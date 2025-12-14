@@ -48,14 +48,17 @@ interface ProposalPreviewProps {
 
 const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
   ({ data, blurred = true, onUnlock, companyInfo }, ref) => {
-    const today = new Date().toLocaleDateString("en-US", {
+    const now = new Date();
+    const today = now.toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
     });
 
     const proposalNumber = (() => {
-      const seed = `${data.clientName ?? ""}|${data.address ?? ""}|${today}`;
+      // Use ISO date string for deterministic hashing across locales/timezones
+      const isoDate = now.toISOString().split('T')[0];
+      const seed = `${data.clientName ?? ""}|${data.address ?? ""}|${isoDate}`;
       let hash = 0;
       for (let i = 0; i < seed.length; i++) {
         hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
