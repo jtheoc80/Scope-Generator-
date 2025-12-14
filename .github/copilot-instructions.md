@@ -4,11 +4,11 @@
 Scope Generator is a Next.js application that helps users generate professional project scopes and proposals. The application features AI-powered scope generation, payment processing, email delivery, and comprehensive proposal management.
 
 ## Tech Stack
-- **Framework**: Next.js 16 (App Router)
+- **Framework**: Next.js 15.5.9 (App Router)
 - **Language**: TypeScript (strict mode)
 - **UI Components**: Radix UI primitives with custom components
 - **Styling**: Tailwind CSS v4
-- **Authentication**: Clerk
+- **Authentication**: Currently disabled (Clerk was removed due to Edge Function bundling incompatibility)
 - **Database**: PostgreSQL with Drizzle ORM
 - **Payments**: Stripe
 - **State Management**: TanStack Query (React Query)
@@ -22,9 +22,10 @@ Scope Generator is a Next.js application that helps users generate professional 
 ```
 /
 ├── app/                    # Next.js App Router pages
-│   ├── layout.tsx          # Root layout with Clerk provider
+│   ├── layout.tsx          # Root layout
 │   ├── page.tsx            # Home page
-│   └── globals.css         # Global styles
+│   ├── not-found.tsx       # 404 page
+│   └── globals.css         # Global styles with Tailwind v4
 ├── components/             # React components
 │   ├── ui/                 # Radix UI-based components (35+ components)
 │   └── *.tsx               # Custom components (modals, layouts, widgets)
@@ -35,11 +36,27 @@ Scope Generator is a Next.js application that helps users generate professional 
 │   │   ├── aiService.ts
 │   │   ├── emailService.ts
 │   │   ├── stripeService.ts
-│   │   └── onebuild.ts
+│   │   ├── stripeClient.ts
+│   │   ├── webhookHandlers.ts
+│   │   ├── onebuild.ts
+│   │   ├── storage.ts
+│   │   └── searchConsole.ts
+│   ├── proposal-data.ts    # Proposal templates and data
+│   ├── regional-pricing.ts # Regional pricing data
+│   ├── translations.ts     # i18n translations
 │   └── utils.ts            # Utility functions
 ├── hooks/                  # Custom React hooks
-├── types/                  # TypeScript type definitions
-└── middleware.ts           # Clerk authentication middleware
+│   ├── use-toast.ts
+│   ├── use-cost-data.ts
+│   ├── use-analytics.tsx
+│   ├── use-mobile.tsx
+│   ├── useAuth.ts
+│   └── useLanguage.tsx
+├── middleware.ts           # Authentication middleware (currently disabled)
+├── pages-to-convert/       # Legacy pages from Vite migration (not yet converted)
+├── api-to-convert/         # Legacy Express routes (not yet converted)
+├── server/                 # Legacy server code (not currently used)
+└── shared/                 # Shared utilities
 ```
 
 ## Development Commands
@@ -78,6 +95,8 @@ Scope Generator is a Next.js application that helps users generate professional 
 - Use `cn()` utility from `lib/utils.ts` for conditional classes
 - Follow mobile-first responsive design
 - Use CSS variables for theme customization
+- **Prefer semantic color variables** (text-foreground, text-muted-foreground, bg-background, bg-card) over hardcoded Tailwind colors (text-gray-900, bg-gray-50)
+- The app uses Tailwind CSS v4 with `@theme inline` syntax in globals.css
 
 ### Database
 - Use Drizzle ORM for all database operations
@@ -86,11 +105,10 @@ Scope Generator is a Next.js application that helps users generate professional 
 - Handle database errors gracefully
 
 ### Authentication
-- Use Clerk for authentication
-- Protected routes via middleware
-- Use `auth()` for server components
-- Use `useUser()` hook for client components
-- Check authentication status before operations
+- Authentication is currently disabled (Clerk was removed due to Edge Function bundling incompatibility with Next.js 15)
+- The middleware.ts file exists but does not enforce authentication
+- For future implementations, consider alternative authentication solutions compatible with Next.js Edge Runtime
+- Legacy auth hooks (useAuth.ts) exist but are not actively used
 
 ### API Routes
 - Place in `app/api/` directory
@@ -98,6 +116,7 @@ Scope Generator is a Next.js application that helps users generate professional 
 - Use `NextResponse` for responses
 - Validate input with Zod schemas
 - Return appropriate HTTP status codes
+- **Note:** Most API routes are currently in legacy `api-to-convert/routes.ts` and need conversion to Next.js API routes
 
 ### Forms
 - Use React Hook Form for form state
@@ -120,19 +139,13 @@ Scope Generator is a Next.js application that helps users generate professional 
 ## Environment Variables
 
 Required environment variables (see `.env.example`):
-- `DATABASE_URL` - PostgreSQL connection string
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` - Clerk public key
-- `CLERK_SECRET_KEY` - Clerk secret key
-- `NEXT_PUBLIC_CLERK_SIGN_IN_URL` - Clerk sign-in page URL
-- `NEXT_PUBLIC_CLERK_SIGN_UP_URL` - Clerk sign-up page URL
-- `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL` - Redirect URL after sign-in
-- `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL` - Redirect URL after sign-up
+- `DATABASE_URL` - PostgreSQL connection string (Neon or Supabase)
 - `STRIPE_SECRET_KEY` - Stripe secret key
 - `STRIPE_WEBHOOK_SECRET` - Stripe webhook signing secret (for webhook signature verification)
 - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` - Stripe public key
-- `MAILGUN_API_KEY` - Mailgun API key
-- `MAILGUN_DOMAIN` - Mailgun domain (required for email functionality)
-- `ONEBUILD_EXTERNAL_KEY` - 1Build API key (optional)
+- `MAILGUN_API_KEY` - Mailgun API key (optional for email functionality)
+- `MAILGUN_DOMAIN` - Mailgun domain (optional for email functionality)
+- `ONEBUILD_EXTERNAL_KEY` - 1Build API key (optional for market pricing)
 
 ## Common Patterns
 
@@ -142,11 +155,10 @@ Use server actions for mutations from client components:
 'use server'
 
 export async function createProposal(data: ProposalData) {
-  const { userId } = await auth()
-  if (!userId) throw new Error('Unauthorized')
+  // Add authentication check when auth is re-enabled
   
   // Database operation
-  return await db.insert(proposals).values({ ...data, userId })
+  return await db.insert(proposals).values(data)
 }
 ```
 
@@ -191,15 +203,41 @@ Use Radix UI Dialog for modals with consistent styling from `components/ui/dialo
 - Environment variables configured in Vercel dashboard
 
 ## Migration Notes
-This project was migrated from a React + Vite + Replit setup to Next.js + Vercel. See `MIGRATION_GUIDE.md` for historical context. Some legacy patterns may still exist in the codebase.
+This project was migrated from a React + Vite + Replit setup to Next.js + Vercel. See `MIGRATION_GUIDE.md` for historical context. 
+
+**Important Migration Status:**
+- The migration is **partially complete**
+- The Next.js app structure exists with basic layout and home page
+- Many legacy files remain in `pages-to-convert/`, `api-to-convert/`, and `server/` directories
+- These legacy files are **excluded from TypeScript compilation** (see tsconfig.json)
+- The app currently uses a minimal Next.js setup with only the home page converted
+- When working on this project, be aware that some patterns and files may be legacy artifacts
 
 ## Best Practices
 - Follow Next.js App Router conventions
 - Use Server Components by default, Client Components when needed
 - Optimize images with `next/image`
+  - **Important:** Use `unoptimized={true}` prop when rendering base64 data URLs
 - Use proper loading and error states
 - Implement accessibility features (ARIA labels, keyboard navigation)
 - Keep bundle size minimal
 - Follow security best practices (sanitize inputs, validate on server)
 - Use semantic HTML
 - Write descriptive commit messages
+- Use `next/link` Link component instead of anchor tags for internal navigation
+- For type assertions that bypass TypeScript safety, add detailed inline comments with rationale and TODO notes
+
+## Common Issues & Gotchas
+
+### TypeScript Configuration
+- Use `jsx: "preserve"` in tsconfig.json for Next.js App Router (SWC handles JSX transformation)
+- Path aliases use `@/` prefix which resolves to root-level directories
+
+### Error Handling
+- Use Zod's built-in error messages instead of external validation error libraries
+- Always use try-catch blocks for async operations
+
+### Build Considerations
+- Next.js 15.5.9 is used (not 16.x) due to Edge Function bundling compatibility
+- Clerk authentication was removed due to Edge Function bundling issues with node-only modules
+- When adding external packages, verify Edge Runtime compatibility if using middleware
