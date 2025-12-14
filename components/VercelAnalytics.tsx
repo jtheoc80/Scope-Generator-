@@ -1,8 +1,7 @@
 'use client';
 
-import { inject } from '@vercel/analytics';
+import { Analytics } from '@vercel/analytics/react';
 
 export function VercelAnalytics() {
-  inject();
-  return null;
+  return <Analytics />;
 }
