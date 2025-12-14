@@ -57,7 +57,8 @@ Scope Generator is a Next.js application that helps users generate professional 
 - Use strict TypeScript mode
 - Define types explicitly; avoid `any`
 - Use interfaces for object shapes, types for unions/intersections
-- Path aliases: Use `@/` prefix for imports (configured in tsconfig.json paths)
+- Path aliases: Use `@/` prefix for imports (e.g., `@/lib/utils`, `@/components/ui/button`)
+  - Currently resolves to root-level directories (`app/`, `components/`, `lib/`, etc.)
 
 ### React Components
 - Use functional components with TypeScript
