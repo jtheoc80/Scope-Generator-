@@ -123,9 +123,15 @@ Required environment variables (see `.env.example`):
 - `DATABASE_URL` - PostgreSQL connection string
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` - Clerk public key
 - `CLERK_SECRET_KEY` - Clerk secret key
+- `NEXT_PUBLIC_CLERK_SIGN_IN_URL` - Clerk sign-in page URL
+- `NEXT_PUBLIC_CLERK_SIGN_UP_URL` - Clerk sign-up page URL
+- `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL` - Redirect URL after sign-in
+- `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL` - Redirect URL after sign-up
 - `STRIPE_SECRET_KEY` - Stripe secret key
+- `STRIPE_WEBHOOK_SECRET` - Stripe webhook signing secret (for webhook signature verification)
 - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` - Stripe public key
 - `MAILGUN_API_KEY` - Mailgun API key
+- `MAILGUN_DOMAIN` - Mailgun domain (required for email functionality)
 - `ONEBUILD_EXTERNAL_KEY` - 1Build API key (optional)
 
 ## Common Patterns
