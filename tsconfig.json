@@ -2,6 +2,7 @@
   "compilerOptions": {
     "target": "ES2017",
     "lib": ["dom", "dom.iterable", "esnext"],
+    "baseUrl": ".",
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -19,7 +20,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./*"],
+      "@shared/*": ["./shared/*"]
     }
   },
   "include": [
@@ -30,5 +32,23 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    // Legacy SPA entrypoint / migration artifacts (not used by Next app router)
+    "App.tsx",
+    "api-to-convert/**",
+    "pages-to-convert/**",
+    "nextjs-app/**",
+    "script/**",
+    "server/**",
+    "lib/services/**",
+    "shared/**",
+    "server/vite.ts",
+    "vite.config.ts",
+    "vite-plugin-meta-images.ts",
+    // Generated Next.js type artifacts accidentally committed
+    "types/routes.d.ts",
+    "types/cache-life.d.ts",
+    "types/validator.ts"
+  ]
 }

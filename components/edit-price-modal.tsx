@@ -89,7 +89,7 @@ export default function EditPriceModal({
             Adjust Pricing
           </DialogTitle>
           <DialogDescription>
-            Update the price range for {clientName}'s proposal.
+            Update the price range for {clientName}&apos;s proposal.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>

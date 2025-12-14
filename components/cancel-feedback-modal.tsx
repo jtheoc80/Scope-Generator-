@@ -127,7 +127,7 @@ export default function CancelFeedbackModal({
             Before you go...
           </DialogTitle>
           <DialogDescription>
-            We're sorry to see you leave. Your feedback helps us improve ScopeGen for everyone.
+            We&apos;re sorry to see you leave. Your feedback helps us improve ScopeGen for everyone.
           </DialogDescription>
         </DialogHeader>
 
@@ -135,7 +135,7 @@ export default function CancelFeedbackModal({
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-2">
             <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <p className="text-sm text-amber-800">
-              After submitting feedback, you'll be redirected to manage your subscription.
+              After submitting feedback, you&apos;ll be redirected to manage your subscription.
             </p>
           </div>
 

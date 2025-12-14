@@ -42,11 +42,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <Link href="/dashboard" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
               {t.nav.dashboard}
             </Link>
-            <a href="/#how-it-works" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">{t.nav.howItWorks}</a>
+            <Link href="/#how-it-works" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+              {t.nav.howItWorks}
+            </Link>
             <Link href="/market-pricing" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors" data-testid="nav-market-pricing">
               Market Pricing
             </Link>
-            <a href="/#pricing" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">{t.pricing.title}</a>
+            <Link href="/#pricing" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+              {t.pricing.title}
+            </Link>
             {(user?.subscriptionPlan === 'pro' || user?.subscriptionPlan === 'crew') && (
               <Link href="/pricing-insights" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                 Pricing Insights
@@ -95,13 +99,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               >
                 {t.nav.dashboard}
               </Link>
-              <a 
+              <Link 
                 href="/#how-it-works" 
                 className="text-base font-medium text-slate-700 hover:text-primary transition-colors py-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {t.nav.howItWorks}
-              </a>
+              </Link>
               <Link 
                 href="/market-pricing" 
                 className="text-base font-medium text-slate-700 hover:text-primary transition-colors py-2"
@@ -110,13 +114,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               >
                 Market Pricing
               </Link>
-              <a 
+              <Link 
                 href="/#pricing" 
                 className="text-base font-medium text-slate-700 hover:text-primary transition-colors py-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {t.pricing.title}
-              </a>
+              </Link>
               {(user?.subscriptionPlan === 'pro' || user?.subscriptionPlan === 'crew') && (
                 <Link 
                   href="/pricing-insights" 
@@ -185,7 +189,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div>
             <h4 className="text-white font-bold mb-4">{t.nav.product}</h4>
             <ul className="space-y-2 text-sm">
-              <li><a href="/#pricing" className="hover:text-white">{t.pricing.title}</a></li>
+              <li><Link href="/#pricing" className="hover:text-white">{t.pricing.title}</Link></li>
               <li><Link href="/app" className="hover:text-white">{t.nav.generator}</Link></li>
             </ul>
           </div>
@@ -193,7 +197,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div>
             <h4 className="text-white font-bold mb-4">{t.nav.company}</h4>
             <ul className="space-y-2 text-sm">
-              <li><a href="/#how-it-works" className="hover:text-white">{t.nav.howItWorks}</a></li>
+              <li><Link href="/#how-it-works" className="hover:text-white">{t.nav.howItWorks}</Link></li>
               <li><Link href="/dashboard" className="hover:text-white">{t.nav.dashboard}</Link></li>
               <li><Link href="/blog" className="hover:text-white">Blog</Link></li>
             </ul>
