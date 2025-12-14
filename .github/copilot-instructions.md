@@ -26,7 +26,7 @@ Scope Generator is a Next.js application that helps users generate professional 
 │   ├── page.tsx            # Home page
 │   └── globals.css         # Global styles
 ├── components/             # React components
-│   ├── ui/                 # Radix UI-based components (50+ components)
+│   ├── ui/                 # Radix UI-based components (35+ components)
 │   └── *.tsx               # Custom components (modals, layouts, widgets)
 ├── lib/                    # Utilities and services
 │   ├── db.ts               # Database connection
