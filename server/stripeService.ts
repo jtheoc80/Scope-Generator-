@@ -255,10 +255,10 @@ export class StripeService {
           //
           // References:
           // - Stripe API docs: https://stripe.com/docs/api/payment_links/payment_links/create#create_payment_link-line_items-price_data
-          // - Related GitHub issue: https://github.com/stripe/stripe-node/issues/1755
           //
           // TODO: Monitor stripe-node releases for when price_data is added to the type definitions.
-          // Once available, this type assertion can be removed.
+          // Once available, this type assertion can be removed. Consider filing an issue with
+          // stripe/stripe-node if this persists in future versions.
           price_data: {
             currency: 'usd',
             unit_amount: amountInCents,
