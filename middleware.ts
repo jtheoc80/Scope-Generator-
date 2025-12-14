@@ -1,6 +1,18 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
-export default clerkMiddleware();
+// Check if Clerk is configured
+const isClerkConfigured = Boolean(
+  process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
+  process.env.CLERK_SECRET_KEY
+);
+
+// Create the appropriate middleware based on configuration
+const middleware = isClerkConfigured
+  ? clerkMiddleware()
+  : () => NextResponse.next();
+
+export default middleware;
 
 export const config = {
   matcher: [
