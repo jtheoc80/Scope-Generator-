@@ -8,6 +8,7 @@ interface User {
   lastName: string | null;
   profileImageUrl: string | null;
   isPro: boolean;
+  subscriptionPlan: string | null;
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
   proposalCredits: number;
@@ -24,6 +25,7 @@ interface User {
   hasStripeKey: boolean;
   emailNotificationsEnabled: boolean;
   smsNotificationsEnabled: boolean;
+  onboardingCompleted?: boolean;
 }
 
 export function useAuth() {
