@@ -247,7 +247,7 @@ export class StripeService {
           // TYPE ASSERTION RATIONALE:
           // The Stripe API supports `price_data` for inline price creation in Payment Links
           // (confirmed working with Stripe API version 2023-10-16 and stripe-node v14.25.0).
-          // However, the TypeScript types in @stripe/stripe-js v14.x only define `price` (string ID)
+          // However, the TypeScript types in stripe-node v14.x only define `price` (string ID)
           // as the valid field for PaymentLinkCreateParams.LineItem.
           //
           // This is a known limitation where TypeScript definitions lag behind API capabilities.
