@@ -48,14 +48,16 @@ interface ProposalPreviewProps {
 
 const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
   ({ data, blurred = true, onUnlock, companyInfo }, ref) => {
-    const today = new Date().toLocaleDateString("en-US", {
+    const now = new Date();
+    const todayISO = now.toISOString().split('T')[0]; // YYYY-MM-DD format for deterministic hashing
+    const todayFormatted = now.toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
     });
 
     const proposalNumber = (() => {
-      const seed = `${data.clientName ?? ""}|${data.address ?? ""}|${today}`;
+      const seed = `${data.clientName ?? ""}|${data.address ?? ""}|${todayISO}`;
       let hash = 0;
       for (let i = 0; i < seed.length; i++) {
         hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
@@ -138,7 +140,7 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
           </div>
           <div className="text-right">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Date</h3>
-            <div>{today}</div>
+            <div>{todayFormatted}</div>
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 mt-4">
               {hasMultipleServices ? "Proposal Type" : "Job Type"}
             </h3>
