@@ -246,10 +246,10 @@ export class StripeService {
         {
           // NOTE: Type assertion required due to incomplete Stripe TypeScript definitions.
           // The Stripe API (v14.25.0+) supports `price_data` for Payment Link line items,
-          // but the @types definition only includes the `price: string` field.
-          // This is documented in the Stripe API: https://stripe.com/docs/api/payment_links/payment_links/create#create_payment_link-line_items-price_data
-          // TODO: Remove type assertion when Stripe types are updated to include price_data.
-          // Track: https://github.com/stripe/stripe-node/issues
+          // but the TypeScript definition only includes the `price: string` field.
+          // Reference: https://stripe.com/docs/api/payment_links/payment_links/create#create_payment_link-line_items-price_data
+          // TODO: Remove type assertion when stripe-node types include price_data for Payment Links.
+          // Related: https://github.com/stripe/stripe-node (search for PaymentLink price_data)
           price_data: {
             currency: 'usd',
             unit_amount: amountInCents,
