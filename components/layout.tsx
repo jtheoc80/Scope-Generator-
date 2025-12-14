@@ -1,6 +1,7 @@
 'use client';
 import { useState } from "react";
-import { Link, useLocation } from "wouter";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Hammer, Menu, X } from "lucide-react";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -8,7 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { OnboardingModal } from "@/components/onboarding-modal";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const [location] = useLocation();
+  const location = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { t } = useLanguage();
 

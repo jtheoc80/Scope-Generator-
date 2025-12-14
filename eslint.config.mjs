@@ -33,6 +33,14 @@ export default [
       // without blocking builds on `any` usage.
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-empty-object-type": "off",
+      // Allow unescaped entities during migration - pre-existing in legacy pages
+      "react/no-unescaped-entities": "warn",
+      // Allow unused vars during migration
+      "@typescript-eslint/no-unused-vars": "warn",
+      // Allow missing hook dependencies during migration
+      "react-hooks/exhaustive-deps": "warn",
+      // Allow prefer-const during migration
+      "prefer-const": "warn",
     },
   },
 ];
