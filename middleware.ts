@@ -1,5 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { isClerkConfigured } from "@/lib/authUtils";
 
 // Define routes that should be protected
@@ -12,7 +12,7 @@ const clerkHandler = isClerkConfigured()
         await auth.protect();
       }
     })
-  : () => NextResponse.next();
+  : (req: NextRequest) => NextResponse.next();
 
 export default clerkHandler;
 
