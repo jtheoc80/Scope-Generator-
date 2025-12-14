@@ -244,8 +244,12 @@ export class StripeService {
     const paymentLink = await stripe.paymentLinks.create({
       line_items: [
         {
-          // Stripe's TS types for Payment Links can lag behind API capabilities.
-          // This payload is valid in practice, so keep it runtime-correct.
+          // NOTE: Type assertion required due to incomplete Stripe TypeScript definitions.
+          // The Stripe API (v14.25.0+) supports `price_data` for Payment Link line items,
+          // but the @types definition only includes the `price: string` field.
+          // This is documented in the Stripe API: https://stripe.com/docs/api/payment_links/payment_links/create#create_payment_link-line_items-price_data
+          // TODO: Remove type assertion when Stripe types are updated to include price_data.
+          // Track: https://github.com/stripe/stripe-node/issues
           price_data: {
             currency: 'usd',
             unit_amount: amountInCents,
