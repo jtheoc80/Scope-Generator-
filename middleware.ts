@@ -13,10 +13,8 @@
 // });
 
 import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function middleware(_request: NextRequest) {
+export function middleware() {
   // Pass through all requests - authentication handled at component level when Clerk is configured
   return NextResponse.next()
 }
