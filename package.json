@@ -57,7 +57,7 @@
     "jspdf": "^2.5.1",
     "lucide-react": "^0.454.0",
     "memoizee": "^0.4.17",
-    "next": "16.0.10",
+    "next": "15.5.9",
     "openid-client": "^6.8.1",
     "passport": "^0.7.0",
     "pg": "^8.11.0",
@@ -90,7 +90,7 @@
     "@types/react-dom": "^19",
     "drizzle-kit": "^0.24.0",
     "eslint": "^9",
-    "eslint-config-next": "16.0.10",
+    "eslint-config-next": "15.5.9",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
