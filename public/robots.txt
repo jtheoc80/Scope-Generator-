@@ -1,7 +1,4 @@
 User-agent: *
 Allow: /
-Disallow: /api/
-Disallow: /dashboard
-Disallow: /settings
 
-Sitemap: https://scopegen.replit.app/sitemap.xml
+Sitemap: https://scopegenerator.com/sitemap.xml
