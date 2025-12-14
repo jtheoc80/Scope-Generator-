@@ -1,0 +1,228 @@
+'use client';
+import { useState } from "react";
+import { Link, useLocation } from "wouter";
+import { Hammer, Menu, X } from "lucide-react";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import { useLanguage } from "@/hooks/useLanguage";
+import { useQuery } from "@tanstack/react-query";
+import { OnboardingModal } from "@/components/onboarding-modal";
+
+export default function Layout({ children }: { children: React.ReactNode }) {
+  const [location] = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { t } = useLanguage();
+
+  const { data: user } = useQuery({
+    queryKey: ["/api/auth/user"],
+    queryFn: async () => {
+      const res = await fetch("/api/auth/user");
+      if (!res.ok) return null;
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const showOnboarding = Boolean(user && !user.onboardingCompleted);
+
+  return (
+    <div className="min-h-screen flex flex-col font-sans">
+      <header className="border-b border-border bg-white sticky top-0 z-50">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+            <div className="bg-secondary p-1.5 rounded-sm">
+              <Hammer className="w-5 h-5 text-primary-foreground" />
+            </div>
+            <span className="text-xl font-heading font-bold text-primary uppercase tracking-tight">
+              ScopeGen
+            </span>
+          </Link>
+
+          {/* Desktop Navigation - Alphabetical Order */}
+          <nav className="hidden md:flex items-center gap-6">
+            <Link href="/dashboard" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+              {t.nav.dashboard}
+            </Link>
+            <a href="/#how-it-works" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">{t.nav.howItWorks}</a>
+            <Link href="/market-pricing" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors" data-testid="nav-market-pricing">
+              Market Pricing
+            </Link>
+            <a href="/#pricing" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">{t.pricing.title}</a>
+            {(user?.subscriptionPlan === 'pro' || user?.subscriptionPlan === 'crew') && (
+              <Link href="/pricing-insights" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+                Pricing Insights
+              </Link>
+            )}
+            {user?.subscriptionPlan === 'crew' && (
+              <Link href="/search-console" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+                Search Console
+              </Link>
+            )}
+            <Link href="/settings" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+              {t.nav.settings}
+            </Link>
+            {user?.subscriptionPlan === 'crew' && (
+              <Link href="/crew" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+                Team
+              </Link>
+            )}
+            <LanguageSwitcher />
+            {location === "/" && (
+              <Link href="/app" className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-semibold hover:bg-primary/90 transition-colors">
+                {t.hero.cta}
+              </Link>
+            )}
+          </nav>
+
+          {/* Mobile Menu Button */}
+          <button
+            className="md:hidden p-2 -mr-2 text-slate-600 hover:text-primary transition-colors"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Toggle menu"
+            data-testid="button-mobile-menu"
+          >
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+        </div>
+
+        {/* Mobile Navigation - Alphabetical Order */}
+        {mobileMenuOpen && (
+          <nav className="md:hidden border-t border-border bg-white animate-in slide-in-from-top-2 duration-200">
+            <div className="container mx-auto px-4 py-4 flex flex-col gap-4">
+              <Link 
+                href="/dashboard" 
+                className="text-base font-medium text-slate-700 hover:text-primary transition-colors py-2"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {t.nav.dashboard}
+              </Link>
+              <a 
+                href="/#how-it-works" 
+                className="text-base font-medium text-slate-700 hover:text-primary transition-colors py-2"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {t.nav.howItWorks}
+              </a>
+              <Link 
+                href="/market-pricing" 
+                className="text-base font-medium text-slate-700 hover:text-primary transition-colors py-2"
+                onClick={() => setMobileMenuOpen(false)}
+                data-testid="nav-market-pricing-mobile"
+              >
+                Market Pricing
+              </Link>
+              <a 
+                href="/#pricing" 
+                className="text-base font-medium text-slate-700 hover:text-primary transition-colors py-2"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {t.pricing.title}
+              </a>
+              {(user?.subscriptionPlan === 'pro' || user?.subscriptionPlan === 'crew') && (
+                <Link 
+                  href="/pricing-insights" 
+                  className="text-base font-medium text-slate-700 hover:text-primary transition-colors py-2"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Pricing Insights
+                </Link>
+              )}
+              {user?.subscriptionPlan === 'crew' && (
+                <Link 
+                  href="/search-console" 
+                  className="text-base font-medium text-slate-700 hover:text-primary transition-colors py-2"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Search Console
+                </Link>
+              )}
+              <Link 
+                href="/settings" 
+                className="text-base font-medium text-slate-700 hover:text-primary transition-colors py-2"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {t.nav.settings}
+              </Link>
+              {user?.subscriptionPlan === 'crew' && (
+                <Link 
+                  href="/crew" 
+                  className="text-base font-medium text-slate-700 hover:text-primary transition-colors py-2"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Team
+                </Link>
+              )}
+              <div className="py-2">
+                <LanguageSwitcher />
+              </div>
+              <Link 
+                href="/app" 
+                className="bg-primary text-primary-foreground px-4 py-3 rounded-md text-base font-semibold hover:bg-primary/90 transition-colors text-center mt-2"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {t.hero.cta}
+              </Link>
+            </div>
+          </nav>
+        )}
+      </header>
+
+      <main className="flex-1 flex flex-col">
+        {children}
+      </main>
+
+      <footer className="bg-slate-900 text-slate-400 py-12 border-t border-slate-800">
+        <div className="container mx-auto px-4 grid grid-cols-2 md:grid-cols-5 gap-8">
+          <div className="col-span-2 md:col-span-1">
+            <div className="flex items-center gap-2 mb-4">
+              <Hammer className="w-5 h-5 text-secondary" />
+              <span className="text-lg font-heading font-bold text-white uppercase">ScopeGen</span>
+            </div>
+            <p className="text-sm leading-relaxed">
+              {t.footer.builtFor}
+            </p>
+          </div>
+          
+          <div>
+            <h4 className="text-white font-bold mb-4">{t.nav.product}</h4>
+            <ul className="space-y-2 text-sm">
+              <li><a href="/#pricing" className="hover:text-white">{t.pricing.title}</a></li>
+              <li><Link href="/app" className="hover:text-white">{t.nav.generator}</Link></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-white font-bold mb-4">{t.nav.company}</h4>
+            <ul className="space-y-2 text-sm">
+              <li><a href="/#how-it-works" className="hover:text-white">{t.nav.howItWorks}</a></li>
+              <li><Link href="/dashboard" className="hover:text-white">{t.nav.dashboard}</Link></li>
+              <li><Link href="/blog" className="hover:text-white">Blog</Link></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-white font-bold mb-4">Legal</h4>
+            <ul className="space-y-2 text-sm">
+              <li><Link href="/privacy" className="hover:text-white">Privacy Policy</Link></li>
+              <li><Link href="/terms" className="hover:text-white">Terms of Service</Link></li>
+            </ul>
+          </div>
+
+          <div className="col-span-2 md:col-span-2">
+            <h4 className="text-white font-bold mb-4">{t.hero.cta}</h4>
+            <Link 
+              href="/app" 
+              className="inline-block bg-secondary text-slate-900 px-4 py-2 rounded font-bold text-sm hover:bg-secondary/90 transition-colors"
+            >
+              {t.hero.cta}
+            </Link>
+          </div>
+        </div>
+        <div className="container mx-auto px-4 mt-12 pt-8 border-t border-slate-800 text-center text-xs">
+          © {new Date().getFullYear()} Lead Ledger LLC. {t.footer.copyright}
+        </div>
+      </footer>
+
+      <OnboardingModal open={showOnboarding} userName={user?.firstName} />
+    </div>
+  );
+}
