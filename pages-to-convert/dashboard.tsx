@@ -920,7 +920,6 @@ export default function Dashboard() {
       <PaywallModal 
         isOpen={showPaywall} 
         onClose={() => setShowPaywall(false)} 
-        onUnlock={() => setShowPaywall(false)} 
       />
 
       {emailModalData && (

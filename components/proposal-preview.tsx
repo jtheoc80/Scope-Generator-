@@ -1,6 +1,7 @@
 'use client';
 import { forwardRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { Clock, Shield, AlertCircle, MapPin, Layers } from "lucide-react";
 
@@ -93,9 +94,11 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
           </div>
           <div className="text-right flex items-start gap-4 justify-end">
             {companyInfo?.companyLogo && (
-              <img 
+              <Image 
                 src={companyInfo.companyLogo} 
                 alt="Company logo" 
+                width={64}
+                height={64}
                 className="w-16 h-16 object-contain"
                 data-testid="img-proposal-logo"
               />

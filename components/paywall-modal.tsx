@@ -1,18 +1,17 @@
 'use client';
 import { useState } from "react";
 import { Lock, Check, Loader2, Zap, Package, Shield, Star, Users } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
 interface PaywallModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onUnlock: () => void;
 }
 
 type PricingOption = 'single' | 'pack';
 
-export default function PaywallModal({ isOpen, onClose, onUnlock }: PaywallModalProps) {
+export default function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
   const [selectedOption, setSelectedOption] = useState<PricingOption>('pack');
   const [checkoutLoading, setCheckoutLoading] = useState(false);
 
