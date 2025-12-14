@@ -9,13 +9,16 @@ function isClerkConfigured(): boolean {
   );
 }
 
+// Check configuration once at module load time
+const clerkConfigured = isClerkConfigured();
+
 // Import Clerk conditionally only if configured
 // Note: We use dynamic imports at build time to avoid crashes when Clerk is not configured
 let clerkMiddleware: any;
 let createRouteMatcher: any;
 let isProtectedRoute: any;
 
-if (isClerkConfigured()) {
+if (clerkConfigured) {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const clerk = require("@clerk/nextjs/server");
   clerkMiddleware = clerk.clerkMiddleware;
@@ -24,7 +27,7 @@ if (isClerkConfigured()) {
 }
 
 // Export middleware - conditionally use Clerk or passthrough
-export default isClerkConfigured()
+export default clerkConfigured
   ? clerkMiddleware(async (auth: any, req: any) => {
       if (isProtectedRoute(req)) await auth.protect();
     })
