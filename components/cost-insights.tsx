@@ -1,9 +1,8 @@
 'use client';
-import { useState, useEffect } from "react";
 import { useCostServiceStatus, useTradePricing } from "@/hooks/use-cost-data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, TrendingUp, DollarSign, Hammer, AlertCircle } from "lucide-react";
+import { Loader2, TrendingUp, DollarSign, Hammer } from "lucide-react";
 
 interface CostInsightsProps {
   tradeId: string;

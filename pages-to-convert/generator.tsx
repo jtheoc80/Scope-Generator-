@@ -1099,15 +1099,6 @@ export default function Generator() {
       <PaywallModal 
         isOpen={showPaywall} 
         onClose={() => setShowPaywall(false)} 
-        onUnlock={() => {
-          setIsUnlocked(true);
-          setShowPaywall(false);
-          toast({
-            title: "Success!",
-            description: "Full proposal unlocked. You can now download and edit.",
-            duration: 5000,
-          });
-        }}
       />
     </Layout>
   );

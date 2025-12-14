@@ -69,7 +69,7 @@ export default function EditPriceModal({
       });
       onUpdated();
       onClose();
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to update the price. Please try again.",
