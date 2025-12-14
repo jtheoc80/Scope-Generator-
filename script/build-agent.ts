@@ -3,6 +3,8 @@
  * 
  * This agent runs builds continuously until success, analyzing errors
  * and providing detailed diagnostics to help fix issues.
+ * 
+ * Supports pulling GitHub PRs and working on them.
  */
 
 import { spawn, execSync } from 'child_process';
@@ -27,6 +29,14 @@ interface BuildResult {
   duration: number;
 }
 
+interface PRInfo {
+  number: number;
+  title: string;
+  branch: string;
+  state: string;
+  url: string;
+}
+
 interface AgentConfig {
   maxAttempts: number;
   buildCmd: string;
@@ -34,6 +44,7 @@ interface AgentConfig {
   logDir: string;
   workspaceRoot: string;
   retryDelay: number;
+  prRef?: string; // PR number or URL
 }
 
 class PersistentBuildAgent {
@@ -41,6 +52,7 @@ class PersistentBuildAgent {
   private attempt: number = 0;
   private startTime: Date;
   private errors: Map<string, BuildError[]> = new Map();
+  private prInfo?: PRInfo;
 
   constructor(config: Partial<AgentConfig> = {}) {
     this.config = {
@@ -50,6 +62,7 @@ class PersistentBuildAgent {
       logDir: config.logDir ?? './build-logs',
       workspaceRoot: config.workspaceRoot ?? process.cwd(),
       retryDelay: config.retryDelay ?? 2000,
+      prRef: config.prRef,
     };
     this.startTime = new Date();
     
@@ -253,6 +266,111 @@ class PersistentBuildAgent {
     return true;
   }
 
+  private extractPRNumber(ref: string): string | null {
+    // Check if it's a URL like https://github.com/owner/repo/pull/123
+    const urlMatch = ref.match(/github\.com\/[^/]+\/[^/]+\/pull\/(\d+)/);
+    if (urlMatch) {
+      return urlMatch[1];
+    }
+    // Check if it's just a number
+    if (/^\d+$/.test(ref)) {
+      return ref;
+    }
+    return null;
+  }
+
+  private async pullPR(prRef: string): Promise<boolean> {
+    console.log('\n' + '─'.repeat(60));
+    this.log(`Pulling PR: ${prRef}`, 'info');
+    console.log('─'.repeat(60));
+
+    // Check if gh is available
+    try {
+      execSync('gh --version', { stdio: 'pipe' });
+    } catch {
+      this.log('GitHub CLI (gh) is not installed', 'error');
+      return false;
+    }
+
+    // Check if authenticated
+    try {
+      execSync('gh auth status', { stdio: 'pipe', cwd: this.config.workspaceRoot });
+    } catch {
+      this.log('GitHub CLI is not authenticated. Run "gh auth login" first.', 'error');
+      return false;
+    }
+
+    const prNumber = this.extractPRNumber(prRef);
+    if (!prNumber) {
+      this.log(`Invalid PR reference: ${prRef} (use PR number or GitHub URL)`, 'error');
+      return false;
+    }
+
+    // Get PR details
+    this.log(`Fetching PR #${prNumber} details...`, 'info');
+    try {
+      const prJson = execSync(`gh pr view ${prNumber} --json number,title,headRefName,state,url`, {
+        cwd: this.config.workspaceRoot,
+        encoding: 'utf-8',
+      });
+      
+      const prData = JSON.parse(prJson);
+      this.prInfo = {
+        number: prData.number,
+        title: prData.title,
+        branch: prData.headRefName,
+        state: prData.state,
+        url: prData.url,
+      };
+
+      console.log(`\n\x1b[36m[PR]\x1b[0m PR #${this.prInfo.number}: ${this.prInfo.title}`);
+      console.log(`\x1b[36m[PR]\x1b[0m Branch: ${this.prInfo.branch}`);
+      console.log(`\x1b[36m[PR]\x1b[0m State: ${this.prInfo.state}`);
+      console.log(`\x1b[36m[PR]\x1b[0m URL: ${this.prInfo.url}\n`);
+
+    } catch (err) {
+      this.log(`Failed to fetch PR #${prNumber}`, 'error');
+      return false;
+    }
+
+    // Checkout the PR
+    this.log(`Checking out PR #${prNumber}...`, 'info');
+    try {
+      execSync(`gh pr checkout ${prNumber}`, {
+        cwd: this.config.workspaceRoot,
+        stdio: 'inherit',
+      });
+      this.log(`Successfully checked out PR #${prNumber}`, 'success');
+    } catch {
+      this.log(`Failed to checkout PR #${prNumber}`, 'error');
+      return false;
+    }
+
+    // Check if package.json changed and reinstall if needed
+    try {
+      const changedFiles = execSync('git diff HEAD~1 --name-only', {
+        cwd: this.config.workspaceRoot,
+        encoding: 'utf-8',
+      });
+      
+      if (changedFiles.includes('package.json')) {
+        this.log('package.json changed, reinstalling dependencies...', 'info');
+        execSync('npm install', {
+          cwd: this.config.workspaceRoot,
+          stdio: 'inherit',
+        });
+      }
+    } catch {
+      // Ignore errors from git diff (might be first commit)
+    }
+
+    console.log('');
+    this.log(`PR #${prNumber} is ready for building`, 'success');
+    console.log('');
+
+    return true;
+  }
+
   async run(): Promise<boolean> {
     console.log('\n' + '═'.repeat(60));
     this.log('Starting Persistent Build Agent');
@@ -261,7 +379,18 @@ class PersistentBuildAgent {
     this.log(`Build command: ${this.config.buildCmd}`);
     this.log(`Workspace: ${this.config.workspaceRoot}`);
     this.log(`Log directory: ${this.config.logDir}`);
+    if (this.config.prRef) {
+      this.log(`PR: ${this.config.prRef}`);
+    }
     console.log('');
+
+    // Pull PR if specified
+    if (this.config.prRef) {
+      if (!await this.pullPR(this.config.prRef)) {
+        this.log('Failed to pull PR, aborting', 'error');
+        return false;
+      }
+    }
 
     // Check dependencies
     if (!await this.checkDependencies()) {
@@ -358,7 +487,8 @@ async function main() {
   const config: Partial<AgentConfig> = {};
   
   for (let i = 0; i < args.length; i++) {
-    switch (args[i]) {
+    const arg = args[i];
+    switch (arg) {
       case '-m':
       case '--max':
         config.maxAttempts = parseInt(args[++i]);
@@ -371,20 +501,36 @@ async function main() {
       case '--delay':
         config.retryDelay = parseInt(args[++i]);
         break;
+      case '-p':
+      case '--pr':
+        config.prRef = args[++i];
+        break;
       case '-h':
       case '--help':
         console.log(`
 Persistent Build Agent
 
-Usage: npx ts-node script/build-agent.ts [options]
+Usage: npx ts-node script/build-agent.ts [options] [PR_NUMBER_OR_URL]
 
 Options:
   -m, --max N      Maximum build attempts (default: 50)
   -c, --cmd CMD    Build command (default: 'npm run build')
   -d, --delay MS   Delay between retries in ms (default: 2000)
+  -p, --pr PR      Pull request number or GitHub URL
   -h, --help       Show this help message
+
+Examples:
+  npx ts-node script/build-agent.ts                    # Build current branch
+  npx ts-node script/build-agent.ts --pr 123           # Pull PR #123 and build
+  npx ts-node script/build-agent.ts --pr https://github.com/org/repo/pull/123
+  npx ts-node script/build-agent.ts 123                # Shorthand for --pr 123
 `);
         process.exit(0);
+      default:
+        // Check if it's a PR number or URL (positional argument)
+        if (/^\d+$/.test(arg) || arg.includes('github.com') && arg.includes('/pull/')) {
+          config.prRef = arg;
+        }
     }
   }
 
