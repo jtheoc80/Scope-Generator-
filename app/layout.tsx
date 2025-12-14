@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
+import { isClerkConfigured } from "@/lib/authUtils";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -23,9 +24,6 @@ export const metadata: Metadata = {
   },
 };
 
-// Check if Clerk publishable key is available
-const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -41,8 +39,8 @@ export default function RootLayout({
     </html>
   );
 
-  // Only wrap with ClerkProvider if publishable key is available
-  if (clerkPublishableKey) {
+  // Only wrap with ClerkProvider if Clerk is fully configured
+  if (isClerkConfigured()) {
     return <ClerkProvider>{content}</ClerkProvider>;
   }
 

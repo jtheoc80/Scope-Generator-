@@ -1,5 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { isClerkConfigured } from "@/lib/authUtils";
 
 // 1. Define routes that should be protected
 const isProtectedRoute = createRouteMatcher([
@@ -7,11 +8,8 @@ const isProtectedRoute = createRouteMatcher([
   '/api/trpc(.*)', // Protects API routes if you have them
 ]);
 
-// Check if Clerk is configured
-const isClerkConfigured = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
-
 // 2. Create the middleware based on Clerk availability
-const clerkHandler = isClerkConfigured
+const clerkHandler = isClerkConfigured()
   ? clerkMiddleware(async (auth, req) => {
       if (isProtectedRoute(req)) {
         await auth.protect();
