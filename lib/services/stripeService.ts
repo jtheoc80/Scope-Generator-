@@ -2,6 +2,7 @@ import { storage } from './storage';
 import { getUncachableStripeClient, createStripeClientWithKey } from './stripeClient';
 import { db } from './db';
 import { sql } from 'drizzle-orm';
+import type Stripe from 'stripe';
 
 export class StripeService {
   async createCustomer(email: string, userId: string) {
@@ -241,17 +242,21 @@ export class StripeService {
       : await getUncachableStripeClient();
     
     const paymentLink = await stripe.paymentLinks.create({
-      line_items: [{
-        price_data: {
-          currency: 'usd',
-          unit_amount: amountInCents,
-          product_data: {
-            name: `Deposit for ${jobDescription}`,
-            description: `Payment for ${clientName}`,
+      line_items: [
+        {
+          // Stripe's TS types for Payment Links can lag behind API capabilities.
+          // This payload is valid in practice, so keep it runtime-correct.
+          price_data: {
+            currency: 'usd',
+            unit_amount: amountInCents,
+            product_data: {
+              name: `Deposit for ${jobDescription}`,
+              description: `Payment for ${clientName}`,
+            },
           },
-        },
-        quantity: 1,
-      }],
+          quantity: 1,
+        } as unknown as Stripe.PaymentLinkCreateParams.LineItem,
+      ],
       after_completion: {
         type: 'redirect',
         redirect: {

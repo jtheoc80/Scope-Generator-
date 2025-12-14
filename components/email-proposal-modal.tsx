@@ -92,7 +92,7 @@ export default function EmailProposalModal({
             Send Proposal via Email
           </DialogTitle>
           <DialogDescription>
-            Send this proposal directly to your client's inbox.
+            Send this proposal directly to your client&apos;s inbox.
           </DialogDescription>
         </DialogHeader>
 

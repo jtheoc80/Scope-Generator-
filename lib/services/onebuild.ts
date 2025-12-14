@@ -1,5 +1,3 @@
-import fetch from "node-fetch";
-
 const ONEBUILD_API_URL = "https://gateway-external.1build.com/";
 
 interface OneBuildLocation {

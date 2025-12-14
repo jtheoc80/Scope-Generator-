@@ -5,7 +5,10 @@ declare global {
   }
 }
 
-const GA_MEASUREMENT_ID = import.meta.env.VITE_GA_MEASUREMENT_ID;
+const GA_MEASUREMENT_ID =
+  process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ??
+  // Back-compat for Vite-era env naming (only works if exposed as NEXT_PUBLIC_*)
+  process.env.NEXT_PUBLIC_VITE_GA_MEASUREMENT_ID;
 
 export const initGA = () => {
   if (!GA_MEASUREMENT_ID) {
