@@ -344,7 +344,7 @@ export default function Home() {
               <Link 
                 href="/app" 
                 data-testid="button-try-free-proposal"
-                className="inline-flex items-center justify-center h-12 sm:h-14 px-6 sm:px-8 rounded-md bg-secondary text-slate-900 font-bold text-base sm:text-lg hover:bg-secondary/90 transition-all hover:scale-105 shadow-[0_0_20px_rgba(249,115,22,0.3)] whitespace-nowrap"
+                className="inline-flex items-center justify-center h-12 sm:h-14 px-6 sm:px-8 rounded-md bg-orange-500 text-white font-bold text-base sm:text-lg hover:bg-orange-600 transition-all hover:scale-105 shadow-[0_0_20px_rgba(249,115,22,0.3)] whitespace-nowrap"
               >
                 Try a Free Proposal
                 <ArrowRight className="ml-2 w-5 h-5" />
