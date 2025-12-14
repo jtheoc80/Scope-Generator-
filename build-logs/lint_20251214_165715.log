@@ -1,0 +1,37 @@
+
+> scope-generator@0.1.0 lint
+> eslint
+
+
+/workspace/App.tsx
+  20:40  warning  'tradeCityData' is defined but never used  @typescript-eslint/no-unused-vars
+
+/workspace/eslint.config.mjs
+  12:1  warning  Assign array to a variable before exporting as module default  import/no-anonymous-default-export
+
+/workspace/hooks/use-toast.ts
+  19:7  warning  'actionTypes' is assigned a value but only used as a type  @typescript-eslint/no-unused-vars
+
+/workspace/script/build-agent.ts
+  248:16  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+/workspace/server/index.ts
+  173:52  warning  '_next' is defined but never used  @typescript-eslint/no-unused-vars
+
+/workspace/server/replitAuth.ts
+  158:12  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+/workspace/server/routes.ts
+     2:10  warning  'createServer' is defined but never used                  @typescript-eslint/no-unused-vars
+   383:36  warning  '_' is assigned a value but never used                    @typescript-eslint/no-unused-vars
+   414:15  warning  'userStripeSecretKey' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  1590:14  warning  'error' is defined but never used                         @typescript-eslint/no-unused-vars
+
+/workspace/server/storage.ts
+  22:8  warning  'InsertProposalView' is defined but never used  @typescript-eslint/no-unused-vars
+
+/workspace/server/stripeService.ts
+  1:10  warning  'storage' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 12 problems (0 errors, 12 warnings)
+
