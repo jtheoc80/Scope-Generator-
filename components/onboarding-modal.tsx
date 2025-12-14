@@ -82,7 +82,7 @@ export function OnboardingModal({ open, userName }: OnboardingModalProps) {
             Welcome{userName ? `, ${userName}` : ""}!
           </DialogTitle>
           <DialogDescription>
-            Let's set up your account so you can start creating professional proposals.
+            Let&apos;s set up your account so you can start creating professional proposals.
           </DialogDescription>
         </DialogHeader>
 

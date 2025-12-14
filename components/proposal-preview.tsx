@@ -1,5 +1,6 @@
 'use client';
 import { forwardRef } from "react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Clock, Shield, AlertCircle, MapPin, Layers } from "lucide-react";
 
@@ -53,6 +54,15 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
       day: "numeric",
     });
 
+    const proposalNumber = (() => {
+      const seed = `${data.clientName ?? ""}|${data.address ?? ""}|${today}`;
+      let hash = 0;
+      for (let i = 0; i < seed.length; i++) {
+        hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+      }
+      return String(hash % 10000).padStart(4, "0");
+    })();
+
     const hasMultipleServices = data.lineItems && data.lineItems.length > 1;
     const lineItems = data.lineItems || [];
 
@@ -79,7 +89,7 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
         <div className={cn("flex justify-between items-start border-b-2 border-slate-900 pb-6 mb-8", blurred && "mt-8")}>
           <div>
             <h1 className="text-3xl font-heading font-bold text-slate-900 uppercase tracking-wide">Proposal</h1>
-            <p className="text-slate-500 mt-1">#{Math.floor(Math.random() * 10000)}</p>
+            <p className="text-slate-500 mt-1">#{proposalNumber}</p>
           </div>
           <div className="text-right flex items-start gap-4 justify-end">
             {companyInfo?.companyLogo && (
@@ -438,12 +448,12 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
           data-testid="footer-powered-by"
           className="mt-8 pt-6 border-t border-slate-100 text-center"
         >
-          <a 
+          <Link 
             href="/"
             className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
           >
             Powered by <span className="font-semibold">ScopeGen</span>
-          </a>
+          </Link>
           <p className="text-[10px] text-slate-300 mt-1">
             Professional proposals in seconds
           </p>

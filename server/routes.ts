@@ -3,7 +3,6 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertProposalSchema, insertCancellationFeedbackSchema } from "@shared/schema";
-import { fromZodError } from "zod-validation-error";
 import { stripeService } from "./stripeService";
 import { getStripePublishableKey } from "./stripeClient";
 import { emailService } from "./emailService";
@@ -739,8 +738,10 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       });
 
       if (!validationResult.success) {
-        const error = fromZodError(validationResult.error);
-        return res.status(400).json({ message: error.message });
+        const message =
+          validationResult.error.issues?.[0]?.message ??
+          validationResult.error.message;
+        return res.status(400).json({ message });
       }
 
       const proposal = await storage.createProposal(validationResult.data);
@@ -1166,8 +1167,10 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       });
 
       if (!validationResult.success) {
-        const error = fromZodError(validationResult.error);
-        return res.status(400).json({ message: error.message });
+        const message =
+          validationResult.error.issues?.[0]?.message ??
+          validationResult.error.message;
+        return res.status(400).json({ message });
       }
 
       await storage.saveCancellationFeedback(validationResult.data);

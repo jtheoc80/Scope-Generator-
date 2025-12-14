@@ -1,4 +1,4 @@
-name: NodeJS with Webpack
+name: Node.js CI
 
 on:
   push:
@@ -12,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [18.x, 20.x, 22.x]
+        node-version: [20.x, 22.x]
 
     steps:
     - uses: actions/checkout@v4
@@ -21,8 +21,23 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ matrix.node-version }}
+        cache: npm
+
+    - name: Install
+      run: npm ci
+
+    - name: Lint
+      run: npm run lint
 
     - name: Build
-      run: |
-        npm install
-        npx webpack
+      run: npm run build
+      env:
+        # Dummy values so build doesn't fail on missing env at compile time.
+        DATABASE_URL: postgresql://user:password@localhost:5432/database?sslmode=disable
+        STRIPE_SECRET_KEY: sk_test_dummy
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_dummy
+        STRIPE_WEBHOOK_SECRET: whsec_dummy
+        ONEBUILD_EXTERNAL_KEY: dummy
+        MAILGUN_API_KEY: dummy
+        MAILGUN_DOMAIN: example.com
+        NEXT_PUBLIC_GA_MEASUREMENT_ID: G-TEST1234
