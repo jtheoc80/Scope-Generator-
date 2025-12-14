@@ -740,7 +740,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       if (!validationResult.success) {
         const message =
           validationResult.error.issues?.[0]?.message ??
-          validationResult.error.message;
+          validationResult.error.message ??
+          "Invalid proposal data";
         return res.status(400).json({ message });
       }
 
