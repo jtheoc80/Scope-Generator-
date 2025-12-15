@@ -818,7 +818,7 @@ export default function Dashboard() {
                                   data-testid={`button-adjust-price-${proposal.id}`}
                                 >
                                   <DollarSign className="w-4 h-4 mr-2" />
-                                  Adjust Price
+                                  {t.dashboard.adjustPrice}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem 
                                   onClick={() => setEmailModalData({ 
@@ -843,7 +843,7 @@ export default function Dashboard() {
                                     className="text-primary"
                                   >
                                     <CreditCard className="w-4 h-4 mr-2" />
-                                    Request Payment
+                                    {t.dashboard.requestPayment}
                                   </DropdownMenuItem>
                                 )}
                                 {proposal.status === 'accepted' && !proposal.contractorSignature && (
@@ -858,7 +858,7 @@ export default function Dashboard() {
                                       className="text-green-600 font-medium"
                                     >
                                       <Pen className="w-4 h-4 mr-2" />
-                                      Countersign Proposal
+                                      {t.dashboard.countersignProposal}
                                     </DropdownMenuItem>
                                   </>
                                 )}
@@ -962,7 +962,7 @@ export default function Dashboard() {
           proposalId={countersignModalData.id}
           clientName={countersignModalData.clientName}
           onSuccess={() => {
-            setSuccessMessage("Proposal countersigned! Client has been notified.");
+            setSuccessMessage(t.dashboard.proposalCountersigned);
             setIsSuccess(true);
             fetch('/api/proposals', { credentials: 'include' })
               .then(res => res.json())
@@ -983,7 +983,7 @@ export default function Dashboard() {
           existingPaymentLink={paymentModalData.paymentLinkUrl}
           existingDepositPercentage={paymentModalData.depositPercentage}
           onSuccess={() => {
-            setSuccessMessage("Payment link created!");
+            setSuccessMessage(t.dashboard.paymentLinkCreatedSuccess);
             setIsSuccess(true);
             fetch('/api/proposals', { credentials: 'include' })
               .then(res => res.json())
