@@ -1,430 +1,145 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <!-- Core Pages -->
   <url>
     <loc>https://scopegenerator.com/</loc>
     <xhtml:link rel="alternate" hreflang="en" href="https://scopegenerator.com/" />
     <xhtml:link rel="alternate" hreflang="es" href="https://scopegenerator.com/?lang=es" />
-    <lastmod>2025-12-08</lastmod>
+    <lastmod>2025-12-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://scopegenerator.com/app</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://scopegenerator.com/app" />
-    <xhtml:link rel="alternate" hreflang="es" href="https://scopegenerator.com/app?lang=es" />
-    <lastmod>2025-12-08</lastmod>
+    <lastmod>2025-12-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://scopegenerator.com/about</loc>
-    <lastmod>2025-12-08</lastmod>
+    <lastmod>2025-12-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://scopegenerator.com/dashboard</loc>
-    <lastmod>2025-12-08</lastmod>
+    <lastmod>2025-12-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://scopegenerator.com/settings</loc>
-    <lastmod>2025-12-08</lastmod>
+    <lastmod>2025-12-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://scopegenerator.com/pricing-insights</loc>
-    <lastmod>2025-12-08</lastmod>
+    <lastmod>2025-12-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
-  
-  <!-- Trade-Specific Landing Pages -->
   <url>
-    <loc>https://scopegenerator.com/bathroom-remodeling-proposal</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://scopegenerator.com/bathroom-remodeling-proposal" />
-    <xhtml:link rel="alternate" hreflang="es" href="https://scopegenerator.com/bathroom-remodeling-proposal?lang=es" />
-    <lastmod>2025-12-08</lastmod>
+    <loc>https://scopegenerator.com/market-pricing</loc>
+    <lastmod>2025-12-14</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://scopegenerator.com/kitchen-remodeling-proposal</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://scopegenerator.com/kitchen-remodeling-proposal" />
-    <xhtml:link rel="alternate" hreflang="es" href="https://scopegenerator.com/kitchen-remodeling-proposal?lang=es" />
-    <lastmod>2025-12-08</lastmod>
+    <loc>https://scopegenerator.com/crew</loc>
+    <lastmod>2025-12-14</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
+    <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://scopegenerator.com/roofing-proposal</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://scopegenerator.com/roofing-proposal" />
-    <xhtml:link rel="alternate" hreflang="es" href="https://scopegenerator.com/roofing-proposal?lang=es" />
-    <lastmod>2025-12-08</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
+    <loc>https://scopegenerator.com/privacy</loc>
+    <lastmod>2025-12-14</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://scopegenerator.com/painting-proposal</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://scopegenerator.com/painting-proposal" />
-    <xhtml:link rel="alternate" hreflang="es" href="https://scopegenerator.com/painting-proposal?lang=es" />
-    <lastmod>2025-12-08</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
+    <loc>https://scopegenerator.com/terms</loc>
+    <lastmod>2025-12-14</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
   </url>
-  <url>
-    <loc>https://scopegenerator.com/landscaping-proposal</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://scopegenerator.com/landscaping-proposal" />
-    <xhtml:link rel="alternate" hreflang="es" href="https://scopegenerator.com/landscaping-proposal?lang=es" />
-    <lastmod>2025-12-08</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://scopegenerator.com/hvac-proposal</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://scopegenerator.com/hvac-proposal" />
-    <xhtml:link rel="alternate" hreflang="es" href="https://scopegenerator.com/hvac-proposal?lang=es" />
-    <lastmod>2025-12-08</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://scopegenerator.com/plumbing-proposal</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://scopegenerator.com/plumbing-proposal" />
-    <xhtml:link rel="alternate" hreflang="es" href="https://scopegenerator.com/plumbing-proposal?lang=es" />
-    <lastmod>2025-12-08</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://scopegenerator.com/electrical-proposal</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://scopegenerator.com/electrical-proposal" />
-    <xhtml:link rel="alternate" hreflang="es" href="https://scopegenerator.com/electrical-proposal?lang=es" />
-    <lastmod>2025-12-08</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://scopegenerator.com/flooring-proposal</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://scopegenerator.com/flooring-proposal" />
-    <xhtml:link rel="alternate" hreflang="es" href="https://scopegenerator.com/flooring-proposal?lang=es" />
-    <lastmod>2025-12-08</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  
-  <!-- Location + Trade Landing Pages (Northern Markets) -->
-  <!-- New York -->
-  <url><loc>https://scopegenerator.com/new-york-bathroom-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/new-york-kitchen-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/new-york-roofing-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/new-york-painting-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/new-york-landscaping-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/new-york-hvac-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/new-york-plumbing-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/new-york-electrical-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/new-york-flooring-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  
-  <!-- Chicago -->
-  <url><loc>https://scopegenerator.com/chicago-bathroom-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/chicago-kitchen-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/chicago-roofing-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/chicago-painting-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/chicago-landscaping-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/chicago-hvac-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/chicago-plumbing-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/chicago-electrical-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/chicago-flooring-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  
-  <!-- Boston -->
-  <url><loc>https://scopegenerator.com/boston-bathroom-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/boston-kitchen-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/boston-roofing-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/boston-painting-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/boston-landscaping-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/boston-hvac-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/boston-plumbing-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/boston-electrical-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/boston-flooring-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  
-  <!-- Philadelphia -->
-  <url><loc>https://scopegenerator.com/philadelphia-bathroom-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/philadelphia-kitchen-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/philadelphia-roofing-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/philadelphia-painting-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/philadelphia-landscaping-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/philadelphia-hvac-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/philadelphia-plumbing-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/philadelphia-electrical-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/philadelphia-flooring-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  
-  <!-- Detroit -->
-  <url><loc>https://scopegenerator.com/detroit-bathroom-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/detroit-kitchen-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/detroit-roofing-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/detroit-painting-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/detroit-landscaping-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/detroit-hvac-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/detroit-plumbing-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/detroit-electrical-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/detroit-flooring-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  
-  <!-- Location + Trade Landing Pages (Southern Markets) -->
-  <!-- Houston -->
-  <url><loc>https://scopegenerator.com/houston-bathroom-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/houston-kitchen-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/houston-roofing-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/houston-painting-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/houston-landscaping-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/houston-hvac-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/houston-plumbing-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/houston-electrical-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/houston-flooring-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  
-  <!-- Dallas -->
-  <url><loc>https://scopegenerator.com/dallas-bathroom-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/dallas-kitchen-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/dallas-roofing-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/dallas-painting-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/dallas-landscaping-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/dallas-hvac-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/dallas-plumbing-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/dallas-electrical-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/dallas-flooring-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  
-  <!-- Atlanta -->
-  <url><loc>https://scopegenerator.com/atlanta-bathroom-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/atlanta-kitchen-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/atlanta-roofing-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/atlanta-painting-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/atlanta-landscaping-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/atlanta-hvac-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/atlanta-plumbing-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/atlanta-electrical-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/atlanta-flooring-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  
-  <!-- Miami -->
-  <url><loc>https://scopegenerator.com/miami-bathroom-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/miami-kitchen-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/miami-roofing-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/miami-painting-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/miami-landscaping-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/miami-hvac-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/miami-plumbing-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/miami-electrical-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/miami-flooring-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  
-  <!-- Phoenix -->
-  <url><loc>https://scopegenerator.com/phoenix-bathroom-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/phoenix-kitchen-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/phoenix-roofing-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/phoenix-painting-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/phoenix-landscaping-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/phoenix-hvac-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/phoenix-plumbing-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/phoenix-electrical-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://scopegenerator.com/phoenix-flooring-proposal</loc><lastmod>2025-12-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  
-  <!-- Free Tools (Linkable Assets) -->
+
+  <!-- Free Tools -->
   <url>
     <loc>https://scopegenerator.com/calculator</loc>
-    <lastmod>2025-12-11</lastmod>
+    <lastmod>2025-12-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
-  
-  <!-- Competitor Comparison Pages (New VS format) -->
+
+  <!-- Competitor Comparison Pages -->
   <url>
     <loc>https://scopegenerator.com/vs/buildertrend</loc>
-    <lastmod>2025-12-11</lastmod>
+    <lastmod>2025-12-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://scopegenerator.com/vs/jobber</loc>
-    <lastmod>2025-12-11</lastmod>
+    <lastmod>2025-12-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://scopegenerator.com/vs/houzz-pro</loc>
-    <lastmod>2025-12-11</lastmod>
+    <lastmod>2025-12-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
-  
-  <!-- Competitor Comparison Pages (Legacy) -->
-  <url>
-    <loc>https://scopegenerator.com/compare/jobnimbus</loc>
-    <lastmod>2025-12-08</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://scopegenerator.com/compare/buildbook</loc>
-    <lastmod>2025-12-08</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://scopegenerator.com/compare/joist</loc>
-    <lastmod>2025-12-08</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://scopegenerator.com/compare/houzz-pro</loc>
-    <lastmod>2025-12-08</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://scopegenerator.com/compare/companycam</loc>
-    <lastmod>2025-12-08</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://scopegenerator.com/compare/housecall-pro</loc>
-    <lastmod>2025-12-08</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  
+
   <!-- Blog Pages -->
   <url>
     <loc>https://scopegenerator.com/blog</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://scopegenerator.com/blog" />
-    <xhtml:link rel="alternate" hreflang="es" href="https://scopegenerator.com/blog?lang=es" />
-    <lastmod>2025-12-08</lastmod>
+    <lastmod>2025-12-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://scopegenerator.com/blog/how-to-write-bathroom-remodel-proposal</loc>
-    <lastmod>2025-12-08</lastmod>
+    <lastmod>2025-12-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://scopegenerator.com/blog/contractor-pricing-guide-2025</loc>
-    <lastmod>2025-12-08</lastmod>
+    <lastmod>2025-12-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://scopegenerator.com/blog/scope-of-work-template-examples</loc>
-    <lastmod>2025-12-08</lastmod>
+    <lastmod>2025-12-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://scopegenerator.com/blog/win-more-contractor-bids</loc>
-    <lastmod>2025-12-08</lastmod>
+    <lastmod>2025-12-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://scopegenerator.com/blog/bathroom-remodeling-proposal</loc>
-    <lastmod>2025-12-11</lastmod>
+    <lastmod>2025-12-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://scopegenerator.com/blog/roofing-proposal-checklist</loc>
-    <lastmod>2025-12-11</lastmod>
+    <lastmod>2025-12-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://scopegenerator.com/blog/kitchen-remodel-scope-of-work</loc>
-    <lastmod>2025-12-11</lastmod>
+    <lastmod>2025-12-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
-  </url>
-  
-  <!-- Spanish City Landing Pages (Hispanic Market Focus) -->
-  <url>
-    <loc>https://scopegenerator.com/es/houston</loc>
-    <xhtml:link rel="alternate" hreflang="es" href="https://scopegenerator.com/es/houston" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://scopegenerator.com/" />
-    <lastmod>2025-12-09</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://scopegenerator.com/es/miami</loc>
-    <xhtml:link rel="alternate" hreflang="es" href="https://scopegenerator.com/es/miami" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://scopegenerator.com/" />
-    <lastmod>2025-12-09</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://scopegenerator.com/es/dallas</loc>
-    <xhtml:link rel="alternate" hreflang="es" href="https://scopegenerator.com/es/dallas" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://scopegenerator.com/" />
-    <lastmod>2025-12-09</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://scopegenerator.com/es/phoenix</loc>
-    <xhtml:link rel="alternate" hreflang="es" href="https://scopegenerator.com/es/phoenix" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://scopegenerator.com/" />
-    <lastmod>2025-12-09</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://scopegenerator.com/es/los-angeles</loc>
-    <xhtml:link rel="alternate" hreflang="es" href="https://scopegenerator.com/es/los-angeles" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://scopegenerator.com/" />
-    <lastmod>2025-12-09</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://scopegenerator.com/es/san-antonio</loc>
-    <xhtml:link rel="alternate" hreflang="es" href="https://scopegenerator.com/es/san-antonio" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://scopegenerator.com/" />
-    <lastmod>2025-12-09</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://scopegenerator.com/es/san-diego</loc>
-    <xhtml:link rel="alternate" hreflang="es" href="https://scopegenerator.com/es/san-diego" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://scopegenerator.com/" />
-    <lastmod>2025-12-09</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://scopegenerator.com/es/chicago</loc>
-    <xhtml:link rel="alternate" hreflang="es" href="https://scopegenerator.com/es/chicago" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://scopegenerator.com/" />
-    <lastmod>2025-12-09</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://scopegenerator.com/es/las-vegas</loc>
-    <xhtml:link rel="alternate" hreflang="es" href="https://scopegenerator.com/es/las-vegas" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://scopegenerator.com/" />
-    <lastmod>2025-12-09</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://scopegenerator.com/es/san-jose</loc>
-    <xhtml:link rel="alternate" hreflang="es" href="https://scopegenerator.com/es/san-jose" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://scopegenerator.com/" />
-    <lastmod>2025-12-09</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
   </url>
 </urlset>

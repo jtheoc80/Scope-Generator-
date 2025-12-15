@@ -164,10 +164,10 @@ function InstantPriceCalculator() {
 
   return (
     <div className="relative">
-      <div className="absolute -inset-4 bg-gradient-to-br from-secondary/30 via-orange-400/20 to-amber-500/30 rounded-2xl blur-2xl -z-10"></div>
+      <div className="absolute -inset-4 bg-gradient-to-br from-orange-500/30 via-orange-400/20 to-amber-500/30 rounded-2xl blur-2xl -z-10"></div>
       <div className="bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden">
         <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-4 flex items-center gap-3">
-          <div className="w-10 h-10 bg-secondary rounded-lg flex items-center justify-center">
+          <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
             <Calculator className="w-5 h-5 text-slate-900" />
           </div>
           <div>
@@ -183,7 +183,7 @@ function InstantPriceCalculator() {
               data-testid="select-trade"
               value={selectedTrade}
               onChange={(e) => handleTradeChange(e.target.value)}
-              className="w-full h-11 px-3 rounded-lg border border-slate-300 bg-white text-slate-900 focus:ring-2 focus:ring-secondary focus:border-secondary transition-all"
+              className="w-full h-11 px-3 rounded-lg border border-slate-300 bg-white text-slate-900 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
             >
               <option value="">Select a trade...</option>
               {calculatorTrades.map((trade) => (
@@ -199,7 +199,7 @@ function InstantPriceCalculator() {
               value={selectedJobType}
               onChange={(e) => setSelectedJobType(e.target.value)}
               disabled={!selectedTrade}
-              className="w-full h-11 px-3 rounded-lg border border-slate-300 bg-white text-slate-900 focus:ring-2 focus:ring-secondary focus:border-secondary transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full h-11 px-3 rounded-lg border border-slate-300 bg-white text-slate-900 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">Select job type...</option>
               {trade?.jobTypes.map((job) => (
@@ -219,7 +219,7 @@ function InstantPriceCalculator() {
                   disabled={!selectedJobType}
                   className={`py-2.5 px-3 rounded-lg border-2 transition-all text-center disabled:opacity-50 disabled:cursor-not-allowed ${
                     selectedSize === key
-                      ? "border-secondary bg-secondary/10 text-slate-900 font-bold"
+                      ? "border-orange-500 bg-orange-500/10 text-slate-900 font-bold"
                       : "border-slate-200 hover:border-slate-300 text-slate-600"
                   }`}
                 >
@@ -238,15 +238,15 @@ function InstantPriceCalculator() {
           }`}>
             {isCalculating ? (
               <div className="flex items-center justify-center gap-3 py-2">
-                <Loader2 className="w-5 h-5 text-secondary animate-spin" />
+                <Loader2 className="w-5 h-5 text-orange-500 animate-spin" />
                 <span className="text-slate-600 font-medium">Calculating estimate...</span>
               </div>
             ) : showPrice ? (
               <div className="text-center animate-in fade-in zoom-in duration-500">
                 <div className="flex items-center justify-center gap-2 mb-2">
-                  <Sparkles className="w-4 h-4 text-secondary" />
+                  <Sparkles className="w-4 h-4 text-orange-500" />
                   <span className="text-sm font-medium text-green-700">Estimated Price Range</span>
-                  <Sparkles className="w-4 h-4 text-secondary" />
+                  <Sparkles className="w-4 h-4 text-orange-500" />
                 </div>
                 <div className="text-2xl sm:text-3xl font-heading font-bold text-slate-900">
                   {formatPrice(animatedLow)} – {formatPrice(animatedHigh)}
@@ -268,7 +268,7 @@ function InstantPriceCalculator() {
             data-testid="button-get-full-proposal"
             className={`block w-full text-center py-3 rounded-lg font-bold transition-all ${
               showPrice
-                ? "bg-secondary text-slate-900 hover:bg-secondary/90 shadow-lg hover:shadow-xl hover:scale-[1.02]"
+                ? "bg-orange-500 text-white hover:bg-orange-600 shadow-lg hover:shadow-xl hover:scale-[1.02]"
                 : "bg-slate-200 text-slate-500 cursor-not-allowed pointer-events-none"
             }`}
             onClick={() => {
@@ -333,7 +333,7 @@ export default function Home() {
           <div className="space-y-6 animate-in slide-in-from-left duration-700">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-heading font-bold leading-[1.1] tracking-tight">
               {t.home.heroTitle1} <br/>
-              <span className="text-secondary">{t.home.heroTitle2}</span>
+              <span className="text-orange-500">{t.home.heroTitle2}</span>
             </h1>
             
             <p className="text-base sm:text-lg text-slate-300 max-w-lg leading-relaxed">
@@ -344,7 +344,7 @@ export default function Home() {
               <Link 
                 href="/app" 
                 data-testid="button-try-free-proposal"
-                className="inline-flex items-center justify-center h-12 sm:h-14 px-6 sm:px-8 rounded-md bg-secondary text-slate-900 font-bold text-base sm:text-lg hover:bg-secondary/90 transition-all hover:scale-105 shadow-[0_0_20px_rgba(249,115,22,0.3)] whitespace-nowrap"
+                className="inline-flex items-center justify-center h-12 sm:h-14 px-6 sm:px-8 rounded-md bg-orange-500 text-white font-bold text-base sm:text-lg hover:bg-orange-600 transition-all hover:scale-105 shadow-[0_0_20px_rgba(249,115,22,0.3)] whitespace-nowrap"
               >
                 Try a Free Proposal
                 <ArrowRight className="ml-2 w-5 h-5" />
@@ -371,17 +371,17 @@ export default function Home() {
         <div className="container mx-auto px-4 py-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-10 max-w-5xl mx-auto">
             <div className="flex items-center justify-center gap-4 text-white" data-testid="stat-proposals">
-              <Users className="w-6 h-6 text-secondary flex-shrink-0" />
+              <Users className="w-6 h-6 text-orange-500 flex-shrink-0" />
               <span className="font-bold text-xl">500+</span>
               <span className="text-slate-300 text-base">Proposals Generated</span>
             </div>
             <div className="flex items-center justify-center gap-4 text-white" data-testid="stat-rating">
-              <Star className="w-6 h-6 text-secondary fill-secondary flex-shrink-0" />
+              <Star className="w-6 h-6 text-orange-500 fill-orange-500 flex-shrink-0" />
               <span className="font-bold text-xl">4.9★</span>
               <span className="text-slate-300 text-base">Contractor Rating</span>
             </div>
             <div className="flex items-center justify-center gap-4 text-white" data-testid="stat-won-jobs">
-              <TrendingUp className="w-6 h-6 text-secondary flex-shrink-0" />
+              <TrendingUp className="w-6 h-6 text-orange-500 flex-shrink-0" />
               <span className="font-bold text-xl">$2.5M+</span>
               <span className="text-slate-300 text-base">in Won Jobs</span>
             </div>
@@ -403,8 +403,12 @@ export default function Home() {
                 </p>
               </div>
               <div className="order-1 md:order-2">
-                <div className="w-full h-64 rounded-xl shadow-lg bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center">
-                  <Hammer className="w-16 h-16 text-slate-400" />
+                <div className="w-full h-72 md:h-80 rounded-xl shadow-lg overflow-hidden">
+                  <img 
+                    src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=600&h=400&fit=crop&crop=center"
+                    alt="Contractor working on paperwork"
+                    className="w-full h-full object-cover"
+                  />
                 </div>
               </div>
             </div>
@@ -443,7 +447,7 @@ export default function Home() {
               <Link 
                 href="/app" 
                 data-testid="button-bathroom-proposal-cta"
-                className="inline-flex items-center justify-center h-14 px-10 rounded-md bg-primary text-white font-bold text-lg hover:bg-primary/90 transition-all"
+                className="inline-flex items-center justify-center h-14 px-10 rounded-md bg-slate-900 text-white font-bold text-lg hover:bg-slate-800 transition-all"
               >
                 Create your first proposal free
                 <ArrowRight className="ml-2 w-5 h-5" />
@@ -507,36 +511,36 @@ export default function Home() {
       </section>
 
       {/* How ScopeGen Works - Enhanced */}
-      <section id="how-it-works" className="py-20 sm:py-28 bg-primary" data-testid="section-how-it-works">
+      <section id="how-it-works" className="py-20 sm:py-28 bg-slate-900" data-testid="section-how-it-works">
         <div className="max-w-[95vw] xl:max-w-[90vw] 2xl:max-w-[85vw] mx-auto px-4 sm:px-8">
           <div className="text-center mb-12 sm:mb-20">
             <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-heading font-bold text-white mb-4 sm:mb-6">
               How ScopeGen Works
             </h2>
-            <p className="text-primary-foreground/70 text-lg sm:text-xl lg:text-2xl">
+            <p className="text-slate-300 text-lg sm:text-xl lg:text-2xl">
               Three simple steps to create proposals that win jobs
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 lg:gap-16">
             <div className="text-center bg-white/10 backdrop-blur-sm rounded-2xl p-8 lg:p-12" data-testid="step-1">
-              <div className="text-6xl lg:text-8xl font-heading font-bold text-secondary mb-6">1</div>
+              <div className="text-6xl lg:text-8xl font-heading font-bold text-orange-500 mb-6">1</div>
               <h3 className="text-xl lg:text-2xl font-bold text-white mb-4">Pick Your Trade</h3>
-              <p className="text-primary-foreground/70 text-base lg:text-lg leading-relaxed">
+              <p className="text-slate-300 text-base lg:text-lg leading-relaxed">
                 Select your trade — bathroom, kitchen, roofing, HVAC, plumbing, electrical — and choose the job type.
               </p>
             </div>
             <div className="text-center bg-white/10 backdrop-blur-sm rounded-2xl p-8 lg:p-12" data-testid="step-2">
-              <div className="text-6xl lg:text-8xl font-heading font-bold text-secondary mb-6">2</div>
+              <div className="text-6xl lg:text-8xl font-heading font-bold text-orange-500 mb-6">2</div>
               <h3 className="text-xl lg:text-2xl font-bold text-white mb-4">Answer Quick Questions</h3>
-              <p className="text-primary-foreground/70 text-base lg:text-lg leading-relaxed">
+              <p className="text-slate-300 text-base lg:text-lg leading-relaxed">
                 Project size, materials, and add-ons. Takes about 30 seconds.
               </p>
             </div>
             <div className="text-center bg-white/10 backdrop-blur-sm rounded-2xl p-8 lg:p-12" data-testid="step-3">
-              <div className="text-6xl lg:text-8xl font-heading font-bold text-secondary mb-6">3</div>
+              <div className="text-6xl lg:text-8xl font-heading font-bold text-orange-500 mb-6">3</div>
               <h3 className="text-xl lg:text-2xl font-bold text-white mb-4">Send Your Proposal</h3>
-              <p className="text-primary-foreground/70 text-base lg:text-lg leading-relaxed">
+              <p className="text-slate-300 text-base lg:text-lg leading-relaxed">
                 Get a professional PDF or email it directly to your customer.
               </p>
             </div>
@@ -544,15 +548,15 @@ export default function Home() {
 
           <div className="mt-12 sm:mt-16 flex flex-wrap justify-center gap-8 sm:gap-12 lg:gap-16 text-white/80">
             <div className="flex items-center gap-3">
-              <Clock className="w-5 h-5 lg:w-6 lg:h-6 text-secondary" />
+              <Clock className="w-5 h-5 lg:w-6 lg:h-6 text-orange-500" />
               <span className="text-base lg:text-lg">{t.home.saveHours}</span>
             </div>
             <div className="flex items-center gap-3">
-              <FileCheck className="w-5 h-5 lg:w-6 lg:h-6 text-secondary" />
+              <FileCheck className="w-5 h-5 lg:w-6 lg:h-6 text-orange-500" />
               <span className="text-base lg:text-lg">{t.home.lookLikePro}</span>
             </div>
             <div className="flex items-center gap-3">
-              <DollarSign className="w-5 h-5 lg:w-6 lg:h-6 text-secondary" />
+              <DollarSign className="w-5 h-5 lg:w-6 lg:h-6 text-orange-500" />
               <span className="text-base lg:text-lg">{t.home.closeDealsFaster}</span>
             </div>
           </div>
@@ -561,7 +565,7 @@ export default function Home() {
             <Link 
               href="/app"
               data-testid="button-create-first-proposal-how"
-              className="inline-flex items-center justify-center h-14 lg:h-16 px-10 lg:px-14 rounded-md bg-secondary text-slate-900 font-bold text-lg lg:text-xl hover:bg-white transition-all"
+              className="inline-flex items-center justify-center h-14 lg:h-16 px-10 lg:px-14 rounded-md bg-orange-500 text-white font-bold text-lg lg:text-xl hover:bg-orange-600 transition-all"
             >
               Create Your First Proposal
               <ArrowRight className="ml-2 w-5 h-5 lg:w-6 lg:h-6" />
@@ -654,14 +658,14 @@ export default function Home() {
 
           {/* Full Sample Proposal Preview */}
           <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden">
-            <div className="bg-primary p-4 sm:p-6 text-white">
+            <div className="bg-slate-900 p-4 sm:p-6 text-white">
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0">
                 <div>
                   <h3 className="text-xl sm:text-2xl font-heading font-bold">{t.home.bathroomRemodelProposal}</h3>
-                  <p className="text-primary-foreground/70 mt-1 text-sm sm:text-base">{t.home.preparedFor} Sarah Johnson</p>
+                  <p className="text-slate-300 mt-1 text-sm sm:text-base">{t.home.preparedFor} Sarah Johnson</p>
                 </div>
                 <div className="sm:text-right">
-                  <div className="text-xs sm:text-sm text-primary-foreground/60">{t.home.proposalDate}</div>
+                  <div className="text-xs sm:text-sm text-slate-400">{t.home.proposalDate}</div>
                   <div className="font-medium text-sm sm:text-base">December 6, 2025</div>
                 </div>
               </div>
@@ -681,7 +685,7 @@ export default function Home() {
 
               <div>
                 <h4 className="font-bold text-slate-900 mb-3 flex items-center gap-2">
-                  <FileCheck className="w-5 h-5 text-secondary" />
+                  <FileCheck className="w-5 h-5 text-orange-500" />
                   {t.home.scopeOfWork}
                 </h4>
                 <div className="space-y-2">
@@ -733,7 +737,7 @@ export default function Home() {
               <Link 
                 href="/app" 
                 data-testid="button-create-your-own"
-                className="inline-flex items-center justify-center h-11 sm:h-12 px-6 sm:px-8 rounded-md bg-secondary text-slate-900 font-bold text-sm sm:text-base hover:bg-secondary/90 transition-all hover:scale-105"
+                className="inline-flex items-center justify-center h-11 sm:h-12 px-6 sm:px-8 rounded-md bg-orange-500 text-white font-bold text-sm sm:text-base hover:bg-orange-600 transition-all hover:scale-105"
               >
                 {t.home.createYourOwn}
                 <ArrowRight className="ml-2 w-4 h-4 sm:w-5 sm:h-5" />
@@ -789,27 +793,27 @@ export default function Home() {
             </div>
 
             {/* Pro - Most Popular */}
-            <div className="bg-primary p-8 sm:p-10 lg:p-12 rounded-2xl shadow-xl relative overflow-hidden flex flex-col">
-              <div className="absolute top-5 right-5 lg:top-6 lg:right-6 bg-secondary text-sm lg:text-base font-bold px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-slate-900">{t.home.mostPopular}</div>
+            <div className="bg-slate-900 p-8 sm:p-10 lg:p-12 rounded-2xl shadow-xl relative overflow-hidden flex flex-col">
+              <div className="absolute top-5 right-5 lg:top-6 lg:right-6 bg-orange-500 text-sm lg:text-base font-bold px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-white">{t.home.mostPopular}</div>
               <h3 className="text-2xl lg:text-3xl font-bold text-white mb-3">{t.home.proPlan}</h3>
-              <p className="text-primary-foreground/70 text-base lg:text-lg mb-8">{t.home.proDesc}</p>
+              <p className="text-slate-300 text-base lg:text-lg mb-8">{t.home.proDesc}</p>
               <div className="text-5xl lg:text-6xl font-heading font-bold text-white mb-2">{t.home.proPrice}<span className="text-xl lg:text-2xl font-normal">{t.home.proPriceLabel}</span></div>
-              <p className="text-primary-foreground/60 text-base lg:text-lg mb-8">{t.home.proFeature2}</p>
+              <p className="text-slate-400 text-base lg:text-lg mb-8">{t.home.proFeature2}</p>
               <ul className="space-y-4 lg:space-y-5 mb-10 flex-grow">
                 <li className="flex items-center gap-3 text-base lg:text-lg text-white">
-                  <CheckCircle2 className="w-5 h-5 lg:w-6 lg:h-6 text-secondary flex-shrink-0" /> {t.home.proFeature1}
+                  <CheckCircle2 className="w-5 h-5 lg:w-6 lg:h-6 text-orange-500 flex-shrink-0" /> {t.home.proFeature1}
                 </li>
                 <li className="flex items-center gap-3 text-base lg:text-lg text-white">
-                  <CheckCircle2 className="w-5 h-5 lg:w-6 lg:h-6 text-secondary flex-shrink-0" /> {t.home.proFeature3}
+                  <CheckCircle2 className="w-5 h-5 lg:w-6 lg:h-6 text-orange-500 flex-shrink-0" /> {t.home.proFeature3}
                 </li>
                 <li className="flex items-center gap-3 text-base lg:text-lg text-white">
-                  <CheckCircle2 className="w-5 h-5 lg:w-6 lg:h-6 text-secondary flex-shrink-0" /> {t.home.proFeature4}
+                  <CheckCircle2 className="w-5 h-5 lg:w-6 lg:h-6 text-orange-500 flex-shrink-0" /> {t.home.proFeature4}
                 </li>
               </ul>
               <button 
                 onClick={() => handleCheckout('pro')}
                 disabled={checkoutLoading === 'pro'}
-                className="block w-full text-center py-4 lg:py-5 bg-secondary text-slate-900 rounded-xl font-bold text-lg lg:text-xl hover:bg-secondary/90 transition-colors disabled:opacity-50"
+                className="block w-full text-center py-4 lg:py-5 bg-orange-500 text-white rounded-xl font-bold text-lg lg:text-xl hover:bg-orange-600 transition-colors disabled:opacity-50"
                 data-testid="button-subscribe-pro"
               >
                 {checkoutLoading === 'pro' ? (
@@ -823,8 +827,8 @@ export default function Home() {
             </div>
 
             {/* Crew - For Teams */}
-            <div className="bg-white p-8 sm:p-10 lg:p-12 rounded-2xl border-2 border-primary shadow-sm relative flex flex-col">
-              <div className="absolute top-5 right-5 lg:top-6 lg:right-6 bg-primary text-white text-sm lg:text-base font-bold px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg">{t.home.forTeams}</div>
+            <div className="bg-white p-8 sm:p-10 lg:p-12 rounded-2xl border-2 border-slate-900 shadow-sm relative flex flex-col">
+              <div className="absolute top-5 right-5 lg:top-6 lg:right-6 bg-slate-900 text-white text-sm lg:text-base font-bold px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg">{t.home.forTeams}</div>
               <h3 className="text-2xl lg:text-3xl font-bold text-slate-900 mb-3">{t.home.crewPlan}</h3>
               <p className="text-muted-foreground text-base lg:text-lg mb-8">{t.home.crewDesc}</p>
               <div className="text-5xl lg:text-6xl font-heading font-bold text-slate-900 mb-2">{t.home.crewPrice}<span className="text-xl lg:text-2xl font-normal text-muted-foreground">{t.home.crewPriceLabel}</span></div>
@@ -843,7 +847,7 @@ export default function Home() {
               <button 
                 onClick={() => handleCheckout('crew')}
                 disabled={checkoutLoading === 'crew'}
-                className="block w-full text-center py-4 lg:py-5 bg-primary text-white rounded-xl font-bold text-lg lg:text-xl hover:bg-primary/90 transition-colors disabled:opacity-50"
+                className="block w-full text-center py-4 lg:py-5 bg-slate-900 text-white rounded-xl font-bold text-lg lg:text-xl hover:bg-slate-800 transition-colors disabled:opacity-50"
                 data-testid="button-subscribe-crew"
               >
                 {checkoutLoading === 'crew' ? (
@@ -864,7 +868,7 @@ export default function Home() {
       </section>
 
       {/* CTA Banner */}
-      <section className="bg-primary py-12 sm:py-20">
+      <section className="bg-slate-900 py-12 sm:py-20">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-heading font-bold text-white mb-4 sm:mb-6">
             {t.home.readyToLookLikePro}
@@ -872,11 +876,11 @@ export default function Home() {
           <Link 
             href="/app" 
             data-testid="button-create-first-proposal-cta"
-            className="inline-block bg-secondary text-slate-900 font-bold text-base sm:text-lg px-8 sm:px-10 py-3 sm:py-4 rounded-md hover:bg-white hover:text-primary transition-colors shadow-lg"
+            className="inline-block bg-orange-500 text-white font-bold text-base sm:text-lg px-8 sm:px-10 py-3 sm:py-4 rounded-md hover:bg-orange-600 transition-colors shadow-lg"
           >
             {t.home.createFirstProposal}
           </Link>
-          <p className="mt-3 sm:mt-4 text-primary-foreground/60 text-xs sm:text-sm">{t.home.tryFreeThenUnlock}</p>
+          <p className="mt-3 sm:mt-4 text-slate-400 text-xs sm:text-sm">{t.home.tryFreeThenUnlock}</p>
         </div>
       </section>
     </Layout>
