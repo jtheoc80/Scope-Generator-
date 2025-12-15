@@ -789,12 +789,12 @@ export default function Home() {
             </div>
 
             {/* Pro - Most Popular */}
-            <div className="bg-primary p-8 sm:p-10 lg:p-12 rounded-2xl shadow-xl relative overflow-hidden flex flex-col">
+            <div className="bg-slate-900 p-8 sm:p-10 lg:p-12 rounded-2xl shadow-xl relative overflow-hidden flex flex-col">
               <div className="absolute top-5 right-5 lg:top-6 lg:right-6 bg-orange-500 text-sm lg:text-base font-bold px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-white">{t.home.mostPopular}</div>
               <h3 className="text-2xl lg:text-3xl font-bold text-white mb-3">{t.home.proPlan}</h3>
-              <p className="text-primary-foreground/70 text-base lg:text-lg mb-8">{t.home.proDesc}</p>
+              <p className="text-slate-300 text-base lg:text-lg mb-8">{t.home.proDesc}</p>
               <div className="text-5xl lg:text-6xl font-heading font-bold text-white mb-2">{t.home.proPrice}<span className="text-xl lg:text-2xl font-normal">{t.home.proPriceLabel}</span></div>
-              <p className="text-primary-foreground/60 text-base lg:text-lg mb-8">{t.home.proFeature2}</p>
+              <p className="text-slate-400 text-base lg:text-lg mb-8">{t.home.proFeature2}</p>
               <ul className="space-y-4 lg:space-y-5 mb-10 flex-grow">
                 <li className="flex items-center gap-3 text-base lg:text-lg text-white">
                   <CheckCircle2 className="w-5 h-5 lg:w-6 lg:h-6 text-orange-500 flex-shrink-0" /> {t.home.proFeature1}
