@@ -169,7 +169,7 @@ export default function ProDashboard() {
           <div className="container mx-auto px-4 py-6 md:py-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div className="flex items-center gap-3">
-                <div className="h-12 w-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20">
+                <div className="h-12 w-12 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20">
                   <Crown className="w-6 h-6 text-white" />
                 </div>
                 <div>
@@ -367,26 +367,26 @@ export default function ProDashboard() {
           <Card className="border-0 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <CheckCircle className="w-5 h-5 text-green-500" />
+                <CheckCircle className="w-5 h-5 text-orange-500" />
                 {t.pro.whatsIncluded}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50">
-                  <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-orange-50">
+                  <CheckCircle className="w-5 h-5 text-orange-500 flex-shrink-0" />
                   <span className="text-slate-700">{t.pro.proposalsPerMonth}</span>
                 </div>
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50">
-                  <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-orange-50">
+                  <CheckCircle className="w-5 h-5 text-orange-500 flex-shrink-0" />
                   <span className="text-slate-700">{t.pro.unlimitedMarketPricing}</span>
                 </div>
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50">
-                  <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-orange-50">
+                  <CheckCircle className="w-5 h-5 text-orange-500 flex-shrink-0" />
                   <span className="text-slate-700">{t.pro.pricingAnalytics}</span>
                 </div>
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50">
-                  <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-orange-50">
+                  <CheckCircle className="w-5 h-5 text-orange-500 flex-shrink-0" />
                   <span className="text-slate-700">{t.pro.prioritySupport}</span>
                 </div>
               </div>
