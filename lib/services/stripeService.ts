@@ -1,11 +1,16 @@
-import { getUncachableStripeClient, createStripeClientWithKey } from './stripeClient';
+import { getStripeClient, createStripeClientWithKey } from './stripeClient';
 import { db } from './db';
 import { sql } from 'drizzle-orm';
 import type Stripe from 'stripe';
 
+// Helper to get Stripe client (sync version for compatibility)
+function getUncachableStripeClient(): Stripe {
+  return getStripeClient();
+}
+
 export class StripeService {
   async createCustomer(email: string, userId: string) {
-    const stripe = await getUncachableStripeClient();
+    const stripe = getUncachableStripeClient();
     return await stripe.customers.create({
       email,
       metadata: { userId },
@@ -13,7 +18,7 @@ export class StripeService {
   }
 
   async createCheckoutSession(customerId: string, priceId: string, successUrl: string, cancelUrl: string, userId: string) {
-    const stripe = await getUncachableStripeClient();
+    const stripe = getUncachableStripeClient();
     return await stripe.checkout.sessions.create({
       customer: customerId,
       client_reference_id: userId,
@@ -33,7 +38,7 @@ export class StripeService {
     cancelUrl: string, 
     userId: string
   ) {
-    const stripe = await getUncachableStripeClient();
+    const stripe = getUncachableStripeClient();
     
     // New pricing: Starter = $9 per proposal
     // Legacy support: single = $9, pack = $39 (10 credits)
@@ -91,7 +96,7 @@ export class StripeService {
     cancelUrl: string,
     userId: string
   ) {
-    const stripe = await getUncachableStripeClient();
+    const stripe = getUncachableStripeClient();
     
     // Pro = $29/month (15 proposals), Crew = $79/month (50 proposals)
     let priceData: { unit_amount: number; currency: string };
@@ -144,7 +149,7 @@ export class StripeService {
   }
 
   async createCustomerPortalSession(customerId: string, returnUrl: string) {
-    const stripe = await getUncachableStripeClient();
+    const stripe = getUncachableStripeClient();
     return await stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: returnUrl,
@@ -224,7 +229,7 @@ export class StripeService {
   }
 
   async retrieveCheckoutSession(sessionId: string) {
-    const stripe = await getUncachableStripeClient();
+    const stripe = getUncachableStripeClient();
     return await stripe.checkout.sessions.retrieve(sessionId);
   }
 
@@ -238,7 +243,7 @@ export class StripeService {
   ) {
     const stripe = userStripeSecretKey 
       ? createStripeClientWithKey(userStripeSecretKey)
-      : await getUncachableStripeClient();
+      : getUncachableStripeClient();
     
     const paymentLink = await stripe.paymentLinks.create({
       line_items: [
@@ -272,7 +277,7 @@ export class StripeService {
   }
 
   async deactivatePaymentLink(paymentLinkId: string) {
-    const stripe = await getUncachableStripeClient();
+    const stripe = getUncachableStripeClient();
     return await stripe.paymentLinks.update(paymentLinkId, {
       active: false,
     });

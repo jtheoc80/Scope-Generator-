@@ -1,83 +1,86 @@
 import Stripe from 'stripe';
 
-let connectionSettings: any;
-
-async function getCredentials() {
-  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
-  const xReplitToken = process.env.REPL_IDENTITY
-    ? 'repl ' + process.env.REPL_IDENTITY
-    : process.env.WEB_REPL_RENEWAL
-      ? 'depl ' + process.env.WEB_REPL_RENEWAL
-      : null;
-
-  if (!xReplitToken) {
-    throw new Error('X_REPLIT_TOKEN not found for repl/depl');
-  }
-
-  const connectorName = 'stripe';
-  const isProduction = process.env.REPLIT_DEPLOYMENT === '1';
-  const targetEnvironment = isProduction ? 'production' : 'development';
-
-  const url = new URL(`https://${hostname}/api/v2/connection`);
-  url.searchParams.set('include_secrets', 'true');
-  url.searchParams.set('connector_names', connectorName);
-  url.searchParams.set('environment', targetEnvironment);
-
-  const response = await fetch(url.toString(), {
-    headers: {
-      'Accept': 'application/json',
-      'X_REPLIT_TOKEN': xReplitToken
-    }
-  });
-
-  const data = await response.json();
+/**
+ * Get Stripe client using environment variables
+ * Works with both Vercel and local development
+ */
+export function getStripeClient(): Stripe {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
   
-  connectionSettings = data.items?.[0];
-
-  if (!connectionSettings || (!connectionSettings.settings.publishable || !connectionSettings.settings.secret)) {
-    throw new Error(`Stripe ${targetEnvironment} connection not found`);
+  if (!secretKey) {
+    throw new Error(
+      'STRIPE_SECRET_KEY is not set. Please add it to your environment variables.'
+    );
   }
-
-  return {
-    publishableKey: connectionSettings.settings.publishable,
-    secretKey: connectionSettings.settings.secret,
-  };
-}
-
-export async function getUncachableStripeClient() {
-  const { secretKey } = await getCredentials();
-
+  
   return new Stripe(secretKey);
 }
 
-export async function getStripePublishableKey() {
-  const { publishableKey } = await getCredentials();
+/**
+ * Legacy alias for backward compatibility
+ */
+export async function getUncachableStripeClient(): Promise<Stripe> {
+  return getStripeClient();
+}
+
+/**
+ * Get the Stripe publishable key from environment variables
+ */
+export function getStripePublishableKey(): string {
+  const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+  
+  if (!publishableKey) {
+    throw new Error(
+      'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is not set. Please add it to your environment variables.'
+    );
+  }
+  
   return publishableKey;
 }
 
-export async function getStripeSecretKey() {
-  const { secretKey } = await getCredentials();
+/**
+ * Get the Stripe secret key from environment variables
+ */
+export function getStripeSecretKey(): string {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  
+  if (!secretKey) {
+    throw new Error(
+      'STRIPE_SECRET_KEY is not set. Please add it to your environment variables.'
+    );
+  }
+  
   return secretKey;
 }
 
-export function createStripeClientWithKey(secretKey: string) {
+/**
+ * Create a Stripe client with a custom secret key (for user's own Stripe account)
+ */
+export function createStripeClientWithKey(secretKey: string): Stripe {
   return new Stripe(secretKey);
 }
 
-let stripeSync: any = null;
-
-export async function getStripeSync() {
-  if (!stripeSync) {
-    const { StripeSync } = await import('stripe-replit-sync');
-    const secretKey = await getStripeSecretKey();
-
-    stripeSync = new StripeSync({
-      poolConfig: {
-        connectionString: process.env.DATABASE_URL!,
-        max: 2,
-      },
-      stripeSecretKey: secretKey,
-    });
+/**
+ * Get the Stripe webhook secret for verifying webhooks
+ */
+export function getStripeWebhookSecret(): string {
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  
+  if (!webhookSecret) {
+    throw new Error(
+      'STRIPE_WEBHOOK_SECRET is not set. Please add it to your environment variables.'
+    );
   }
-  return stripeSync;
+  
+  return webhookSecret;
+}
+
+/**
+ * Check if Stripe is properly configured
+ */
+export function isStripeConfigured(): boolean {
+  return Boolean(
+    process.env.STRIPE_SECRET_KEY && 
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  );
 }
