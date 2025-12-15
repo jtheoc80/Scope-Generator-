@@ -159,7 +159,7 @@ export default function MarketPricing() {
                   <Crown className="w-16 h-16 mx-auto mb-4 text-amber-500" />
                   <h3 className="text-xl font-bold text-slate-900 mb-2">You've Used All 3 Free Lookups</h3>
                   <p className="text-slate-600 mb-6 max-w-md mx-auto">
-                    Love the market pricing data? Upgrade to Pro for unlimited lookups and get real-time material costs and labor rates for every quote.
+                    Love the market pricing data? Upgrade to Pro or Crew for unlimited lookups and get real-time material costs and labor rates for every quote.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
                     <Link href="/settings">
@@ -168,9 +168,15 @@ export default function MarketPricing() {
                         Upgrade to Pro - $29/mo
                       </Button>
                     </Link>
+                    <Link href="/settings">
+                      <Button variant="outline" className="gap-2 border-amber-300 text-amber-700 hover:bg-amber-50" data-testid="button-upgrade-crew">
+                        <Crown className="w-4 h-4" />
+                        Upgrade to Crew - $79/mo
+                      </Button>
+                    </Link>
                   </div>
                   <p className="text-sm text-slate-500 mt-4">
-                    Pro: Unlimited market pricing + 15 proposals/month
+                    Pro: Unlimited market pricing + 15 proposals/month | Crew: Team features + unlimited proposals
                   </p>
                 </CardContent>
               </Card>
