@@ -95,7 +95,7 @@ const sizeMultipliers = {
   large: { label: "Large", multiplier: 1.4, description: "Premium scope" },
 };
 
-function InstantPriceCalculator() {
+function InstantPriceCalculator({ t }: { t: any }) {
   const [selectedTrade, setSelectedTrade] = useState<string>("");
   const [selectedJobType, setSelectedJobType] = useState<string>("");
   const [selectedSize, setSelectedSize] = useState<string>("");
@@ -171,21 +171,21 @@ function InstantPriceCalculator() {
             <Calculator className="w-5 h-5 text-slate-900" />
           </div>
           <div>
-            <h3 className="text-white font-bold text-lg">Instant Price Estimate</h3>
-            <p className="text-slate-400 text-xs">Get a ballpark estimate in seconds</p>
+            <h3 className="text-white font-bold text-lg">{t.calculator.title}</h3>
+            <p className="text-slate-400 text-xs">{t.calculator.subtitle}</p>
           </div>
         </div>
 
         <div className="p-5 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">What type of project?</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">{t.calculator.projectType}</label>
             <select
               data-testid="select-trade"
               value={selectedTrade}
               onChange={(e) => handleTradeChange(e.target.value)}
               className="w-full h-11 px-3 rounded-lg border border-slate-300 bg-white text-slate-900 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
             >
-              <option value="">Select a trade...</option>
+              <option value="">{t.calculator.selectTrade}</option>
               {calculatorTrades.map((trade) => (
                 <option key={trade.id} value={trade.id}>{trade.name}</option>
               ))}
@@ -193,7 +193,7 @@ function InstantPriceCalculator() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Job type</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">{t.calculator.jobType}</label>
             <select
               data-testid="select-job-type"
               value={selectedJobType}
@@ -201,7 +201,7 @@ function InstantPriceCalculator() {
               disabled={!selectedTrade}
               className="w-full h-11 px-3 rounded-lg border border-slate-300 bg-white text-slate-900 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <option value="">Select job type...</option>
+              <option value="">{t.calculator.selectJobType}</option>
               {trade?.jobTypes.map((job) => (
                 <option key={job.id} value={job.id}>{job.name}</option>
               ))}
@@ -209,7 +209,7 @@ function InstantPriceCalculator() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Project size</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">{t.calculator.projectSize}</label>
             <div className="grid grid-cols-3 gap-2">
               {Object.entries(sizeMultipliers).map(([key, value]) => (
                 <button
@@ -223,7 +223,7 @@ function InstantPriceCalculator() {
                       : "border-slate-200 hover:border-slate-300 text-slate-600"
                   }`}
                 >
-                  <div className="font-medium text-sm">{value.label}</div>
+                  <div className="font-medium text-sm">{key === 'small' ? t.calculator.small : key === 'medium' ? t.calculator.medium : t.calculator.large}</div>
                 </button>
               ))}
             </div>
@@ -239,25 +239,25 @@ function InstantPriceCalculator() {
             {isCalculating ? (
               <div className="flex items-center justify-center gap-3 py-2">
                 <Loader2 className="w-5 h-5 text-orange-500 animate-spin" />
-                <span className="text-slate-600 font-medium">Calculating estimate...</span>
+                <span className="text-slate-600 font-medium">{t.calculator.calculating}</span>
               </div>
             ) : showPrice ? (
               <div className="text-center animate-in fade-in zoom-in duration-500">
                 <div className="flex items-center justify-center gap-2 mb-2">
                   <Sparkles className="w-4 h-4 text-orange-500" />
-                  <span className="text-sm font-medium text-green-700">Estimated Price Range</span>
+                  <span className="text-sm font-medium text-green-700">{t.calculator.estimatedRange}</span>
                   <Sparkles className="w-4 h-4 text-orange-500" />
                 </div>
                 <div className="text-2xl sm:text-3xl font-heading font-bold text-slate-900">
                   {formatPrice(animatedLow)} – {formatPrice(animatedHigh)}
                 </div>
-                <p className="text-xs text-slate-500 mt-1">Based on {size?.description?.toLowerCase()} scope</p>
+                <p className="text-xs text-slate-500 mt-1">{t.calculator.basedOnScope.replace('{scope}', size?.description?.toLowerCase() || '')}</p>
               </div>
             ) : (
               <div className="text-center py-2">
                 <div className="flex items-center justify-center gap-2 text-slate-400">
                   <TradeIcon className="w-5 h-5" />
-                  <span className="text-sm">Select options above to see estimate</span>
+                  <span className="text-sm">{t.calculator.selectOptions}</span>
                 </div>
               </div>
             )}
@@ -282,11 +282,11 @@ function InstantPriceCalculator() {
               }
             }}
           >
-            Get Full Proposal →
+            {t.calculator.getFullProposal}
           </Link>
           
           <p className="text-center text-xs text-slate-500">
-            Free to create • No credit card required
+            {t.calculator.freeToCreate}
           </p>
         </div>
       </div>
@@ -346,7 +346,7 @@ export default function Home() {
                 data-testid="button-try-free-proposal"
                 className="inline-flex items-center justify-center h-12 sm:h-14 px-6 sm:px-8 rounded-md bg-orange-500 text-white font-bold text-base sm:text-lg hover:bg-orange-600 transition-all hover:scale-105 shadow-[0_0_20px_rgba(249,115,22,0.3)] whitespace-nowrap"
               >
-                Try a Free Proposal
+                {t.home.tryFreeProposal}
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Link>
               <a 
@@ -354,14 +354,14 @@ export default function Home() {
                 data-testid="button-view-sample-proposal"
                 className="inline-flex items-center justify-center h-12 sm:h-14 px-6 sm:px-8 rounded-md border border-slate-700 bg-slate-800/50 text-white font-medium hover:bg-slate-800 transition-colors backdrop-blur-sm whitespace-nowrap"
               >
-                View Sample Proposal
+                {t.home.viewSampleProposal}
               </a>
             </div>
 
           </div>
           
           <div className="animate-in slide-in-from-right duration-1000 delay-200">
-            <InstantPriceCalculator />
+            <InstantPriceCalculator t={t} />
           </div>
         </div>
       </section>
@@ -373,17 +373,17 @@ export default function Home() {
             <div className="flex items-center justify-center gap-4 text-white" data-testid="stat-proposals">
               <Users className="w-6 h-6 text-orange-500 flex-shrink-0" />
               <span className="font-bold text-xl">500+</span>
-              <span className="text-slate-300 text-base">Proposals Generated</span>
+              <span className="text-slate-300 text-base">{t.home.proposalsGenerated}</span>
             </div>
             <div className="flex items-center justify-center gap-4 text-white" data-testid="stat-rating">
               <Star className="w-6 h-6 text-orange-500 fill-orange-500 flex-shrink-0" />
               <span className="font-bold text-xl">4.9★</span>
-              <span className="text-slate-300 text-base">Contractor Rating</span>
+              <span className="text-slate-300 text-base">{t.home.contractorRating}</span>
             </div>
             <div className="flex items-center justify-center gap-4 text-white" data-testid="stat-won-jobs">
               <TrendingUp className="w-6 h-6 text-orange-500 flex-shrink-0" />
               <span className="font-bold text-xl">$2.5M+</span>
-              <span className="text-slate-300 text-base">in Won Jobs</span>
+              <span className="text-slate-300 text-base">{t.home.inWonJobs}</span>
             </div>
           </div>
         </div>
@@ -396,10 +396,10 @@ export default function Home() {
             <div className="grid md:grid-cols-2 gap-12 items-center mb-14">
               <div className="order-2 md:order-1">
                 <h2 className="text-3xl sm:text-4xl md:text-5xl font-heading font-bold text-slate-900 mb-8">
-                  Tired of writing proposals after a 10-hour day?
+                  {t.home.tiredOfWriting}
                 </h2>
                 <p className="text-xl sm:text-2xl text-slate-600 leading-relaxed">
-                  ScopeGen lets remodelers, roofers, HVAC, plumbing, and electrical contractors build detailed proposals in about 60 seconds — no Word templates, no copy-paste, no guessing at scope.
+                  {t.home.scopeGenLets}
                 </p>
               </div>
               <div className="order-1 md:order-2">
@@ -417,28 +417,28 @@ export default function Home() {
               <div data-testid="benefit-prebuilt-scopes">
                 <div className="flex items-center gap-3 mb-3">
                   <FileText className="w-6 h-6 text-slate-700" />
-                  <h3 className="font-bold text-slate-900 text-lg">Pre-built Scopes</h3>
+                  <h3 className="font-bold text-slate-900 text-lg">{t.home.preBuiltScopes}</h3>
                 </div>
                 <p className="text-slate-600 text-base leading-relaxed">
-                  Ready-to-use scopes for bathrooms, kitchens, roofing, HVAC, electrical, landscaping, and more.
+                  {t.home.preBuiltScopesDesc}
                 </p>
               </div>
               <div data-testid="benefit-clear-descriptions">
                 <div className="flex items-center gap-3 mb-3">
                   <Target className="w-6 h-6 text-slate-700" />
-                  <h3 className="font-bold text-slate-900 text-lg">Clear Line-Items</h3>
+                  <h3 className="font-bold text-slate-900 text-lg">{t.home.clearLineItems}</h3>
                 </div>
                 <p className="text-slate-600 text-base leading-relaxed">
-                  Descriptions your homeowners actually understand — no confusing contractor jargon.
+                  {t.home.clearLineItemsDesc}
                 </p>
               </div>
               <div data-testid="benefit-consistent-pricing">
                 <div className="flex items-center gap-3 mb-3">
                   <DollarSign className="w-6 h-6 text-slate-700" />
-                  <h3 className="font-bold text-slate-900 text-lg">Consistent Pricing</h3>
+                  <h3 className="font-bold text-slate-900 text-lg">{t.home.consistentPricing}</h3>
                 </div>
                 <p className="text-slate-600 text-base leading-relaxed">
-                  Structured pricing so you don't underbid jobs or leave money on the table.
+                  {t.home.consistentPricingDesc}
                 </p>
               </div>
             </div>
@@ -449,7 +449,7 @@ export default function Home() {
                 data-testid="button-bathroom-proposal-cta"
                 className="inline-flex items-center justify-center h-14 px-10 rounded-md bg-slate-900 text-white font-bold text-lg hover:bg-slate-800 transition-all"
               >
-                Create your first proposal free
+                {t.home.createFirstProposalFree}
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Link>
             </div>
@@ -461,7 +461,7 @@ export default function Home() {
       <section className="bg-slate-50 py-16 sm:py-20 border-t border-slate-100">
         <div className="container mx-auto px-4">
           <div className="text-center mb-10">
-            <p className="text-base font-medium text-slate-500 uppercase tracking-wide">Trusted by Contractors</p>
+            <p className="text-base font-medium text-slate-500 uppercase tracking-wide">{t.home.trustedByContractors}</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10 max-w-5xl mx-auto">
             <div data-testid="testimonial-1">
@@ -471,11 +471,11 @@ export default function Home() {
                 ))}
               </div>
               <p className="text-slate-700 text-lg leading-relaxed mb-4">
-                "Game changer for my plumbing business. I used to spend hours on proposals—now it takes me 10 minutes."
+                "{t.home.testimonial1}"
               </p>
               <div className="text-base">
-                <span className="font-medium text-slate-900">Mike R.</span>
-                <span className="text-slate-400 ml-2">· Plumbing Contractor, TX</span>
+                <span className="font-medium text-slate-900">{t.home.testimonial1Author}</span>
+                <span className="text-slate-400 ml-2">· {t.home.testimonial1Business}</span>
               </div>
             </div>
             <div data-testid="testimonial-2">
@@ -485,11 +485,11 @@ export default function Home() {
                 ))}
               </div>
               <p className="text-slate-700 text-lg leading-relaxed mb-4">
-                "My close rate went up 30% since I started using ScopeGen. The proposals look so professional."
+                "{t.home.testimonial2}"
               </p>
               <div className="text-base">
-                <span className="font-medium text-slate-900">Sarah T.</span>
-                <span className="text-slate-400 ml-2">· General Contractor, CA</span>
+                <span className="font-medium text-slate-900">{t.home.testimonial2Author}</span>
+                <span className="text-slate-400 ml-2">· {t.home.testimonial2Business}</span>
               </div>
             </div>
             <div data-testid="testimonial-3">
@@ -499,11 +499,11 @@ export default function Home() {
                 ))}
               </div>
               <p className="text-slate-700 text-lg leading-relaxed mb-4">
-                "Finally, a tool built for contractors. The AI pricing suggestions are spot-on for my market."
+                "{t.home.testimonial3}"
               </p>
               <div className="text-base">
-                <span className="font-medium text-slate-900">James L.</span>
-                <span className="text-slate-400 ml-2">· Roofing Contractor, FL</span>
+                <span className="font-medium text-slate-900">{t.home.testimonial3Author}</span>
+                <span className="text-slate-400 ml-2">· {t.home.testimonial3Business}</span>
               </div>
             </div>
           </div>
@@ -515,33 +515,33 @@ export default function Home() {
         <div className="max-w-[95vw] xl:max-w-[90vw] 2xl:max-w-[85vw] mx-auto px-4 sm:px-8">
           <div className="text-center mb-12 sm:mb-20">
             <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-heading font-bold text-white mb-4 sm:mb-6">
-              How ScopeGen Works
+              {t.home.howScopeGenWorks}
             </h2>
             <p className="text-slate-300 text-lg sm:text-xl lg:text-2xl">
-              Three simple steps to create proposals that win jobs
+              {t.home.threeSimpleSteps}
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 lg:gap-16">
             <div className="text-center bg-white/10 backdrop-blur-sm rounded-2xl p-8 lg:p-12" data-testid="step-1">
               <div className="text-6xl lg:text-8xl font-heading font-bold text-orange-500 mb-6">1</div>
-              <h3 className="text-xl lg:text-2xl font-bold text-white mb-4">Pick Your Trade</h3>
+              <h3 className="text-xl lg:text-2xl font-bold text-white mb-4">{t.home.pickYourTrade}</h3>
               <p className="text-slate-300 text-base lg:text-lg leading-relaxed">
-                Select your trade — bathroom, kitchen, roofing, HVAC, plumbing, electrical — and choose the job type.
+                {t.home.pickYourTradeDesc}
               </p>
             </div>
             <div className="text-center bg-white/10 backdrop-blur-sm rounded-2xl p-8 lg:p-12" data-testid="step-2">
               <div className="text-6xl lg:text-8xl font-heading font-bold text-orange-500 mb-6">2</div>
-              <h3 className="text-xl lg:text-2xl font-bold text-white mb-4">Answer Quick Questions</h3>
+              <h3 className="text-xl lg:text-2xl font-bold text-white mb-4">{t.home.answerQuickQuestions}</h3>
               <p className="text-slate-300 text-base lg:text-lg leading-relaxed">
-                Project size, materials, and add-ons. Takes about 30 seconds.
+                {t.home.answerQuickQuestionsDesc}
               </p>
             </div>
             <div className="text-center bg-white/10 backdrop-blur-sm rounded-2xl p-8 lg:p-12" data-testid="step-3">
               <div className="text-6xl lg:text-8xl font-heading font-bold text-orange-500 mb-6">3</div>
-              <h3 className="text-xl lg:text-2xl font-bold text-white mb-4">Send Your Proposal</h3>
+              <h3 className="text-xl lg:text-2xl font-bold text-white mb-4">{t.home.sendYourProposal}</h3>
               <p className="text-slate-300 text-base lg:text-lg leading-relaxed">
-                Get a professional PDF or email it directly to your customer.
+                {t.home.sendYourProposalDesc}
               </p>
             </div>
           </div>
@@ -579,10 +579,10 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-heading font-bold text-slate-900 mb-4 sm:mb-6">
-              See What Your Proposals Look Like
+              {t.home.seeWhatProposalsLookLike}
             </h2>
             <p className="text-muted-foreground text-lg sm:text-xl">
-              Real scope-of-work examples your customers will see
+              {t.home.realScopeExamples}
             </p>
           </div>
 
@@ -594,29 +594,29 @@ export default function Home() {
               </div>
               <h3 className="font-bold text-slate-900 text-xl mb-5 flex items-center gap-3">
                 <Bath className="w-5 h-5 text-slate-400" />
-                Bathroom Remodel
-                <span className="text-slate-400 font-normal text-base">(Sample)</span>
+                {t.home.bathroomRemodelSample}
+                <span className="text-slate-400 font-normal text-base">{t.home.sample}</span>
               </h3>
               <div className="space-y-3">
                 <div className="flex items-start gap-3 text-slate-600 text-base">
                   <CheckCircle2 className="w-5 h-5 text-slate-300 flex-shrink-0 mt-0.5" />
-                  <span>Demolish existing tub/shower, vanity, and flooring</span>
+                  <span>{t.home.bathroomScope1}</span>
                 </div>
                 <div className="flex items-start gap-3 text-slate-600 text-base">
                   <CheckCircle2 className="w-5 h-5 text-slate-300 flex-shrink-0 mt-0.5" />
-                  <span>Install new acrylic tub/shower system with surround</span>
+                  <span>{t.home.bathroomScope2}</span>
                 </div>
                 <div className="flex items-start gap-3 text-slate-600 text-base">
                   <CheckCircle2 className="w-5 h-5 text-slate-300 flex-shrink-0 mt-0.5" />
-                  <span>Install new vanity with quartz top and undermount sink</span>
+                  <span>{t.home.bathroomScope3}</span>
                 </div>
                 <div className="flex items-start gap-3 text-slate-600 text-base">
                   <CheckCircle2 className="w-5 h-5 text-slate-300 flex-shrink-0 mt-0.5" />
-                  <span>Replace existing plumbing trim with brushed nickel fixtures</span>
+                  <span>{t.home.bathroomScope4}</span>
                 </div>
                 <div className="flex items-start gap-3 text-slate-600 text-base">
                   <CheckCircle2 className="w-5 h-5 text-slate-300 flex-shrink-0 mt-0.5" />
-                  <span>Install waterproof LVP flooring and new baseboards</span>
+                  <span>{t.home.bathroomScope5}</span>
                 </div>
               </div>
             </div>
@@ -628,29 +628,29 @@ export default function Home() {
               </div>
               <h3 className="font-bold text-slate-900 text-xl mb-5 flex items-center gap-3">
                 <HomeIcon className="w-5 h-5 text-slate-400" />
-                Roofing Replacement
-                <span className="text-slate-400 font-normal text-base">(Sample)</span>
+                {t.home.roofingReplacementSample}
+                <span className="text-slate-400 font-normal text-base">{t.home.sample}</span>
               </h3>
               <div className="space-y-3">
                 <div className="flex items-start gap-3 text-slate-600 text-base">
                   <CheckCircle2 className="w-5 h-5 text-slate-300 flex-shrink-0 mt-0.5" />
-                  <span>Remove existing shingles and underlayment</span>
+                  <span>{t.home.roofingScope1}</span>
                 </div>
                 <div className="flex items-start gap-3 text-slate-600 text-base">
                   <CheckCircle2 className="w-5 h-5 text-slate-300 flex-shrink-0 mt-0.5" />
-                  <span>Inspect and repair damaged decking as needed</span>
+                  <span>{t.home.roofingScope2}</span>
                 </div>
                 <div className="flex items-start gap-3 text-slate-600 text-base">
                   <CheckCircle2 className="w-5 h-5 text-slate-300 flex-shrink-0 mt-0.5" />
-                  <span>Install new synthetic underlayment and ice/water shield</span>
+                  <span>{t.home.roofingScope3}</span>
                 </div>
                 <div className="flex items-start gap-3 text-slate-600 text-base">
                   <CheckCircle2 className="w-5 h-5 text-slate-300 flex-shrink-0 mt-0.5" />
-                  <span>Install new architectural shingles with 30-year warranty</span>
+                  <span>{t.home.roofingScope4}</span>
                 </div>
                 <div className="flex items-start gap-3 text-slate-600 text-base">
                   <CheckCircle2 className="w-5 h-5 text-slate-300 flex-shrink-0 mt-0.5" />
-                  <span>Replace all flashing, vents, and ridge cap</span>
+                  <span>{t.home.roofingScope5}</span>
                 </div>
               </div>
             </div>

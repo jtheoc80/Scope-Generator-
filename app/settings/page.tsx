@@ -214,13 +214,13 @@ export default function Settings() {
 
       await refetch();
       toast({
-        title: "Notification preferences saved",
-        description: "Your notification settings have been updated.",
+        title: t.settings.notificationsSaved,
+        description: t.settings.notificationsSavedDesc,
       });
     } catch (error: any) {
       toast({
-        title: "Error saving notification preferences",
-        description: error.message || "Please try again.",
+        title: t.settings.errorSavingNotifications,
+        description: error.message || t.settings.pleaseTryAgain,
         variant: "destructive",
       });
     } finally {
@@ -447,7 +447,7 @@ export default function Settings() {
                 </div>
                 {selectedTrades.length === 0 && (
                   <p className="text-sm text-orange-600">
-                    Please select at least one trade to generate proposals.
+                    {t.settings.selectAtLeastOneTrade}
                   </p>
                 )}
               </div>
@@ -455,14 +455,14 @@ export default function Settings() {
               <div className="space-y-4 pt-6 border-t border-slate-200">
                 <div className="flex items-center gap-2">
                   <DollarSign className="w-5 h-5 text-primary" />
-                  <Label className="text-base font-semibold">Pricing Adjustment</Label>
+                  <Label className="text-base font-semibold">{t.settings.pricingAdjustment}</Label>
                 </div>
                 <p className="text-sm text-slate-500">
-                  Adjust your proposal prices up or down. This applies a percentage to all generated price estimates.
+                  {t.settings.pricingAdjustmentDesc}
                 </p>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-slate-600">Price Multiplier</span>
+                    <span className="text-sm text-slate-600">{t.settings.priceMultiplier}</span>
                     <span className="text-lg font-semibold text-primary" data-testid="text-price-multiplier">
                       {priceMultiplier}%
                     </span>
@@ -477,17 +477,17 @@ export default function Settings() {
                     data-testid="slider-price-multiplier"
                   />
                   <div className="flex justify-between text-xs text-slate-400">
-                    <span>25% (Lower)</span>
-                    <span>100% (Base)</span>
-                    <span>200% (Higher)</span>
+                    <span>25% ({t.settings.lower})</span>
+                    <span>100% ({t.settings.base})</span>
+                    <span>200% ({t.settings.higher})</span>
                   </div>
                   <div className="bg-slate-50 rounded-lg p-3 mt-2">
                     <p className="text-sm text-slate-600">
-                      <strong>Example:</strong> A base estimate of $1,000 will show as{" "}
+                      <strong>{t.settings.pricingExample}</strong> {t.settings.pricingExampleText}{" "}
                       <span className="font-semibold text-primary">
                         ${((1000 * priceMultiplier) / 100).toLocaleString()}
                       </span>{" "}
-                      on your proposals.
+                      {t.settings.onYourProposals}
                     </p>
                   </div>
                 </div>
@@ -498,10 +498,10 @@ export default function Settings() {
                 <div className="space-y-4 pt-6 border-t border-slate-200">
                   <div className="flex items-center gap-2">
                     <Wrench className="w-5 h-5 text-primary" />
-                    <Label className="text-base font-semibold">Per-Trade Pricing</Label>
+                    <Label className="text-base font-semibold">{t.settings.perTradePricing}</Label>
                   </div>
                   <p className="text-sm text-slate-500">
-                    Fine-tune pricing for each trade. These adjustments apply on top of your global multiplier.
+                    {t.settings.perTradePricingDesc}
                   </p>
                   <div className="space-y-4">
                     {selectedTrades.map((tradeId) => {
@@ -540,8 +540,7 @@ export default function Settings() {
                   </div>
                   <div className="bg-blue-50 rounded-lg p-3">
                     <p className="text-sm text-blue-700">
-                      <strong>How it works:</strong> Your final price = Base Price × Global Multiplier × Trade Multiplier. 
-                      For example, a $1,000 base with 110% global and 120% bathroom = ${((1000 * 1.1 * 1.2)).toLocaleString()}.
+                      <strong>{t.settings.perTradePricingHow}</strong> {t.settings.perTradePricingFormula} {t.settings.perTradePricingExample} ${((1000 * 1.1 * 1.2)).toLocaleString()}.
                     </p>
                   </div>
                 </div>
@@ -774,10 +773,10 @@ export default function Settings() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Bell className="w-5 h-5" />
-                Notification Preferences
+                {t.settings.notificationPreferences}
               </CardTitle>
               <CardDescription>
-                Control how you receive notifications about proposal activity.
+                {t.settings.notificationPreferencesDesc}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -786,9 +785,9 @@ export default function Settings() {
                   <div className="flex items-start gap-3">
                     <Mail className="w-5 h-5 text-slate-600 mt-0.5" />
                     <div>
-                      <Label htmlFor="email-notifications" className="font-medium">Email Notifications</Label>
+                      <Label htmlFor="email-notifications" className="font-medium">{t.settings.emailNotifications}</Label>
                       <p className="text-sm text-slate-500">
-                        Receive email notifications when clients accept your proposals.
+                        {t.settings.emailNotificationsDesc}
                       </p>
                     </div>
                   </div>
@@ -804,12 +803,12 @@ export default function Settings() {
                   <div className="flex items-start gap-3">
                     <MessageSquare className="w-5 h-5 text-slate-600 mt-0.5" />
                     <div>
-                      <Label htmlFor="sms-notifications" className="font-medium">SMS Notifications</Label>
+                      <Label htmlFor="sms-notifications" className="font-medium">{t.settings.smsNotifications}</Label>
                       <p className="text-sm text-slate-500">
-                        Receive text message notifications for proposal updates.
+                        {t.settings.smsNotificationsDesc}
                       </p>
                       <p className="text-xs text-orange-600 mt-1">
-                        Requires phone number in your profile and Twilio configuration.
+                        {t.settings.smsRequiresPhone}
                       </p>
                     </div>
                   </div>
@@ -832,12 +831,12 @@ export default function Settings() {
                   {savingNotifications ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Saving...
+                      {t.settings.saving}
                     </>
                   ) : (
                     <>
                       <CheckCircle className="w-4 h-4 mr-2" />
-                      Save Notification Settings
+                      {t.settings.saveNotificationSettings}
                     </>
                   )}
                 </Button>

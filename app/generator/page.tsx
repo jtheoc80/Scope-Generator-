@@ -436,7 +436,7 @@ export default function Generator() {
     if (!hasValidServices) {
       toast({
         title: t.common.error,
-        description: "Please add at least one service",
+        description: t.generator.pleaseAddService,
         variant: "destructive"
       });
       return;
@@ -502,7 +502,7 @@ export default function Generator() {
     if (validServices.length === 0) {
       toast({ 
         title: t.common.error, 
-        description: "Please add at least one service first",
+        description: t.generator.pleaseAddServiceFirst,
         variant: "destructive"
       });
       return;
@@ -560,7 +560,7 @@ export default function Generator() {
     if (validServices.length === 0) {
       toast({ 
         title: t.common.error, 
-        description: "Please add at least one service first",
+        description: t.generator.pleaseAddServiceFirst,
         variant: "destructive"
       });
       return;
@@ -569,7 +569,7 @@ export default function Generator() {
     if (!watchedValues.clientName || !watchedValues.address) {
       toast({ 
         title: t.common.error, 
-        description: "Please fill in client name and address",
+        description: t.generator.pleaseFillClientInfo,
         variant: "destructive"
       });
       return;
@@ -579,7 +579,7 @@ export default function Generator() {
     try {
       const firstService = validServices[0];
       const serviceData = generateServiceData(firstService);
-      if (!serviceData) throw new Error("Invalid service data");
+      if (!serviceData) throw new Error(t.generator.invalidServiceData);
 
       const booleanOptions: Record<string, boolean> = {};
       for (const [key, value] of Object.entries(firstService.options)) {
@@ -622,7 +622,7 @@ export default function Generator() {
       console.error("Error saving draft:", error);
       toast({ 
         title: t.common.error, 
-        description: "Failed to save draft",
+        description: t.generator.failedToSaveDraft,
         variant: "destructive"
       });
     } finally {
@@ -652,7 +652,7 @@ export default function Generator() {
               <GripVertical className="w-4 h-4 text-slate-400" />
             )}
             <span className="text-sm font-bold text-slate-600">
-              Service {index + 1}
+              {t.generator.service} {index + 1}
             </span>
           </div>
           {services.length > 1 && (
@@ -712,13 +712,13 @@ export default function Generator() {
           const areaOptions = getAreaOptionsForTrade(service.tradeId);
           return areaOptions.length > 0 ? (
             <div className="animate-in fade-in slide-in-from-top-2">
-              <label className="text-sm font-medium mb-1.5 block">Area of Home</label>
+              <label className="text-sm font-medium mb-1.5 block">{t.generator.areaOfHome}</label>
               <Select
                 value={service.homeArea}
                 onValueChange={(val) => updateService(service.id, { homeArea: val })}
               >
                 <SelectTrigger data-testid={`select-home-area-${index}`}>
-                  <SelectValue placeholder="Select area..." />
+                  <SelectValue placeholder={t.generator.selectArea} />
                 </SelectTrigger>
                 <SelectContent>
                   {areaOptions.map((area) => (
@@ -741,8 +741,8 @@ export default function Generator() {
         {service.jobTypeId && usesFootagePricing(service.tradeId) && (
           <div className="animate-in fade-in slide-in-from-top-2">
             <label className="text-sm font-medium mb-1.5 block">
-              {getFootageLabel(service.tradeId)}
-              <span className="text-xs text-slate-500 ml-1">(optional - for accurate pricing)</span>
+              {usesFootagePricing(service.tradeId) === "sqft" ? t.generator.squareFootage : t.generator.linearFootage}
+              <span className="text-xs text-slate-500 ml-1">{t.generator.optionalForPricing}</span>
             </label>
             <Input
               type="number"
@@ -923,11 +923,11 @@ export default function Generator() {
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
                           <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">
-                            Services
+                            {t.generator.services}
                           </h3>
                           {services.length > 0 && (
                             <span className="text-xs text-slate-500">
-                              {services.filter(s => s.tradeId && s.jobTypeId).length} service(s) added
+                              {services.filter(s => s.tradeId && s.jobTypeId).length} {t.generator.servicesAdded}
                             </span>
                           )}
                         </div>
@@ -944,7 +944,7 @@ export default function Generator() {
                           data-testid="button-add-service"
                         >
                           <Plus className="w-4 h-4 mr-2" />
-                          Add Another Service
+                          {t.generator.addAnotherService}
                         </Button>
                       </div>
 
@@ -952,15 +952,15 @@ export default function Generator() {
                       {hasValidServices && (
                         <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 animate-in fade-in">
                           <div className="flex justify-between items-center mb-2">
-                            <span className="text-sm font-medium text-slate-700">Total Estimate</span>
+                            <span className="text-sm font-medium text-slate-700">{t.generator.totalEstimate}</span>
                             <span className="text-lg font-bold text-primary">
                               ${previewData.priceRange?.low?.toLocaleString() || 0} - ${previewData.priceRange?.high?.toLocaleString() || 0}
                             </span>
                           </div>
                           <div className="flex justify-between items-center text-sm text-slate-500">
-                            <span>Estimated Duration</span>
+                            <span>{t.generator.estimatedDuration}</span>
                             <span>
-                              {previewData.estimatedDays?.low || 0} - {previewData.estimatedDays?.high || 0} days
+                              {previewData.estimatedDays?.low || 0} - {previewData.estimatedDays?.high || 0} {t.generator.days}
                             </span>
                           </div>
                         </div>
