@@ -443,7 +443,7 @@ export default function Home() {
               <Link 
                 href="/app" 
                 data-testid="button-bathroom-proposal-cta"
-                className="inline-flex items-center justify-center h-14 px-10 rounded-md bg-primary text-white font-bold text-lg hover:bg-primary/90 transition-all"
+                className="inline-flex items-center justify-center h-14 px-10 rounded-md bg-slate-900 text-white font-bold text-lg hover:bg-slate-800 transition-all"
               >
                 Create your first proposal free
                 <ArrowRight className="ml-2 w-5 h-5" />
@@ -507,13 +507,13 @@ export default function Home() {
       </section>
 
       {/* How ScopeGen Works - Enhanced */}
-      <section id="how-it-works" className="py-20 sm:py-28 bg-primary" data-testid="section-how-it-works">
+      <section id="how-it-works" className="py-20 sm:py-28 bg-slate-900" data-testid="section-how-it-works">
         <div className="max-w-[95vw] xl:max-w-[90vw] 2xl:max-w-[85vw] mx-auto px-4 sm:px-8">
           <div className="text-center mb-12 sm:mb-20">
             <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-heading font-bold text-white mb-4 sm:mb-6">
               How ScopeGen Works
             </h2>
-            <p className="text-primary-foreground/70 text-lg sm:text-xl lg:text-2xl">
+            <p className="text-slate-300 text-lg sm:text-xl lg:text-2xl">
               Three simple steps to create proposals that win jobs
             </p>
           </div>
@@ -522,21 +522,21 @@ export default function Home() {
             <div className="text-center bg-white/10 backdrop-blur-sm rounded-2xl p-8 lg:p-12" data-testid="step-1">
               <div className="text-6xl lg:text-8xl font-heading font-bold text-orange-500 mb-6">1</div>
               <h3 className="text-xl lg:text-2xl font-bold text-white mb-4">Pick Your Trade</h3>
-              <p className="text-primary-foreground/70 text-base lg:text-lg leading-relaxed">
+              <p className="text-slate-300 text-base lg:text-lg leading-relaxed">
                 Select your trade — bathroom, kitchen, roofing, HVAC, plumbing, electrical — and choose the job type.
               </p>
             </div>
             <div className="text-center bg-white/10 backdrop-blur-sm rounded-2xl p-8 lg:p-12" data-testid="step-2">
               <div className="text-6xl lg:text-8xl font-heading font-bold text-orange-500 mb-6">2</div>
               <h3 className="text-xl lg:text-2xl font-bold text-white mb-4">Answer Quick Questions</h3>
-              <p className="text-primary-foreground/70 text-base lg:text-lg leading-relaxed">
+              <p className="text-slate-300 text-base lg:text-lg leading-relaxed">
                 Project size, materials, and add-ons. Takes about 30 seconds.
               </p>
             </div>
             <div className="text-center bg-white/10 backdrop-blur-sm rounded-2xl p-8 lg:p-12" data-testid="step-3">
               <div className="text-6xl lg:text-8xl font-heading font-bold text-orange-500 mb-6">3</div>
               <h3 className="text-xl lg:text-2xl font-bold text-white mb-4">Send Your Proposal</h3>
-              <p className="text-primary-foreground/70 text-base lg:text-lg leading-relaxed">
+              <p className="text-slate-300 text-base lg:text-lg leading-relaxed">
                 Get a professional PDF or email it directly to your customer.
               </p>
             </div>
@@ -654,14 +654,14 @@ export default function Home() {
 
           {/* Full Sample Proposal Preview */}
           <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden">
-            <div className="bg-primary p-4 sm:p-6 text-white">
+            <div className="bg-slate-900 p-4 sm:p-6 text-white">
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0">
                 <div>
                   <h3 className="text-xl sm:text-2xl font-heading font-bold">{t.home.bathroomRemodelProposal}</h3>
-                  <p className="text-primary-foreground/70 mt-1 text-sm sm:text-base">{t.home.preparedFor} Sarah Johnson</p>
+                  <p className="text-slate-300 mt-1 text-sm sm:text-base">{t.home.preparedFor} Sarah Johnson</p>
                 </div>
                 <div className="sm:text-right">
-                  <div className="text-xs sm:text-sm text-primary-foreground/60">{t.home.proposalDate}</div>
+                  <div className="text-xs sm:text-sm text-slate-400">{t.home.proposalDate}</div>
                   <div className="font-medium text-sm sm:text-base">December 6, 2025</div>
                 </div>
               </div>
@@ -823,8 +823,8 @@ export default function Home() {
             </div>
 
             {/* Crew - For Teams */}
-            <div className="bg-white p-8 sm:p-10 lg:p-12 rounded-2xl border-2 border-primary shadow-sm relative flex flex-col">
-              <div className="absolute top-5 right-5 lg:top-6 lg:right-6 bg-primary text-white text-sm lg:text-base font-bold px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg">{t.home.forTeams}</div>
+            <div className="bg-white p-8 sm:p-10 lg:p-12 rounded-2xl border-2 border-slate-900 shadow-sm relative flex flex-col">
+              <div className="absolute top-5 right-5 lg:top-6 lg:right-6 bg-slate-900 text-white text-sm lg:text-base font-bold px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg">{t.home.forTeams}</div>
               <h3 className="text-2xl lg:text-3xl font-bold text-slate-900 mb-3">{t.home.crewPlan}</h3>
               <p className="text-muted-foreground text-base lg:text-lg mb-8">{t.home.crewDesc}</p>
               <div className="text-5xl lg:text-6xl font-heading font-bold text-slate-900 mb-2">{t.home.crewPrice}<span className="text-xl lg:text-2xl font-normal text-muted-foreground">{t.home.crewPriceLabel}</span></div>
@@ -843,7 +843,7 @@ export default function Home() {
               <button 
                 onClick={() => handleCheckout('crew')}
                 disabled={checkoutLoading === 'crew'}
-                className="block w-full text-center py-4 lg:py-5 bg-primary text-white rounded-xl font-bold text-lg lg:text-xl hover:bg-primary/90 transition-colors disabled:opacity-50"
+                className="block w-full text-center py-4 lg:py-5 bg-slate-900 text-white rounded-xl font-bold text-lg lg:text-xl hover:bg-slate-800 transition-colors disabled:opacity-50"
                 data-testid="button-subscribe-crew"
               >
                 {checkoutLoading === 'crew' ? (
@@ -864,7 +864,7 @@ export default function Home() {
       </section>
 
       {/* CTA Banner */}
-      <section className="bg-primary py-12 sm:py-20">
+      <section className="bg-slate-900 py-12 sm:py-20">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-heading font-bold text-white mb-4 sm:mb-6">
             {t.home.readyToLookLikePro}
@@ -876,7 +876,7 @@ export default function Home() {
           >
             {t.home.createFirstProposal}
           </Link>
-          <p className="mt-3 sm:mt-4 text-primary-foreground/60 text-xs sm:text-sm">{t.home.tryFreeThenUnlock}</p>
+          <p className="mt-3 sm:mt-4 text-slate-400 text-xs sm:text-sm">{t.home.tryFreeThenUnlock}</p>
         </div>
       </section>
     </Layout>
