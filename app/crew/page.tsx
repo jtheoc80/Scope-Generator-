@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Layout from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/hooks/useLanguage";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Users, 
@@ -23,7 +25,15 @@ import {
   Check,
   Trash2,
   Mail,
-  AlertCircle
+  AlertCircle,
+  FileText,
+  TrendingUp,
+  DollarSign,
+  ArrowRight,
+  Settings,
+  Sparkles,
+  CheckCircle,
+  Infinity
 } from "lucide-react";
 
 interface Company {
@@ -69,6 +79,7 @@ interface Invite {
 
 export default function Crew() {
   const { user, isLoading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -89,6 +100,17 @@ export default function Crew() {
   useEffect(() => {
     if (!authLoading && !user) {
       router.push("/");
+    }
+  }, [user, authLoading, router]);
+
+  // Redirect non-crew users
+  useEffect(() => {
+    if (!authLoading && user && user.subscriptionPlan !== 'crew') {
+      if (user.subscriptionPlan === 'pro') {
+        router.push("/pro");
+      } else {
+        router.push("/#pricing");
+      }
     }
   }, [user, authLoading, router]);
 
@@ -354,7 +376,7 @@ export default function Crew() {
     );
   }
 
-  if (!user) {
+  if (!user || user.subscriptionPlan !== 'crew') {
     return null;
   }
 
@@ -362,10 +384,10 @@ export default function Crew() {
     return (
       <Layout>
         <div className="container mx-auto px-4 py-12 max-w-2xl">
-          <Card className="text-center">
+          <Card className="text-center border-0 shadow-sm">
             <CardHeader>
-              <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                <Building2 className="w-8 h-8 text-primary" />
+              <div className="mx-auto w-16 h-16 bg-slate-900 rounded-xl flex items-center justify-center mb-4">
+                <Users className="w-8 h-8 text-white" />
               </div>
               <CardTitle className="text-2xl">Set Up Your Team Workspace</CardTitle>
               <CardDescription className="text-base mt-2">
@@ -376,7 +398,7 @@ export default function Crew() {
             <CardContent>
               <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
                 <DialogTrigger asChild>
-                  <Button size="lg" className="gap-2" data-testid="button-create-company">
+                  <Button size="lg" className="gap-2 bg-slate-900 hover:bg-slate-800" data-testid="button-create-company">
                     <Building2 className="w-5 h-5" />
                     Create Company Workspace
                   </Button>
@@ -420,80 +442,215 @@ export default function Crew() {
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-heading font-bold text-slate-900 flex items-center gap-2">
-              <Building2 className="w-7 h-7" />
-              {companyInfo.company.name}
-            </h1>
-            <p className="text-muted-foreground mt-1">Manage your team and workspace settings</p>
-          </div>
-          {isOwnerOrAdmin && (
-            <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
-              <DialogTrigger asChild>
-                <Button className="gap-2" data-testid="button-invite-member">
-                  <UserPlus className="w-4 h-4" />
-                  Invite Team Member
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Invite Team Member</DialogTitle>
-                  <DialogDescription>
-                    Send an invitation to add a new member to your team.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="invite-email">Email Address</Label>
-                    <Input
-                      id="invite-email"
-                      type="email"
-                      placeholder="teammate@company.com"
-                      value={inviteEmail}
-                      onChange={(e) => setInviteEmail(e.target.value)}
-                      data-testid="input-invite-email"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="invite-role">Role</Label>
-                    <Select value={inviteRole} onValueChange={setInviteRole}>
-                      <SelectTrigger data-testid="select-invite-role">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="member">Member - Can create and send proposals</SelectItem>
-                        <SelectItem value="admin">Admin - Can also invite and manage members</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+      <div className="bg-slate-50 min-h-screen pb-12">
+        {/* Header */}
+        <div className="bg-white border-b border-slate-200">
+          <div className="container mx-auto px-4 py-6 md:py-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 bg-slate-900 rounded-xl flex items-center justify-center shadow-lg">
+                  <Users className="w-6 h-6 text-white" />
                 </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setShowInviteDialog(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleInvite} disabled={inviting} data-testid="button-send-invite">
-                    {inviting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                    Send Invite
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          )}
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-heading font-bold text-slate-900">
+                    {t.crew?.title || "Crew Dashboard"}
+                  </h1>
+                  <p className="text-slate-500 text-sm">{companyInfo.company.name}</p>
+                </div>
+              </div>
+              <Link href="/settings">
+                <Button variant="outline" className="gap-2">
+                  <Settings className="w-4 h-4" />
+                  {t.pro?.settings || "Settings"}
+                </Button>
+              </Link>
+            </div>
+          </div>
         </div>
 
-        <div className="grid gap-6">
-          <Card>
+        <div className="container mx-auto px-4 py-6 md:py-8 space-y-6">
+          {/* Unlimited Proposals Card */}
+          <Card className="border-0 shadow-sm overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-slate-900 to-slate-800 text-white">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  <CardTitle className="text-lg text-white">{t.crew?.proposalsThisMonth || "Proposals"}</CardTitle>
+                </div>
+                <Badge className="bg-green-500 text-white hover:bg-green-500 gap-1">
+                  <Infinity className="w-3 h-3" />
+                  {t.crew?.unlimited || "Unlimited"}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <p className="text-slate-600">
+                {t.crew?.unlimitedDesc || "Your Crew plan includes unlimited proposals for your entire team. Create as many as you need!"}
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Crew Features / Quick Actions */}
+          <Card className="border-0 shadow-sm">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5" />
-                Team Seats
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Sparkles className="w-5 h-5 text-slate-700" />
+                {t.crew?.crewFeatures || "Crew Features"}
               </CardTitle>
-              <CardDescription>
-                Your plan includes {companyInfo.company.seatLimit} seats
-                {companyInfo.company.extraSeats > 0 && ` + ${companyInfo.company.extraSeats} extra`}
-              </CardDescription>
+              <CardDescription>{t.pro?.quickAccess || "Quick access to your professional tools"}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Create Proposal */}
+                <Link href="/app" className="block group">
+                  <div className="h-full p-6 rounded-xl border-2 border-slate-200 bg-white hover:border-primary hover:shadow-md transition-all">
+                    <div className="h-12 w-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
+                      <FileText className="w-6 h-6 text-primary" />
+                    </div>
+                    <h3 className="font-bold text-slate-900 mb-1">{t.pro?.createProposal || "Create Proposal"}</h3>
+                    <p className="text-sm text-slate-500 mb-4">{t.pro?.createProposalDesc || "Generate a professional proposal in 60 seconds"}</p>
+                    <div className="flex items-center text-primary font-medium text-sm group-hover:gap-2 transition-all">
+                      {t.pro?.createNow || "Create Now"} <ArrowRight className="w-4 h-4 ml-1" />
+                    </div>
+                  </div>
+                </Link>
+
+                {/* Market Pricing */}
+                <Link href="/market-pricing" className="block group">
+                  <div className="h-full p-6 rounded-xl border-2 border-slate-200 bg-white hover:border-emerald-500 hover:shadow-md transition-all">
+                    <div className="h-12 w-12 bg-emerald-100 rounded-xl flex items-center justify-center mb-4 group-hover:bg-emerald-200 transition-colors">
+                      <DollarSign className="w-6 h-6 text-emerald-600" />
+                    </div>
+                    <h3 className="font-bold text-slate-900 mb-1">{t.pro?.marketPricing || "Market Pricing"}</h3>
+                    <p className="text-sm text-slate-500 mb-4">{t.pro?.marketPricingDesc || "Unlimited lookups for material & labor rates"}</p>
+                    <div className="flex items-center text-emerald-600 font-medium text-sm group-hover:gap-2 transition-all">
+                      {t.pro?.lookUp || "Look Up"} <ArrowRight className="w-4 h-4 ml-1" />
+                    </div>
+                  </div>
+                </Link>
+
+                {/* Pricing Insights */}
+                <Link href="/pricing-insights" className="block group">
+                  <div className="h-full p-6 rounded-xl border-2 border-slate-200 bg-white hover:border-purple-500 hover:shadow-md transition-all">
+                    <div className="h-12 w-12 bg-purple-100 rounded-xl flex items-center justify-center mb-4 group-hover:bg-purple-200 transition-colors">
+                      <TrendingUp className="w-6 h-6 text-purple-600" />
+                    </div>
+                    <h3 className="font-bold text-slate-900 mb-1">{t.pro?.pricingInsights || "Pricing Insights"}</h3>
+                    <p className="text-sm text-slate-500 mb-4">{t.pro?.pricingInsightsDesc || "Analyze your win rates & proposal performance"}</p>
+                    <div className="flex items-center text-purple-600 font-medium text-sm group-hover:gap-2 transition-all">
+                      {t.pro?.viewInsights || "View Insights"} <ArrowRight className="w-4 h-4 ml-1" />
+                    </div>
+                  </div>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* What's Included */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <CheckCircle className="w-5 h-5 text-green-500" />
+                {t.crew?.whatsIncluded || "What's Included in Crew"}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-100">
+                  <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                  <span className="text-slate-700">{t.crew?.unlimitedProposals || "Unlimited proposals"}</span>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-100">
+                  <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                  <span className="text-slate-700">{t.crew?.teamSeats || "3 team member seats"}</span>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-100">
+                  <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                  <span className="text-slate-700">{t.pro?.unlimitedMarketPricing || "Unlimited Market Pricing lookups"}</span>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-100">
+                  <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                  <span className="text-slate-700">{t.crew?.sharedBranding || "Shared company branding"}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Team Management Section */}
+          <div className="pt-4">
+            <h2 className="text-xl font-heading font-bold text-slate-900 mb-4 flex items-center gap-2">
+              <Building2 className="w-5 h-5" />
+              {t.crew?.teamManagement || "Team Management"}
+            </h2>
+          </div>
+
+          {/* Team Seats */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="w-5 h-5" />
+                    {t.crew?.teamSeatsTitle || "Team Seats"}
+                  </CardTitle>
+                  <CardDescription>
+                    Your plan includes {companyInfo.company.seatLimit} seats
+                    {companyInfo.company.extraSeats > 0 && ` + ${companyInfo.company.extraSeats} extra`}
+                  </CardDescription>
+                </div>
+                {isOwnerOrAdmin && (
+                  <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
+                    <DialogTrigger asChild>
+                      <Button className="gap-2" data-testid="button-invite-member">
+                        <UserPlus className="w-4 h-4" />
+                        Invite Member
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Invite Team Member</DialogTitle>
+                        <DialogDescription>
+                          Send an invitation to add a new member to your team.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="invite-email">Email Address</Label>
+                          <Input
+                            id="invite-email"
+                            type="email"
+                            placeholder="teammate@company.com"
+                            value={inviteEmail}
+                            onChange={(e) => setInviteEmail(e.target.value)}
+                            data-testid="input-invite-email"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="invite-role">Role</Label>
+                          <Select value={inviteRole} onValueChange={setInviteRole}>
+                            <SelectTrigger data-testid="select-invite-role">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="member">Member - Can create and send proposals</SelectItem>
+                              <SelectItem value="admin">Admin - Can also invite and manage members</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowInviteDialog(false)}>
+                          Cancel
+                        </Button>
+                        <Button onClick={handleInvite} disabled={inviting} data-testid="button-send-invite">
+                          {inviting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                          Send Invite
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-4">
@@ -504,7 +661,7 @@ export default function Crew() {
                   </div>
                   <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-primary transition-all"
+                      className="h-full bg-slate-900 transition-all"
                       style={{ width: `${(companyInfo.memberCount / companyInfo.totalSeats) * 100}%` }}
                     />
                   </div>
@@ -519,7 +676,8 @@ export default function Crew() {
             </CardContent>
           </Card>
 
-          <Card>
+          {/* Team Members */}
+          <Card className="border-0 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="w-5 h-5" />
@@ -538,7 +696,7 @@ export default function Crew() {
                     data-testid={`member-row-${member.user.id}`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center">
                         {member.user.profileImageUrl ? (
                           <img 
                             src={member.user.profileImageUrl} 
@@ -581,8 +739,9 @@ export default function Crew() {
             </CardContent>
           </Card>
 
+          {/* Pending Invitations */}
           {invites.length > 0 && (
-            <Card>
+            <Card className="border-0 shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Mail className="w-5 h-5" />
@@ -644,7 +803,8 @@ export default function Crew() {
             </Card>
           )}
 
-          <Card>
+          {/* Your Role */}
+          <Card className="border-0 shadow-sm">
             <CardHeader>
               <CardTitle>Your Role</CardTitle>
               <CardDescription>
