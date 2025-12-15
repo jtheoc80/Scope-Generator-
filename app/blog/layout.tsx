@@ -9,6 +9,23 @@ export const metadata: Metadata = {
     description: "Free resources for contractors: proposal writing tips, pricing guides, and business advice.",
     url: "https://scopegenerator.com/blog",
     type: "website",
+    images: [
+      {
+        url: "/opengraph.jpg",
+        width: 1200,
+        height: 630,
+        alt: "ScopeGen Contractor Blog",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Contractor Blog - Proposal Tips & Business Advice",
+    description: "Free resources for contractors: proposal writing tips, pricing guides, and business advice.",
+    images: ["/opengraph.jpg"],
+  },
+  alternates: {
+    canonical: "https://scopegenerator.com/blog",
   },
 };
 
