@@ -40,8 +40,8 @@ export class StripeService {
   ) {
     const stripe = getUncachableStripeClient();
     
-    // New pricing: Starter = $9 per proposal
-    // Legacy support: single = $9, pack = $39 (10 credits)
+    // Pricing aligned with Stripe Product Catalog:
+    // Single Proposal = $12, 10 Credit Pack = $39
     let priceData: { unit_amount: number; currency: string };
     let productName: string;
     let description: string;
@@ -50,14 +50,14 @@ export class StripeService {
     switch (productType) {
       case 'starter':
       case 'single':
-        priceData = { unit_amount: 900, currency: 'usd' };
-        productName = 'Starter - Single Proposal';
+        priceData = { unit_amount: 1200, currency: 'usd' };
+        productName = 'Single Proposal';
         description = 'Unlock 1 professional proposal';
         credits = 1;
         break;
       case 'pack':
         priceData = { unit_amount: 3900, currency: 'usd' };
-        productName = 'Proposal Pack (10 Credits)';
+        productName = '10 Credit Pack';
         description = '10 proposal credits for active contractors';
         credits = 10;
         break;
