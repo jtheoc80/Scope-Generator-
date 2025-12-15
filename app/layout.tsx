@@ -6,6 +6,7 @@ import {
 import { isClerkConfigured } from "@/lib/authUtils";
 import { VercelAnalytics } from "@/components/VercelAnalytics";
 import { Providers } from "@/components/providers";
+import { OrganizationJsonLd } from "@/components/JsonLd";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -84,6 +85,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <OrganizationJsonLd type="SoftwareApplication" />
         <Providers>
           {children}
         </Providers>
