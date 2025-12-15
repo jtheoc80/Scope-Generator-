@@ -403,8 +403,12 @@ export default function Home() {
                 </p>
               </div>
               <div className="order-1 md:order-2">
-                <div className="w-full h-64 rounded-xl shadow-lg bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center">
-                  <Hammer className="w-16 h-16 text-slate-400" />
+                <div className="w-full h-72 md:h-80 rounded-xl shadow-lg overflow-hidden">
+                  <img 
+                    src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=600&h=400&fit=crop&crop=center"
+                    alt="Contractor working on paperwork"
+                    className="w-full h-full object-cover"
+                  />
                 </div>
               </div>
             </div>
