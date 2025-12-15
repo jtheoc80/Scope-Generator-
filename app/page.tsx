@@ -405,8 +405,8 @@ export default function Home() {
               <div className="order-1 md:order-2">
                 <div className="w-full h-72 md:h-80 rounded-xl shadow-lg overflow-hidden">
                   <img 
-                    src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=600&h=400&fit=crop&crop=center"
-                    alt="Contractor working on paperwork"
+                    src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&h=400&fit=crop&crop=center"
+                    alt="Beautiful residential home exterior"
                     className="w-full h-full object-cover"
                   />
                 </div>
