@@ -809,6 +809,9 @@ export default function Home() {
                 <li className="flex items-center gap-3 text-base lg:text-lg text-white">
                   <CheckCircle2 className="w-5 h-5 lg:w-6 lg:h-6 text-orange-500 flex-shrink-0" /> {t.home.proFeature4}
                 </li>
+                <li className="flex items-center gap-3 text-base lg:text-lg text-white">
+                  <CheckCircle2 className="w-5 h-5 lg:w-6 lg:h-6 text-orange-500 flex-shrink-0" /> {t.home.proFeature5}
+                </li>
               </ul>
               <button 
                 onClick={() => handleCheckout('pro')}
@@ -842,6 +845,9 @@ export default function Home() {
                 </li>
                 <li className="flex items-center gap-3 text-base lg:text-lg text-slate-600">
                   <CheckCircle2 className="w-5 h-5 lg:w-6 lg:h-6 text-green-500 flex-shrink-0" /> {t.home.crewFeature4}
+                </li>
+                <li className="flex items-center gap-3 text-base lg:text-lg text-slate-600">
+                  <CheckCircle2 className="w-5 h-5 lg:w-6 lg:h-6 text-green-500 flex-shrink-0" /> {t.home.crewFeature5}
                 </li>
               </ul>
               <button 
