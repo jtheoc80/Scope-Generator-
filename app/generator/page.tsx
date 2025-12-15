@@ -509,6 +509,9 @@ export default function Generator() {
     }
     
     setIsEnhancing(true);
+    let hasErrors = false;
+    let successCount = 0;
+    
     try {
       const newEnhancedScopes: Record<string, string[]> = {};
       
@@ -516,24 +519,63 @@ export default function Generator() {
         const serviceData = generateServiceData(service);
         if (!serviceData) continue;
         
-        const response = await apiRequest("POST", "/api/ai/enhance-scope", {
-          jobTypeName: serviceData.jobTypeName,
-          baseScope: serviceData.scope,
-          clientName: watchedValues.clientName,
-          address: watchedValues.address,
-          jobNotes: service.homeArea,
-        });
-        const data = await response.json();
-        if (data.enhancedScope) {
-          newEnhancedScopes[service.id] = data.enhancedScope;
+        try {
+          const response = await apiRequest("POST", "/api/ai/enhance-scope", {
+            jobTypeName: serviceData.jobTypeName,
+            baseScope: serviceData.scope,
+            clientName: watchedValues.clientName,
+            address: watchedValues.address,
+            jobNotes: service.homeArea,
+          });
+          const data = await response.json();
+          
+          if (data.enhancedScope) {
+            newEnhancedScopes[service.id] = data.enhancedScope;
+            
+            // Check if there was a partial success (AI returned original scope due to error)
+            if (data.error) {
+              hasErrors = true;
+              console.warn(`AI enhancement partial error for service ${service.id}:`, data.error);
+            } else if (data.success) {
+              successCount++;
+            }
+          }
+          
+          // Show specific error messages to user
+          if (data.error && data.error.code !== 'UNKNOWN_ERROR') {
+            toast({
+              title: "Enhancement Issue",
+              description: data.error.message,
+              variant: "default",
+            });
+          }
+        } catch (serviceError) {
+          hasErrors = true;
+          console.error(`Error enhancing scope for service ${service.id}:`, serviceError);
         }
       }
       
       setEnhancedScopes(prev => ({ ...prev, ...newEnhancedScopes }));
-      toast({ 
-        title: t.toast.scopeEnhanced, 
-        description: t.toast.scopeEnhancedDesc 
-      });
+      
+      // Show appropriate success/warning message
+      if (successCount > 0 && !hasErrors) {
+        toast({ 
+          title: t.toast.scopeEnhanced, 
+          description: t.toast.scopeEnhancedDesc 
+        });
+      } else if (successCount > 0 && hasErrors) {
+        toast({ 
+          title: "Partially Enhanced",
+          description: "Some services were enhanced successfully. Others may need to be retried.",
+          variant: "default"
+        });
+      } else if (hasErrors) {
+        toast({ 
+          title: t.common.error, 
+          description: "AI enhancement is temporarily unavailable. Please try again later.",
+          variant: "destructive"
+        });
+      }
     } catch (error) {
       console.error("Error enhancing scope:", error);
       toast({ 
@@ -578,27 +620,68 @@ export default function Generator() {
     setIsSavingDraft(true);
     try {
       const firstService = validServices[0];
-      const serviceData = generateServiceData(firstService);
-      if (!serviceData) throw new Error(t.generator.invalidServiceData);
+      const firstServiceData = generateServiceData(firstService);
+      if (!firstServiceData) throw new Error(t.generator.invalidServiceData);
 
-      const booleanOptions: Record<string, boolean> = {};
-      for (const [key, value] of Object.entries(firstService.options)) {
-        if (typeof value === 'boolean') {
-          booleanOptions[key] = value;
-        }
-      }
+      const isMultiService = validServices.length > 1;
+      
+      // Build line items for multi-service proposals
+      const lineItems = validServices.map(service => {
+        const serviceData = generateServiceData(service);
+        if (!serviceData) return null;
+        
+        const trade = availableTemplates.find(t => t.id === service.tradeId);
+        
+        return {
+          id: service.id,
+          tradeId: service.tradeId,
+          tradeName: trade?.trade || service.tradeId,
+          jobTypeId: service.jobTypeId,
+          jobTypeName: serviceData.jobTypeName,
+          jobSize: service.jobSize,
+          homeArea: service.homeArea,
+          footage: service.footage || undefined,
+          scope: enhancedScopes[service.id] || serviceData.scope,
+          options: service.options,
+          priceLow: serviceData.priceRange.low,
+          priceHigh: serviceData.priceRange.high,
+          estimatedDaysLow: serviceData.estimatedDays.low,
+          estimatedDaysHigh: serviceData.estimatedDays.high,
+          warranty: serviceData.warranty,
+          exclusions: serviceData.exclusions,
+        };
+      }).filter((item): item is NonNullable<typeof item> => item !== null);
+
+      // Calculate totals
+      const totalPriceLow = lineItems.reduce((sum, item) => sum + item.priceLow, 0);
+      const totalPriceHigh = lineItems.reduce((sum, item) => sum + item.priceHigh, 0);
+      const totalDaysLow = lineItems.reduce((sum, item) => sum + (item.estimatedDaysLow || 0), 0);
+      const totalDaysHigh = lineItems.reduce((sum, item) => sum + (item.estimatedDaysHigh || 0), 0);
+
+      // Combine all scopes for the main scope field (backwards compatibility)
+      const allScope = lineItems.flatMap(item => item.scope);
 
       const proposalData = {
         clientName: watchedValues.clientName,
         address: watchedValues.address,
+        // Primary service info (backwards compatibility)
         tradeId: firstService.tradeId,
         jobTypeId: firstService.jobTypeId,
-        jobTypeName: serviceData.jobTypeName,
+        jobTypeName: isMultiService 
+          ? `Multi-Service (${lineItems.length} services)` 
+          : firstServiceData.jobTypeName,
         jobSize: firstService.jobSize,
-        scope: enhancedScopes[firstService.id] || serviceData.scope,
-        options: booleanOptions,
-        priceLow: serviceData.priceRange.low,
-        priceHigh: serviceData.priceRange.high,
+        scope: allScope,
+        options: firstService.options,
+        // Pricing
+        priceLow: totalPriceLow,
+        priceHigh: totalPriceHigh,
+        // Multi-service fields
+        lineItems: isMultiService ? lineItems : undefined,
+        isMultiService,
+        estimatedDaysLow: totalDaysLow,
+        estimatedDaysHigh: totalDaysHigh,
+        // Status
         status: "draft",
         isUnlocked: false,
       };
