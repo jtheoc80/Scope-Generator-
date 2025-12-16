@@ -405,8 +405,8 @@ export default function Home() {
               <div className="order-1 md:order-2">
                 <div className="w-full h-72 md:h-80 rounded-xl shadow-lg overflow-hidden">
                   <img 
-                    src="https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=600&h=400&fit=crop&crop=center"
-                    alt="Modern bathroom renovation"
+                    src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&h=400&fit=crop&crop=center"
+                    alt="Modern bathroom renovation with white tiles and fixtures"
                     className="w-full h-full object-cover"
                   />
                 </div>
