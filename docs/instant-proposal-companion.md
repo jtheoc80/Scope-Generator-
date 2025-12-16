@@ -66,6 +66,11 @@ Mobile (Expo companion app):
 
 ### 3) API endpoint spec (request/response JSON)
 
+#### Common headers
+- `Idempotency-Key: <string>` (recommended for create/draft/submit)
+- `x-request-id: <string>` (optional; server responds with `x-request-id` on success/error)
+- Auth (see below): `x-mobile-user-id`, optional `x-mobile-api-key`
+
 #### Create job
 `POST /api/mobile/jobs`
 
@@ -122,11 +127,29 @@ or
 
 Response:
 ```json
-{ "status": "READY", "payload": { "lineItems": [], "confidence": 70, "questions": [] } }
+{
+  "status": "READY",
+  "payload": {
+    "packages": {
+      "GOOD": { "label": "Good", "lineItems": [] },
+      "BETTER": { "label": "Better", "lineItems": [] },
+      "BEST": { "label": "Best", "lineItems": [] }
+    },
+    "defaultPackage": "BETTER",
+    "confidence": 70,
+    "questions": [],
+    "pricing": { "pricebookVersion": "v1", "inputs": {} }
+  }
+}
 ```
 
 #### Submit to proposal system
 `POST /api/mobile/jobs/:jobId/submit`
+
+Request:
+```json
+{ "package": "BETTER" }
+```
 
 Response:
 ```json
@@ -239,5 +262,16 @@ curl -sS -X GET \"http://localhost:3000/api/mobile/jobs/<JOB_ID>/draft\" \\
 Submit:
 ```bash
 curl -sS -X POST \"http://localhost:3000/api/mobile/jobs/<JOB_ID>/submit\" \\
-  -H \"x-mobile-user-id: <USER_ID>\"
+  -H \"Content-Type: application/json\" \\
+  -H \"x-mobile-user-id: <USER_ID>\" \\
+  -d '{\"package\":\"BETTER\"}'
+```
+
+### Notes on async drafts (current implementation)
+`POST /draft` **enqueues** a DB row (`mobile_job_drafts.status=pending`) and returns immediately. A best-effort in-process worker (`src/lib/mobile/draft/worker.ts`) picks up queued drafts with locking + retry/backoff and writes the READY payload. For true serverless reliability, replace this with a dedicated worker (Supabase Edge Function/cron/queue consumer) that calls the same pipeline.
+
+### Error shape (structured)
+Errors return:
+```json
+{ \"error\": { \"code\": \"INVALID_INPUT\", \"message\": \"...\", \"requestId\": \"...\" } }
 ```

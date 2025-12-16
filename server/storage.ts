@@ -144,6 +144,7 @@ export interface IStorage {
     jobTypeName: string;
     jobSize?: number;
     jobNotes?: string | null;
+    createIdempotencyKey?: string | null;
   }): Promise<typeof mobileJobs.$inferSelect>;
 
   getMobileJob(jobId: number, userId: string): Promise<typeof mobileJobs.$inferSelect | undefined>;
@@ -166,6 +167,8 @@ export interface IStorage {
   getLatestMobileJobDraft(jobId: number, userId: string): Promise<typeof mobileJobDrafts.$inferSelect | undefined>;
 
   linkDraftToProposal(draftId: number, userId: string, proposalId: number): Promise<typeof mobileJobDrafts.$inferSelect | undefined>;
+
+  getMobileJobByCreateIdempotencyKey(userId: string, key: string): Promise<typeof mobileJobs.$inferSelect | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1048,11 +1051,18 @@ export class DatabaseStorage implements IStorage {
     jobTypeName: string;
     jobSize?: number;
     jobNotes?: string | null;
+    createIdempotencyKey?: string | null;
   }): Promise<typeof mobileJobs.$inferSelect> {
+    if (job.createIdempotencyKey) {
+      const existing = await this.getMobileJobByCreateIdempotencyKey(userId, job.createIdempotencyKey);
+      if (existing) return existing;
+    }
+
     const [created] = await db
       .insert(mobileJobs)
       .values({
         userId,
+        createIdempotencyKey: job.createIdempotencyKey ?? null,
         clientName: job.clientName,
         address: job.address,
         tradeId: job.tradeId,
@@ -1065,6 +1075,14 @@ export class DatabaseStorage implements IStorage {
       } as typeof mobileJobs.$inferInsert)
       .returning();
     return created;
+  }
+
+  async getMobileJobByCreateIdempotencyKey(userId: string, key: string): Promise<typeof mobileJobs.$inferSelect | undefined> {
+    const [job] = await db
+      .select()
+      .from(mobileJobs)
+      .where(and(eq(mobileJobs.userId, userId), eq(mobileJobs.createIdempotencyKey, key)));
+    return job;
   }
 
   async getMobileJob(jobId: number, userId: string): Promise<typeof mobileJobs.$inferSelect | undefined> {

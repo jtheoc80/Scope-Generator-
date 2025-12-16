@@ -20,9 +20,14 @@ export type MobilePhotoInput = {
 };
 
 export type MobileDraftOutput = {
-  lineItems: ProposalLineItem[];
+  packages: Record<"GOOD" | "BETTER" | "BEST", { label: string; lineItems: ProposalLineItem[] }>;
+  defaultPackage: "GOOD" | "BETTER" | "BEST";
   confidence: number;
   questions: string[];
+  pricing: {
+    pricebookVersion: string;
+    inputs: unknown;
+  };
 };
 
 export async function generateMobileDraft(params: {
@@ -61,13 +66,15 @@ export async function generateMobileDraft(params: {
   const tradeMultipliers = (user.tradeMultipliers || {}) as Record<string, number>;
   const tradeMult = tradeMultipliers[template.tradeId];
 
-  const { priceLow, priceHigh } = computePriceRange({
+  const pricingInputs = {
     basePriceLow: template.basePriceLow,
     basePriceHigh: template.basePriceHigh,
     jobSize: job.jobSize,
     userPriceMultiplier: user.priceMultiplier,
     tradeMultiplier: typeof tradeMult === "number" ? tradeMult : null,
-  });
+  };
+
+  const { priceLow, priceHigh } = computePriceRange(pricingInputs);
 
   const lineItem: ProposalLineItem = {
     id: crypto.randomUUID(),
@@ -86,6 +93,27 @@ export async function generateMobileDraft(params: {
     exclusions: template.exclusions ?? undefined,
   };
 
+  // Packages: GOOD/BETTER/BEST feel instant onsite.
+  const good: ProposalLineItem = { ...lineItem };
+  const better: ProposalLineItem = {
+    ...lineItem,
+    id: crypto.randomUUID(),
+    scope: [...lineItem.scope, "Confirm field measurements and verify existing conditions prior to install."],
+    priceLow: Math.round(lineItem.priceLow * 1.08),
+    priceHigh: Math.round(lineItem.priceHigh * 1.08),
+  };
+  const best: ProposalLineItem = {
+    ...lineItem,
+    id: crypto.randomUUID(),
+    scope: [
+      ...lineItem.scope,
+      "Include premium protection of adjacent finishes and enhanced daily jobsite cleanup.",
+      "Provide photo documentation of key in-wall conditions as discovered.",
+    ],
+    priceLow: Math.round(lineItem.priceLow * 1.18),
+    priceHigh: Math.round(lineItem.priceHigh * 1.18),
+  };
+
   const questions: string[] = [];
   if (!enhance.success) {
     questions.push("Review the generated scope and adjust for site-specific conditions.");
@@ -100,8 +128,17 @@ export async function generateMobileDraft(params: {
   confidence = Math.max(0, Math.min(95, confidence));
 
   return {
-    lineItems: [lineItem],
+    packages: {
+      GOOD: { label: "Good", lineItems: [good] },
+      BETTER: { label: "Better", lineItems: [better] },
+      BEST: { label: "Best", lineItems: [best] },
+    },
+    defaultPackage: "BETTER",
     confidence,
     questions,
+    pricing: {
+      pricebookVersion: process.env.PRICEBOOK_VERSION || "v1",
+      inputs: pricingInputs,
+    },
   };
 }

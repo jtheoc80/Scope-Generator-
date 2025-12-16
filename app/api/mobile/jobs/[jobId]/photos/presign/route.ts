@@ -1,14 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { requireMobileAuth } from "@/src/lib/mobile/auth";
 import { presignPhotoRequestSchema } from "@/src/lib/mobile/types";
 import { storage } from "@/lib/services/storage";
 import { presignPutObject } from "@/src/lib/mobile/storage/s3";
+import { getRequestId, jsonError, logEvent, withRequestId } from "@/src/lib/mobile/observability";
 
 // POST /api/mobile/jobs/:jobId/photos/presign
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ jobId: string }> }
 ) {
+  const requestId = getRequestId(request.headers);
+  const t0 = Date.now();
   try {
     const authResult = await requireMobileAuth(request);
     if (!authResult.ok) return authResult.response;
@@ -16,20 +19,22 @@ export async function POST(
     const { jobId } = await params;
     const id = parseInt(jobId);
     if (Number.isNaN(id)) {
-      return NextResponse.json({ message: "Invalid jobId" }, { status: 400 });
+      return jsonError(requestId, 400, "INVALID_INPUT", "Invalid jobId");
     }
 
     const job = await storage.getMobileJob(id, authResult.userId);
     if (!job) {
-      return NextResponse.json({ message: "Job not found" }, { status: 404 });
+      return jsonError(requestId, 404, "NOT_FOUND", "Job not found");
     }
 
     const body = await request.json();
     const parsed = presignPhotoRequestSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json(
-        { message: parsed.error.issues[0]?.message ?? "Invalid presign payload" },
-        { status: 400 }
+      return jsonError(
+        requestId,
+        400,
+        "INVALID_INPUT",
+        parsed.error.issues[0]?.message ?? "Invalid presign payload"
       );
     }
 
@@ -47,16 +52,19 @@ export async function POST(
 
     // Keep response compatible with the simplified spec:
     // returns: { uploadUrl, publicUrl }
-    return NextResponse.json({
+    logEvent("mobile.photos.presign.ok", {
+      requestId,
+      jobId: job.id,
+      ms: Date.now() - t0,
+    });
+
+    return withRequestId(requestId, {
       uploadUrl: presigned.uploadUrl,
       publicUrl: presigned.publicUrl,
       key: presigned.key, // extra field (useful for debugging)
     });
   } catch (error) {
     console.error("Error presigning mobile photo upload:", error);
-    return NextResponse.json(
-      { message: "Failed to presign upload" },
-      { status: 500 }
-    );
+    return jsonError(requestId, 500, "INTERNAL", "Failed to presign upload");
   }
 }

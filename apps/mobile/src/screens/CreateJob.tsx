@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button, Text, TextInput, View } from "react-native";
-import { apiFetch } from "../lib/api";
+import { apiFetch, newIdempotencyKey } from "../lib/api";
 
 export default function CreateJob(props: { onCreated: (jobId: number) => void }) {
   // jobType is either a numeric template ID or a jobTypeId string.
@@ -16,6 +16,7 @@ export default function CreateJob(props: { onCreated: (jobId: number) => void })
     try {
       const res = await apiFetch<{ jobId: number }>("/api/mobile/jobs", {
         method: "POST",
+        headers: { "Idempotency-Key": newIdempotencyKey() },
         body: JSON.stringify({
           jobType: /^\d+$/.test(jobType) ? Number(jobType) : jobType,
           customer,

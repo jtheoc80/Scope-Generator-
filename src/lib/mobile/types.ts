@@ -46,24 +46,35 @@ export const registerPhotoResponseSchema = z.object({
 export type RegisterPhotoResponse = z.infer<typeof registerPhotoResponseSchema>;
 
 export type MobileDraftPayload = {
-  lineItems: Array<{
-    id: string;
-    tradeId: string;
-    tradeName: string;
-    jobTypeId: string;
-    jobTypeName: string;
-    jobSize: number;
-    scope: string[];
-    options: Record<string, boolean | string>;
-    priceLow: number;
-    priceHigh: number;
-    estimatedDaysLow?: number;
-    estimatedDaysHigh?: number;
-    warranty?: string;
-    exclusions?: string[];
-  }>;
+  packages: Record<
+    "GOOD" | "BETTER" | "BEST",
+    {
+      label: string;
+      lineItems: Array<{
+        id: string;
+        tradeId: string;
+        tradeName: string;
+        jobTypeId: string;
+        jobTypeName: string;
+        jobSize: number;
+        scope: string[];
+        options: Record<string, boolean | string>;
+        priceLow: number;
+        priceHigh: number;
+        estimatedDaysLow?: number;
+        estimatedDaysHigh?: number;
+        warranty?: string;
+        exclusions?: string[];
+      }>;
+    }
+  >;
+  defaultPackage: "GOOD" | "BETTER" | "BEST";
   confidence: number; // 0-100
   questions: string[];
+  pricing: {
+    pricebookVersion: string;
+    inputs: unknown;
+  };
 };
 
 export const draftStatusSchema = z.enum(["DRAFTING", "READY", "FAILED"]);

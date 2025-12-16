@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button, Image, Text, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { apiFetch } from "../lib/api";
+import { apiFetch, newIdempotencyKey } from "../lib/api";
 
 export default function CapturePhotos(props: {
   jobId: number;
@@ -33,6 +33,7 @@ export default function CapturePhotos(props: {
         `/api/mobile/jobs/${props.jobId}/photos/presign`,
         {
           method: "POST",
+          headers: { "Idempotency-Key": newIdempotencyKey() },
           body: JSON.stringify({
             contentType: asset.mimeType || "image/jpeg",
             filename: asset.fileName || "photo.jpg",
@@ -54,6 +55,7 @@ export default function CapturePhotos(props: {
 
       await apiFetch(`/api/mobile/jobs/${props.jobId}/photos`, {
         method: "POST",
+        headers: { "Idempotency-Key": newIdempotencyKey() },
         body: JSON.stringify({ url: presign.publicUrl, kind: "site" }),
       });
     } catch (e) {
@@ -69,6 +71,7 @@ export default function CapturePhotos(props: {
     try {
       await apiFetch<{ status: "DRAFTING" | "READY" | "FAILED" }>(`/api/mobile/jobs/${props.jobId}/draft`, {
         method: "POST",
+        headers: { "Idempotency-Key": newIdempotencyKey() },
       });
 
       // Poll until READY

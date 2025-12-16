@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button, ScrollView, Text, View } from "react-native";
-import { apiFetch } from "../lib/api";
+import { apiFetch, newIdempotencyKey } from "../lib/api";
 
 type PackageKey = "GOOD" | "BETTER" | "BEST";
 
@@ -22,7 +22,11 @@ export default function DraftPreview(props: {
     try {
       const res = await apiFetch<{ proposalId: number; webReviewUrl: string }>(
         `/api/mobile/jobs/${props.jobId}/submit`,
-        { method: "POST" }
+        {
+          method: "POST",
+          headers: { "Idempotency-Key": newIdempotencyKey() },
+          body: JSON.stringify({ package: pkg }),
+        }
       );
       setSubmitted(res);
     } catch (e) {

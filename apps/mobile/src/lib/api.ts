@@ -4,6 +4,10 @@ type ApiConfig = {
   userId?: string;
 };
 
+export function newIdempotencyKey() {
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}-${Math.random().toString(16).slice(2)}`;
+}
+
 function getConfig(): ApiConfig {
   // Configure these in Expo env:
   // - EXPO_PUBLIC_API_BASE_URL (e.g. http://localhost:3000)
