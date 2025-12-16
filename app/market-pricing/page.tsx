@@ -97,20 +97,30 @@ export default function MarketPricing() {
   // Check if limit was reached
   const limitReached = error instanceof LimitReachedError || (!hasSubscription && effectiveRemaining <= 0);
 
-  // Track anonymous usage when we get results
+  // Track the last counted query to avoid double-counting
+  const [lastCountedQuery, setLastCountedQuery] = useState<string | null>(null);
+  const currentQueryKey = selectedTrade && isValidZip ? `${selectedTrade}-${zipcode}` : null;
+  
+  // Track anonymous usage when a query completes (success or error)
   useEffect(() => {
-    if (hasResults && !hasSubscription) {
-      if (user) {
-        refetchUsage();
-      } else if (pricing && (pricing as any)._anonymous) {
-        // Increment anonymous usage
-        const newCount = incrementAnonymousUsage();
-        setAnonymousUsed(newCount);
-        // Invalidate the usage query to refresh
-        queryClient.invalidateQueries({ queryKey: ["cost-usage"] });
+    if (!hasSubscription && currentQueryKey && currentQueryKey !== lastCountedQuery) {
+      // Only count when we have results OR an error (query completed)
+      const queryCompleted = hasResults || (error && !isLoading);
+      
+      if (queryCompleted) {
+        if (user) {
+          refetchUsage();
+        } else {
+          // Increment anonymous usage for any completed request
+          const newCount = incrementAnonymousUsage();
+          setAnonymousUsed(newCount);
+          // Invalidate the usage query to refresh
+          queryClient.invalidateQueries({ queryKey: ["cost-usage"] });
+        }
+        setLastCountedQuery(currentQueryKey);
       }
     }
-  }, [hasResults, hasSubscription, user, pricing, refetchUsage, queryClient]);
+  }, [hasResults, error, isLoading, hasSubscription, user, currentQueryKey, lastCountedQuery, refetchUsage, queryClient]);
 
   const selectedTradeName = trades.find(t => t.id === selectedTrade)?.label || "";
 
@@ -153,12 +163,6 @@ export default function MarketPricing() {
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
               </div>
-            ) : !status?.available ? (
-              <Card className="border-red-200 bg-red-50">
-                <CardContent className="py-8 text-center">
-                  <p className="text-red-700">Market pricing data is currently unavailable. Please try again later.</p>
-                </CardContent>
-              </Card>
             ) : limitReached ? (
               <Card className="shadow-lg border-0 overflow-hidden" data-testid="upgrade-card">
                 <CardHeader className="bg-gradient-to-r from-amber-500 to-orange-500 text-white">
@@ -338,6 +342,14 @@ export default function MarketPricing() {
                       <div className="text-center py-8 text-slate-400 bg-slate-50 rounded-lg">
                         <p>No pricing data available for {selectedTradeName} in ZIP {zipcode}</p>
                         <p className="text-sm mt-2">Try a different ZIP code or trade</p>
+                      </div>
+                    )}
+
+                    {!isLoading && error && !(error instanceof LimitReachedError) && (
+                      <div className="text-center py-8 text-red-600 bg-red-50 rounded-lg">
+                        <AlertTriangle className="w-8 h-8 mx-auto mb-2" />
+                        <p>Unable to fetch pricing data. Please try again later.</p>
+                        <p className="text-sm mt-2 text-red-500">The pricing service may be temporarily unavailable.</p>
                       </div>
                     )}
                   </CardContent>
