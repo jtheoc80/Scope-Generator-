@@ -1,7 +1,7 @@
 'use client';
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/layout";
 import { useCostServiceStatus, useTradePricing, useCostUsage, LimitReachedError } from "@/hooks/use-cost-data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,23 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, TrendingUp, DollarSign, Hammer, MapPin, ArrowRight, Database, Sparkles, Lock, Crown, AlertTriangle } from "lucide-react";
+
+const ANONYMOUS_USAGE_KEY = "market-pricing-anonymous-usage";
+const FREE_PRICING_LOOKUPS = 3;
+
+function getAnonymousUsage(): number {
+  if (typeof window === "undefined") return 0;
+  const stored = localStorage.getItem(ANONYMOUS_USAGE_KEY);
+  return stored ? parseInt(stored, 10) : 0;
+}
+
+function incrementAnonymousUsage(): number {
+  if (typeof window === "undefined") return 0;
+  const current = getAnonymousUsage();
+  const newCount = current + 1;
+  localStorage.setItem(ANONYMOUS_USAGE_KEY, newCount.toString());
+  return newCount;
+}
 
 const trades = [
   { id: "bathroom", label: "Bathroom Remodel" },
@@ -36,6 +53,13 @@ function formatCurrency(amount: number): string {
 export default function MarketPricing() {
   const [selectedTrade, setSelectedTrade] = useState("");
   const [zipcode, setZipcode] = useState("");
+  const [anonymousUsed, setAnonymousUsed] = useState(0);
+  const queryClient = useQueryClient();
+  
+  // Initialize anonymous usage count on mount
+  useEffect(() => {
+    setAnonymousUsed(getAnonymousUsage());
+  }, []);
   
   // Fetch user data to check subscription
   const { data: user, isLoading: userLoading } = useQuery({
@@ -54,7 +78,12 @@ export default function MarketPricing() {
   
   // Pro/Crew users have unlimited access, free users get 3 trial lookups
   const hasSubscription = user?.subscriptionPlan === 'pro' || user?.subscriptionPlan === 'crew';
-  const hasRemainingLookups = hasSubscription || (usage?.remaining ?? 0) > 0;
+  
+  // For anonymous users, check localStorage usage; for authenticated, check server usage
+  const effectiveRemaining = user 
+    ? (usage?.remaining ?? 0)
+    : Math.max(0, FREE_PRICING_LOOKUPS - anonymousUsed);
+  const hasRemainingLookups = hasSubscription || effectiveRemaining > 0;
   
   const { data: pricing, isLoading, error } = useTradePricing(
     hasRemainingLookups ? selectedTrade : "",
@@ -66,14 +95,22 @@ export default function MarketPricing() {
   const hasResults = hasMaterials || hasLabor;
   
   // Check if limit was reached
-  const limitReached = error instanceof LimitReachedError || (usage && !hasSubscription && usage.remaining <= 0);
+  const limitReached = error instanceof LimitReachedError || (!hasSubscription && effectiveRemaining <= 0);
 
-  // Refetch usage when we get results (a lookup was used)
+  // Track anonymous usage when we get results
   useEffect(() => {
     if (hasResults && !hasSubscription) {
-      refetchUsage();
+      if (user) {
+        refetchUsage();
+      } else if (pricing && (pricing as any)._anonymous) {
+        // Increment anonymous usage
+        const newCount = incrementAnonymousUsage();
+        setAnonymousUsed(newCount);
+        // Invalidate the usage query to refresh
+        queryClient.invalidateQueries({ queryKey: ["cost-usage"] });
+      }
     }
-  }, [hasResults, hasSubscription, refetchUsage]);
+  }, [hasResults, hasSubscription, user, pricing, refetchUsage, queryClient]);
 
   const selectedTradeName = trades.find(t => t.id === selectedTrade)?.label || "";
 
@@ -100,11 +137,11 @@ export default function MarketPricing() {
                   <Crown className="w-4 h-4" />
                   Unlimited lookups with {user?.subscriptionPlan === 'crew' ? 'Crew' : 'Pro'}
                 </div>
-              ) : usage && (
+              ) : (
                 <div className="mt-4 inline-flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-800 px-4 py-2 rounded-full text-sm font-medium" data-testid="usage-indicator">
                   <Sparkles className="w-4 h-4" />
-                  {usage.remaining > 0 ? (
-                    <>Free trial: <strong>{usage.remaining} of {usage.limit}</strong> lookups remaining</>
+                  {effectiveRemaining > 0 ? (
+                    <>Free trial: <strong>{effectiveRemaining} of {FREE_PRICING_LOOKUPS}</strong> lookups remaining</>
                   ) : (
                     <>Free trial complete - upgrade for unlimited access</>
                   )}
@@ -112,7 +149,7 @@ export default function MarketPricing() {
               )}
             </div>
 
-            {(statusLoading || userLoading) ? (
+            {(statusLoading) ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
               </div>
@@ -120,31 +157,6 @@ export default function MarketPricing() {
               <Card className="border-red-200 bg-red-50">
                 <CardContent className="py-8 text-center">
                   <p className="text-red-700">Market pricing data is currently unavailable. Please try again later.</p>
-                </CardContent>
-              </Card>
-            ) : !user ? (
-              <Card className="shadow-lg border-0 overflow-hidden" data-testid="login-card">
-                <CardHeader className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <Sparkles className="w-5 h-5" />
-                    Try Market Pricing Free
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-8 text-center">
-                  <TrendingUp className="w-16 h-16 mx-auto mb-4 text-emerald-500" />
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">Get 3 Free Lookups</h3>
-                  <p className="text-slate-600 mb-6 max-w-md mx-auto">
-                    Sign in to access real-time material costs and labor rates for your area. Try it free with 3 lookups.
-                  </p>
-                  <a href="/api/login">
-                    <Button className="gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700" data-testid="button-login">
-                      <ArrowRight className="w-4 h-4" />
-                      Sign In to Start Free Trial
-                    </Button>
-                  </a>
-                  <p className="text-sm text-slate-500 mt-4">
-                    No credit card required for free trial
-                  </p>
                 </CardContent>
               </Card>
             ) : limitReached ? (
@@ -162,12 +174,21 @@ export default function MarketPricing() {
                     Love the market pricing data? Upgrade to Pro for unlimited lookups and get real-time material costs and labor rates for every quote.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                    <Link href="/settings">
-                      <Button className="gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600" data-testid="button-upgrade">
-                        <Crown className="w-4 h-4" />
-                        Upgrade to Pro - $29/mo
-                      </Button>
-                    </Link>
+                    {!user ? (
+                      <a href="/api/login">
+                        <Button className="gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700" data-testid="button-login">
+                          <ArrowRight className="w-4 h-4" />
+                          Sign In to Upgrade
+                        </Button>
+                      </a>
+                    ) : (
+                      <Link href="/settings">
+                        <Button className="gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600" data-testid="button-upgrade">
+                          <Crown className="w-4 h-4" />
+                          Upgrade to Pro - $29/mo
+                        </Button>
+                      </Link>
+                    )}
                   </div>
                   <p className="text-sm text-slate-500 mt-4">
                     Pro: Unlimited market pricing + 15 proposals/month

@@ -64,17 +64,45 @@ export function useCostServiceStatus() {
   });
 }
 
+const ANONYMOUS_USAGE_KEY = "market-pricing-anonymous-usage";
+const FREE_PRICING_LOOKUPS = 3;
+
+function getAnonymousUsage(): number {
+  if (typeof window === "undefined") return 0;
+  const stored = localStorage.getItem(ANONYMOUS_USAGE_KEY);
+  return stored ? parseInt(stored, 10) : 0;
+}
+
+function incrementAnonymousUsage(): number {
+  if (typeof window === "undefined") return 0;
+  const current = getAnonymousUsage();
+  const newCount = current + 1;
+  localStorage.setItem(ANONYMOUS_USAGE_KEY, newCount.toString());
+  return newCount;
+}
+
 export function useCostUsage() {
   return useQuery<CostUsage>({
     queryKey: ["cost-usage"],
     queryFn: async () => {
+      // First try to get authenticated user usage
       const response = await fetch("/api/costs/usage", {
         credentials: "include"
       });
-      if (!response.ok) {
-        throw new Error("Failed to fetch usage");
+      if (response.ok) {
+        return response.json();
       }
-      return response.json();
+      
+      // For anonymous users, use localStorage tracking
+      const used = getAnonymousUsage();
+      const remaining = Math.max(0, FREE_PRICING_LOOKUPS - used);
+      return {
+        used,
+        remaining,
+        limit: FREE_PRICING_LOOKUPS,
+        isPro: false,
+        hasAccess: remaining > 0
+      };
     },
     staleTime: 30 * 1000, // Refresh every 30 seconds
   });
@@ -168,9 +196,25 @@ export function useTradePricing(trade: string, zipcode: string) {
             throw new LimitReachedError(data.used, data.limit);
           }
         }
+        // For anonymous users who hit the limit
+        if (response.status === 401) {
+          // Check anonymous usage
+          const used = getAnonymousUsage();
+          if (used >= FREE_PRICING_LOOKUPS) {
+            throw new LimitReachedError(used, FREE_PRICING_LOOKUPS);
+          }
+        }
         throw new Error("Failed to fetch trade pricing");
       }
-      return response.json();
+      const result = await response.json();
+      
+      // If this was an anonymous lookup, increment local usage counter
+      // Check if the response indicates anonymous (no user tracking happened server-side)
+      if (result && result._anonymous) {
+        incrementAnonymousUsage();
+      }
+      
+      return result;
     },
     enabled: !!trade && !!zipcode,
     staleTime: 10 * 60 * 1000,
