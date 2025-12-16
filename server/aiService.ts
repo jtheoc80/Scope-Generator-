@@ -13,8 +13,34 @@ interface EnhanceScopeParams {
   jobNotes?: string;
 }
 
-export async function enhanceScope(params: EnhanceScopeParams): Promise<string[]> {
+interface EnhanceScopeResult {
+  success: boolean;
+  enhancedScope: string[];
+  error?: {
+    code: string;
+    message: string;
+  };
+}
+
+export async function enhanceScope(params: EnhanceScopeParams): Promise<EnhanceScopeResult> {
   const { jobTypeName, baseScope, clientName, address, jobNotes } = params;
+
+  // Validate inputs
+  if (!jobTypeName || typeof jobTypeName !== 'string') {
+    return {
+      success: false,
+      enhancedScope: baseScope,
+      error: { code: 'INVALID_INPUT', message: 'Job type name is required' },
+    };
+  }
+
+  if (!Array.isArray(baseScope) || baseScope.length === 0) {
+    return {
+      success: false,
+      enhancedScope: baseScope,
+      error: { code: 'INVALID_INPUT', message: 'Base scope must be a non-empty array' },
+    };
+  }
 
   const prompt = `You are a senior estimator at a high-end contracting firm with 25+ years of experience writing winning proposals. Your proposals are known for being thorough, professional, and client-focused while protecting the contractor.
 
@@ -62,28 +88,72 @@ Example: ["Line item 1.", "Line item 2.", "Line item 3."]`;
 
   try {
     const message = await anthropic.messages.create({
-      model: "claude-opus-4-5",
+      model: "claude-sonnet-4-20250514",
       max_tokens: 4096,
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
+      messages: [{ role: "user", content: prompt }],
     });
 
     const content = message.content[0];
     if (content.type === "text") {
-      const parsed = JSON.parse(content.text);
-      if (Array.isArray(parsed) && parsed.every(item => typeof item === 'string')) {
-        return parsed;
+      let textContent = content.text.trim();
+      
+      // Remove markdown code blocks if present
+      if (textContent.startsWith('```')) {
+        textContent = textContent.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+      }
+      
+      try {
+        const parsed = JSON.parse(textContent);
+        if (Array.isArray(parsed) && parsed.every(item => typeof item === 'string')) {
+          return { success: true, enhancedScope: parsed };
+        }
+        
+        return {
+          success: false,
+          enhancedScope: baseScope,
+          error: { code: 'INVALID_RESPONSE_FORMAT', message: 'AI returned an invalid format. Please try again.' },
+        };
+      } catch (parseError) {
+        console.error("Error parsing AI response:", parseError);
+        return {
+          success: false,
+          enhancedScope: baseScope,
+          error: { code: 'PARSE_ERROR', message: 'Failed to parse AI response. Please try again.' },
+        };
       }
     }
     
-    return baseScope;
-  } catch (error: any) {
+    return {
+      success: false,
+      enhancedScope: baseScope,
+      error: { code: 'NO_TEXT_CONTENT', message: 'AI did not return text content. Please try again.' },
+    };
+  } catch (error: unknown) {
     console.error("Error enhancing scope with AI:", error);
-    return baseScope;
+    
+    if (error instanceof Error) {
+      if (error.message.includes('rate_limit') || error.message.includes('429')) {
+        return {
+          success: false,
+          enhancedScope: baseScope,
+          error: { code: 'RATE_LIMITED', message: 'AI service is temporarily busy. Please try again in a moment.' },
+        };
+      }
+      
+      if (error.message.includes('authentication') || error.message.includes('401')) {
+        return {
+          success: false,
+          enhancedScope: baseScope,
+          error: { code: 'AUTH_ERROR', message: 'AI service configuration error. Please contact support.' },
+        };
+      }
+    }
+    
+    return {
+      success: false,
+      enhancedScope: baseScope,
+      error: { code: 'UNKNOWN_ERROR', message: 'An unexpected error occurred. Please try again.' },
+    };
   }
 }
 

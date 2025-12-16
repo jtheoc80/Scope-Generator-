@@ -70,12 +70,33 @@ export const users = pgTable("users", {
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 
+// Line item interface for multi-service proposals
+export interface ProposalLineItem {
+  id: string;
+  tradeId: string;
+  tradeName: string;
+  jobTypeId: string;
+  jobTypeName: string;
+  jobSize: number;
+  homeArea?: string;
+  footage?: number;
+  scope: string[];
+  options: Record<string, boolean | string>;
+  priceLow: number;
+  priceHigh: number;
+  estimatedDaysLow?: number;
+  estimatedDaysHigh?: number;
+  warranty?: string;
+  exclusions?: string[];
+}
+
 // Proposals table
 export const proposals = pgTable("proposals", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   clientName: varchar("client_name").notNull(),
   address: text("address").notNull(),
+  // Primary trade/job for backwards compatibility and single-service proposals
   tradeId: varchar("trade_id").notNull(),
   jobTypeId: varchar("job_type_id").notNull(),
   jobTypeName: varchar("job_type_name").notNull(),
@@ -84,6 +105,12 @@ export const proposals = pgTable("proposals", {
   options: jsonb("options").notNull().default({}),
   priceLow: integer("price_low").notNull(),
   priceHigh: integer("price_high").notNull(),
+  // Multi-service line items (null for single-service proposals)
+  lineItems: jsonb("line_items").$type<ProposalLineItem[]>(),
+  isMultiService: boolean("is_multi_service").notNull().default(false),
+  // Aggregated timeline for multi-service
+  estimatedDaysLow: integer("estimated_days_low"),
+  estimatedDaysHigh: integer("estimated_days_high"),
   status: varchar("status", { length: 20 }).notNull().default("draft"), // draft, sent, won, lost, accepted
   isUnlocked: boolean("is_unlocked").notNull().default(false),
   publicToken: varchar("public_token").unique(),
@@ -212,13 +239,137 @@ export const proposalViewsRelations = relations(proposalViews, ({ one }) => ({
   }),
 }));
 
+// ==========================================
+// Database-backed Templates
+// ==========================================
+
+// Job option schema for templates
+export interface TemplateJobOption {
+  id: string;
+  label: string;
+  type: "boolean" | "select";
+  choices?: { value: string; label: string; priceModifier: number; scopeAddition?: string }[];
+  priceModifier?: number;
+  scopeAddition?: string;
+}
+
+// Proposal templates table - stores both system and user-custom templates
+export const proposalTemplates = pgTable("proposal_templates", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  // Template identification
+  tradeId: varchar("trade_id", { length: 50 }).notNull(),
+  tradeName: varchar("trade_name", { length: 100 }).notNull(),
+  jobTypeId: varchar("job_type_id", { length: 50 }).notNull(),
+  jobTypeName: varchar("job_type_name", { length: 200 }).notNull(),
+  // Template content
+  baseScope: jsonb("base_scope").notNull().$type<string[]>(),
+  options: jsonb("options").notNull().$type<TemplateJobOption[]>(),
+  basePriceLow: integer("base_price_low").notNull(),
+  basePriceHigh: integer("base_price_high").notNull(),
+  estimatedDaysLow: integer("estimated_days_low"),
+  estimatedDaysHigh: integer("estimated_days_high"),
+  warranty: text("warranty"),
+  exclusions: jsonb("exclusions").$type<string[]>(),
+  // Template metadata
+  isDefault: boolean("is_default").notNull().default(true), // true = system template
+  isActive: boolean("is_active").notNull().default(true),
+  createdBy: varchar("created_by").references(() => users.id, { onDelete: "set null" }), // null = system
+  // Analytics
+  usageCount: integer("usage_count").notNull().default(0),
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  tradeJobTypeIdx: index("idx_templates_trade_job").on(table.tradeId, table.jobTypeId),
+  createdByIdx: index("idx_templates_created_by").on(table.createdBy),
+}));
+
+export const proposalTemplatesRelations = relations(proposalTemplates, ({ one }) => ({
+  creator: one(users, {
+    fields: [proposalTemplates.createdBy],
+    references: [users.id],
+  }),
+}));
+
+// ==========================================
+// Business Insights / Analytics
+// ==========================================
+
+// Proposal analytics snapshots - stores daily/weekly aggregated metrics
+export const proposalAnalyticsSnapshots = pgTable("proposal_analytics_snapshots", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  // Time period
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  periodType: varchar("period_type", { length: 20 }).notNull(), // 'daily', 'weekly', 'monthly'
+  // Proposal metrics
+  totalProposals: integer("total_proposals").notNull().default(0),
+  sentCount: integer("sent_count").notNull().default(0),
+  viewedCount: integer("viewed_count").notNull().default(0),
+  acceptedCount: integer("accepted_count").notNull().default(0),
+  wonCount: integer("won_count").notNull().default(0),
+  lostCount: integer("lost_count").notNull().default(0),
+  // Value metrics
+  totalValueLow: integer("total_value_low").notNull().default(0),
+  totalValueHigh: integer("total_value_high").notNull().default(0),
+  wonValueLow: integer("won_value_low").notNull().default(0),
+  wonValueHigh: integer("won_value_high").notNull().default(0),
+  avgPriceLow: integer("avg_price_low"),
+  avgPriceHigh: integer("avg_price_high"),
+  // Engagement metrics
+  totalViews: integer("total_views").notNull().default(0),
+  uniqueViewers: integer("unique_viewers").notNull().default(0),
+  // Time metrics (in hours)
+  avgTimeToView: integer("avg_time_to_view"),
+  avgTimeToAccept: integer("avg_time_to_accept"),
+  // Breakdowns stored as JSON
+  tradeBreakdown: jsonb("trade_breakdown").$type<Record<string, { count: number; value: number }>>(),
+  statusBreakdown: jsonb("status_breakdown").$type<Record<string, number>>(),
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  userPeriodIdx: index("idx_analytics_user_period").on(table.userId, table.periodStart, table.periodType),
+}));
+
+export const proposalAnalyticsSnapshotsRelations = relations(proposalAnalyticsSnapshots, ({ one }) => ({
+  user: one(users, {
+    fields: [proposalAnalyticsSnapshots.userId],
+    references: [users.id],
+  }),
+}));
+
+// Zod schemas for line items
+export const proposalLineItemSchema = z.object({
+  id: z.string(),
+  tradeId: z.string(),
+  tradeName: z.string(),
+  jobTypeId: z.string(),
+  jobTypeName: z.string(),
+  jobSize: z.number().min(1).max(3),
+  homeArea: z.string().optional(),
+  footage: z.number().optional(),
+  scope: z.array(z.string()),
+  options: z.record(z.string(), z.union([z.boolean(), z.string()])),
+  priceLow: z.number(),
+  priceHigh: z.number(),
+  estimatedDaysLow: z.number().optional(),
+  estimatedDaysHigh: z.number().optional(),
+  warranty: z.string().optional(),
+  exclusions: z.array(z.string()).optional(),
+});
+
 // Zod schemas
 export const insertProposalSchema = createInsertSchema(proposals).omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
   scope: z.array(z.string()),
-  options: z.record(z.string(), z.boolean()).optional(),
+  options: z.record(z.string(), z.union([z.boolean(), z.string()])).optional(),
+  lineItems: z.array(proposalLineItemSchema).optional(),
+  isMultiService: z.boolean().optional(),
+  estimatedDaysLow: z.number().optional(),
+  estimatedDaysHigh: z.number().optional(),
 });
 
 export const selectProposalSchema = createSelectSchema(proposals);
@@ -285,3 +436,85 @@ export type Invite = typeof invites.$inferSelect;
 // Proposal views types
 export type ProposalView = typeof proposalViews.$inferSelect;
 export type InsertProposalView = typeof proposalViews.$inferInsert;
+
+// Template types
+export type ProposalTemplate = typeof proposalTemplates.$inferSelect;
+export type InsertProposalTemplate = typeof proposalTemplates.$inferInsert;
+
+// Template Zod schemas
+export const templateJobOptionSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  type: z.enum(["boolean", "select"]),
+  choices: z.array(z.object({
+    value: z.string(),
+    label: z.string(),
+    priceModifier: z.number(),
+    scopeAddition: z.string().optional(),
+  })).optional(),
+  priceModifier: z.number().optional(),
+  scopeAddition: z.string().optional(),
+});
+
+export const insertTemplateSchema = createInsertSchema(proposalTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  usageCount: true,
+}).extend({
+  baseScope: z.array(z.string()),
+  options: z.array(templateJobOptionSchema),
+  exclusions: z.array(z.string()).optional(),
+});
+
+// Analytics types
+export type ProposalAnalyticsSnapshot = typeof proposalAnalyticsSnapshots.$inferSelect;
+export type InsertProposalAnalyticsSnapshot = typeof proposalAnalyticsSnapshots.$inferInsert;
+
+// Enhanced analytics result type
+export interface EnhancedProposalAnalytics {
+  // Summary metrics
+  totalProposals: number;
+  sentCount: number;
+  viewedCount: number;
+  acceptedCount: number;
+  wonCount: number;
+  lostCount: number;
+  acceptanceRate: number;
+  winRate: number;
+  
+  // Value metrics
+  totalValueLow: number;
+  totalValueHigh: number;
+  wonValueLow: number;
+  wonValueHigh: number;
+  avgPriceLow: number;
+  avgPriceHigh: number;
+  avgWonValueLow: number;
+  avgWonValueHigh: number;
+  
+  // Engagement metrics
+  totalViews: number;
+  avgViewsPerProposal: number;
+  viewToAcceptRate: number;
+  
+  // Time metrics (in hours)
+  avgTimeToView: number | null;
+  avgTimeToAccept: number | null;
+  
+  // Breakdowns
+  statusBreakdown: Record<string, number>;
+  tradeBreakdown: Record<string, { 
+    count: number; 
+    avgPriceLow: number; 
+    avgPriceHigh: number;
+    winRate: number;
+  }>;
+  
+  // Trends (last 30 days vs previous 30 days)
+  trends: {
+    proposalsChange: number; // percentage
+    valueChange: number; // percentage
+    winRateChange: number; // percentage points
+  };
+}

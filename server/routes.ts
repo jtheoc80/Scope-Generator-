@@ -263,7 +263,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         return res.status(400).json({ message: "jobTypeName and baseScope array are required" });
       }
 
-      const enhancedScope = await aiService.enhanceScope({
+      const result = await aiService.enhanceScope({
         jobTypeName,
         baseScope,
         clientName,
@@ -271,10 +271,21 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         jobNotes,
       });
 
-      res.json({ enhancedScope });
+      // Return both the scope and any error info for client feedback
+      res.json({ 
+        enhancedScope: result.enhancedScope,
+        success: result.success,
+        error: result.error,
+      });
     } catch (error) {
       console.error("Error enhancing scope:", error);
-      res.status(500).json({ message: "Failed to enhance scope" });
+      res.status(500).json({ 
+        message: "Failed to enhance scope",
+        error: {
+          code: 'SERVER_ERROR',
+          message: 'An unexpected error occurred. Please try again.',
+        }
+      });
     }
   });
 
@@ -1560,6 +1571,18 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     } catch (error) {
       console.error("Error fetching pricing summary:", error);
       res.status(500).json({ message: "Failed to fetch pricing summary" });
+    }
+  });
+
+  // Enhanced analytics for business insights
+  app.get('/api/analytics/insights', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const insights = await storage.getEnhancedProposalAnalytics(userId);
+      res.json(insights);
+    } catch (error) {
+      console.error("Error fetching insights:", error);
+      res.status(500).json({ message: "Failed to fetch insights" });
     }
   });
 

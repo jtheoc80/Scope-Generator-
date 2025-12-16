@@ -45,6 +45,8 @@ import CountersignModal from "@/components/countersign-modal";
 import PaymentLinkModal from "@/components/payment-link-modal";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
+import type { TranslationKeys } from "@/lib/translations";
+import { BusinessInsights } from "@/components/business-insights";
 
 interface Proposal {
   id: number;
@@ -67,7 +69,7 @@ interface Proposal {
   lastViewedAt?: string | null;
 }
 
-function StatusBadge({ status, t }: { status: string; t: any }) {
+function StatusBadge({ status, t }: { status: string; t: TranslationKeys }) {
   const styles: Record<string, string> = {
     sent: "bg-blue-100 text-blue-700 border-blue-200",
     draft: "bg-slate-100 text-slate-700 border-slate-200",
@@ -105,7 +107,7 @@ function PipelineView({
   onViewProposal
 }: { 
   proposals: Proposal[];
-  t: any;
+  t: TranslationKeys;
   language: string;
   onStatusChange: (proposalId: number, status: string) => void;
   onViewProposal: (proposal: Proposal) => void;
@@ -294,7 +296,7 @@ function MobileProposalMenu({
   showPaymentLink
 }: { 
   proposal: Proposal;
-  t: any;
+  t: TranslationKeys;
   onEdit: () => void;
   onView: () => void;
   onEmail: () => void;
@@ -389,6 +391,16 @@ export default function Dashboard() {
     depositPercentage?: number | null;
   } | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'pipeline'>('list');
+  const [isViewSwitching, setIsViewSwitching] = useState(false);
+
+  const handleViewModeChange = async (mode: 'list' | 'pipeline') => {
+    if (mode === viewMode) return;
+    setIsViewSwitching(true);
+    // Small delay for smooth transition
+    await new Promise(resolve => setTimeout(resolve, 150));
+    setViewMode(mode);
+    setIsViewSwitching(false);
+  };
 
   const handleViewProposal = (proposal: Proposal) => {
     if (proposal.publicToken) {
@@ -619,6 +631,9 @@ export default function Dashboard() {
             ))}
           </div>
 
+          {/* Business Insights Section */}
+          <BusinessInsights />
+
           <Card className="border-none shadow-sm">
             <CardHeader className="px-4 md:px-6 py-4 md:py-5 border-b border-slate-100 flex flex-row items-center justify-between bg-white rounded-t-lg gap-2">
               <CardTitle className="text-base md:text-lg font-bold text-slate-800">{t.dashboard.recentProposals}</CardTitle>
@@ -628,20 +643,30 @@ export default function Dashboard() {
                     variant={viewMode === 'list' ? 'default' : 'ghost'}
                     size="sm"
                     className={`h-7 px-3 gap-1.5 text-xs ${viewMode === 'list' ? '' : 'hover:bg-slate-200'}`}
-                    onClick={() => setViewMode('list')}
+                    onClick={() => handleViewModeChange('list')}
+                    disabled={isViewSwitching}
                     data-testid="toggle-list-view"
                   >
-                    <List className="w-3.5 h-3.5" />
+                    {isViewSwitching && viewMode !== 'list' ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <List className="w-3.5 h-3.5" />
+                    )}
                     {t.dashboard.listView}
                   </Button>
                   <Button
                     variant={viewMode === 'pipeline' ? 'default' : 'ghost'}
                     size="sm"
                     className={`h-7 px-3 gap-1.5 text-xs ${viewMode === 'pipeline' ? '' : 'hover:bg-slate-200'}`}
-                    onClick={() => setViewMode('pipeline')}
+                    onClick={() => handleViewModeChange('pipeline')}
+                    disabled={isViewSwitching}
                     data-testid="toggle-pipeline-view"
                   >
-                    <Columns className="w-3.5 h-3.5" />
+                    {isViewSwitching && viewMode !== 'pipeline' ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Columns className="w-3.5 h-3.5" />
+                    )}
                     {t.dashboard.pipelineView}
                   </Button>
                 </div>
@@ -661,6 +686,10 @@ export default function Dashboard() {
                     <Plus className="w-4 h-4" />
                     {t.dashboard.createProposal}
                   </Link>
+                </div>
+              ) : isViewSwitching ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
                 </div>
               ) : viewMode === 'pipeline' ? (
                 <PipelineView 

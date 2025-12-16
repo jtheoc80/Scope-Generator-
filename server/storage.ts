@@ -356,7 +356,7 @@ export class DatabaseStorage implements IStorage {
 
     const newCredits = (existingUser.proposalCredits || 0) + credits;
     
-    const updateData: any = {
+    const updateData: Partial<typeof users.$inferInsert> = {
       proposalCredits: newCredits,
       updatedAt: new Date(),
     };
@@ -687,6 +687,232 @@ export class DatabaseStorage implements IStorage {
       avgPriceHigh,
       statusBreakdown,
       tradeBreakdown,
+    };
+  }
+
+  // Enhanced analytics for business insights
+  async getEnhancedProposalAnalytics(userId: string): Promise<{
+    // Summary metrics
+    totalProposals: number;
+    sentCount: number;
+    viewedCount: number;
+    acceptedCount: number;
+    wonCount: number;
+    lostCount: number;
+    acceptanceRate: number;
+    winRate: number;
+    
+    // Value metrics
+    totalValueLow: number;
+    totalValueHigh: number;
+    wonValueLow: number;
+    wonValueHigh: number;
+    avgPriceLow: number;
+    avgPriceHigh: number;
+    avgWonValueLow: number;
+    avgWonValueHigh: number;
+    
+    // Engagement metrics
+    totalViews: number;
+    avgViewsPerProposal: number;
+    viewToAcceptRate: number;
+    
+    // Time metrics (in hours)
+    avgTimeToView: number | null;
+    avgTimeToAccept: number | null;
+    
+    // Breakdowns
+    statusBreakdown: Record<string, number>;
+    tradeBreakdown: Record<string, { 
+      count: number; 
+      avgPriceLow: number; 
+      avgPriceHigh: number;
+      winRate: number;
+    }>;
+    
+    // Recent activity (last 30 days)
+    recentProposals: number;
+    recentWonValue: number;
+    
+    // Trends (last 30 days vs previous 30 days)
+    trends: {
+      proposalsChange: number;
+      valueChange: number;
+      winRateChange: number;
+    };
+  }> {
+    const userProposals = await db
+      .select()
+      .from(proposals)
+      .where(eq(proposals.userId, userId));
+
+    // Get all views for user's proposals
+    const proposalIds = userProposals.map(p => p.id);
+    const allViews = proposalIds.length > 0 
+      ? await db.select().from(proposalViews).where(inArray(proposalViews.proposalId, proposalIds))
+      : [];
+
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+
+    // Basic counts
+    const totalProposals = userProposals.length;
+    const sentCount = userProposals.filter(p => p.status !== 'draft').length;
+    const viewedCount = userProposals.filter(p => p.status === 'viewed' || p.status === 'accepted' || p.status === 'won').length;
+    const acceptedCount = userProposals.filter(p => p.status === 'accepted' || p.status === 'won').length;
+    const wonCount = userProposals.filter(p => p.status === 'won').length;
+    const lostCount = userProposals.filter(p => p.status === 'lost').length;
+
+    // Rates
+    const acceptanceRate = sentCount > 0 ? (acceptedCount / sentCount) * 100 : 0;
+    const completedCount = wonCount + lostCount;
+    const winRate = completedCount > 0 ? (wonCount / completedCount) * 100 : 0;
+
+    // Value metrics
+    const totalValueLow = userProposals.reduce((sum, p) => sum + p.priceLow, 0);
+    const totalValueHigh = userProposals.reduce((sum, p) => sum + p.priceHigh, 0);
+    
+    const wonProposals = userProposals.filter(p => p.status === 'won');
+    const wonValueLow = wonProposals.reduce((sum, p) => sum + p.priceLow, 0);
+    const wonValueHigh = wonProposals.reduce((sum, p) => sum + p.priceHigh, 0);
+
+    const avgPriceLow = totalProposals > 0 ? totalValueLow / totalProposals : 0;
+    const avgPriceHigh = totalProposals > 0 ? totalValueHigh / totalProposals : 0;
+    const avgWonValueLow = wonCount > 0 ? wonValueLow / wonCount : 0;
+    const avgWonValueHigh = wonCount > 0 ? wonValueHigh / wonCount : 0;
+
+    // Engagement metrics
+    const totalViews = allViews.length;
+    const avgViewsPerProposal = totalProposals > 0 ? totalViews / totalProposals : 0;
+    const viewToAcceptRate = viewedCount > 0 ? (acceptedCount / viewedCount) * 100 : 0;
+
+    // Time metrics
+    let totalTimeToView = 0;
+    let timeToViewCount = 0;
+    let totalTimeToAccept = 0;
+    let timeToAcceptCount = 0;
+
+    for (const proposal of userProposals) {
+      if (proposal.createdAt) {
+        // Find first view
+        const proposalViewsList = allViews.filter(v => v.proposalId === proposal.id);
+        if (proposalViewsList.length > 0) {
+          const firstView = proposalViewsList.sort((a, b) => 
+            (a.createdAt?.getTime() || 0) - (b.createdAt?.getTime() || 0)
+          )[0];
+          if (firstView.createdAt) {
+            totalTimeToView += (firstView.createdAt.getTime() - proposal.createdAt.getTime()) / (1000 * 60 * 60);
+            timeToViewCount++;
+          }
+        }
+        
+        // Time to accept
+        if (proposal.acceptedAt) {
+          totalTimeToAccept += (proposal.acceptedAt.getTime() - proposal.createdAt.getTime()) / (1000 * 60 * 60);
+          timeToAcceptCount++;
+        }
+      }
+    }
+
+    const avgTimeToView = timeToViewCount > 0 ? Math.round(totalTimeToView / timeToViewCount) : null;
+    const avgTimeToAccept = timeToAcceptCount > 0 ? Math.round(totalTimeToAccept / timeToAcceptCount) : null;
+
+    // Status breakdown
+    const statusBreakdown: Record<string, number> = {};
+    userProposals.forEach(p => {
+      statusBreakdown[p.status] = (statusBreakdown[p.status] || 0) + 1;
+    });
+
+    // Trade breakdown with win rate
+    const tradeBreakdown: Record<string, { count: number; avgPriceLow: number; avgPriceHigh: number; winRate: number }> = {};
+    userProposals.forEach(p => {
+      if (!tradeBreakdown[p.tradeId]) {
+        tradeBreakdown[p.tradeId] = { count: 0, avgPriceLow: 0, avgPriceHigh: 0, winRate: 0 };
+      }
+      tradeBreakdown[p.tradeId].count++;
+    });
+
+    Object.keys(tradeBreakdown).forEach(tradeId => {
+      const tradeProposals = userProposals.filter(p => p.tradeId === tradeId);
+      const tradeWon = tradeProposals.filter(p => p.status === 'won').length;
+      const tradeLost = tradeProposals.filter(p => p.status === 'lost').length;
+      const tradeCompleted = tradeWon + tradeLost;
+      
+      tradeBreakdown[tradeId].avgPriceLow = tradeProposals.reduce((sum, p) => sum + p.priceLow, 0) / tradeProposals.length;
+      tradeBreakdown[tradeId].avgPriceHigh = tradeProposals.reduce((sum, p) => sum + p.priceHigh, 0) / tradeProposals.length;
+      tradeBreakdown[tradeId].winRate = tradeCompleted > 0 ? (tradeWon / tradeCompleted) * 100 : 0;
+    });
+
+    // Recent activity (last 30 days)
+    const recentProposals = userProposals.filter(p => 
+      p.createdAt && p.createdAt >= thirtyDaysAgo
+    ).length;
+    
+    const recentWonProposals = userProposals.filter(p => 
+      p.status === 'won' && p.updatedAt && p.updatedAt >= thirtyDaysAgo
+    );
+    const recentWonValue = recentWonProposals.reduce((sum, p) => sum + Math.round((p.priceLow + p.priceHigh) / 2), 0);
+
+    // Trends (compare last 30 days to previous 30 days)
+    const last30DaysProposals = userProposals.filter(p => 
+      p.createdAt && p.createdAt >= thirtyDaysAgo
+    );
+    const prev30DaysProposals = userProposals.filter(p => 
+      p.createdAt && p.createdAt >= sixtyDaysAgo && p.createdAt < thirtyDaysAgo
+    );
+
+    const proposalsChange = prev30DaysProposals.length > 0 
+      ? ((last30DaysProposals.length - prev30DaysProposals.length) / prev30DaysProposals.length) * 100
+      : last30DaysProposals.length > 0 ? 100 : 0;
+
+    const last30Value = last30DaysProposals.reduce((sum, p) => sum + Math.round((p.priceLow + p.priceHigh) / 2), 0);
+    const prev30Value = prev30DaysProposals.reduce((sum, p) => sum + Math.round((p.priceLow + p.priceHigh) / 2), 0);
+    const valueChange = prev30Value > 0 
+      ? ((last30Value - prev30Value) / prev30Value) * 100
+      : last30Value > 0 ? 100 : 0;
+
+    const last30Won = last30DaysProposals.filter(p => p.status === 'won').length;
+    const last30Completed = last30Won + last30DaysProposals.filter(p => p.status === 'lost').length;
+    const last30WinRate = last30Completed > 0 ? (last30Won / last30Completed) * 100 : 0;
+
+    const prev30Won = prev30DaysProposals.filter(p => p.status === 'won').length;
+    const prev30Completed = prev30Won + prev30DaysProposals.filter(p => p.status === 'lost').length;
+    const prev30WinRate = prev30Completed > 0 ? (prev30Won / prev30Completed) * 100 : 0;
+
+    const winRateChange = last30WinRate - prev30WinRate;
+
+    return {
+      totalProposals,
+      sentCount,
+      viewedCount,
+      acceptedCount,
+      wonCount,
+      lostCount,
+      acceptanceRate: Math.round(acceptanceRate * 10) / 10,
+      winRate: Math.round(winRate * 10) / 10,
+      totalValueLow,
+      totalValueHigh,
+      wonValueLow,
+      wonValueHigh,
+      avgPriceLow: Math.round(avgPriceLow),
+      avgPriceHigh: Math.round(avgPriceHigh),
+      avgWonValueLow: Math.round(avgWonValueLow),
+      avgWonValueHigh: Math.round(avgWonValueHigh),
+      totalViews,
+      avgViewsPerProposal: Math.round(avgViewsPerProposal * 10) / 10,
+      viewToAcceptRate: Math.round(viewToAcceptRate * 10) / 10,
+      avgTimeToView,
+      avgTimeToAccept,
+      statusBreakdown,
+      tradeBreakdown,
+      recentProposals,
+      recentWonValue,
+      trends: {
+        proposalsChange: Math.round(proposalsChange * 10) / 10,
+        valueChange: Math.round(valueChange * 10) / 10,
+        winRateChange: Math.round(winRateChange * 10) / 10,
+      },
     };
   }
 
