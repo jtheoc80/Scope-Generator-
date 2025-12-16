@@ -191,7 +191,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get('/api/costs/trade', isAuthenticated, async (req: any, res) => {
+  app.get('/api/costs/trade', async (req: any, res) => {
     try {
       if (!oneBuildService.isConfigured()) {
         return res.status(503).json({ message: "Cost data service not configured" });
@@ -203,38 +203,52 @@ export async function registerRoutes(
         return res.status(400).json({ message: "trade and zipcode are required" });
       }
       
-      // Check usage limits for non-Pro users
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      // Check if user is authenticated
+      const isLoggedIn = req.isAuthenticated() && req.user?.claims?.sub;
       
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      const lookupCount = user.marketPricingLookups || 0;
-      
-      // Free users limited to 3 lookups (Pro users have unlimited)
-      if (!user.isPro && lookupCount >= FREE_PRICING_LOOKUPS) {
-        return res.status(403).json({ 
-          message: "Free lookup limit reached",
-          limitReached: true,
-          used: lookupCount,
-          limit: FREE_PRICING_LOOKUPS
-        });
-      }
+      if (isLoggedIn) {
+        // Check usage limits for authenticated non-Pro users
+        const userId = req.user.claims.sub;
+        const user = await storage.getUser(userId);
+        
+        if (!user) {
+          return res.status(404).json({ message: "User not found" });
+        }
+        
+        const lookupCount = user.marketPricingLookups || 0;
+        
+        // Free users limited to 3 lookups (Pro users have unlimited)
+        if (!user.isPro && lookupCount >= FREE_PRICING_LOOKUPS) {
+          return res.status(403).json({ 
+            message: "Free lookup limit reached",
+            limitReached: true,
+            used: lookupCount,
+            limit: FREE_PRICING_LOOKUPS
+          });
+        }
 
-      const result = await oneBuildService.getTradePricing(
-        trade as string,
-        zipcode as string
-      );
-      
-      // Only increment usage for free users after successful lookup
-      // Pro users have unlimited access, so we don't track their usage
-      if (!user.isPro) {
-        await storage.incrementMarketPricingLookups(userId);
-      }
+        const result = await oneBuildService.getTradePricing(
+          trade as string,
+          zipcode as string
+        );
+        
+        // Only increment usage for free users after successful lookup
+        // Pro users have unlimited access, so we don't track their usage
+        if (!user.isPro) {
+          await storage.incrementMarketPricingLookups(userId);
+        }
 
-      res.json(result);
+        res.json(result);
+      } else {
+        // Anonymous user - let client-side handle usage tracking via localStorage
+        // Server just returns the data with an _anonymous flag
+        const result = await oneBuildService.getTradePricing(
+          trade as string,
+          zipcode as string
+        );
+        
+        res.json({ ...result, _anonymous: true });
+      }
     } catch (error) {
       console.error("Error fetching trade pricing:", error);
       res.status(500).json({ message: "Failed to fetch trade pricing" });
