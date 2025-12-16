@@ -47,6 +47,7 @@
     "api-to-convert/**",
     "pages-to-convert/**",
     "nextjs-app/**",
+    "apps/**",
     "script/**",
     "server/**",
     "lib/services/**",

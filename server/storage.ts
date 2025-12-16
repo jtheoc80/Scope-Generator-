@@ -6,6 +6,9 @@ import {
   companyMembers,
   invites,
   proposalViews,
+  mobileJobs,
+  mobileJobPhotos,
+  mobileJobDrafts,
   type User,
   type UpsertUser,
   type Proposal,
@@ -128,6 +131,41 @@ export interface IStorage {
   // Market pricing usage tracking
   getMarketPricingLookups(userId: string): Promise<number>;
   incrementMarketPricingLookups(userId: string): Promise<number>;
+
+  // ==========================================
+  // Mobile Companion App: Jobs / Photos / Drafts
+  // ==========================================
+  createMobileJob(userId: string, job: {
+    clientName: string;
+    address: string;
+    tradeId: string;
+    tradeName?: string | null;
+    jobTypeId: string;
+    jobTypeName: string;
+    jobSize?: number;
+    jobNotes?: string | null;
+  }): Promise<typeof mobileJobs.$inferSelect>;
+
+  getMobileJob(jobId: number, userId: string): Promise<typeof mobileJobs.$inferSelect | undefined>;
+
+  addMobileJobPhoto(jobId: number, userId: string, photo: {
+    publicUrl: string;
+    kind?: string;
+  }): Promise<typeof mobileJobPhotos.$inferSelect>;
+
+  listMobileJobPhotos(jobId: number, userId: string): Promise<(typeof mobileJobPhotos.$inferSelect)[]>;
+
+  createMobileJobDraft(jobId: number, userId: string, draft: {
+    status: "pending" | "processing" | "ready" | "failed";
+    payload?: unknown;
+    confidence?: number | null;
+    questions?: string[];
+    error?: string | null;
+  }): Promise<typeof mobileJobDrafts.$inferSelect>;
+
+  getLatestMobileJobDraft(jobId: number, userId: string): Promise<typeof mobileJobDrafts.$inferSelect | undefined>;
+
+  linkDraftToProposal(draftId: number, userId: string, proposalId: number): Promise<typeof mobileJobDrafts.$inferSelect | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -995,6 +1033,153 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId))
       .returning({ marketPricingLookups: users.marketPricingLookups });
     return user?.marketPricingLookups ?? 0;
+  }
+
+  // ==========================================
+  // Mobile Companion App: Jobs / Photos / Drafts
+  // ==========================================
+
+  async createMobileJob(userId: string, job: {
+    clientName: string;
+    address: string;
+    tradeId: string;
+    tradeName?: string | null;
+    jobTypeId: string;
+    jobTypeName: string;
+    jobSize?: number;
+    jobNotes?: string | null;
+  }): Promise<typeof mobileJobs.$inferSelect> {
+    const [created] = await db
+      .insert(mobileJobs)
+      .values({
+        userId,
+        clientName: job.clientName,
+        address: job.address,
+        tradeId: job.tradeId,
+        tradeName: job.tradeName ?? null,
+        jobTypeId: job.jobTypeId,
+        jobTypeName: job.jobTypeName,
+        jobSize: job.jobSize ?? 2,
+        jobNotes: job.jobNotes ?? null,
+        status: "created",
+      } as typeof mobileJobs.$inferInsert)
+      .returning();
+    return created;
+  }
+
+  async getMobileJob(jobId: number, userId: string): Promise<typeof mobileJobs.$inferSelect | undefined> {
+    const [job] = await db
+      .select()
+      .from(mobileJobs)
+      .where(and(eq(mobileJobs.id, jobId), eq(mobileJobs.userId, userId)));
+    return job;
+  }
+
+  async addMobileJobPhoto(jobId: number, userId: string, photo: {
+    publicUrl: string;
+    kind?: string;
+  }): Promise<typeof mobileJobPhotos.$inferSelect> {
+    // Ensure job belongs to user
+    const job = await this.getMobileJob(jobId, userId);
+    if (!job) {
+      throw new Error("Job not found or access denied");
+    }
+
+    const [created] = await db
+      .insert(mobileJobPhotos)
+      .values({
+        jobId,
+        publicUrl: photo.publicUrl,
+        kind: photo.kind ?? "site",
+      } as typeof mobileJobPhotos.$inferInsert)
+      .returning();
+
+    await db
+      .update(mobileJobs)
+      .set({ status: "photos_uploaded", updatedAt: new Date() })
+      .where(eq(mobileJobs.id, jobId));
+
+    return created;
+  }
+
+  async listMobileJobPhotos(jobId: number, userId: string): Promise<(typeof mobileJobPhotos.$inferSelect)[]> {
+    const job = await this.getMobileJob(jobId, userId);
+    if (!job) return [];
+    return await db
+      .select()
+      .from(mobileJobPhotos)
+      .where(eq(mobileJobPhotos.jobId, jobId))
+      .orderBy(desc(mobileJobPhotos.createdAt));
+  }
+
+  async createMobileJobDraft(jobId: number, userId: string, draft: {
+    status: "pending" | "processing" | "ready" | "failed";
+    payload?: unknown;
+    confidence?: number | null;
+    questions?: string[];
+    error?: string | null;
+  }): Promise<typeof mobileJobDrafts.$inferSelect> {
+    const job = await this.getMobileJob(jobId, userId);
+    if (!job) {
+      throw new Error("Job not found or access denied");
+    }
+
+    const [created] = await db
+      .insert(mobileJobDrafts)
+      .values({
+        jobId,
+        status: draft.status,
+        payload: draft.payload ?? null,
+        confidence: draft.confidence ?? null,
+        questions: draft.questions ?? [],
+        error: draft.error ?? null,
+      } as typeof mobileJobDrafts.$inferInsert)
+      .returning();
+
+    await db
+      .update(mobileJobs)
+      .set({
+        status: draft.status === "ready" ? "drafted" : "drafting",
+        updatedAt: new Date(),
+      })
+      .where(eq(mobileJobs.id, jobId));
+
+    return created;
+  }
+
+  async getLatestMobileJobDraft(jobId: number, userId: string): Promise<typeof mobileJobDrafts.$inferSelect | undefined> {
+    const job = await this.getMobileJob(jobId, userId);
+    if (!job) return undefined;
+
+    const [draft] = await db
+      .select()
+      .from(mobileJobDrafts)
+      .where(eq(mobileJobDrafts.jobId, jobId))
+      .orderBy(desc(mobileJobDrafts.createdAt))
+      .limit(1);
+    return draft;
+  }
+
+  async linkDraftToProposal(draftId: number, userId: string, proposalId: number): Promise<typeof mobileJobDrafts.$inferSelect | undefined> {
+    // Verify draft -> job -> user ownership
+    const [draft] = await db.select().from(mobileJobDrafts).where(eq(mobileJobDrafts.id, draftId));
+    if (!draft) return undefined;
+
+    const job = await this.getMobileJob(draft.jobId, userId);
+    if (!job) return undefined;
+
+    const [updated] = await db
+      .update(mobileJobDrafts)
+      .set({ proposalId, updatedAt: new Date() })
+      .where(eq(mobileJobDrafts.id, draftId))
+      .returning();
+
+    await db
+      .update(mobileJobs)
+      .set({ status: "submitted", updatedAt: new Date() })
+      .where(eq(mobileJobs.id, job.id));
+
+    return updated;
   }
 }
 

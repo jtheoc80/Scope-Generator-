@@ -292,6 +292,79 @@ export const proposalTemplatesRelations = relations(proposalTemplates, ({ one })
 }));
 
 // ==========================================
+// Mobile Companion App: Jobs / Photos / Drafts
+// ==========================================
+
+export const mobileJobs = pgTable("mobile_jobs", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+
+  clientName: varchar("client_name").notNull(),
+  address: text("address").notNull(),
+
+  // Store trade/jobType directly to avoid tight coupling to template IDs
+  tradeId: varchar("trade_id", { length: 50 }).notNull(),
+  tradeName: varchar("trade_name", { length: 100 }),
+  jobTypeId: varchar("job_type_id", { length: 50 }).notNull(),
+  jobTypeName: varchar("job_type_name", { length: 200 }).notNull(),
+  jobSize: integer("job_size").notNull().default(2),
+
+  jobNotes: text("job_notes"),
+  status: varchar("status", { length: 20 }).notNull().default("created"), // created, photos_uploaded, drafting, drafted, submitted
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const mobileJobPhotos = pgTable("mobile_job_photos", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  jobId: integer("job_id").notNull().references(() => mobileJobs.id, { onDelete: "cascade" }),
+  kind: varchar("kind", { length: 50 }).notNull().default("site"), // site, closeup, damage, etc.
+  publicUrl: text("public_url").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const mobileJobDrafts = pgTable("mobile_job_drafts", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  jobId: integer("job_id").notNull().references(() => mobileJobs.id, { onDelete: "cascade" }),
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // pending, processing, ready, failed
+  payload: jsonb("payload").$type<unknown>(), // draft payload (lineItems, packages, questions, etc.)
+  confidence: integer("confidence"), // 0-100
+  questions: text("questions").array().default([]),
+  error: text("error"),
+  proposalId: integer("proposal_id").references(() => proposals.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const mobileJobsRelations = relations(mobileJobs, ({ one, many }) => ({
+  user: one(users, {
+    fields: [mobileJobs.userId],
+    references: [users.id],
+  }),
+  photos: many(mobileJobPhotos),
+  drafts: many(mobileJobDrafts),
+}));
+
+export const mobileJobPhotosRelations = relations(mobileJobPhotos, ({ one }) => ({
+  job: one(mobileJobs, {
+    fields: [mobileJobPhotos.jobId],
+    references: [mobileJobs.id],
+  }),
+}));
+
+export const mobileJobDraftsRelations = relations(mobileJobDrafts, ({ one }) => ({
+  job: one(mobileJobs, {
+    fields: [mobileJobDrafts.jobId],
+    references: [mobileJobs.id],
+  }),
+  proposal: one(proposals, {
+    fields: [mobileJobDrafts.proposalId],
+    references: [proposals.id],
+  }),
+}));
+
+// ==========================================
 // Business Insights / Analytics
 // ==========================================
 
