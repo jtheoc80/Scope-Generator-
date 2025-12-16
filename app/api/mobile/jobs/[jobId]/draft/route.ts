@@ -58,12 +58,9 @@ export async function POST(
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
 
-    // Create a "processing" draft record first
-    const processing = await storage.createMobileJobDraft(id, authResult.userId, {
-      status: "processing",
-    });
-
     try {
+      // In v1 we generate synchronously, but keep the API contract:
+      // POST returns { status: "DRAFTING" | "READY" }
       const draft = await generateMobileDraft({
         job: {
           id: job.id,
@@ -84,18 +81,14 @@ export async function POST(
         })),
       });
 
-      const ready = await storage.createMobileJobDraft(id, authResult.userId, {
+      await storage.createMobileJobDraft(id, authResult.userId, {
         status: "ready",
         payload: draft,
         confidence: draft.confidence,
         questions: draft.questions,
       });
 
-      return NextResponse.json({
-        draftId: ready.id,
-        status: ready.status,
-        payload: ready.payload,
-      });
+      return NextResponse.json({ status: "READY" });
     } catch (inner) {
       console.error("Draft generation failed:", inner);
       await storage.createMobileJobDraft(id, authResult.userId, {
@@ -104,17 +97,57 @@ export async function POST(
       });
 
       return NextResponse.json(
-        { message: "Draft generation failed" },
+        { status: "FAILED" },
         { status: 500 }
       );
-    } finally {
-      // no-op: keep the processing record for traceability
-      void processing;
     }
   } catch (error) {
     console.error("Error generating mobile draft:", error);
     return NextResponse.json(
       { message: "Failed to generate draft" },
+      { status: 500 }
+    );
+  }
+}
+
+// GET /api/mobile/jobs/:jobId/draft (poll until ready)
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ jobId: string }> }
+) {
+  try {
+    const authResult = await requireMobileAuth(request);
+    if (!authResult.ok) return authResult.response;
+
+    const { jobId } = await params;
+    const id = parseInt(jobId);
+    if (Number.isNaN(id)) {
+      return NextResponse.json({ message: "Invalid jobId" }, { status: 400 });
+    }
+
+    const job = await storage.getMobileJob(id, authResult.userId);
+    if (!job) {
+      return NextResponse.json({ message: "Job not found" }, { status: 404 });
+    }
+
+    const draft = await storage.getLatestMobileJobDraft(id, authResult.userId);
+    if (!draft) {
+      return NextResponse.json({ status: "DRAFTING" });
+    }
+
+    if (draft.status === "ready" && draft.payload) {
+      return NextResponse.json({ status: "READY", payload: draft.payload });
+    }
+
+    if (draft.status === "failed") {
+      return NextResponse.json({ status: "FAILED" }, { status: 500 });
+    }
+
+    return NextResponse.json({ status: "DRAFTING" });
+  } catch (error) {
+    console.error("Error fetching mobile draft:", error);
+    return NextResponse.json(
+      { message: "Failed to fetch draft" },
       { status: 500 }
     );
   }

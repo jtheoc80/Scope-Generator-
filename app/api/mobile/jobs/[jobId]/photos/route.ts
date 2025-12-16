@@ -28,7 +28,7 @@ export async function POST(
     }
 
     const photo = await storage.addMobileJobPhoto(id, authResult.userId, {
-      publicUrl: parsed.data.publicUrl,
+      publicUrl: parsed.data.url,
       kind: parsed.data.kind,
     });
 

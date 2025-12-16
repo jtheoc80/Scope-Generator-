@@ -35,8 +35,7 @@ export default function CapturePhotos(props: {
           method: "POST",
           body: JSON.stringify({
             contentType: asset.mimeType || "image/jpeg",
-            fileName: asset.fileName || "photo.jpg",
-            kind: "site",
+            filename: asset.fileName || "photo.jpg",
           }),
         }
       );
@@ -55,7 +54,7 @@ export default function CapturePhotos(props: {
 
       await apiFetch(`/api/mobile/jobs/${props.jobId}/photos`, {
         method: "POST",
-        body: JSON.stringify({ publicUrl: presign.publicUrl, kind: "site" }),
+        body: JSON.stringify({ url: presign.publicUrl, kind: "site" }),
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed");
@@ -68,11 +67,26 @@ export default function CapturePhotos(props: {
     setBusy(true);
     setError(null);
     try {
-      const res = await apiFetch<{ draftId: number; status: string; payload: unknown }>(
-        `/api/mobile/jobs/${props.jobId}/draft`,
-        { method: "POST" }
-      );
-      props.onDraftReady(res.draftId, res.payload);
+      await apiFetch<{ status: "DRAFTING" | "READY" | "FAILED" }>(`/api/mobile/jobs/${props.jobId}/draft`, {
+        method: "POST",
+      });
+
+      // Poll until READY
+      for (let i = 0; i < 30; i++) {
+        await new Promise((r) => setTimeout(r, 1000));
+        const draft = await apiFetch<{ status: "DRAFTING" | "READY" | "FAILED"; payload?: unknown }>(
+          `/api/mobile/jobs/${props.jobId}/draft`,
+          { method: "GET" }
+        );
+        if (draft.status === "READY" && draft.payload) {
+          props.onDraftReady(0, draft.payload);
+          return;
+        }
+        if (draft.status === "FAILED") {
+          throw new Error("Draft failed");
+        }
+      }
+      throw new Error("Draft timed out");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Draft generation failed");
     } finally {

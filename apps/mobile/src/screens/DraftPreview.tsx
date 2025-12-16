@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Button, ScrollView, Text, View } from "react-native";
 import { apiFetch } from "../lib/api";
 
+type PackageKey = "GOOD" | "BETTER" | "BEST";
+
 export default function DraftPreview(props: {
   jobId: number;
   draftId: number;
@@ -12,6 +14,7 @@ export default function DraftPreview(props: {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState<{ proposalId: number; webReviewUrl: string } | null>(null);
+  const [pkg, setPkg] = useState<PackageKey>("BETTER");
 
   const submit = async () => {
     setBusy(true);
@@ -34,6 +37,13 @@ export default function DraftPreview(props: {
       {error ? <Text style={{ color: "#b00020" }}>{error}</Text> : null}
 
       <Text>Draft ID: {props.draftId}</Text>
+
+      <View style={{ flexDirection: "row", gap: 8 }}>
+        <Button title="Good" onPress={() => setPkg("GOOD")} disabled={busy} />
+        <Button title="Better" onPress={() => setPkg("BETTER")} disabled={busy} />
+        <Button title="Best" onPress={() => setPkg("BEST")} disabled={busy} />
+      </View>
+      <Text>Selected: {pkg}</Text>
 
       <ScrollView style={{ flex: 1, borderWidth: 1, borderColor: "#eee", borderRadius: 12, padding: 12 }}>
         <Text style={{ fontFamily: "Courier" }}>{JSON.stringify(props.payload, null, 2)}</Text>

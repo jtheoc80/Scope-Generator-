@@ -33,7 +33,7 @@ export async function POST(
       );
     }
 
-    const safeName = (parsed.data.fileName || "photo")
+    const safeName = (parsed.data.filename || "photo")
       .replace(/[^a-zA-Z0-9._-]/g, "_")
       .slice(0, 80);
 
@@ -45,7 +45,13 @@ export async function POST(
       contentType: parsed.data.contentType,
     });
 
-    return NextResponse.json(presigned);
+    // Keep response compatible with the simplified spec:
+    // returns: { uploadUrl, publicUrl }
+    return NextResponse.json({
+      uploadUrl: presigned.uploadUrl,
+      publicUrl: presigned.publicUrl,
+      key: presigned.key, // extra field (useful for debugging)
+    });
   } catch (error) {
     console.error("Error presigning mobile photo upload:", error);
     return NextResponse.json(

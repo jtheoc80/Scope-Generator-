@@ -1,14 +1,12 @@
 import { z } from "zod";
 
+// Accept the simplified mobile contract:
+// body: { jobType, customer?, address? }
+// - jobType can be a template numeric ID OR a jobTypeId string.
 export const createMobileJobRequestSchema = z.object({
-  clientName: z.string().min(1),
-  address: z.string().min(1),
-  tradeId: z.string().min(1),
-  tradeName: z.string().min(1).optional(),
-  jobTypeId: z.string().min(1),
-  jobTypeName: z.string().min(1),
-  jobSize: z.number().int().min(1).max(3).optional(),
-  jobNotes: z.string().optional(),
+  jobType: z.union([z.number().int(), z.string().min(1)]),
+  customer: z.string().min(1).optional(),
+  address: z.string().min(1).optional(),
 });
 
 export type CreateMobileJobRequest = z.infer<typeof createMobileJobRequestSchema>;
@@ -21,8 +19,7 @@ export type CreateMobileJobResponse = z.infer<typeof createMobileJobResponseSche
 
 export const presignPhotoRequestSchema = z.object({
   contentType: z.string().min(1),
-  fileName: z.string().min(1).optional(),
-  kind: z.string().min(1).optional(),
+  filename: z.string().min(1).optional(),
 });
 
 export type PresignPhotoRequest = z.infer<typeof presignPhotoRequestSchema>;
@@ -36,7 +33,7 @@ export const presignPhotoResponseSchema = z.object({
 export type PresignPhotoResponse = z.infer<typeof presignPhotoResponseSchema>;
 
 export const registerPhotoRequestSchema = z.object({
-  publicUrl: z.string().url(),
+  url: z.string().url(),
   kind: z.string().min(1).optional(),
 });
 
@@ -69,13 +66,21 @@ export type MobileDraftPayload = {
   questions: string[];
 };
 
-export const createDraftResponseSchema = z.object({
-  draftId: z.number().int(),
-  status: z.enum(["pending", "processing", "ready", "failed"]),
+export const draftStatusSchema = z.enum(["DRAFTING", "READY", "FAILED"]);
+export type DraftStatus = z.infer<typeof draftStatusSchema>;
+
+export const triggerDraftResponseSchema = z.object({
+  status: draftStatusSchema,
+});
+
+export type TriggerDraftResponse = z.infer<typeof triggerDraftResponseSchema>;
+
+export const getDraftResponseSchema = z.object({
+  status: draftStatusSchema,
   payload: z.unknown().optional(),
 });
 
-export type CreateDraftResponse = z.infer<typeof createDraftResponseSchema>;
+export type GetDraftResponse = z.infer<typeof getDraftResponseSchema>;
 
 export const submitJobResponseSchema = z.object({
   proposalId: z.number().int(),
