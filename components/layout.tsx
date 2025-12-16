@@ -71,6 +71,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </Link>
             )}
             <LanguageSwitcher />
+            {user ? (
+              <Link
+                href="/sign-out"
+                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+              >
+                {t.nav.signOut}
+              </Link>
+            ) : (
+              <Link
+                href="/sign-in"
+                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+              >
+                {t.nav.signIn}
+              </Link>
+            )}
             {location === "/" && (
               <Link href="/app" className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-semibold hover:bg-primary/90 transition-colors">
                 {t.hero.cta}
@@ -154,6 +169,23 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   Team
+                </Link>
+              )}
+              {user ? (
+                <Link
+                  href="/sign-out"
+                  className="text-base font-medium text-slate-700 hover:text-primary transition-colors py-2"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  {t.nav.signOut}
+                </Link>
+              ) : (
+                <Link
+                  href="/sign-in"
+                  className="text-base font-medium text-slate-700 hover:text-primary transition-colors py-2"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  {t.nav.signIn}
                 </Link>
               )}
               <div className="py-2">
