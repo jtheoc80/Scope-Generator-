@@ -214,11 +214,11 @@ Auth:
 
 Storage (S3/R2/Supabase Storage gateway):
 - `S3_REGION=...` (or `auto`)
-- `S3_BUCKET=...`
+- `S3_BUCKET=scopegen25`
 - `S3_ACCESS_KEY_ID=...`
 - `S3_SECRET_ACCESS_KEY=...`
 - `S3_ENDPOINT=...` (optional; for R2/S3-compatible endpoints)
-- `S3_PUBLIC_BASE_URL=...` (how mobile reads the uploaded file)
+- `S3_PUBLIC_BASE_URL=https://scopegen25.s3.amazonaws.com` (how mobile reads the uploaded file)
 - `S3_FORCE_PATH_STYLE=true|false` (optional)
 
 Vision (AWS Rekognition + GPT vision):

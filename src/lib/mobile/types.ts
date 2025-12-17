@@ -28,7 +28,6 @@ export const presignPhotoResponseSchema = z.object({
   key: z.string().min(1),
   uploadUrl: z.string().url(),
   publicUrl: z.string().url(),
-  token: z.string().min(1).optional(),
 });
 
 export type PresignPhotoResponse = z.infer<typeof presignPhotoResponseSchema>;
