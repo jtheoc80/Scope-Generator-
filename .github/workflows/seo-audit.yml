@@ -1,0 +1,231 @@
+name: SEO Audit Bot
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "app/**"
+      - "lib/seo/**"
+      - "lib/blog-data.ts"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "app/**"
+      - "lib/seo/**"
+      - "lib/blog-data.ts"
+  schedule:
+    # Run weekly SEO audit on Monday at 9am UTC
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+    inputs:
+      strict:
+        description: "Run in strict mode (fail on any warning)"
+        required: false
+        default: "false"
+        type: boolean
+
+jobs:
+  seo-audit:
+    name: SEO Metadata Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run SEO Audit
+        id: seo_audit
+        run: |
+          # Create reports directory
+          mkdir -p seo-reports
+
+          # Run audit and capture output
+          if [ "${{ github.event.inputs.strict }}" == "true" ]; then
+            npx tsx script/seo-audit.ts --ci --strict --output=seo-reports/audit-report.txt 2>&1 | tee audit-output.txt
+          else
+            npx tsx script/seo-audit.ts --ci --output=seo-reports/audit-report.txt 2>&1 | tee audit-output.txt
+          fi
+
+          # Also generate JSON report
+          npx tsx script/seo-audit.ts --json --output=seo-reports/audit-report.json
+
+          # Check exit code
+          AUDIT_EXIT_CODE=${PIPESTATUS[0]}
+          echo "audit_exit_code=$AUDIT_EXIT_CODE" >> $GITHUB_OUTPUT
+
+          # Extract key metrics for summary
+          if [ -f seo-reports/audit-report.json ]; then
+            SCORE=$(cat seo-reports/audit-report.json | jq '.overallScore')
+            ERRORS=$(cat seo-reports/audit-report.json | jq '.errorCount')
+            WARNINGS=$(cat seo-reports/audit-report.json | jq '.warningCount')
+            TOTAL_PAGES=$(cat seo-reports/audit-report.json | jq '.totalPages')
+
+            echo "score=$SCORE" >> $GITHUB_OUTPUT
+            echo "errors=$ERRORS" >> $GITHUB_OUTPUT
+            echo "warnings=$WARNINGS" >> $GITHUB_OUTPUT
+            echo "total_pages=$TOTAL_PAGES" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload SEO Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: seo-audit-report
+          path: seo-reports/
+          retention-days: 30
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            const score = '${{ steps.seo_audit.outputs.score }}';
+            const errors = '${{ steps.seo_audit.outputs.errors }}';
+            const warnings = '${{ steps.seo_audit.outputs.warnings }}';
+            const totalPages = '${{ steps.seo_audit.outputs.total_pages }}';
+            const exitCode = '${{ steps.seo_audit.outputs.audit_exit_code }}';
+            
+            const scoreEmoji = score >= 90 ? '🟢' : score >= 70 ? '🟡' : '🔴';
+            const statusEmoji = exitCode == '0' ? '✅' : '❌';
+            
+            const body = `## ${statusEmoji} SEO Audit Report
+
+            | Metric | Value |
+            |--------|-------|
+            | ${scoreEmoji} Overall Score | **${score}/100** |
+            | 🔴 Errors | ${errors} |
+            | 🟡 Warnings | ${warnings} |
+            | 📄 Pages Audited | ${totalPages} |
+
+            ${exitCode != '0' ? '⚠️ **This PR has SEO issues that should be addressed before merging.**' : '✨ All SEO checks passed!'}
+
+            <details>
+            <summary>View detailed report</summary>
+
+            \`\`\`
+            ${fs.existsSync('seo-reports/audit-report.txt') ? fs.readFileSync('seo-reports/audit-report.txt', 'utf8').substring(0, 60000) : 'Report not available'}
+            \`\`\`
+
+            </details>
+
+            ---
+            *🤖 SEO Bot - Keeping your site optimized*`;
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('SEO Audit Report')
+            );
+
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }
+
+      - name: Create Job Summary
+        if: always()
+        run: |
+          echo "## 📊 SEO Audit Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Overall Score | ${{ steps.seo_audit.outputs.score }}/100 |" >> $GITHUB_STEP_SUMMARY
+          echo "| Errors | ${{ steps.seo_audit.outputs.errors }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Warnings | ${{ steps.seo_audit.outputs.warnings }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Pages Audited | ${{ steps.seo_audit.outputs.total_pages }} |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail if audit failed
+        if: steps.seo_audit.outputs.audit_exit_code != '0'
+        run: |
+          echo "❌ SEO Audit failed with score ${{ steps.seo_audit.outputs.score }}/100"
+          exit 1
+
+  seo-weekly-report:
+    name: Weekly SEO Report
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    needs: seo-audit
+
+    steps:
+      - name: Download audit report
+        uses: actions/download-artifact@v4
+        with:
+          name: seo-audit-report
+          path: seo-reports/
+
+      - name: Create Issue for Low Scores
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            if (!fs.existsSync('seo-reports/audit-report.json')) {
+              console.log('No audit report found');
+              return;
+            }
+
+            const report = JSON.parse(fs.readFileSync('seo-reports/audit-report.json', 'utf8'));
+            
+            // Only create issue if score is below threshold
+            if (report.overallScore < 80 || report.errorCount > 0) {
+              const body = `## 📊 Weekly SEO Audit Report
+
+              The automated weekly SEO audit has detected issues that need attention.
+
+              ### Summary
+              - **Overall Score:** ${report.overallScore}/100
+              - **Errors:** ${report.errorCount}
+              - **Warnings:** ${report.warningCount}
+              - **Pages Audited:** ${report.totalPages}
+
+              ### Pages Needing Attention
+              ${report.results
+                .filter(r => r.score < 80)
+                .map(r => `- [ ] \`${r.page}\` (Score: ${r.score}/100)`)
+                .join('\n')}
+
+              ### Recommended Actions
+              ${report.errorCount > 0 ? '1. Fix all critical errors first\n' : ''}
+              ${report.summary.missingTitles?.length > 0 ? `2. Add missing titles to: ${report.summary.missingTitles.join(', ')}\n` : ''}
+              ${report.summary.missingDescriptions?.length > 0 ? `3. Add missing descriptions to: ${report.summary.missingDescriptions.join(', ')}\n` : ''}
+
+              ---
+              *🤖 Generated by SEO Bot on ${new Date().toISOString().split('T')[0]}*`;
+
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `🔍 Weekly SEO Audit: Score ${report.overallScore}/100`,
+                body: body,
+                labels: ['seo', 'automated']
+              });
+            }
