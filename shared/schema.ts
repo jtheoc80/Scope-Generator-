@@ -503,6 +503,263 @@ export const proposalAnalyticsSnapshotsRelations = relations(proposalAnalyticsSn
   }),
 }));
 
+// ==========================================
+// Learning System - User Behavior & Preferences
+// ==========================================
+
+/**
+ * User action types for learning
+ */
+export const userActionTypes = [
+  // Photo actions
+  'photo_categorize',      // User assigns a category to a photo
+  'photo_caption',         // User adds/edits a caption
+  'photo_reorder',         // User reorders photos
+  'photo_set_hero',        // User sets a photo as hero
+  // Scope actions
+  'scope_add',             // User adds a scope item
+  'scope_remove',          // User removes a scope item
+  'scope_edit',            // User edits a scope item
+  'scope_reorder',         // User reorders scope items
+  // Pricing actions
+  'price_adjust',          // User adjusts price
+  'price_accept_suggestion', // User accepts suggested price
+  'price_reject_suggestion', // User rejects suggested price
+  // Option actions
+  'option_enable',         // User enables an option
+  'option_disable',        // User disables an option
+  'option_select',         // User selects an option value
+  // Proposal actions
+  'proposal_create',       // User creates a proposal
+  'proposal_send',         // User sends a proposal
+  'proposal_won',          // Proposal marked as won
+  'proposal_lost',         // Proposal marked as lost
+  // Template actions
+  'template_use',          // User uses a template
+  'template_customize',    // User customizes a template
+] as const;
+
+export type UserActionType = typeof userActionTypes[number];
+
+/**
+ * Log of user actions for learning
+ * This is the raw event stream that feeds the learning system
+ */
+export const userActionLog = pgTable("user_action_log", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  // Action details
+  actionType: varchar("action_type", { length: 50 }).notNull(),
+  // Context
+  proposalId: integer("proposal_id").references(() => proposals.id, { onDelete: "set null" }),
+  tradeId: varchar("trade_id", { length: 50 }),
+  jobTypeId: varchar("job_type_id", { length: 50 }),
+  // Geographic context
+  zipcode: varchar("zipcode", { length: 10 }),
+  city: varchar("city", { length: 100 }),
+  state: varchar("state", { length: 50 }),
+  neighborhood: varchar("neighborhood", { length: 100 }),
+  // Action payload (flexible JSON for different action types)
+  payload: jsonb("payload").$type<Record<string, unknown>>(),
+  // Outcome tracking (for learning what works)
+  outcomeType: varchar("outcome_type", { length: 20 }), // 'won', 'lost', 'pending', null
+  outcomeValue: integer("outcome_value"), // final price if won
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  userActionIdx: index("idx_user_action_log_user").on(table.userId, table.actionType),
+  geoActionIdx: index("idx_user_action_log_geo").on(table.zipcode, table.actionType),
+  tradeActionIdx: index("idx_user_action_log_trade").on(table.tradeId, table.jobTypeId, table.actionType),
+  createdAtIdx: index("idx_user_action_log_created").on(table.createdAt),
+}));
+
+/**
+ * Aggregated learned preferences per user
+ * Updated periodically from userActionLog
+ */
+export const userLearnedPreferences = pgTable("user_learned_preferences", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  // Preference category
+  category: varchar("category", { length: 50 }).notNull(), // 'photo', 'scope', 'pricing', 'options'
+  // Context (optional - for context-specific preferences)
+  tradeId: varchar("trade_id", { length: 50 }),
+  jobTypeId: varchar("job_type_id", { length: 50 }),
+  zipcode: varchar("zipcode", { length: 10 }),
+  // Learned data
+  preferenceKey: varchar("preference_key", { length: 100 }).notNull(),
+  preferenceValue: jsonb("preference_value").$type<unknown>().notNull(),
+  // Confidence score (0-100) - increases with more data points
+  confidence: integer("confidence").notNull().default(0),
+  // Number of data points this preference is based on
+  sampleCount: integer("sample_count").notNull().default(0),
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userCategoryIdx: index("idx_user_prefs_user_category").on(table.userId, table.category),
+  contextIdx: index("idx_user_prefs_context").on(table.userId, table.tradeId, table.jobTypeId),
+  uniquePreference: index("idx_user_prefs_unique").on(
+    table.userId, table.category, table.preferenceKey, table.tradeId, table.jobTypeId, table.zipcode
+  ),
+}));
+
+/**
+ * Geographic patterns - learned from all users in an area
+ * Aggregated patterns by region/city/neighborhood
+ */
+export const geographicPatterns = pgTable("geographic_patterns", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  // Geographic scope (hierarchical: state > city > zipcode > neighborhood)
+  geoLevel: varchar("geo_level", { length: 20 }).notNull(), // 'state', 'city', 'zipcode', 'neighborhood'
+  geoValue: varchar("geo_value", { length: 100 }).notNull(), // e.g., "CA", "Los Angeles", "90210"
+  parentGeoValue: varchar("parent_geo_value", { length: 100 }), // for hierarchy
+  // Trade/Job context
+  tradeId: varchar("trade_id", { length: 50 }),
+  jobTypeId: varchar("job_type_id", { length: 50 }),
+  // Pattern category
+  patternType: varchar("pattern_type", { length: 50 }).notNull(),
+  // Examples:
+  // 'avg_price' - average pricing in this area
+  // 'price_multiplier' - price multiplier vs national average
+  // 'common_scope_items' - frequently used scope items
+  // 'common_materials' - popular material choices
+  // 'win_rate' - proposal win rate in this area
+  // 'common_options' - frequently selected options
+  // Learned data
+  patternValue: jsonb("pattern_value").$type<unknown>().notNull(),
+  // Statistics
+  sampleCount: integer("sample_count").notNull().default(0),
+  confidence: integer("confidence").notNull().default(0),
+  // Timestamps
+  lastCalculatedAt: timestamp("last_calculated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  geoPatternIdx: index("idx_geo_patterns_geo").on(table.geoLevel, table.geoValue),
+  tradePatternIdx: index("idx_geo_patterns_trade").on(table.tradeId, table.jobTypeId, table.geoLevel),
+  patternTypeIdx: index("idx_geo_patterns_type").on(table.patternType, table.geoLevel),
+}));
+
+/**
+ * Photo categorization learning - tracks how users categorize photos
+ * Used to auto-suggest categories for new photos
+ */
+export const photoCategorization = pgTable("photo_categorization_learning", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  // Context
+  tradeId: varchar("trade_id", { length: 50 }),
+  jobTypeId: varchar("job_type_id", { length: 50 }),
+  // Photo details (for pattern matching)
+  photoOrder: integer("photo_order").notNull(), // 1st, 2nd, 3rd photo uploaded
+  // What the user chose
+  assignedCategory: varchar("assigned_category", { length: 30 }).notNull(),
+  assignedCaption: text("assigned_caption"),
+  // Was this the default or did user change it?
+  wasAutoAssigned: boolean("was_auto_assigned").notNull().default(false),
+  wasModified: boolean("was_modified").notNull().default(false),
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  userTradeIdx: index("idx_photo_cat_user_trade").on(table.userId, table.tradeId, table.jobTypeId),
+  orderIdx: index("idx_photo_cat_order").on(table.photoOrder, table.assignedCategory),
+}));
+
+/**
+ * Scope item patterns - tracks scope modifications by users
+ */
+export const scopeItemPatterns = pgTable("scope_item_patterns", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  // Context
+  tradeId: varchar("trade_id", { length: 50 }).notNull(),
+  jobTypeId: varchar("job_type_id", { length: 50 }).notNull(),
+  zipcode: varchar("zipcode", { length: 10 }),
+  // The scope item
+  scopeItem: text("scope_item").notNull(),
+  // Tracking
+  addedCount: integer("added_count").notNull().default(0), // times users added this
+  removedCount: integer("removed_count").notNull().default(0), // times users removed this
+  modifiedCount: integer("modified_count").notNull().default(0), // times users edited this
+  // Original vs custom
+  isFromTemplate: boolean("is_from_template").notNull().default(false),
+  // Outcome correlation
+  wonWithItem: integer("won_with_item").notNull().default(0),
+  lostWithItem: integer("lost_with_item").notNull().default(0),
+  // Timestamps
+  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  tradeJobIdx: index("idx_scope_patterns_trade_job").on(table.tradeId, table.jobTypeId),
+  geoIdx: index("idx_scope_patterns_geo").on(table.zipcode, table.tradeId),
+}));
+
+/**
+ * Pricing adjustment patterns - learns pricing preferences
+ */
+export const pricingPatterns = pgTable("pricing_patterns", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  // User (null for aggregate patterns)
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
+  // Context
+  tradeId: varchar("trade_id", { length: 50 }).notNull(),
+  jobTypeId: varchar("job_type_id", { length: 50 }).notNull(),
+  jobSize: integer("job_size"), // 1=small, 2=medium, 3=large
+  zipcode: varchar("zipcode", { length: 10 }),
+  // Pricing data
+  suggestedPriceLow: integer("suggested_price_low"),
+  suggestedPriceHigh: integer("suggested_price_high"),
+  finalPriceLow: integer("final_price_low"),
+  finalPriceHigh: integer("final_price_high"),
+  adjustmentPercent: integer("adjustment_percent"), // how much user adjusted (+/- %)
+  // Outcome
+  outcome: varchar("outcome", { length: 20 }), // 'won', 'lost', 'pending'
+  // Statistics (for aggregate patterns)
+  sampleCount: integer("sample_count").notNull().default(1),
+  avgAdjustmentPercent: integer("avg_adjustment_percent"),
+  winRate: integer("win_rate"), // percentage
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  userTradeIdx: index("idx_pricing_patterns_user_trade").on(table.userId, table.tradeId, table.jobTypeId),
+  geoTradeIdx: index("idx_pricing_patterns_geo_trade").on(table.zipcode, table.tradeId, table.jobTypeId),
+  outcomeIdx: index("idx_pricing_patterns_outcome").on(table.outcome, table.tradeId),
+}));
+
+// Relations for learning tables
+export const userActionLogRelations = relations(userActionLog, ({ one }) => ({
+  user: one(users, {
+    fields: [userActionLog.userId],
+    references: [users.id],
+  }),
+  proposal: one(proposals, {
+    fields: [userActionLog.proposalId],
+    references: [proposals.id],
+  }),
+}));
+
+export const userLearnedPreferencesRelations = relations(userLearnedPreferences, ({ one }) => ({
+  user: one(users, {
+    fields: [userLearnedPreferences.userId],
+    references: [users.id],
+  }),
+}));
+
+export const photoCategorizationRelations = relations(photoCategorization, ({ one }) => ({
+  user: one(users, {
+    fields: [photoCategorization.userId],
+    references: [users.id],
+  }),
+}));
+
+// Types for learning system
+export type UserActionLog = typeof userActionLog.$inferSelect;
+export type InsertUserActionLog = typeof userActionLog.$inferInsert;
+export type UserLearnedPreference = typeof userLearnedPreferences.$inferSelect;
+export type GeographicPattern = typeof geographicPatterns.$inferSelect;
+export type PhotoCategorizationRecord = typeof photoCategorization.$inferSelect;
+export type ScopeItemPattern = typeof scopeItemPatterns.$inferSelect;
+export type PricingPattern = typeof pricingPatterns.$inferSelect;
+
 // Zod schemas for line items
 export const proposalLineItemSchema = z.object({
   id: z.string(),

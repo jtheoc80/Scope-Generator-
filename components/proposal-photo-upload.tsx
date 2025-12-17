@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,8 @@ import {
   ImageIcon,
   Loader2,
   AlertCircle,
+  Brain,
+  Sparkles,
 } from 'lucide-react';
 import {
   type ProposalPhotoCategory,
@@ -37,6 +39,28 @@ export interface UploadedPhoto {
   displayOrder: number;
   isUploading?: boolean;
   error?: string;
+  /** Was this category auto-assigned by the learning system? */
+  wasAutoAssigned?: boolean;
+  /** Confidence level of the suggestion (0-100) */
+  suggestionConfidence?: number;
+}
+
+/** Learning context for photo suggestions */
+export interface LearningContext {
+  tradeId?: string;
+  jobTypeId?: string;
+  zipcode?: string;
+  city?: string;
+  state?: string;
+}
+
+/** Photo suggestion from learning system */
+interface PhotoSuggestion {
+  category: ProposalPhotoCategory;
+  confidence: number;
+  reason: string;
+  suggestedCaption?: string;
+  captionOptions: string[];
 }
 
 interface ProposalPhotoUploadProps {
@@ -45,6 +69,10 @@ interface ProposalPhotoUploadProps {
   maxPhotos?: number;
   disabled?: boolean;
   className?: string;
+  /** Learning context for smart suggestions */
+  learningContext?: LearningContext;
+  /** Enable learning system integration */
+  enableLearning?: boolean;
 }
 
 const CATEGORY_LABELS: Record<ProposalPhotoCategory, string> = {
@@ -73,11 +101,12 @@ const CATEGORY_LABELS: Record<ProposalPhotoCategory, string> = {
  * Supports drag-drop, category assignment, captions, and reordering.
  * 
  * UX Features:
- * - Smart auto-categorization based on file order
+ * - Smart auto-categorization based on file order AND learned preferences
  * - Visual feedback during drag operations
  * - Progress indicators for uploads
  * - Undo support for deletions
  * - Recommended photo tips
+ * - Learning system integration for personalized suggestions
  */
 export function ProposalPhotoUpload({
   photos,
@@ -85,27 +114,148 @@ export function ProposalPhotoUpload({
   maxPhotos = 20,
   disabled = false,
   className,
+  learningContext,
+  enableLearning = true,
 }: ProposalPhotoUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [recentlyDeleted, setRecentlyDeleted] = useState<UploadedPhoto | null>(null);
+  const [captionSuggestions, setCaptionSuggestions] = useState<Record<string, string[]>>({});
+  const [learningReady, setLearningReady] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const generateId = () => `photo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-  // Smart auto-categorization based on upload order
-  const getSmartCategory = (index: number, totalNew: number, existingCount: number): ProposalPhotoCategory => {
-    // First photo becomes hero if no photos exist
-    if (existingCount === 0 && index === 0) return 'hero';
+  // Fetch caption suggestions when learning is enabled
+  useEffect(() => {
+    if (enableLearning && learningContext?.tradeId) {
+      setLearningReady(true);
+    }
+  }, [enableLearning, learningContext]);
+
+  // Fetch photo category suggestion from learning API
+  const fetchPhotoSuggestion = async (photoOrder: number): Promise<PhotoSuggestion | null> => {
+    if (!enableLearning || !learningContext) return null;
     
-    // Next 2-6 photos become existing conditions
-    const existingPhotosCount = photos.filter(p => p.category === 'existing').length;
-    if (existingPhotosCount + index < 6) return 'existing';
-    
-    // Rest go to other
-    return 'other';
+    try {
+      const response = await fetch('/api/learning/photo-suggestion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          photoOrder,
+          ...learningContext,
+        }),
+      });
+      
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (error) {
+      console.error('Failed to fetch photo suggestion:', error);
+    }
+    return null;
   };
 
-  const handleFileSelect = useCallback((files: FileList | null) => {
+  // Track photo categorization for learning
+  const trackPhotoCategory = async (
+    photoOrder: number,
+    category: ProposalPhotoCategory,
+    caption: string | null,
+    wasAutoAssigned: boolean,
+    wasModified: boolean
+  ) => {
+    if (!enableLearning || !learningContext) return;
+    
+    try {
+      await fetch('/api/learning/track/photo-category', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          photoOrder,
+          category,
+          caption,
+          wasAutoAssigned,
+          wasModified,
+          ...learningContext,
+        }),
+      });
+    } catch (error) {
+      console.error('Failed to track photo category:', error);
+    }
+  };
+
+  // Fetch caption suggestions for a category
+  const fetchCaptionSuggestions = async (category: ProposalPhotoCategory): Promise<string[]> => {
+    if (!enableLearning || !learningContext) return [];
+    
+    // Check cache first
+    if (captionSuggestions[category]) {
+      return captionSuggestions[category];
+    }
+    
+    try {
+      const response = await fetch('/api/learning/caption-suggestions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          category,
+          ...learningContext,
+        }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const suggestions = data.suggestions || [];
+        setCaptionSuggestions(prev => ({ ...prev, [category]: suggestions }));
+        return suggestions;
+      }
+    } catch (error) {
+      console.error('Failed to fetch caption suggestions:', error);
+    }
+    return [];
+  };
+
+  // Smart auto-categorization using learning system when available
+  const getSmartCategory = async (
+    index: number, 
+    totalNew: number, 
+    existingCount: number
+  ): Promise<{ category: ProposalPhotoCategory; confidence: number; wasAutoAssigned: boolean }> => {
+    const photoOrder = existingCount + index + 1;
+    
+    // Try learning system first
+    if (enableLearning && learningContext?.tradeId) {
+      const suggestion = await fetchPhotoSuggestion(photoOrder);
+      if (suggestion && suggestion.confidence >= 60) {
+        return {
+          category: suggestion.category,
+          confidence: suggestion.confidence,
+          wasAutoAssigned: true,
+        };
+      }
+    }
+    
+    // Fall back to rule-based categorization
+    let category: ProposalPhotoCategory = 'other';
+    
+    // First photo becomes hero if no photos exist
+    if (existingCount === 0 && index === 0) {
+      category = 'hero';
+    }
+    // Next 2-6 photos become existing conditions
+    else {
+      const currentExistingCount = photos.filter(p => p.category === 'existing').length;
+      if (currentExistingCount + index < 6) {
+        category = 'existing';
+      }
+    }
+    
+    return { category, confidence: 50, wasAutoAssigned: true };
+  };
+
+  const handleFileSelect = useCallback(async (files: FileList | null) => {
     if (!files || disabled) return;
 
     const remainingSlots = maxPhotos - photos.length;
@@ -116,17 +266,36 @@ export function ProposalPhotoUpload({
       return;
     }
 
-    const newPhotos: UploadedPhoto[] = filesToAdd.map((file, index) => ({
+    // Create photos with temporary categories first for instant feedback
+    const tempPhotos: UploadedPhoto[] = filesToAdd.map((file, index) => ({
       id: generateId(),
       file,
       url: URL.createObjectURL(file),
-      category: getSmartCategory(index, filesToAdd.length, photos.length),
+      category: 'other' as ProposalPhotoCategory,
       caption: '',
       displayOrder: photos.length + index,
+      wasAutoAssigned: true,
     }));
 
-    onPhotosChange([...photos, ...newPhotos]);
-  }, [photos, onPhotosChange, maxPhotos, disabled]);
+    // Immediately show photos
+    onPhotosChange([...photos, ...tempPhotos]);
+
+    // Then update with smart categories asynchronously
+    const updatedPhotos = await Promise.all(
+      tempPhotos.map(async (photo, index) => {
+        const result = await getSmartCategory(index, filesToAdd.length, photos.length);
+        return {
+          ...photo,
+          category: result.category,
+          suggestionConfidence: result.confidence,
+          wasAutoAssigned: result.wasAutoAssigned,
+        };
+      })
+    );
+
+    // Update with smart categories
+    onPhotosChange([...photos, ...updatedPhotos]);
+  }, [photos, onPhotosChange, maxPhotos, disabled, enableLearning, learningContext]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -145,7 +314,22 @@ export function ProposalPhotoUpload({
   }, []);
 
   const updatePhoto = (id: string, updates: Partial<UploadedPhoto>) => {
-    onPhotosChange(photos.map(p => p.id === id ? { ...p, ...updates } : p));
+    const photo = photos.find(p => p.id === id);
+    if (!photo) return;
+
+    // Track category changes for learning
+    if (updates.category && updates.category !== photo.category) {
+      const photoOrder = photos.indexOf(photo) + 1;
+      trackPhotoCategory(
+        photoOrder,
+        updates.category,
+        updates.caption ?? photo.caption ?? null,
+        photo.wasAutoAssigned ?? false,
+        true // wasModified
+      );
+    }
+
+    onPhotosChange(photos.map(p => p.id === id ? { ...p, ...updates, wasAutoAssigned: false } : p));
   };
 
   const removePhoto = (id: string) => {
@@ -300,6 +484,14 @@ export function ProposalPhotoUpload({
         </div>
       )}
 
+      {/* Learning Status Indicator */}
+      {enableLearning && learningReady && photos.length > 0 && (
+        <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2">
+          <Brain className="w-4 h-4 text-primary" />
+          <span>Smart suggestions enabled • Learning your preferences</span>
+        </div>
+      )}
+
       {/* Hero Photo Section */}
       {heroPhoto && (
         <div>
@@ -310,6 +502,7 @@ export function ProposalPhotoUpload({
             photo={heroPhoto}
             onUpdate={(updates) => updatePhoto(heroPhoto.id, updates)}
             onRemove={() => removePhoto(heroPhoto.id)}
+            onRequestCaptionSuggestions={() => fetchCaptionSuggestions(heroPhoto.category)}
             isHero
           />
         </div>
@@ -329,6 +522,7 @@ export function ProposalPhotoUpload({
                 onUpdate={(updates) => updatePhoto(photo.id, updates)}
                 onRemove={() => removePhoto(photo.id)}
                 onSetAsHero={() => setAsHero(photo.id)}
+                onRequestCaptionSuggestions={() => fetchCaptionSuggestions(photo.category)}
                 compact
               />
             ))}
@@ -350,6 +544,7 @@ export function ProposalPhotoUpload({
                 onUpdate={(updates) => updatePhoto(photo.id, updates)}
                 onRemove={() => removePhoto(photo.id)}
                 onSetAsHero={() => setAsHero(photo.id)}
+                onRequestCaptionSuggestions={() => fetchCaptionSuggestions(photo.category)}
                 compact
               />
             ))}
@@ -371,6 +566,7 @@ export function ProposalPhotoUpload({
                 onUpdate={(updates) => updatePhoto(photo.id, updates)}
                 onRemove={() => removePhoto(photo.id)}
                 onSetAsHero={() => setAsHero(photo.id)}
+                onRequestCaptionSuggestions={() => fetchCaptionSuggestions(photo.category)}
                 compact
               />
             ))}
@@ -388,6 +584,8 @@ interface PhotoCardProps {
   onSetAsHero?: () => void;
   isHero?: boolean;
   compact?: boolean;
+  captionSuggestions?: string[];
+  onRequestCaptionSuggestions?: () => Promise<string[]>;
 }
 
 function PhotoCard({
@@ -397,7 +595,20 @@ function PhotoCard({
   onSetAsHero,
   isHero = false,
   compact = false,
+  captionSuggestions = [],
+  onRequestCaptionSuggestions,
 }: PhotoCardProps) {
+  const [showCaptionSuggestions, setShowCaptionSuggestions] = useState(false);
+  const [loadedSuggestions, setLoadedSuggestions] = useState<string[]>(captionSuggestions);
+
+  const handleCaptionFocus = async () => {
+    if (onRequestCaptionSuggestions && loadedSuggestions.length === 0) {
+      const suggestions = await onRequestCaptionSuggestions();
+      setLoadedSuggestions(suggestions);
+    }
+    setShowCaptionSuggestions(true);
+  };
+
   return (
     <div className={cn(
       'border rounded-lg overflow-hidden bg-white',
@@ -464,35 +675,76 @@ function PhotoCard({
             ⭐ Hero
           </div>
         )}
+
+        {/* Learning confidence indicator */}
+        {photo.wasAutoAssigned && photo.suggestionConfidence && photo.suggestionConfidence >= 70 && (
+          <div className="absolute bottom-2 left-2 bg-green-500/90 text-white text-[10px] px-1.5 py-0.5 rounded-full font-medium flex items-center gap-1">
+            <Brain className="w-3 h-3" />
+            {photo.suggestionConfidence}%
+          </div>
+        )}
       </div>
       
       {/* Controls */}
       <div className={cn('p-2 space-y-2', compact && 'p-2')}>
-        {/* Category Select */}
-        <Select
-          value={photo.category}
-          onValueChange={(value) => onUpdate({ category: value as ProposalPhotoCategory })}
-        >
-          <SelectTrigger className={cn('h-8 text-xs', compact && 'h-7')}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {proposalPhotoCategories.map((cat) => (
-              <SelectItem key={cat} value={cat} className="text-xs">
-                {CATEGORY_LABELS[cat]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {/* Category Select with learning indicator */}
+        <div className="relative">
+          <Select
+            value={photo.category}
+            onValueChange={(value) => onUpdate({ category: value as ProposalPhotoCategory })}
+          >
+            <SelectTrigger className={cn(
+              'h-8 text-xs',
+              compact && 'h-7',
+              photo.wasAutoAssigned && photo.suggestionConfidence && photo.suggestionConfidence >= 70 && 'border-green-300 bg-green-50/50'
+            )}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {proposalPhotoCategories.map((cat) => (
+                <SelectItem key={cat} value={cat} className="text-xs">
+                  {CATEGORY_LABELS[cat]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {photo.wasAutoAssigned && photo.suggestionConfidence && photo.suggestionConfidence >= 70 && (
+            <div className="absolute -right-1 -top-1">
+              <Sparkles className="w-3 h-3 text-green-500" />
+            </div>
+          )}
+        </div>
         
-        {/* Caption */}
+        {/* Caption with suggestions */}
         {!compact && (
-          <Input
-            placeholder="Add caption (optional)"
-            value={photo.caption}
-            onChange={(e) => onUpdate({ caption: e.target.value })}
-            className="h-8 text-xs"
-          />
+          <div className="relative">
+            <Input
+              placeholder="Add caption (optional)"
+              value={photo.caption}
+              onChange={(e) => onUpdate({ caption: e.target.value })}
+              onFocus={handleCaptionFocus}
+              onBlur={() => setTimeout(() => setShowCaptionSuggestions(false), 200)}
+              className="h-8 text-xs"
+            />
+            
+            {/* Caption suggestions dropdown */}
+            {showCaptionSuggestions && loadedSuggestions.length > 0 && !photo.caption && (
+              <div className="absolute top-full left-0 right-0 z-10 mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-32 overflow-auto">
+                <div className="px-2 py-1 text-[10px] text-slate-500 border-b flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" /> Suggested captions
+                </div>
+                {loadedSuggestions.slice(0, 5).map((suggestion, i) => (
+                  <button
+                    key={i}
+                    className="w-full text-left px-2 py-1.5 text-xs hover:bg-slate-50 transition-colors"
+                    onMouseDown={() => onUpdate({ caption: suggestion })}
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>
