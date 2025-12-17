@@ -128,20 +128,61 @@ export const proposals = pgTable("proposals", {
   paymentStatus: varchar("payment_status", { length: 20 }).default("none"), // none, pending, partial, paid
   paidAmount: integer("paid_amount").default(0), // amount paid in cents
   stripePaymentIntentId: varchar("stripe_payment_intent_id"),
+  // Source tracking (desktop vs mobile)
+  source: varchar("source", { length: 20 }).notNull().default("desktop"), // desktop, mobile
+  // Photo count for quick dashboard display
+  photoCount: integer("photo_count").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const proposalsRelations = relations(proposals, ({ one }) => ({
+// Proposal Photos table - stores photos associated with proposals
+export const proposalPhotos = pgTable("proposal_photos", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  proposalId: integer("proposal_id").notNull().references(() => proposals.id, { onDelete: "cascade" }),
+  // Photo metadata
+  publicUrl: text("public_url").notNull(),
+  category: varchar("category", { length: 30 }).notNull().default("other"), // hero, existing, shower, vanity, flooring, etc.
+  caption: text("caption"),
+  filename: varchar("filename", { length: 255 }),
+  // Order within category (lower = first)
+  displayOrder: integer("display_order").notNull().default(0),
+  // File metadata
+  fileSize: integer("file_size"), // in bytes
+  mimeType: varchar("mime_type", { length: 100 }),
+  width: integer("width"),
+  height: integer("height"),
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  proposalIdx: index("idx_proposal_photos_proposal").on(table.proposalId),
+  categoryOrderIdx: index("idx_proposal_photos_category_order").on(table.proposalId, table.category, table.displayOrder),
+}));
+
+export const proposalsRelations = relations(proposals, ({ one, many }) => ({
   user: one(users, {
     fields: [proposals.userId],
     references: [users.id],
+  }),
+  photos: many(proposalPhotos),
+}));
+
+export const proposalPhotosRelations = relations(proposalPhotos, ({ one }) => ({
+  proposal: one(proposals, {
+    fields: [proposalPhotos.proposalId],
+    references: [proposals.id],
   }),
 }));
 
 export const usersRelations = relations(users, ({ many }) => ({
   proposals: many(proposals),
 }));
+
+// Proposal source options for UI
+export const PROPOSAL_SOURCE_LABELS: Record<ProposalSource, string> = {
+  desktop: 'Desktop',
+  mobile: 'Mobile App',
+};
 
 // Companies (workspaces) table for Crew plan
 export const companies = pgTable("companies", {
@@ -493,6 +534,8 @@ export const insertProposalSchema = createInsertSchema(proposals).omit({
   isMultiService: z.boolean().optional(),
   estimatedDaysLow: z.number().optional(),
   estimatedDaysHigh: z.number().optional(),
+  source: z.enum(proposalSourceTypes).optional(),
+  photoCount: z.number().optional(),
 });
 
 export const selectProposalSchema = createSelectSchema(proposals);
@@ -559,6 +602,43 @@ export type Invite = typeof invites.$inferSelect;
 // Proposal views types
 export type ProposalView = typeof proposalViews.$inferSelect;
 export type InsertProposalView = typeof proposalViews.$inferInsert;
+
+// Proposal photos types and schemas
+export type ProposalPhotoRecord = typeof proposalPhotos.$inferSelect;
+export type InsertProposalPhoto = typeof proposalPhotos.$inferInsert;
+
+export const proposalPhotoCategories = [
+  'hero',
+  'existing',
+  'shower',
+  'vanity',
+  'flooring',
+  'tub',
+  'toilet',
+  'plumbing',
+  'electrical',
+  'damage',
+  'kitchen',
+  'cabinets',
+  'countertops',
+  'roofing',
+  'siding',
+  'windows',
+  'hvac',
+  'other',
+] as const;
+
+export type ProposalPhotoCategory = typeof proposalPhotoCategories[number];
+
+export const insertProposalPhotoSchema = createInsertSchema(proposalPhotos).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  category: z.enum(proposalPhotoCategories).default('other'),
+});
+
+export const proposalSourceTypes = ['desktop', 'mobile'] as const;
+export type ProposalSource = typeof proposalSourceTypes[number];
 
 // Template types
 export type ProposalTemplate = typeof proposalTemplates.$inferSelect;

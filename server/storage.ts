@@ -1,6 +1,7 @@
 import {
   users,
   proposals,
+  proposalPhotos,
   cancellationFeedback,
   companies,
   companyMembers,
@@ -13,6 +14,8 @@ import {
   type UpsertUser,
   type Proposal,
   type InsertProposal,
+  type ProposalPhotoRecord,
+  type InsertProposalPhoto,
   type InsertCancellationFeedback,
   type CancellationFeedback,
   type Company,
@@ -169,6 +172,19 @@ export interface IStorage {
   linkDraftToProposal(draftId: number, userId: string, proposalId: number): Promise<typeof mobileJobDrafts.$inferSelect | undefined>;
 
   getMobileJobByCreateIdempotencyKey(userId: string, key: string): Promise<typeof mobileJobs.$inferSelect | undefined>;
+
+  // ==========================================
+  // Proposal Photos
+  // ==========================================
+  addProposalPhoto(proposalId: number, userId: string, photo: Omit<InsertProposalPhoto, 'proposalId'>): Promise<ProposalPhotoRecord>;
+  
+  getProposalPhotos(proposalId: number, userId: string): Promise<ProposalPhotoRecord[]>;
+  
+  updateProposalPhoto(photoId: number, proposalId: number, userId: string, updates: Partial<InsertProposalPhoto>): Promise<ProposalPhotoRecord | undefined>;
+  
+  deleteProposalPhoto(photoId: number, proposalId: number, userId: string): Promise<boolean>;
+  
+  updateProposalPhotoCount(proposalId: number, userId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
