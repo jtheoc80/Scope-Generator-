@@ -87,7 +87,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </Link>
             )}
             {location === "/" && (
-              <Link href="/app" className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-semibold hover:bg-primary/90 transition-colors">
+              <Link href="/app" className="bg-orange-500 text-white px-4 py-2 rounded-md text-sm font-semibold hover:bg-orange-600 transition-colors">
                 {t.hero.cta}
               </Link>
             )}
@@ -193,7 +193,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </div>
               <Link 
                 href="/app" 
-                className="bg-primary text-primary-foreground px-4 py-3 rounded-md text-base font-semibold hover:bg-primary/90 transition-colors text-center mt-2"
+                className="bg-orange-500 text-white px-4 py-3 rounded-md text-base font-semibold hover:bg-orange-600 transition-colors text-center mt-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {t.hero.cta}
