@@ -398,6 +398,23 @@ export const mobileJobDraftsRelations = relations(mobileJobDrafts, ({ one }) => 
 }));
 
 // ==========================================
+// Market pricing cache (1build) for mobile
+// ==========================================
+
+export const onebuildPriceCache = pgTable("onebuild_price_cache", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  tradeId: varchar("trade_id", { length: 50 }).notNull(),
+  zipcode: varchar("zipcode", { length: 10 }).notNull(),
+  payload: jsonb("payload").$type<unknown>().notNull(),
+  location: varchar("location", { length: 120 }),
+  fetchedAt: timestamp("fetched_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+}, (table) => ({
+  tradeZipIdx: index("idx_onebuild_cache_trade_zip").on(table.tradeId, table.zipcode),
+  expiresIdx: index("idx_onebuild_cache_expires").on(table.expiresAt),
+}));
+
+// ==========================================
 // Business Insights / Analytics
 // ==========================================
 

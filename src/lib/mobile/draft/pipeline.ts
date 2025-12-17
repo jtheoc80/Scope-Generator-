@@ -1,6 +1,7 @@
 import { aiService } from "@/lib/services/aiService";
 import type { ProposalLineItem, ProposalTemplate, User } from "@shared/schema";
 import { computePriceRange } from "./pricebook";
+import { extractZip, getOneBuildTradePricingBestEffort, marketMultiplierFromOneBuild } from "./marketPricing";
 
 export type MobileJobInput = {
   id: number;
@@ -51,6 +52,12 @@ export async function generateMobileDraft(params: {
 }): Promise<MobileDraftOutput> {
   const { job, template, user, photos } = params;
 
+  const zipcode = extractZip(job.address);
+  const onebuild = zipcode
+    ? await getOneBuildTradePricingBestEffort({ tradeId: template.tradeId, zipcode, timeoutMs: 1200 })
+    : null;
+  const { multiplier: marketMultiplier, basis: marketBasis } = marketMultiplierFromOneBuild(template.tradeId, onebuild);
+
   const needsMorePhotosFromVision: string[] = [];
   const visionLabels: string[] = [];
   for (const p of photos) {
@@ -89,6 +96,7 @@ export async function generateMobileDraft(params: {
     jobSize: job.jobSize,
     userPriceMultiplier: user.priceMultiplier,
     tradeMultiplier: typeof tradeMult === "number" ? tradeMult : null,
+    marketMultiplier,
   };
 
   const { priceLow, priceHigh } = computePriceRange(pricingInputs);
@@ -146,6 +154,7 @@ export async function generateMobileDraft(params: {
   if (photos.length >= 3) confidence += 10;
   if (job.jobNotes && job.jobNotes.length > 20) confidence += 5;
   if (needsMorePhotosFromVision.length === 0 && photos.length >= 3) confidence += 5;
+  if (onebuild) confidence += 5;
   confidence = Math.max(0, Math.min(95, confidence));
 
   return {
@@ -159,7 +168,12 @@ export async function generateMobileDraft(params: {
     questions,
     pricing: {
       pricebookVersion: process.env.PRICEBOOK_VERSION || "v1",
-      inputs: pricingInputs,
+      inputs: {
+        ...pricingInputs,
+        onebuild: onebuild
+          ? { source: onebuild._meta.source, zipcode: onebuild._meta.zipcode, basis: marketBasis }
+          : null,
+      },
     },
   };
 }

@@ -231,6 +231,14 @@ Vision (AWS Rekognition + GPT vision):
 Pricing snapshot:
 - `PRICEBOOK_VERSION=v1` (saved into draft payload + DB for auditability)
 
+1build (market pricing enrichment; non-blocking, cached):
+- `ONEBUILD_EXTERNAL_KEY=...`
+
+Behavior:
+- Draft generation will try to fetch cached 1build trade pricing for the job’s ZIP with a short timeout (~1.2s).
+- If available, it applies a **conservative market multiplier** (clamped) and boosts confidence slightly.
+- Results are cached in Postgres table `onebuild_price_cache` for ~7 days and recorded in the draft pricing snapshot.
+
 ### 6) Local testing with curl
 
 Create a job:
