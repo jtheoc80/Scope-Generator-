@@ -29,7 +29,7 @@ export default function CapturePhotos(props: {
       const asset = result.assets[0];
       setLastUri(asset.uri);
 
-      const presign = await apiFetch<{ key: string; uploadUrl: string; publicUrl: string }>(
+      const presign = await apiFetch<{ key: string; uploadUrl: string; publicUrl: string; token?: string }>(
         `/api/mobile/jobs/${props.jobId}/photos/presign`,
         {
           method: "POST",
@@ -47,6 +47,8 @@ export default function CapturePhotos(props: {
         method: "PUT",
         headers: {
           "Content-Type": asset.mimeType || "image/jpeg",
+          ...(presign.token ? { Authorization: `Bearer ${presign.token}` } : {}),
+          "x-upsert": "true",
         },
         body: blob,
       });

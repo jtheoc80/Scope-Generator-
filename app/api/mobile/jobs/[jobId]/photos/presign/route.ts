@@ -3,6 +3,7 @@ import { requireMobileAuth } from "@/src/lib/mobile/auth";
 import { presignPhotoRequestSchema } from "@/src/lib/mobile/types";
 import { storage } from "@/lib/services/storage";
 import { presignPutObject } from "@/src/lib/mobile/storage/s3";
+import { presignSupabaseUpload } from "@/src/lib/mobile/storage/supabase";
 import { getRequestId, jsonError, logEvent, withRequestId } from "@/src/lib/mobile/observability";
 
 // POST /api/mobile/jobs/:jobId/photos/presign
@@ -45,10 +46,12 @@ export async function POST(
     const ext = safeName.includes(".") ? safeName.split(".").pop() : undefined;
     const key = `mobile/${authResult.userId}/jobs/${job.id}/${crypto.randomUUID()}${ext ? `.${ext}` : ""}`;
 
-    const presigned = await presignPutObject({
-      key,
-      contentType: parsed.data.contentType,
-    });
+    // Prefer native Supabase Storage signed uploads when configured.
+    // Fallback to S3-compatible presigned PUT if S3 env vars are set.
+    const presigned =
+      process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.SUPABASE_STORAGE_BUCKET
+        ? await presignSupabaseUpload({ key })
+        : await presignPutObject({ key, contentType: parsed.data.contentType });
 
     // Keep response compatible with the simplified spec:
     // returns: { uploadUrl, publicUrl }
@@ -62,6 +65,7 @@ export async function POST(
       uploadUrl: presigned.uploadUrl,
       publicUrl: presigned.publicUrl,
       key: presigned.key, // extra field (useful for debugging)
+      token: (presigned as any).token, // supabase signed upload token (optional)
     });
   } catch (error) {
     console.error("Error presigning mobile photo upload:", error);
