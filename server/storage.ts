@@ -1215,6 +1215,104 @@ export class DatabaseStorage implements IStorage {
 
     return updated;
   }
+
+  // ==========================================
+  // Proposal Photos
+  // ==========================================
+  
+  async addProposalPhoto(proposalId: number, userId: string, photo: Omit<InsertProposalPhoto, 'proposalId'>): Promise<ProposalPhotoRecord> {
+    // Verify proposal ownership
+    const proposal = await this.getProposal(proposalId);
+    if (!proposal || proposal.userId !== userId) {
+      throw new Error("Proposal not found or access denied");
+    }
+
+    const [created] = await db
+      .insert(proposalPhotos)
+      .values({
+        ...photo,
+        proposalId,
+      } as typeof proposalPhotos.$inferInsert)
+      .returning();
+
+    // Update photo count
+    await this.updateProposalPhotoCount(proposalId, userId);
+
+    return created;
+  }
+
+  async getProposalPhotos(proposalId: number, userId: string): Promise<ProposalPhotoRecord[]> {
+    // Verify proposal ownership
+    const proposal = await this.getProposal(proposalId);
+    if (!proposal || proposal.userId !== userId) {
+      return [];
+    }
+
+    return await db
+      .select()
+      .from(proposalPhotos)
+      .where(eq(proposalPhotos.proposalId, proposalId))
+      .orderBy(proposalPhotos.category, proposalPhotos.displayOrder);
+  }
+
+  async updateProposalPhoto(photoId: number, proposalId: number, userId: string, updates: Partial<InsertProposalPhoto>): Promise<ProposalPhotoRecord | undefined> {
+    // Verify proposal ownership
+    const proposal = await this.getProposal(proposalId);
+    if (!proposal || proposal.userId !== userId) {
+      return undefined;
+    }
+
+    const [updated] = await db
+      .update(proposalPhotos)
+      .set(updates)
+      .where(and(
+        eq(proposalPhotos.id, photoId),
+        eq(proposalPhotos.proposalId, proposalId)
+      ))
+      .returning();
+
+    return updated;
+  }
+
+  async deleteProposalPhoto(photoId: number, proposalId: number, userId: string): Promise<boolean> {
+    // Verify proposal ownership
+    const proposal = await this.getProposal(proposalId);
+    if (!proposal || proposal.userId !== userId) {
+      return false;
+    }
+
+    const result = await db
+      .delete(proposalPhotos)
+      .where(and(
+        eq(proposalPhotos.id, photoId),
+        eq(proposalPhotos.proposalId, proposalId)
+      ))
+      .returning();
+
+    if (result.length > 0) {
+      // Update photo count
+      await this.updateProposalPhotoCount(proposalId, userId);
+      return true;
+    }
+    return false;
+  }
+
+  async updateProposalPhotoCount(proposalId: number, userId: string): Promise<void> {
+    const photos = await db
+      .select({ count: count() })
+      .from(proposalPhotos)
+      .where(eq(proposalPhotos.proposalId, proposalId));
+
+    const photoCount = photos[0]?.count ?? 0;
+
+    await db
+      .update(proposals)
+      .set({ photoCount, updatedAt: new Date() })
+      .where(and(
+        eq(proposals.id, proposalId),
+        eq(proposals.userId, userId)
+      ));
+  }
 }
 
 export const storage = new DatabaseStorage();

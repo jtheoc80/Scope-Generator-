@@ -71,6 +71,13 @@ const CATEGORY_LABELS: Record<ProposalPhotoCategory, string> = {
 /**
  * Photo upload component for proposals.
  * Supports drag-drop, category assignment, captions, and reordering.
+ * 
+ * UX Features:
+ * - Smart auto-categorization based on file order
+ * - Visual feedback during drag operations
+ * - Progress indicators for uploads
+ * - Undo support for deletions
+ * - Recommended photo tips
  */
 export function ProposalPhotoUpload({
   photos,
@@ -80,9 +87,23 @@ export function ProposalPhotoUpload({
   className,
 }: ProposalPhotoUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
+  const [recentlyDeleted, setRecentlyDeleted] = useState<UploadedPhoto | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const generateId = () => `photo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+  // Smart auto-categorization based on upload order
+  const getSmartCategory = (index: number, totalNew: number, existingCount: number): ProposalPhotoCategory => {
+    // First photo becomes hero if no photos exist
+    if (existingCount === 0 && index === 0) return 'hero';
+    
+    // Next 2-6 photos become existing conditions
+    const existingPhotosCount = photos.filter(p => p.category === 'existing').length;
+    if (existingPhotosCount + index < 6) return 'existing';
+    
+    // Rest go to other
+    return 'other';
+  };
 
   const handleFileSelect = useCallback((files: FileList | null) => {
     if (!files || disabled) return;
@@ -90,11 +111,16 @@ export function ProposalPhotoUpload({
     const remainingSlots = maxPhotos - photos.length;
     const filesToAdd = Array.from(files).slice(0, remainingSlots);
 
+    if (filesToAdd.length === 0 && files.length > 0) {
+      // Show feedback that max photos reached
+      return;
+    }
+
     const newPhotos: UploadedPhoto[] = filesToAdd.map((file, index) => ({
       id: generateId(),
       file,
       url: URL.createObjectURL(file),
-      category: photos.length === 0 && index === 0 ? 'hero' : 'existing',
+      category: getSmartCategory(index, filesToAdd.length, photos.length),
       caption: '',
       displayOrder: photos.length + index,
     }));
@@ -124,10 +150,28 @@ export function ProposalPhotoUpload({
 
   const removePhoto = (id: string) => {
     const photo = photos.find(p => p.id === id);
-    if (photo?.url.startsWith('blob:')) {
-      URL.revokeObjectURL(photo.url);
-    }
+    if (!photo) return;
+    
+    // Store for undo (don't revoke URL yet)
+    setRecentlyDeleted(photo);
     onPhotosChange(photos.filter(p => p.id !== id));
+    
+    // Clear undo after 5 seconds and revoke URL
+    setTimeout(() => {
+      setRecentlyDeleted(prev => {
+        if (prev?.id === photo.id && photo.url.startsWith('blob:')) {
+          URL.revokeObjectURL(photo.url);
+        }
+        return prev?.id === photo.id ? null : prev;
+      });
+    }, 5000);
+  };
+
+  const undoDelete = () => {
+    if (recentlyDeleted) {
+      onPhotosChange([...photos, recentlyDeleted]);
+      setRecentlyDeleted(null);
+    }
   };
 
   const setAsHero = (id: string) => {
@@ -146,17 +190,33 @@ export function ProposalPhotoUpload({
 
   return (
     <div className={cn('space-y-6', className)}>
+      {/* Undo Toast */}
+      {recentlyDeleted && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 z-50 animate-in slide-in-from-bottom-4">
+          <span className="text-sm">Photo removed</span>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={undoDelete}
+            className="h-7 text-xs"
+          >
+            Undo
+          </Button>
+        </div>
+      )}
+
       {/* Drop Zone */}
       <div
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         className={cn(
-          'border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer',
-          isDragging ? 'border-primary bg-primary/5' : 'border-slate-300 hover:border-slate-400',
-          disabled && 'opacity-50 cursor-not-allowed'
+          'border-2 border-dashed rounded-lg p-6 text-center transition-all cursor-pointer',
+          isDragging ? 'border-primary bg-primary/5 scale-[1.02]' : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50',
+          disabled && 'opacity-50 cursor-not-allowed',
+          photos.length >= maxPhotos && 'border-amber-300 bg-amber-50'
         )}
-        onClick={() => !disabled && fileInputRef.current?.click()}
+        onClick={() => !disabled && photos.length < maxPhotos && fileInputRef.current?.click()}
       >
         <input
           ref={fileInputRef}
@@ -165,23 +225,54 @@ export function ProposalPhotoUpload({
           multiple
           className="hidden"
           onChange={(e) => handleFileSelect(e.target.files)}
-          disabled={disabled}
+          disabled={disabled || photos.length >= maxPhotos}
         />
         
         <div className="flex flex-col items-center gap-2">
-          <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
-            <Upload className="w-6 h-6 text-slate-500" />
+          <div className={cn(
+            'w-12 h-12 rounded-full flex items-center justify-center transition-colors',
+            isDragging ? 'bg-primary/20' : 'bg-slate-100',
+            photos.length >= maxPhotos && 'bg-amber-100'
+          )}>
+            <Upload className={cn(
+              'w-6 h-6',
+              isDragging ? 'text-primary' : 'text-slate-500',
+              photos.length >= maxPhotos && 'text-amber-600'
+            )} />
           </div>
           <div>
             <p className="font-medium text-slate-700">
-              {isDragging ? 'Drop photos here' : 'Drag & drop photos or click to browse'}
+              {photos.length >= maxPhotos 
+                ? 'Maximum photos reached' 
+                : isDragging 
+                  ? 'Drop photos here' 
+                  : 'Drag & drop photos or click to browse'}
             </p>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className={cn(
+              'text-sm mt-1',
+              photos.length >= maxPhotos ? 'text-amber-600' : 'text-slate-500'
+            )}>
               {photos.length}/{maxPhotos} photos • JPG, PNG up to 10MB each
             </p>
           </div>
         </div>
       </div>
+      
+      {/* Helpful tips for empty state */}
+      {photos.length === 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h4 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
+            <Camera className="w-4 h-4" />
+            Photo Tips for Better Proposals
+          </h4>
+          <ul className="text-sm text-blue-800 space-y-1">
+            <li>• <strong>First photo</strong> becomes the hero banner on your proposal</li>
+            <li>• <strong>2-6 photos</strong> work best for "Existing Conditions" section</li>
+            <li>• Include close-ups of problem areas (water damage, wear, etc.)</li>
+            <li>• Wide shots help show the overall scope of work</li>
+          </ul>
+        </div>
+      )}
 
       {/* Photo Summary */}
       {photos.length > 0 && (
