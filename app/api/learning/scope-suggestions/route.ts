@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       ))
       .orderBy(desc(scopeItemPatterns.addedCount));
 
-    const currentScopeLower = new Set(
+    const currentScopeLower = new Set<string>(
       (currentScope || []).map((s: string) => s.toLowerCase())
     );
 

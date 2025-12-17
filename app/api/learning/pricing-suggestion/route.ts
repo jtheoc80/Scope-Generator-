@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
         baseLow: basePriceLow,
         baseHigh: basePriceHigh,
         userAdjustment: userPatterns[0]?.count >= 3 ? userPatterns[0].avgAdjustment : null,
-        localAdjustment: localPatterns?.[0]?.count >= 5 ? localPatterns[0].avgAdjustment : null,
+        localAdjustment: (localPatterns?.[0]?.count ?? 0) >= 5 ? (localPatterns?.[0]?.avgAdjustment ?? null) : null,
         geoMultiplier: geoPattern?.[0]?.patternValue ?? null,
         dataPoints: {
           userHistory: userPatterns[0]?.count || 0,

@@ -780,6 +780,10 @@ export const proposalLineItemSchema = z.object({
   exclusions: z.array(z.string()).optional(),
 });
 
+// Proposal source types
+export const proposalSourceTypes = ['desktop', 'mobile'] as const;
+export type ProposalSource = typeof proposalSourceTypes[number];
+
 // Zod schemas
 export const insertProposalSchema = createInsertSchema(proposals).omit({
   createdAt: true,
@@ -893,9 +897,6 @@ export const insertProposalPhotoSchema = createInsertSchema(proposalPhotos).omit
 }).extend({
   category: z.enum(proposalPhotoCategories).default('other'),
 });
-
-export const proposalSourceTypes = ['desktop', 'mobile'] as const;
-export type ProposalSource = typeof proposalSourceTypes[number];
 
 // Template types
 export type ProposalTemplate = typeof proposalTemplates.$inferSelect;
