@@ -3,6 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Hammer, Menu, X } from "lucide-react";
+import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useQuery } from "@tanstack/react-query";
@@ -13,6 +14,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { t } = useLanguage();
 
+  // Only render Clerk UI if the client publishable key is present.
+  // (Server-only key isn't available in the browser.)
+  const isClerkClientConfigured = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
+
   const { data: user } = useQuery({
     queryKey: ["/api/auth/user"],
     queryFn: async () => {
@@ -21,6 +26,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       return res.json();
     },
     retry: false,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 
   const showOnboarding = Boolean(user && !user.onboardingCompleted);
@@ -71,13 +78,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </Link>
             )}
             <LanguageSwitcher />
-            {user ? (
-              <Link
-                href="/sign-out"
-                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-              >
-                {t.nav.signOut}
-              </Link>
+            {isClerkClientConfigured ? (
+              <>
+                <SignedOut>
+                  <Link
+                    href="/sign-in"
+                    className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    {t.nav.signIn}
+                  </Link>
+                </SignedOut>
+                <SignedIn>
+                  <UserButton afterSignOutUrl="/" />
+                </SignedIn>
+              </>
             ) : (
               <Link
                 href="/sign-in"
@@ -171,14 +185,23 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   Team
                 </Link>
               )}
-              {user ? (
-                <Link
-                  href="/sign-out"
-                  className="text-base font-medium text-slate-700 hover:text-primary transition-colors py-2"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {t.nav.signOut}
-                </Link>
+              {isClerkClientConfigured ? (
+                <>
+                  <SignedOut>
+                    <Link
+                      href="/sign-in"
+                      className="text-base font-medium text-slate-700 hover:text-primary transition-colors py-2"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      {t.nav.signIn}
+                    </Link>
+                  </SignedOut>
+                  <SignedIn>
+                    <div className="py-2" onClick={() => setMobileMenuOpen(false)}>
+                      <UserButton afterSignOutUrl="/" />
+                    </div>
+                  </SignedIn>
+                </>
               ) : (
                 <Link
                   href="/sign-in"

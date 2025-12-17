@@ -1,9 +1,16 @@
 import { NextResponse } from 'next/server';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { storage } from '@/lib/services/storage';
+import { isClerkServerConfigured } from '@/lib/authUtils';
 
 export async function GET() {
   try {
+    // If Clerk isn't configured server-side, treat as unauthenticated.
+    // This prevents confusing 500s and makes the UI state consistent.
+    if (!isClerkServerConfigured()) {
+      return NextResponse.json(null);
+    }
+
     const { userId } = await auth();
     
     if (!userId) {
