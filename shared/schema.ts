@@ -327,10 +327,17 @@ export const mobileJobPhotos = pgTable("mobile_job_photos", {
   publicUrl: text("public_url").notNull(),
   // Vision findings (damage, measurements, materials, etc.)
   findings: jsonb("findings").$type<unknown>(),
-  findingsStatus: varchar("findings_status", { length: 20 }).notNull().default("pending"), // pending, ready, failed
+  findingsStatus: varchar("findings_status", { length: 20 }).notNull().default("pending"), // pending, processing, ready, failed
+  findingsError: text("findings_error"),
+  findingsAttempts: integer("findings_attempts").notNull().default(0),
+  findingsNextAttemptAt: timestamp("findings_next_attempt_at"),
+  findingsLockedBy: varchar("findings_locked_by", { length: 80 }),
+  findingsLockedAt: timestamp("findings_locked_at"),
   analyzedAt: timestamp("analyzed_at"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  statusNextAttemptIdx: index("idx_mobile_job_photos_status_next_attempt").on(table.findingsStatus, table.findingsNextAttemptAt),
+}));
 
 export const mobileJobDrafts = pgTable("mobile_job_drafts", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),

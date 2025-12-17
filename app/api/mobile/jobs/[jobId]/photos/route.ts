@@ -3,6 +3,7 @@ import { requireMobileAuth } from "@/src/lib/mobile/auth";
 import { registerPhotoRequestSchema } from "@/src/lib/mobile/types";
 import { storage } from "@/lib/services/storage";
 import { getRequestId, jsonError, logEvent, withRequestId } from "@/src/lib/mobile/observability";
+import { ensureVisionWorker } from "@/src/lib/mobile/vision/worker";
 
 // POST /api/mobile/jobs/:jobId/photos (register uploaded photo public URL)
 export async function POST(
@@ -36,6 +37,9 @@ export async function POST(
       publicUrl: parsed.data.url,
       kind: parsed.data.kind,
     });
+
+    // Kick off vision analysis ASAP (best-effort).
+    ensureVisionWorker();
 
     logEvent("mobile.photos.register.ok", {
       requestId,

@@ -2,6 +2,7 @@ import { db } from "@/server/db";
 import { mobileJobDrafts, mobileJobs, mobileJobPhotos, proposalTemplates, users } from "@shared/schema";
 import { and, eq, isNull, lte, or, desc } from "drizzle-orm";
 import { generateMobileDraft } from "./pipeline";
+import { ensureVisionWorker } from "@/src/lib/mobile/vision/worker";
 
 const WORKER_ID = `api-${process.pid}-${Math.random().toString(16).slice(2)}`;
 let started = false;
@@ -148,6 +149,9 @@ async function runDraft(draft: typeof mobileJobDrafts.$inferSelect) {
 
     if (!photos.length) throw new Error("NO_PHOTOS");
 
+    // Ensure vision worker is running; draft quality improves as findings arrive.
+    ensureVisionWorker();
+
     const [template] = await db
       .select()
       .from(proposalTemplates)
@@ -189,7 +193,7 @@ async function runDraft(draft: typeof mobileJobDrafts.$inferSelect) {
       },
       template,
       user,
-      photos: photos.map((p) => ({ publicUrl: p.publicUrl, kind: p.kind })),
+      photos: photos.map((p) => ({ publicUrl: p.publicUrl, kind: p.kind, findings: p.findings })),
     });
 
     await db

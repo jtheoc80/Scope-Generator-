@@ -47,9 +47,22 @@ export async function generateMobileDraft(params: {
     | "exclusions"
   >;
   user: Pick<User, "priceMultiplier" | "tradeMultipliers">;
-  photos: MobilePhotoInput[];
+  photos: Array<MobilePhotoInput & { findings?: unknown }>;
 }): Promise<MobileDraftOutput> {
   const { job, template, user, photos } = params;
+
+  const needsMorePhotosFromVision: string[] = [];
+  const visionLabels: string[] = [];
+  for (const p of photos) {
+    const f: any = p.findings;
+    const combined = f?.combined;
+    if (combined?.needsMorePhotos && Array.isArray(combined.needsMorePhotos)) {
+      needsMorePhotosFromVision.push(...combined.needsMorePhotos);
+    }
+    if (combined?.summaryLabels && Array.isArray(combined.summaryLabels)) {
+      visionLabels.push(...combined.summaryLabels);
+    }
+  }
 
   // v1: use template scope + optional contractor notes.
   // (Vision parsing can be layered in later; we still require photos so the UX stays consistent.)
@@ -58,7 +71,11 @@ export async function generateMobileDraft(params: {
     baseScope: template.baseScope,
     clientName: job.clientName,
     address: job.address,
-    jobNotes: job.jobNotes ?? (photos.length ? `Photos captured: ${photos.length}.` : undefined),
+    jobNotes:
+      job.jobNotes ??
+      (photos.length
+        ? `Photos captured: ${photos.length}. Vision labels: ${Array.from(new Set(visionLabels)).slice(0, 12).join(", ")}`
+        : undefined),
   });
 
   const scope = enhance.enhancedScope;
@@ -121,10 +138,14 @@ export async function generateMobileDraft(params: {
   if (photos.length === 0) {
     questions.push("Add at least 1 photo to improve accuracy.");
   }
+  for (const q of Array.from(new Set(needsMorePhotosFromVision)).slice(0, 5)) {
+    questions.push(q);
+  }
 
   let confidence = enhance.success ? 70 : 45;
   if (photos.length >= 3) confidence += 10;
   if (job.jobNotes && job.jobNotes.length > 20) confidence += 5;
+  if (needsMorePhotosFromVision.length === 0 && photos.length >= 3) confidence += 5;
   confidence = Math.max(0, Math.min(95, confidence));
 
   return {

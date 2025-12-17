@@ -221,6 +221,16 @@ Storage (S3/R2/Supabase Storage gateway):
 - `S3_PUBLIC_BASE_URL=...` (how mobile reads the uploaded file)
 - `S3_FORCE_PATH_STYLE=true|false` (optional)
 
+Vision (AWS Rekognition + GPT vision):
+- `AWS_REGION=us-east-1` (or your region)
+- `AWS_ACCESS_KEY_ID=...` (optional if running on AWS with IAM role)
+- `AWS_SECRET_ACCESS_KEY=...` (optional if running on AWS with IAM role)
+- `OPENAI_API_KEY=...`
+- `OPENAI_VISION_MODEL=gpt-4o-mini` (or `gpt-4o` for max quality)
+
+Pricing snapshot:
+- `PRICEBOOK_VERSION=v1` (saved into draft payload + DB for auditability)
+
 ### 6) Local testing with curl
 
 Create a job:
@@ -275,3 +285,11 @@ Errors return:
 ```json
 { \"error\": { \"code\": \"INVALID_INPUT\", \"message\": \"...\", \"requestId\": \"...\" } }
 ```
+
+### Vision structure (per photo)
+Each `mobile_job_photos` row stores `findings` JSON with this structure:
+- `detector`: AWS Rekognition labels (fast, consistent)
+- `llm`: GPT vision extraction (materials/damage/missing shots)
+- `combined`: a conservative combined confidence + `needsMorePhotos`
+
+This allows the UI to show a checklist like “Need under-sink plumbing close-up” *before* generating the draft, reducing change orders.
