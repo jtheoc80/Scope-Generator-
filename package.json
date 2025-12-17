@@ -8,7 +8,13 @@
     "start": "next start",
     "lint": "eslint",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "seo:audit": "tsx script/seo-audit.ts",
+    "seo:audit:ci": "tsx script/seo-audit.ts --ci",
+    "seo:audit:strict": "tsx script/seo-audit.ts --ci --strict",
+    "seo:report": "tsx script/seo-audit.ts --json --output=seo-report.json",
+    "seo:scan": "tsx script/seo-page-scanner.ts",
+    "seo:check": "tsx script/seo-audit.ts --ci && tsx script/seo-page-scanner.ts --ci"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
@@ -94,6 +100,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "drizzle-kit": "^0.24.0",
+    "tsx": "^4.0.0",
     "eslint": "^9",
     "eslint-config-next": "15.5.9",
     "tailwindcss": "^4",

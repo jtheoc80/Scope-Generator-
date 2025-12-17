@@ -1,37 +1,33 @@
 import { MetadataRoute } from 'next';
+import { seoConfig } from '@/lib/seo';
 
+/**
+ * Robots.txt Generation
+ * Uses centralized SEO configuration for consistency.
+ */
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = 'https://scopegenerator.com';
+  const baseUrl = seoConfig.site.url;
+  
+  // Get disallow paths from SEO config
+  const disallowPaths = seoConfig.noIndexPages;
   
   return {
     rules: [
       {
         userAgent: '*',
         allow: '/',
-        disallow: [
-          '/api/',
-          '/dashboard',
-          '/settings',
-          '/crew',
-          '/p/',
-          '/invite/',
-          '/sign-in',
-          '/sign-up',
-        ],
+        disallow: disallowPaths,
       },
       {
         userAgent: 'Googlebot',
         allow: '/',
-        disallow: [
-          '/api/',
-          '/dashboard',
-          '/settings',
-          '/crew',
-          '/p/',
-          '/invite/',
-          '/sign-in',
-          '/sign-up',
-        ],
+        disallow: disallowPaths,
+      },
+      // Allow specific crawlers for better discovery
+      {
+        userAgent: 'Bingbot',
+        allow: '/',
+        disallow: disallowPaths,
       },
     ],
     sitemap: `${baseUrl}/sitemap.xml`,

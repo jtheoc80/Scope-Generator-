@@ -1,93 +1,31 @@
 import { MetadataRoute } from 'next';
 import { blogPosts } from '@/lib/blog-data';
+import { 
+  seoConfig, 
+  pagesSeoConfig, 
+  getSitemapPriority, 
+  getChangeFrequency,
+  shouldIndex 
+} from '@/lib/seo';
 
+/**
+ * Sitemap Generation
+ * Automatically generates sitemap from SEO configuration.
+ * The SEO bot ensures all pages are properly configured.
+ */
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://scopegenerator.com';
+  const baseUrl = seoConfig.site.url;
   const currentDate = new Date().toISOString().split('T')[0];
   
-  // Core pages
-  const corePages: MetadataRoute.Sitemap = [
-    {
-      url: baseUrl,
+  // Generate sitemap entries from pagesSeoConfig
+  const configuredPages: MetadataRoute.Sitemap = Object.entries(pagesSeoConfig)
+    .filter(([path]) => shouldIndex(path))
+    .map(([path, config]) => ({
+      url: `${baseUrl}${path}`,
       lastModified: currentDate,
-      changeFrequency: 'weekly',
-      priority: 1.0,
-    },
-    {
-      url: `${baseUrl}/app`,
-      lastModified: currentDate,
-      changeFrequency: 'weekly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/calculator`,
-      lastModified: currentDate,
-      changeFrequency: 'monthly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/about`,
-      lastModified: currentDate,
-      changeFrequency: 'monthly',
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/market-pricing`,
-      lastModified: currentDate,
-      changeFrequency: 'monthly',
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/pricing-insights`,
-      lastModified: currentDate,
-      changeFrequency: 'monthly',
-      priority: 0.6,
-    },
-    {
-      url: `${baseUrl}/privacy`,
-      lastModified: currentDate,
-      changeFrequency: 'yearly',
-      priority: 0.3,
-    },
-    {
-      url: `${baseUrl}/terms`,
-      lastModified: currentDate,
-      changeFrequency: 'yearly',
-      priority: 0.3,
-    },
-  ];
-
-  // Competitor comparison pages
-  const comparisonPages: MetadataRoute.Sitemap = [
-    {
-      url: `${baseUrl}/vs/buildertrend`,
-      lastModified: currentDate,
-      changeFrequency: 'monthly',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/vs/jobber`,
-      lastModified: currentDate,
-      changeFrequency: 'monthly',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/vs/houzz-pro`,
-      lastModified: currentDate,
-      changeFrequency: 'monthly',
-      priority: 0.8,
-    },
-  ];
-
-  // Blog pages
-  const blogIndex: MetadataRoute.Sitemap = [
-    {
-      url: `${baseUrl}/blog`,
-      lastModified: currentDate,
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-  ];
+      changeFrequency: config.changeFrequency || getChangeFrequency(path),
+      priority: config.priority ?? getSitemapPriority(path),
+    }));
 
   // Dynamic blog post pages
   const blogPostPages: MetadataRoute.Sitemap = Object.values(blogPosts).map((post) => ({
@@ -97,10 +35,24 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }));
 
-  return [
-    ...corePages,
-    ...comparisonPages,
-    ...blogIndex,
-    ...blogPostPages,
-  ];
+  // Combine and deduplicate (prefer configured pages)
+  const allPaths = new Set<string>();
+  const result: MetadataRoute.Sitemap = [];
+  
+  // Add configured pages first
+  for (const page of configuredPages) {
+    allPaths.add(page.url);
+    result.push(page);
+  }
+  
+  // Add blog posts (avoid duplicates)
+  for (const page of blogPostPages) {
+    if (!allPaths.has(page.url)) {
+      allPaths.add(page.url);
+      result.push(page);
+    }
+  }
+
+  // Sort by priority (highest first)
+  return result.sort((a, b) => (b.priority ?? 0.5) - (a.priority ?? 0.5));
 }
