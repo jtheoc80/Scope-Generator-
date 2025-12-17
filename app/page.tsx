@@ -567,7 +567,7 @@ export default function Home() {
               data-testid="button-create-first-proposal-how"
               className="inline-flex items-center justify-center h-14 lg:h-16 px-10 lg:px-14 rounded-md bg-orange-500 text-white font-bold text-lg lg:text-xl hover:bg-orange-600 transition-all"
             >
-              Create Your First Proposal
+              {t.home.createFirstProposal}
               <ArrowRight className="ml-2 w-5 h-5 lg:w-6 lg:h-6" />
             </Link>
           </div>

@@ -47,19 +47,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               {t.nav.howItWorks}
             </Link>
             <Link href="/market-pricing" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors" data-testid="nav-market-pricing">
-              Market Pricing
+              {t.nav.marketPricing}
             </Link>
             <Link href="/#pricing" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
               {t.pricing.title}
             </Link>
             {(user?.subscriptionPlan === 'pro' || user?.subscriptionPlan === 'crew') && (
               <Link href="/pricing-insights" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
-                Pricing Insights
+                {t.nav.pricingInsights}
               </Link>
             )}
             {user?.subscriptionPlan === 'crew' && (
               <Link href="/search-console" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
-                Search Console
+                {t.nav.searchConsole}
               </Link>
             )}
             <Link href="/settings" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
@@ -67,7 +67,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </Link>
             {user?.subscriptionPlan === 'crew' && (
               <Link href="/crew" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
-                Team
+                {t.nav.team}
               </Link>
             )}
             <LanguageSwitcher />
@@ -128,7 +128,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 onClick={() => setMobileMenuOpen(false)}
                 data-testid="nav-market-pricing-mobile"
               >
-                Market Pricing
+                {t.nav.marketPricing}
               </Link>
               <Link 
                 href="/#pricing" 
@@ -143,7 +143,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   className="text-base font-medium text-slate-700 hover:text-primary transition-colors py-2"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  Pricing Insights
+                  {t.nav.pricingInsights}
                 </Link>
               )}
               {user?.subscriptionPlan === 'crew' && (
@@ -152,7 +152,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   className="text-base font-medium text-slate-700 hover:text-primary transition-colors py-2"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  Search Console
+                  {t.nav.searchConsole}
                 </Link>
               )}
               <Link 
@@ -168,7 +168,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   className="text-base font-medium text-slate-700 hover:text-primary transition-colors py-2"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  Team
+                  {t.nav.team}
                 </Link>
               )}
               {user ? (
@@ -232,15 +232,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <ul className="space-y-2 text-sm">
               <li><Link href="/#how-it-works" className="hover:text-white">{t.nav.howItWorks}</Link></li>
               <li><Link href="/dashboard" className="hover:text-white">{t.nav.dashboard}</Link></li>
-              <li><Link href="/blog" className="hover:text-white">Blog</Link></li>
+              <li><Link href="/blog" className="hover:text-white">{t.nav.blog}</Link></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="text-white font-bold mb-4">Legal</h4>
+            <h4 className="text-white font-bold mb-4">{t.footer.legal}</h4>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/privacy" className="hover:text-white">Privacy Policy</Link></li>
-              <li><Link href="/terms" className="hover:text-white">Terms of Service</Link></li>
+              <li><Link href="/privacy" className="hover:text-white">{t.footer.privacyPolicy}</Link></li>
+              <li><Link href="/terms" className="hover:text-white">{t.footer.termsOfService}</Link></li>
             </ul>
           </div>
 
