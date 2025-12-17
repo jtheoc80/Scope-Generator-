@@ -1,9 +1,17 @@
 'use client';
-import { forwardRef } from "react";
+import { forwardRef, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { Clock, Shield, AlertCircle, MapPin, Layers } from "lucide-react";
+import { 
+  HeroPhoto, 
+  ExistingConditionsGrid, 
+  ScopePhotoInline, 
+  AppendixGallery,
+  organizePhotosForProposal,
+  type ProposalPhoto,
+} from "@/components/proposal-photos";
 
 interface CompanyInfo {
   companyName?: string | null;
@@ -45,10 +53,14 @@ interface ProposalPreviewProps {
   blurred?: boolean;
   onUnlock?: () => void;
   companyInfo?: CompanyInfo;
+  /** Photos to display in the proposal */
+  photos?: ProposalPhoto[];
+  /** Whether to show photos in the proposal (default: true if photos provided) */
+  showPhotos?: boolean;
 }
 
 const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
-  ({ data, blurred = true, onUnlock, companyInfo }, ref) => {
+  ({ data, blurred = true, onUnlock, companyInfo, photos = [], showPhotos = true }, ref) => {
     const today = new Date().toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
@@ -66,6 +78,16 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
 
     const hasMultipleServices = data.lineItems && data.lineItems.length > 1;
     const lineItems = data.lineItems || [];
+
+    // Organize photos for display
+    const organizedPhotos = useMemo(() => {
+      const allScopeItems = hasMultipleServices 
+        ? lineItems.flatMap(item => item.scope)
+        : (data.scope || []);
+      return organizePhotosForProposal(photos, allScopeItems);
+    }, [photos, hasMultipleServices, lineItems, data.scope]);
+    
+    const hasPhotos = showPhotos && photos.length > 0;
 
     return (
       <div ref={ref} className="bg-white shadow-xl min-h-[800px] w-full max-w-[800px] mx-auto p-8 md:p-12 relative text-slate-800 text-sm leading-relaxed font-serif">
@@ -86,14 +108,31 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
           </div>
         )}
 
+        {/* Hero Photo Banner (if available) */}
+        {hasPhotos && organizedPhotos.hero && (
+          <div className={cn("mb-6", blurred && "mt-8")}>
+            <HeroPhoto
+              photo={organizedPhotos.hero}
+              companyLogo={companyInfo?.companyLogo}
+              companyName={companyInfo?.companyName || "Your Company Name"}
+              customerName={data.clientName}
+              address={data.address}
+            />
+          </div>
+        )}
+
         {/* Header */}
-        <div className={cn("flex justify-between items-start border-b-2 border-slate-900 pb-6 mb-8", blurred && "mt-8")}>
+        <div className={cn(
+          "flex justify-between items-start border-b-2 border-slate-900 pb-6 mb-8", 
+          blurred && !organizedPhotos.hero && "mt-8"
+        )}>
           <div>
             <h1 className="text-3xl font-heading font-bold text-slate-900 uppercase tracking-wide">Proposal</h1>
             <p className="text-slate-500 mt-1">#{proposalNumber}</p>
           </div>
           <div className="text-right flex items-start gap-4 justify-end">
-            {companyInfo?.companyLogo && (
+            {/* Only show logo here if no hero photo (logo already in hero) */}
+            {companyInfo?.companyLogo && !organizedPhotos.hero && (
               <Image 
                 src={companyInfo.companyLogo} 
                 alt="Company logo" 
@@ -174,6 +213,14 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
           </div>
         )}
 
+        {/* Existing Conditions Photos (2-6 photos in grid) */}
+        {hasPhotos && organizedPhotos.existingConditions.length > 0 && (
+          <ExistingConditionsGrid 
+            photos={organizedPhotos.existingConditions}
+            maxPhotos={6}
+          />
+        )}
+
         {/* Multi-Service Line Items Summary */}
         {hasMultipleServices && (
           <div className="mb-8">
@@ -238,49 +285,64 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
                 We propose to furnish all materials and perform all labor necessary to complete the following:
               </p>
 
-              {lineItems.map((item, serviceIndex) => (
-                <div key={item.serviceId} className="border-l-4 border-l-secondary pl-4">
-                  <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
-                    <span className="bg-secondary text-slate-900 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">
-                      {serviceIndex + 1}
-                    </span>
-                    {item.jobTypeName}
-                    <span className="text-slate-500 font-normal text-sm">({item.tradeName})</span>
-                  </h3>
+              {lineItems.map((item, serviceIndex) => {
+                // Find photos matching this service's scope items
+                const servicePhotos = item.scope.flatMap(scopeItem => 
+                  organizedPhotos.scopePhotos[scopeItem] || []
+                ).slice(0, 2); // Max 2 photos per service section
+                
+                return (
+                  <div key={item.serviceId} className="border-l-4 border-l-secondary pl-4">
+                    <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                      <span className="bg-secondary text-slate-900 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">
+                        {serviceIndex + 1}
+                      </span>
+                      {item.jobTypeName}
+                      <span className="text-slate-500 font-normal text-sm">({item.tradeName})</span>
+                    </h3>
 
-                  {/* First 4 items shown */}
-                  <ul className="list-disc pl-5 space-y-2 marker:text-secondary mb-2">
-                    {item.scope.slice(0, 4).map((scopeItem, i) => (
-                      <li key={i}>{scopeItem}</li>
-                    ))}
-                  </ul>
+                    {/* Inline scope photos for this service */}
+                    {hasPhotos && servicePhotos.length > 0 && !blurred && (
+                      <ScopePhotoInline 
+                        photos={servicePhotos} 
+                        variant={servicePhotos.length > 1 ? 'pair' : 'single'}
+                      />
+                    )}
 
-                  {/* BLURRED SECTION for remaining items */}
-                  {item.scope.length > 4 && (
-                    <div className="relative mt-2">
-                      {blurred && serviceIndex === 0 && (
-                        <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center text-center border-2 border-dashed border-slate-200 rounded">
-                          <p className="text-slate-900 font-bold mb-2">Detailed scope & pricing hidden</p>
-                          <button 
-                            onClick={onUnlock}
-                            className="bg-secondary text-slate-900 px-4 py-2 rounded font-bold text-sm shadow-lg hover:scale-105 transition-transform"
-                          >
-                            Unlock Full Proposal
-                          </button>
+                    {/* First 4 items shown */}
+                    <ul className="list-disc pl-5 space-y-2 marker:text-secondary mb-2">
+                      {item.scope.slice(0, 4).map((scopeItem, i) => (
+                        <li key={i}>{scopeItem}</li>
+                      ))}
+                    </ul>
+
+                    {/* BLURRED SECTION for remaining items */}
+                    {item.scope.length > 4 && (
+                      <div className="relative mt-2">
+                        {blurred && serviceIndex === 0 && (
+                          <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center text-center border-2 border-dashed border-slate-200 rounded">
+                            <p className="text-slate-900 font-bold mb-2">Detailed scope & pricing hidden</p>
+                            <button 
+                              onClick={onUnlock}
+                              className="bg-secondary text-slate-900 px-4 py-2 rounded font-bold text-sm shadow-lg hover:scale-105 transition-transform"
+                            >
+                              Unlock Full Proposal
+                            </button>
+                          </div>
+                        )}
+                        
+                        <div className={cn("space-y-2", blurred && "opacity-30 select-none filter blur-[1px]")}>
+                          <ul className="list-disc pl-5 space-y-2 marker:text-secondary">
+                            {item.scope.slice(4).map((scopeItem, i) => (
+                              <li key={i}>{scopeItem}</li>
+                            ))}
+                          </ul>
                         </div>
-                      )}
-                      
-                      <div className={cn("space-y-2", blurred && "opacity-30 select-none filter blur-[1px]")}>
-                        <ul className="list-disc pl-5 space-y-2 marker:text-secondary">
-                          {item.scope.slice(4).map((scopeItem, i) => (
-                            <li key={i}>{scopeItem}</li>
-                          ))}
-                        </ul>
                       </div>
-                    </div>
-                  )}
-                </div>
-              ))}
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         ) : (
@@ -292,6 +354,17 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
               <p className="italic text-slate-600">
                 We propose to furnish all materials and perform all labor necessary to complete the following:
               </p>
+
+              {/* Inline scope photos for single service (show first matching photos) */}
+              {hasPhotos && !blurred && (() => {
+                const singleServicePhotos = Object.values(organizedPhotos.scopePhotos).flat().slice(0, 2);
+                return singleServicePhotos.length > 0 ? (
+                  <ScopePhotoInline 
+                    photos={singleServicePhotos} 
+                    variant={singleServicePhotos.length > 1 ? 'pair' : 'single'}
+                  />
+                ) : null;
+              })()}
 
               <ul className="list-disc pl-5 space-y-2 marker:text-secondary">
                 {data.scope && data.scope.length > 0 ? (
@@ -428,6 +501,14 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
             <li>All permits to be obtained by contractor unless otherwise specified.</li>
           </ol>
         </div>
+
+        {/* Photo Appendix Gallery (all remaining photos) */}
+        {hasPhotos && organizedPhotos.appendix.length > 0 && !blurred && (
+          <AppendixGallery 
+            photos={organizedPhotos.appendix}
+            title="Photo Appendix"
+          />
+        )}
 
         {/* Footer/Signature */}
         <div className="mt-12 pt-8 border-t border-slate-200 grid grid-cols-2 gap-12">
