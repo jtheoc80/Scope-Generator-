@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Download, Loader2, FileWarning, CheckCircle2, FileSignature } from "lucide-react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface PublicProposalResponse {
   proposal: {
@@ -41,6 +42,7 @@ export default function PublicProposal() {
   const previewRef = useRef<HTMLDivElement>(null);
   const signaturePadRef = useRef<SignaturePadRef>(null);
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
   const [isDownloading, setIsDownloading] = useState(false);
   const [showAcceptForm, setShowAcceptForm] = useState(false);
   const [acceptName, setAcceptName] = useState("");
@@ -52,7 +54,7 @@ export default function PublicProposal() {
     queryFn: async () => {
       const res = await fetch(`/api/public/proposal/${token}`);
       if (!res.ok) {
-        throw new Error("Proposal not found");
+        throw new Error(t.proposal.proposalNotFound);
       }
       return res.json();
     },
@@ -68,7 +70,7 @@ export default function PublicProposal() {
       });
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.message || "Failed to accept proposal");
+        throw new Error(error.message || t.proposal.failedToAccept);
       }
       return res.json();
     },
@@ -184,7 +186,7 @@ export default function PublicProposal() {
                 data-testid="button-accept-proposal"
               >
                 <FileSignature className="w-4 h-4 mr-2" />
-                Accept Proposal
+                {t.proposal.acceptProposal}
               </Button>
             )}
             <Button
@@ -230,7 +232,7 @@ export default function PublicProposal() {
                   type="text"
                   value={acceptName}
                   onChange={(e) => setAcceptName(e.target.value)}
-                  placeholder="John Smith"
+                  placeholder={t.proposal.signaturePlaceholder}
                   required
                   data-testid="input-accept-name"
                 />
@@ -266,7 +268,7 @@ export default function PublicProposal() {
               
               {acceptMutation.isError && (
                 <p className="text-red-600 text-sm" data-testid="text-accept-error">
-                  {acceptMutation.error?.message || "Failed to accept proposal"}
+                  {acceptMutation.error?.message || t.proposal.failedToAccept}
                 </p>
               )}
               
@@ -292,10 +294,10 @@ export default function PublicProposal() {
                   {acceptMutation.isPending ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Accepting...
+                      {t.proposal.acceptingProposal}
                     </>
                   ) : (
-                    "Accept Proposal"
+                    t.proposal.acceptProposal
                   )}
                 </Button>
               </div>
@@ -327,7 +329,7 @@ export default function PublicProposal() {
                 <div className="bg-white rounded-lg p-2 inline-block border border-green-200">
                   <img 
                     src={data.proposal.signature} 
-                    alt="Client signature" 
+                    alt={t.proposal.clientSignature} 
                     className="max-h-20"
                     data-testid="img-signature"
                   />

@@ -107,14 +107,6 @@ const usesFootagePricing = (tradeId: string): "sqft" | "linear" | null => {
   return null;
 };
 
-// Get footage label for trade
-const getFootageLabel = (tradeId: string): string => {
-  const type = usesFootagePricing(tradeId);
-  if (type === "sqft") return "Square Footage";
-  if (type === "linear") return "Linear Footage";
-  return "";
-};
-
 // Get footage placeholder for trade
 const getFootagePlaceholder = (tradeId: string): string => {
   const type = usesFootagePricing(tradeId);
@@ -129,79 +121,94 @@ const formSchema = z.object({
   address: z.string().min(5, "Address is required"),
 });
 
-// Trade-aware area options
-const interiorRooms = [
-  { value: "living-room", label: "Living Room" },
-  { value: "dining-room", label: "Dining Room" },
-  { value: "bedroom", label: "Bedroom" },
-  { value: "master-bedroom", label: "Master Bedroom" },
-  { value: "hallway", label: "Hallway" },
-  { value: "home-office", label: "Home Office" },
-  { value: "closet", label: "Closet" },
-  { value: "mudroom", label: "Mudroom" },
-  { value: "basement", label: "Basement" },
-  { value: "attic", label: "Attic" },
-  { value: "whole-house", label: "Whole House Interior" },
+// Trade-aware area options with translation keys
+const areaLabelKeys: Record<string, string> = {
+  "living-room": "livingRoom",
+  "dining-room": "diningRoom",
+  "bedroom": "bedroom",
+  "master-bedroom": "masterBedroom",
+  "hallway": "hallway",
+  "home-office": "homeOffice",
+  "closet": "closet",
+  "mudroom": "mudroom",
+  "basement": "basement",
+  "attic": "attic",
+  "whole-house": "wholeHouseInterior",
+  "bathroom": "bathroom",
+  "master-bathroom": "masterBathroom",
+  "half-bath": "halfBath",
+  "guest-bathroom": "guestBathroom",
+  "kitchen": "kitchen",
+  "kitchenette": "kitchenette",
+  "outdoor-kitchen": "outdoorKitchen",
+  "front-yard": "frontYard",
+  "backyard": "backyard",
+  "side-yard": "sideYard",
+  "patio": "patio",
+  "deck": "deck",
+  "driveway": "driveway",
+  "walkway": "walkway",
+  "garage": "garage",
+  "carport": "carport",
+  "exterior-full": "exteriorFull",
+  "main-roof": "mainRoof",
+  "garage-roof": "garageRoof",
+  "porch-roof": "porchRoof",
+  "addition-roof": "additionRoof",
+  "full-roof": "fullRoof",
+};
+
+const getLocalizedLabel = (value: string, t: any): string => {
+  const key = areaLabelKeys[value];
+  if (key && t.generator[key]) {
+    return t.generator[key];
+  }
+  // Fallback: capitalize the value
+  return value.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+};
+
+const interiorRoomValues = [
+  "living-room", "dining-room", "bedroom", "master-bedroom", "hallway", 
+  "home-office", "closet", "mudroom", "basement", "attic", "whole-house"
 ];
 
-const bathroomAreas = [
-  { value: "bathroom", label: "Bathroom" },
-  { value: "master-bathroom", label: "Master Bathroom" },
-  { value: "half-bath", label: "Half Bath / Powder Room" },
-  { value: "guest-bathroom", label: "Guest Bathroom" },
+const bathroomAreaValues = ["bathroom", "master-bathroom", "half-bath", "guest-bathroom"];
+
+const kitchenAreaValues = ["kitchen", "kitchenette", "outdoor-kitchen"];
+
+const exteriorAreaValues = [
+  "front-yard", "backyard", "side-yard", "patio", "deck", 
+  "driveway", "walkway", "garage", "carport", "exterior-full"
 ];
 
-const kitchenAreas = [
-  { value: "kitchen", label: "Kitchen" },
-  { value: "kitchenette", label: "Kitchenette" },
-  { value: "outdoor-kitchen", label: "Outdoor Kitchen" },
-];
+const roofingAreaValues = ["main-roof", "garage-roof", "porch-roof", "addition-roof", "full-roof"];
 
-const exteriorAreas = [
-  { value: "front-yard", label: "Front Yard" },
-  { value: "backyard", label: "Backyard" },
-  { value: "side-yard", label: "Side Yard" },
-  { value: "patio", label: "Patio" },
-  { value: "deck", label: "Deck" },
-  { value: "driveway", label: "Driveway" },
-  { value: "walkway", label: "Walkway" },
-  { value: "garage", label: "Garage" },
-  { value: "carport", label: "Carport" },
-  { value: "exterior-full", label: "Full Exterior" },
-];
-
-const roofingAreas = [
-  { value: "main-roof", label: "Main Roof" },
-  { value: "garage-roof", label: "Garage Roof" },
-  { value: "porch-roof", label: "Porch Roof" },
-  { value: "addition-roof", label: "Addition Roof" },
-  { value: "full-roof", label: "Full Roof (Entire Home)" },
-];
-
-const getAreaOptionsForTrade = (tradeId: string): { value: string; label: string }[] => {
+const getAreaOptionsForTrade = (tradeId: string, t: any): { value: string; label: string }[] => {
+  const toOptions = (values: string[]) => values.map(v => ({ value: v, label: getLocalizedLabel(v, t) }));
+  
   switch (tradeId) {
     case "bathroom":
-      return bathroomAreas;
+      return toOptions(bathroomAreaValues);
     case "kitchen":
-      return kitchenAreas;
+      return toOptions(kitchenAreaValues);
     case "painting":
-      return [...interiorRooms, ...exteriorAreas];
+      return toOptions([...interiorRoomValues, ...exteriorAreaValues]);
     case "flooring":
     case "drywall":
-      return interiorRooms;
+      return toOptions(interiorRoomValues);
     case "roofing":
-      return roofingAreas;
+      return toOptions(roofingAreaValues);
     case "concrete":
     case "landscape":
-      return exteriorAreas;
+      return toOptions(exteriorAreaValues);
     case "plumbing":
     case "electrical":
     case "handyman":
-      return [...bathroomAreas, ...kitchenAreas, ...interiorRooms.filter(r => r.value !== "whole-house"), { value: "whole-house", label: "Whole House" }];
+      return toOptions([...bathroomAreaValues, ...kitchenAreaValues, ...interiorRoomValues.filter(r => r !== "whole-house"), "whole-house"]);
     case "windows-doors":
-      return [...interiorRooms.filter(r => !["whole-house", "closet"].includes(r.value)), ...exteriorAreas.filter(r => ["front-yard", "backyard", "patio", "garage"].includes(r.value))];
+      return toOptions([...interiorRoomValues.filter(r => !["whole-house", "closet"].includes(r)), ...exteriorAreaValues.filter(r => ["front-yard", "backyard", "patio", "garage"].includes(r))]);
     default:
-      return [...interiorRooms, ...exteriorAreas];
+      return toOptions([...interiorRoomValues, ...exteriorAreaValues]);
   }
 };
 
@@ -792,7 +799,7 @@ export default function Generator() {
 
         {/* Area of Home Selection - Trade-Aware */}
         {service.jobTypeId && (() => {
-          const areaOptions = getAreaOptionsForTrade(service.tradeId);
+          const areaOptions = getAreaOptionsForTrade(service.tradeId, t);
           return areaOptions.length > 0 ? (
             <div className="animate-in fade-in slide-in-from-top-2">
               <label className="text-sm font-medium mb-1.5 block">{t.generator.areaOfHome}</label>
