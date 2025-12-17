@@ -213,12 +213,12 @@ Auth:
 - `NEXT_PUBLIC_WEB_BASE_URL=https://yourdomain.com` (used to build `webReviewUrl`)
 
 Storage (S3/R2/Supabase Storage gateway):
-- `S3_REGION=...` (or `auto`)
 - `S3_BUCKET=scopegen25`
-- `S3_ACCESS_KEY_ID=...`
-- `S3_SECRET_ACCESS_KEY=...`
-- `S3_ENDPOINT=...` (optional; for R2/S3-compatible endpoints)
 - `S3_PUBLIC_BASE_URL=https://scopegen25.s3.amazonaws.com` (how mobile reads the uploaded file)
+- `AWS_REGION=us-east-1` (should match the bucket region)
+- `AWS_ACCESS_KEY_ID=...`
+- `AWS_SECRET_ACCESS_KEY=...`
+- `S3_ENDPOINT=...` (optional; for R2/S3-compatible endpoints)
 - `S3_FORCE_PATH_STYLE=true|false` (optional)
 
 Vision (AWS Rekognition + GPT vision):

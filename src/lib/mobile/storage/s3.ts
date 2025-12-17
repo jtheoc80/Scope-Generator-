@@ -13,6 +13,15 @@ function requireEnv(name: string) {
   return v;
 }
 
+function getAwsCredentials() {
+  // Prefer standard AWS_* credentials, fallback to legacy S3_* keys.
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID || process.env.S3_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY || process.env.S3_SECRET_ACCESS_KEY;
+
+  if (!accessKeyId || !secretAccessKey) return null;
+  return { accessKeyId, secretAccessKey };
+}
+
 export type PresignPutResult = {
   key: string;
   uploadUrl: string;
@@ -20,15 +29,12 @@ export type PresignPutResult = {
 };
 
 export function createS3Client() {
-  const region = process.env.S3_REGION || "auto";
+  const region = process.env.AWS_REGION || process.env.S3_REGION || "us-east-1";
 
   return new S3Client({
     region,
     endpoint: process.env.S3_ENDPOINT,
-    credentials: {
-      accessKeyId: requireEnv("S3_ACCESS_KEY_ID"),
-      secretAccessKey: requireEnv("S3_SECRET_ACCESS_KEY"),
-    },
+    credentials: getAwsCredentials() ?? undefined,
     forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true",
   });
 }
