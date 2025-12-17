@@ -12,6 +12,9 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
+    "@aws-sdk/client-s3": "^3.758.0",
+    "@aws-sdk/client-rekognition": "^3.758.0",
+    "@aws-sdk/s3-request-presigner": "^3.758.0",
     "@clerk/nextjs": "^6.36.2",
     "@hookform/resolvers": "^3.9.0",
     "@radix-ui/react-accordion": "^1.2.0",
@@ -61,6 +64,7 @@
     "memoizee": "^0.4.17",
     "next": "15.5.9",
     "openid-client": "^6.8.1",
+    "openai": "^5.11.0",
     "passport": "^0.7.0",
     "pg": "^8.11.0",
     "react": "19.2.1",

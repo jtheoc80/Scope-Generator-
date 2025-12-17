@@ -292,6 +292,129 @@ export const proposalTemplatesRelations = relations(proposalTemplates, ({ one })
 }));
 
 // ==========================================
+// Mobile Companion App: Jobs / Photos / Drafts
+// ==========================================
+
+export const mobileJobs = pgTable("mobile_jobs", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  // Idempotency for job creation (unique per user)
+  createIdempotencyKey: varchar("create_idempotency_key", { length: 120 }),
+
+  clientName: varchar("client_name").notNull(),
+  address: text("address").notNull(),
+
+  // Store trade/jobType directly to avoid tight coupling to template IDs
+  tradeId: varchar("trade_id", { length: 50 }).notNull(),
+  tradeName: varchar("trade_name", { length: 100 }),
+  jobTypeId: varchar("job_type_id", { length: 50 }).notNull(),
+  jobTypeName: varchar("job_type_name", { length: 200 }).notNull(),
+  jobSize: integer("job_size").notNull().default(2),
+
+  jobNotes: text("job_notes"),
+  status: varchar("status", { length: 20 }).notNull().default("created"), // created, photos_uploaded, drafting, drafted, submitted
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userCreateIdemIdx: index("idx_mobile_jobs_user_create_idem").on(table.userId, table.createIdempotencyKey),
+}));
+
+export const mobileJobPhotos = pgTable("mobile_job_photos", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  jobId: integer("job_id").notNull().references(() => mobileJobs.id, { onDelete: "cascade" }),
+  kind: varchar("kind", { length: 50 }).notNull().default("site"), // site, closeup, damage, etc.
+  publicUrl: text("public_url").notNull(),
+  // Vision findings (damage, measurements, materials, etc.)
+  findings: jsonb("findings").$type<unknown>(),
+  findingsStatus: varchar("findings_status", { length: 20 }).notNull().default("pending"), // pending, processing, ready, failed
+  findingsError: text("findings_error"),
+  findingsAttempts: integer("findings_attempts").notNull().default(0),
+  findingsNextAttemptAt: timestamp("findings_next_attempt_at"),
+  findingsLockedBy: varchar("findings_locked_by", { length: 80 }),
+  findingsLockedAt: timestamp("findings_locked_at"),
+  analyzedAt: timestamp("analyzed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  statusNextAttemptIdx: index("idx_mobile_job_photos_status_next_attempt").on(table.findingsStatus, table.findingsNextAttemptAt),
+}));
+
+export const mobileJobDrafts = pgTable("mobile_job_drafts", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  jobId: integer("job_id").notNull().references(() => mobileJobs.id, { onDelete: "cascade" }),
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // pending, processing, ready, failed
+  // Idempotency for draft trigger (unique per job)
+  draftIdempotencyKey: varchar("draft_idempotency_key", { length: 120 }),
+  // Worker fields for async processing
+  attempts: integer("attempts").notNull().default(0),
+  nextAttemptAt: timestamp("next_attempt_at"),
+  lockedBy: varchar("locked_by", { length: 80 }),
+  lockedAt: timestamp("locked_at"),
+  startedAt: timestamp("started_at"),
+  finishedAt: timestamp("finished_at"),
+  // Pricing snapshot/version for auditability
+  pricebookVersion: varchar("pricebook_version", { length: 40 }),
+  pricingSnapshot: jsonb("pricing_snapshot").$type<unknown>(),
+  payload: jsonb("payload").$type<unknown>(), // draft payload (lineItems, packages, questions, etc.)
+  confidence: integer("confidence"), // 0-100
+  questions: text("questions").array().default([]),
+  error: text("error"),
+  proposalId: integer("proposal_id").references(() => proposals.id, { onDelete: "set null" }),
+  // Idempotency for submit (unique per job)
+  submitIdempotencyKey: varchar("submit_idempotency_key", { length: 120 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  jobDraftIdemIdx: index("idx_mobile_job_drafts_job_draft_idem").on(table.jobId, table.draftIdempotencyKey),
+  jobSubmitIdemIdx: index("idx_mobile_job_drafts_job_submit_idem").on(table.jobId, table.submitIdempotencyKey),
+  statusNextAttemptIdx: index("idx_mobile_job_drafts_status_next_attempt").on(table.status, table.nextAttemptAt),
+}));
+
+export const mobileJobsRelations = relations(mobileJobs, ({ one, many }) => ({
+  user: one(users, {
+    fields: [mobileJobs.userId],
+    references: [users.id],
+  }),
+  photos: many(mobileJobPhotos),
+  drafts: many(mobileJobDrafts),
+}));
+
+export const mobileJobPhotosRelations = relations(mobileJobPhotos, ({ one }) => ({
+  job: one(mobileJobs, {
+    fields: [mobileJobPhotos.jobId],
+    references: [mobileJobs.id],
+  }),
+}));
+
+export const mobileJobDraftsRelations = relations(mobileJobDrafts, ({ one }) => ({
+  job: one(mobileJobs, {
+    fields: [mobileJobDrafts.jobId],
+    references: [mobileJobs.id],
+  }),
+  proposal: one(proposals, {
+    fields: [mobileJobDrafts.proposalId],
+    references: [proposals.id],
+  }),
+}));
+
+// ==========================================
+// Market pricing cache (1build) for mobile
+// ==========================================
+
+export const onebuildPriceCache = pgTable("onebuild_price_cache", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  tradeId: varchar("trade_id", { length: 50 }).notNull(),
+  zipcode: varchar("zipcode", { length: 10 }).notNull(),
+  payload: jsonb("payload").$type<unknown>().notNull(),
+  location: varchar("location", { length: 120 }),
+  fetchedAt: timestamp("fetched_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+}, (table) => ({
+  tradeZipIdx: index("idx_onebuild_cache_trade_zip").on(table.tradeId, table.zipcode),
+  expiresIdx: index("idx_onebuild_cache_expires").on(table.expiresAt),
+}));
+
+// ==========================================
 // Business Insights / Analytics
 // ==========================================
 

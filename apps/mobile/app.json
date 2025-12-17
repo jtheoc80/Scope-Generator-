@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "Instant Proposal Companion",
+    "slug": "instant-proposal-companion",
+    "scheme": "instantproposal",
+    "version": "0.1.0",
+    "sdkVersion": "51.0.0",
+    "platforms": ["ios", "android"],
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic"
+  }
+}
