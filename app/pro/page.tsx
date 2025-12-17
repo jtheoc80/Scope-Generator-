@@ -55,15 +55,18 @@ export default function ProDashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ plan: pack }),
+        body: JSON.stringify({ productType: pack }),
       });
       
       const data = await response.json();
       if (data.url) {
         window.location.href = data.url;
+      } else if (data.message) {
+        alert(data.message);
       }
     } catch (error) {
       console.error('Checkout error:', error);
+      alert('Failed to start checkout. Please try again.');
     } finally {
       setCheckoutLoading(null);
     }
@@ -76,15 +79,18 @@ export default function ProDashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ plan: 'crew' }),
+        body: JSON.stringify({ productType: 'crew' }),
       });
       
       const data = await response.json();
       if (data.url) {
         window.location.href = data.url;
+      } else if (data.message) {
+        alert(data.message);
       }
     } catch (error) {
       console.error('Checkout error:', error);
+      alert('Failed to start checkout. Please try again.');
     } finally {
       setCheckoutLoading(null);
     }

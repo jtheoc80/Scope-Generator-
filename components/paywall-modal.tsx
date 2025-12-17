@@ -30,11 +30,15 @@ export default function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
       
       if (data.url) {
         window.location.href = data.url;
+      } else if (data.message) {
+        alert(data.message);
       } else {
         console.error('No checkout URL returned');
+        alert('Failed to start checkout. Please try again.');
       }
     } catch (error) {
       console.error('Checkout error:', error);
+      alert('Failed to start checkout. Please try again.');
     } finally {
       setCheckoutLoading(false);
     }

@@ -87,11 +87,30 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ url: session.url });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating checkout session:', error);
+    
+    // Provide more specific error messages based on the error type
+    let message = 'Failed to create checkout session';
+    let status = 500;
+    
+    if (error?.type === 'StripeAuthenticationError' || error?.code === 'api_key_expired') {
+      message = 'Payment service is temporarily unavailable. Please try again later.';
+      status = 503;
+    } else if (error?.type === 'StripeInvalidRequestError') {
+      message = error?.message || 'Invalid payment request. Please try again.';
+      status = 400;
+    } else if (error?.code === 'ENOTFOUND' || error?.code === 'ECONNREFUSED') {
+      message = 'Unable to connect to payment service. Please check your internet connection.';
+      status = 503;
+    } else if (error?.message) {
+      // Include the actual error message for debugging
+      message = `Failed to create checkout session: ${error.message}`;
+    }
+    
     return NextResponse.json(
-      { message: 'Failed to create checkout session' },
-      { status: 500 }
+      { message },
+      { status }
     );
   }
 }
