@@ -26,14 +26,14 @@ export function LanguageSwitcher() {
           className={language === "en" ? "bg-accent" : ""}
           data-testid="menu-item-english"
         >
-          🇺🇸 English
+          English
         </DropdownMenuItem>
         <DropdownMenuItem 
           onClick={() => setLanguage("es")}
           className={language === "es" ? "bg-accent" : ""}
           data-testid="menu-item-spanish"
         >
-          🇪🇸 Español
+          Español
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
