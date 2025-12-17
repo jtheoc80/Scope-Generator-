@@ -26,7 +26,10 @@ import {
   Columns,
   Eye,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  Camera,
+  Smartphone,
+  Monitor
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -64,6 +67,9 @@ interface Proposal {
   paidAmount?: number | null;
   viewCount?: number | null;
   lastViewedAt?: string | null;
+  // Photo and source tracking
+  photoCount?: number | null;
+  source?: 'desktop' | 'mobile' | null;
 }
 
 function StatusBadge({ status, t }: { status: string; t: any }) {
@@ -92,6 +98,39 @@ function StatusBadge({ status, t }: { status: string; t: any }) {
   return (
     <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${style}`}>
       {label}
+    </span>
+  );
+}
+
+function SourceBadge({ source }: { source?: 'desktop' | 'mobile' | null }) {
+  if (!source) return null;
+  
+  const isDesktop = source === 'desktop';
+  
+  return (
+    <span 
+      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${
+        isDesktop 
+          ? 'bg-slate-100 text-slate-600' 
+          : 'bg-indigo-100 text-indigo-700'
+      }`}
+      title={isDesktop ? 'Created on desktop' : 'Created from mobile app'}
+    >
+      {isDesktop ? <Monitor className="w-3 h-3" /> : <Smartphone className="w-3 h-3" />}
+    </span>
+  );
+}
+
+function PhotoCountBadge({ count }: { count?: number | null }) {
+  if (!count || count === 0) return null;
+  
+  return (
+    <span 
+      className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 text-[10px] px-1.5 py-0.5 rounded font-medium"
+      title={`${count} photo${count !== 1 ? 's' : ''} attached`}
+    >
+      <Camera className="w-3 h-3" />
+      {count}
     </span>
   );
 }
@@ -187,15 +226,19 @@ function PipelineView({
                             maximumFractionDigits: 0 
                           }).format(Math.round((proposal.priceLow + proposal.priceHigh) / 2))}
                         </span>
-                        {proposal.viewCount != null && proposal.viewCount > 0 && (
-                          <span 
-                            className="flex items-center gap-1 bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full"
-                            data-testid={`view-count-badge-${proposal.id}`}
-                          >
-                            <Eye className="w-3 h-3" />
-                            {proposal.viewCount} {t.dashboard.views}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1">
+                          <SourceBadge source={proposal.source} />
+                          <PhotoCountBadge count={proposal.photoCount} />
+                          {proposal.viewCount != null && proposal.viewCount > 0 && (
+                            <span 
+                              className="flex items-center gap-1 bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full"
+                              data-testid={`view-count-badge-${proposal.id}`}
+                            >
+                              <Eye className="w-3 h-3" />
+                              {proposal.viewCount} {t.dashboard.views}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       
                       <div className="flex items-center justify-between gap-1 pt-2 border-t border-slate-100">
@@ -724,8 +767,12 @@ export default function Dashboard() {
                           </span>
                         </div>
                         <div className="flex items-center justify-between gap-2 mt-2">
-                          <div className="flex items-center gap-1 text-xs text-slate-500">
-                            <Calendar className="w-3 h-3" /> {formatDate(proposal.createdAt)}
+                          <div className="flex items-center gap-2 text-xs text-slate-500">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3" /> {formatDate(proposal.createdAt)}
+                            </span>
+                            <SourceBadge source={proposal.source} />
+                            <PhotoCountBadge count={proposal.photoCount} />
                           </div>
                           <StatusBadge status={proposal.status} t={t} />
                         </div>
@@ -762,12 +809,18 @@ export default function Dashboard() {
                               {new Intl.NumberFormat(language === 'es' ? 'es-ES' : 'en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Math.round((proposal.priceLow + proposal.priceHigh) / 2))}
                             </td>
                             <td className="px-6 py-4 text-slate-500">
-                              <div className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3" /> {formatDate(proposal.createdAt)}
+                              <div className="flex items-center gap-2">
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="w-3 h-3" /> {formatDate(proposal.createdAt)}
+                                </span>
+                                <SourceBadge source={proposal.source} />
                               </div>
                             </td>
                             <td className="px-6 py-4">
-                              <StatusBadge status={proposal.status} t={t} />
+                              <div className="flex items-center gap-2">
+                                <StatusBadge status={proposal.status} t={t} />
+                                <PhotoCountBadge count={proposal.photoCount} />
+                              </div>
                             </td>
                             <td className="px-6 py-4 text-right">
                               <div className="flex items-center justify-end gap-1">
