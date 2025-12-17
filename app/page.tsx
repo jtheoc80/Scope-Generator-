@@ -2,8 +2,10 @@
 import { useState, useEffect } from "react";
 import Layout from "@/components/layout";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CheckCircle2, ArrowRight, Clock, DollarSign, FileCheck, Loader2, Bath, ChefHat, Home as HomeIcon, Paintbrush, Plug, Wrench, Thermometer, TreePine, Calculator, Sparkles, Star, Users, TrendingUp, Quote, Zap, Target, FileText, Hammer } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useQuery } from "@tanstack/react-query";
 
 const calculatorTrades = [
   {
@@ -296,9 +298,28 @@ function InstantPriceCalculator({ t }: { t: any }) {
 
 export default function Home() {
   const { t } = useLanguage();
+  const router = useRouter();
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
 
+  // Check if user is logged in
+  const { data: user } = useQuery({
+    queryKey: ["/api/auth/user"],
+    queryFn: async () => {
+      const res = await fetch("/api/auth/user");
+      if (!res.ok) return null;
+      return res.json();
+    },
+    retry: false,
+  });
+
   const handleCheckout = async (productType: 'starter' | 'pro' | 'crew') => {
+    // If user is not logged in, redirect to sign-up with the plan
+    if (!user) {
+      const redirectUrl = `/dashboard?checkout=${productType}`;
+      router.push(`/sign-up?plan=${productType}&redirect_url=${encodeURIComponent(redirectUrl)}`);
+      return;
+    }
+
     setCheckoutLoading(productType);
     try {
       const response = await fetch('/api/stripe/checkout', {
@@ -316,7 +337,7 @@ export default function Home() {
       }
     } catch (error) {
       console.error('Checkout error:', error);
-      alert('Please log in first to purchase a plan.');
+      alert('Something went wrong. Please try again.');
     } finally {
       setCheckoutLoading(null);
     }

@@ -412,6 +412,43 @@ export default function Dashboard() {
     router.push(`/app?edit=${proposal.id}`);
   };
 
+  // Handle checkout redirect after sign-up
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const checkoutPlan = urlParams.get('checkout');
+    
+    if (checkoutPlan && user) {
+      // Clear the URL parameter
+      window.history.replaceState({}, '', '/dashboard');
+      
+      // Trigger checkout for the selected plan
+      const handleCheckout = async () => {
+        try {
+          const response = await fetch('/api/stripe/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ productType: checkoutPlan }),
+          });
+          
+          const data = await response.json();
+          
+          if (data.url) {
+            window.location.href = data.url;
+          } else if (data.message) {
+            setSuccessMessage(data.message);
+            setIsSuccess(false);
+          }
+        } catch (error) {
+          console.error('Checkout error:', error);
+          setSuccessMessage('Something went wrong. Please try subscribing from the pricing page.');
+          setIsSuccess(false);
+        }
+      };
+      
+      handleCheckout();
+    }
+  }, [user]);
+
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('success') === 'true') {
