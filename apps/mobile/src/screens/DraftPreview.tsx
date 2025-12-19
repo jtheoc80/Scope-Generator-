@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, ScrollView, Text, View } from "react-native";
+import { Button, Linking, ScrollView, Text, View } from "react-native";
 import { apiFetch, newIdempotencyKey } from "../lib/api";
 
 type PackageKey = "GOOD" | "BETTER" | "BEST";
@@ -57,6 +57,11 @@ export default function DraftPreview(props: {
         <View style={{ paddingVertical: 10 }}>
           <Text>Proposal created: {submitted.proposalId}</Text>
           <Text selectable>Review URL: {submitted.webReviewUrl}</Text>
+          <Button
+            title="Open review"
+            onPress={() => Linking.openURL(submitted.webReviewUrl)}
+            disabled={busy}
+          />
         </View>
       ) : (
         <Button title={busy ? "Submitting..." : "Submit to proposal"} onPress={submit} disabled={busy} />

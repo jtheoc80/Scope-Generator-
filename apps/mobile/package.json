@@ -6,11 +6,21 @@
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
-    "ios": "expo start --ios"
+    "ios": "expo start --ios",
+    "build:android:dev": "eas build -p android --profile development",
+    "build:ios:dev": "eas build -p ios --profile development",
+    "build:android:preview": "eas build -p android --profile preview",
+    "build:ios:preview": "eas build -p ios --profile preview",
+    "build:android:prod": "eas build -p android --profile production",
+    "build:ios:prod": "eas build -p ios --profile production",
+    "submit:android:prod": "eas submit -p android --profile production",
+    "submit:ios:prod": "eas submit -p ios --profile production"
   },
   "dependencies": {
     "expo": "~51.0.0",
+    "expo-constants": "~16.0.2",
     "expo-image-picker": "~15.0.0",
+    "expo-secure-store": "~13.0.2",
     "expo-status-bar": "~1.12.1",
     "react": "18.2.0",
     "react-native": "0.74.5"
