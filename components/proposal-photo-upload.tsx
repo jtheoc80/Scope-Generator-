@@ -401,6 +401,7 @@ export function ProposalPhotoUpload({
           photos.length >= maxPhotos && 'border-amber-300 bg-amber-50'
         )}
         onClick={() => !disabled && photos.length < maxPhotos && fileInputRef.current?.click()}
+        data-testid="photo-upload-area"
       >
         <input
           ref={fileInputRef}

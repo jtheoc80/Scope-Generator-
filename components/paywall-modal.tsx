@@ -46,7 +46,7 @@ export default function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg border-none shadow-2xl p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-lg border-none shadow-2xl p-0 overflow-hidden" data-testid="paywall-modal">
         <div className="bg-slate-900 p-6 text-center text-white relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-secondary to-transparent opacity-50"></div>
           <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">

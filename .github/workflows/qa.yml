@@ -1,0 +1,168 @@
+name: QA Agent
+
+on:
+  pull_request:
+    branches: [main, master]
+  push:
+    branches: [main, master]
+  schedule:
+    # Nightly run at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Base URL for tests'
+        required: false
+        default: ''
+
+env:
+  QA_BASE_URL: ${{ github.event.inputs.base_url || 'http://localhost:3000' }}
+  QA_TEST_EMAIL_DOMAIN: 'example.test'
+  QA_EMAIL_SINK: 'file'
+  QA_STRIPE_MODE: 'redirect'
+  CI: true
+
+jobs:
+  qa:
+    name: QA Agent
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Build application
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Start server
+        run: |
+          npm run start &
+          sleep 10
+          curl --retry 10 --retry-delay 2 --retry-connrefused http://localhost:3000 || exit 1
+        env:
+          NODE_ENV: production
+
+      - name: Run TypeScript check
+        run: npx tsc --noEmit
+        continue-on-error: true
+
+      - name: Run Lint
+        run: npm run lint -- --max-warnings=0
+        continue-on-error: true
+
+      - name: Run E2E Tests
+        run: npx playwright test
+        env:
+          QA_BASE_URL: http://localhost:3000
+
+      - name: Run Lighthouse CI
+        run: npx lhci autorun
+        continue-on-error: true
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+      - name: Generate QA Summary
+        if: always()
+        run: |
+          echo "# QA Agent Run Summary" > qa/reports/summary.md
+          echo "" >> qa/reports/summary.md
+          echo "**Run Date:** $(date -u)" >> qa/reports/summary.md
+          echo "**Commit:** ${{ github.sha }}" >> qa/reports/summary.md
+          echo "**Branch:** ${{ github.ref_name }}" >> qa/reports/summary.md
+          echo "**Trigger:** ${{ github.event_name }}" >> qa/reports/summary.md
+
+      - name: Upload Playwright Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: qa/reports/playwright-html/
+          retention-days: 30
+
+      - name: Upload Playwright Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-results
+          path: qa/reports/playwright-results.json
+          retention-days: 30
+
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: qa/reports/test-results/
+          retention-days: 30
+
+      - name: Upload Lighthouse Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-report
+          path: qa/reports/lighthouse/
+          retention-days: 30
+
+      - name: Upload QA Summary
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qa-summary
+          path: qa/reports/summary.md
+          retention-days: 30
+
+  # Nightly staging/production tests
+  qa-staging:
+    name: QA Staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.base_url != '')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Run E2E Tests against staging
+        run: npx playwright test
+        env:
+          QA_BASE_URL: ${{ secrets.STAGING_URL || github.event.inputs.base_url || 'https://staging.example.com' }}
+          QA_TEST_SECRET: ${{ secrets.QA_TEST_SECRET }}
+
+      - name: Run Lighthouse CI against staging
+        run: npx lhci autorun --collect.url=${{ secrets.STAGING_URL || 'https://staging.example.com' }}
+        continue-on-error: true
+
+      - name: Upload Staging Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: staging-qa-results
+          path: qa/reports/
+          retention-days: 30
