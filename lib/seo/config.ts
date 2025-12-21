@@ -95,6 +95,8 @@ export const seoConfig = {
   },
 
   // Pages that should NOT be indexed
+  // Note: All protected routes that require authentication should be here
+  // to prevent "Page with redirect" issues in Google Search Console
   noIndexPages: [
     "/api/",
     "/dashboard",
@@ -105,6 +107,9 @@ export const seoConfig = {
     "/sign-in",
     "/sign-up",
     "/sign-out",
+    "/seo-dashboard",
+    "/search-console",
+    "/pricing-insights",  // Protected route - redirects to login
   ],
 
   // High-priority pages for sitemap
@@ -211,19 +216,8 @@ export const pagesSeoConfig: Record<
     priority: 0.7,
     changeFrequency: "monthly",
   },
-  "/pricing-insights": {
-    title: "Pricing Insights for Contractors",
-    description:
-      "Get data-driven pricing insights to help you quote competitive prices. Learn what other contractors charge in your area.",
-    keywords: [
-      "pricing insights",
-      "contractor rates",
-      "competitive pricing",
-      "market analysis",
-    ],
-    priority: 0.6,
-    changeFrequency: "monthly",
-  },
+  // NOTE: /pricing-insights removed - it's a protected route that requires authentication
+  // Including it in the sitemap would cause "Page with redirect" issues
   "/privacy": {
     title: "Privacy Policy - ScopeGen Data Protection",
     description:
