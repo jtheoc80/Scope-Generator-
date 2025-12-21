@@ -79,6 +79,7 @@ jobs:
       - name: Generate QA Summary
         if: always()
         run: |
+          mkdir -p qa/reports
           echo "# QA Agent Run Summary" > qa/reports/summary.md
           echo "" >> qa/reports/summary.md
           echo "**Run Date:** $(date -u)" >> qa/reports/summary.md
