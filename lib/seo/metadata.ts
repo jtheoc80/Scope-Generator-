@@ -11,7 +11,7 @@ export interface GenerateMetadataOptions {
   description: string;
   keywords?: string[];
   path?: string;
-  ogType?: "website" | "article" | "product";
+  ogType?: "website" | "article";
   ogImage?: string;
   ogImageAlt?: string;
   noIndex?: boolean;
