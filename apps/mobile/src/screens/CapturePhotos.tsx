@@ -12,6 +12,40 @@ export default function CapturePhotos(props: {
   const [error, setError] = useState<string | null>(null);
   const [lastUri, setLastUri] = useState<string | null>(null);
 
+  const uploadAsset = async (asset: ImagePicker.ImagePickerAsset) => {
+    setLastUri(asset.uri);
+
+    const presign = await apiFetch<{ key: string; uploadUrl: string; publicUrl: string }>(
+      `/api/mobile/jobs/${props.jobId}/photos/presign`,
+      {
+        method: "POST",
+        headers: { "Idempotency-Key": newIdempotencyKey() },
+        body: JSON.stringify({
+          contentType: asset.mimeType || "image/jpeg",
+          filename: asset.fileName || "photo.jpg",
+        }),
+      }
+    );
+
+    const blob = await (await fetch(asset.uri)).blob();
+
+    const put = await fetch(presign.uploadUrl, {
+      method: "PUT",
+      headers: {
+        "Content-Type": asset.mimeType || "image/jpeg",
+      },
+      body: blob,
+    });
+
+    if (!put.ok) throw new Error("Upload failed");
+
+    await apiFetch(`/api/mobile/jobs/${props.jobId}/photos`, {
+      method: "POST",
+      headers: { "Idempotency-Key": newIdempotencyKey() },
+      body: JSON.stringify({ url: presign.publicUrl, kind: "site" }),
+    });
+  };
+
   const pickAndUpload = async () => {
     setBusy(true);
     setError(null);
@@ -26,40 +60,30 @@ export default function CapturePhotos(props: {
 
       if (result.canceled) return;
 
-      const asset = result.assets[0];
-      setLastUri(asset.uri);
-
-      const presign = await apiFetch<{ key: string; uploadUrl: string; publicUrl: string }>(
-        `/api/mobile/jobs/${props.jobId}/photos/presign`,
-        {
-          method: "POST",
-          headers: { "Idempotency-Key": newIdempotencyKey() },
-          body: JSON.stringify({
-            contentType: asset.mimeType || "image/jpeg",
-            filename: asset.fileName || "photo.jpg",
-          }),
-        }
-      );
-
-      const blob = await (await fetch(asset.uri)).blob();
-
-      const put = await fetch(presign.uploadUrl, {
-        method: "PUT",
-        headers: {
-          "Content-Type": asset.mimeType || "image/jpeg",
-        },
-        body: blob,
-      });
-
-      if (!put.ok) throw new Error("Upload failed");
-
-      await apiFetch(`/api/mobile/jobs/${props.jobId}/photos`, {
-        method: "POST",
-        headers: { "Idempotency-Key": newIdempotencyKey() },
-        body: JSON.stringify({ url: presign.publicUrl, kind: "site" }),
-      });
+      await uploadAsset(result.assets[0]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const takeAndUpload = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!perm.granted) throw new Error("Camera permission denied");
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.85,
+      });
+
+      if (result.canceled) return;
+      await uploadAsset(result.assets[0]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Capture failed");
     } finally {
       setBusy(false);
     }
@@ -103,7 +127,8 @@ export default function CapturePhotos(props: {
 
       <Text>Job ID: {props.jobId}</Text>
 
-      <Button title={busy ? "Working..." : "Pick & upload photo"} onPress={pickAndUpload} disabled={busy} />
+      <Button title={busy ? "Working..." : "Take photo"} onPress={takeAndUpload} disabled={busy} />
+      <Button title={busy ? "Working..." : "Pick from library"} onPress={pickAndUpload} disabled={busy} />
 
       {lastUri ? (
         <Image source={{ uri: lastUri }} style={{ width: "100%", height: 220, borderRadius: 12 }} />
