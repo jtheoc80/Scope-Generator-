@@ -132,7 +132,7 @@ export const pagesSeoConfig: Record<
     title: string;
     description: string;
     keywords: string[];
-    ogType?: "website" | "article" | "product";
+    ogType?: "website" | "article";
     priority?: number;
     changeFrequency?: "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never";
   }
