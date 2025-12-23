@@ -199,22 +199,40 @@ export class DatabaseStorage implements IStorage {
     const trialEndsAt = new Date();
     trialEndsAt.setDate(trialEndsAt.getDate() + 60);
     
-    const [user] = await db
-      .insert(users)
-      .values({
-        ...userData,
-        trialEndsAt, // Set trial end date for new users
-      })
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
+    try {
+      // Try to insert with trial end date
+      const [user] = await db
+        .insert(users)
+        .values({
           ...userData,
-          updatedAt: new Date(),
-          // Don't override existing trialEndsAt on update
-        },
-      })
-      .returning();
-    return user;
+          trialEndsAt, // Set trial end date for new users
+        })
+        .onConflictDoUpdate({
+          target: users.id,
+          set: {
+            ...userData,
+            updatedAt: new Date(),
+            // Don't override existing trialEndsAt on update
+          },
+        })
+        .returning();
+      return user;
+    } catch (error) {
+      // If trial column doesn't exist yet, insert without it
+      console.error('Error with trial column, trying without:', error);
+      const [user] = await db
+        .insert(users)
+        .values(userData)
+        .onConflictDoUpdate({
+          target: users.id,
+          set: {
+            ...userData,
+            updatedAt: new Date(),
+          },
+        })
+        .returning();
+      return user;
+    }
   }
 
   // Proposal operations
