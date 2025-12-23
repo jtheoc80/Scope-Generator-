@@ -195,14 +195,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
+    // Set 60-day trial for new users
+    const trialEndsAt = new Date();
+    trialEndsAt.setDate(trialEndsAt.getDate() + 60);
+    
     const [user] = await db
       .insert(users)
-      .values(userData)
+      .values({
+        ...userData,
+        trialEndsAt, // Set trial end date for new users
+      })
       .onConflictDoUpdate({
         target: users.id,
         set: {
           ...userData,
           updatedAt: new Date(),
+          // Don't override existing trialEndsAt on update
         },
       })
       .returning();

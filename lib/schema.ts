@@ -24,6 +24,8 @@ export const users = pgTable("users", {
   stripeSubscriptionId: varchar("stripe_subscription_id"),
   proposalCredits: integer("proposal_credits").notNull().default(0),
   creditsExpireAt: timestamp("credits_expire_at"),
+  // Free trial: 60 days from account creation
+  trialEndsAt: timestamp("trial_ends_at"),
   processedSessions: text("processed_sessions").array().default([]),
   companyName: varchar("company_name"),
   companyAddress: text("company_address"),

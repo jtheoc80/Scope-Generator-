@@ -36,7 +36,24 @@ export async function GET() {
     const { userStripeSecretKey, ...safeUser } = user;
     const hasStripeKey = !!userStripeSecretKey;
     
-    return NextResponse.json({ ...safeUser, hasStripeKey });
+    // Check if user has active access (Pro subscription OR active trial)
+    const now = new Date();
+    const trialEndsAt = user.trialEndsAt ? new Date(user.trialEndsAt) : null;
+    const isInTrial = trialEndsAt && trialEndsAt > now;
+    const hasActiveAccess = user.isPro || isInTrial;
+    
+    // Calculate trial days remaining
+    const trialDaysRemaining = trialEndsAt && trialEndsAt > now 
+      ? Math.ceil((trialEndsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+      : 0;
+    
+    return NextResponse.json({ 
+      ...safeUser, 
+      hasStripeKey,
+      hasActiveAccess,
+      isInTrial,
+      trialDaysRemaining,
+    });
   } catch (error) {
     console.error('Error fetching user:', error);
     return NextResponse.json(

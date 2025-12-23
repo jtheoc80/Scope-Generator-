@@ -2,13 +2,31 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertProposalSchema, insertCancellationFeedbackSchema } from "@shared/schema";
+import { insertProposalSchema, insertCancellationFeedbackSchema, type User } from "@shared/schema";
 import { stripeService } from "./stripeService";
 import { getStripePublishableKey } from "./stripeClient";
 import { emailService } from "./emailService";
 import { aiService } from "./aiService";
 import { benchmarkTrades, regionalMultipliers } from "./benchmark-data";
 import { oneBuildService } from "./services/onebuild";
+
+/**
+ * Check if a user has active access (Pro subscription OR active trial period)
+ * This grants full access to the app during the 60-day free trial.
+ */
+function hasActiveAccess(user: User | undefined | null): boolean {
+  if (!user) return false;
+  if (user.isPro) return true;
+  
+  // Check for active trial
+  if (user.trialEndsAt) {
+    const now = new Date();
+    const trialEnd = new Date(user.trialEndsAt);
+    return trialEnd > now;
+  }
+  
+  return false;
+}
 
 export async function registerRoutes(
   httpServer: Server,
@@ -93,13 +111,15 @@ export async function registerRoutes(
       
       const lookupCount = user.marketPricingLookups || 0;
       const remaining = Math.max(0, FREE_PRICING_LOOKUPS - lookupCount);
+      const userHasAccess = hasActiveAccess(user);
       
       res.json({
         used: lookupCount,
-        remaining: user.isPro ? -1 : remaining, // -1 means unlimited for Pro users
+        remaining: userHasAccess ? -1 : remaining, // -1 means unlimited for Pro/trial users
         limit: FREE_PRICING_LOOKUPS,
         isPro: user.isPro || false,
-        hasAccess: user.isPro || remaining > 0
+        hasActiveAccess: userHasAccess,
+        hasAccess: userHasAccess || remaining > 0
       });
     } catch (error) {
       console.error("Error fetching usage:", error);
@@ -215,9 +235,10 @@ export async function registerRoutes(
         }
         
         const lookupCount = user.marketPricingLookups || 0;
+        const userHasAccess = hasActiveAccess(user);
         
-        // Free users limited to 3 lookups (Pro users have unlimited)
-        if (!user.isPro && lookupCount >= FREE_PRICING_LOOKUPS) {
+        // Free users limited to 3 lookups (Pro/trial users have unlimited)
+        if (!userHasAccess && lookupCount >= FREE_PRICING_LOOKUPS) {
           return res.status(403).json({ 
             message: "Free lookup limit reached",
             limitReached: true,
@@ -231,9 +252,9 @@ export async function registerRoutes(
           zipcode as string
         );
         
-        // Only increment usage for free users after successful lookup
-        // Pro users have unlimited access, so we don't track their usage
-        if (!user.isPro) {
+        // Only increment usage for non-Pro/trial users after successful lookup
+        // Pro and trial users have unlimited access, so we don't track their usage
+        if (!userHasAccess) {
           await storage.incrementMarketPricingLookups(userId);
         }
 
