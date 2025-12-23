@@ -26,6 +26,11 @@ interface User {
   emailNotificationsEnabled: boolean;
   smsNotificationsEnabled: boolean;
   onboardingCompleted?: boolean;
+  // 60-day free trial fields
+  trialEndsAt: string | null;
+  hasActiveAccess: boolean; // true if isPro OR in active trial period
+  isInTrial: boolean;
+  trialDaysRemaining: number;
 }
 
 export function useAuth() {

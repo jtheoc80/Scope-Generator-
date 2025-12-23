@@ -12,10 +12,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, ChevronRight, Wand2, Download, FileText, Sparkles, Plus, Trash2, GripVertical, Lock, Save } from "lucide-react";
+import { Loader2, ChevronRight, Wand2, Download, FileText, Sparkles, Plus, Trash2, GripVertical, Lock, Save, Camera } from "lucide-react";
 import ProposalPreview from "@/components/proposal-preview";
 import PaywallModal from "@/components/paywall-modal";
 import { CostInsights } from "@/components/cost-insights";
+import ProposalPhotoUpload, { type UploadedPhoto } from "@/components/proposal-photo-upload";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -224,6 +225,7 @@ export default function Generator() {
   const [enhancedScopes, setEnhancedScopes] = useState<Record<string, string[]>>({});
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [photos, setPhotos] = useState<UploadedPhoto[]>([]);
   const { toast } = useToast();
   const { user } = useAuth();
   const { t, language } = useLanguage();
@@ -418,6 +420,15 @@ export default function Generator() {
     // Get first regional info
     const firstRegionalInfo = lineItems.find(item => item?.regionalInfo)?.regionalInfo || null;
 
+    // Transform photos for preview
+    const previewPhotos = photos.map(p => ({
+      id: parseInt(p.id.replace(/\D/g, '').slice(0, 8)) || Math.floor(Math.random() * 10000),
+      publicUrl: p.url,
+      category: p.category,
+      caption: p.caption || null,
+      displayOrder: p.displayOrder,
+    }));
+
     return {
       clientName: watchedValues.clientName,
       address: watchedValues.address,
@@ -434,6 +445,7 @@ export default function Generator() {
       warranty: allWarranties.join(" "),
       exclusions: allExclusions,
       regionalInfo: firstRegionalInfo,
+      photos: previewPhotos,
     };
   };
 
@@ -691,6 +703,8 @@ export default function Generator() {
         // Status
         status: "draft",
         isUnlocked: false,
+        // Photo count
+        photoCount: photos.length,
       };
 
       const response = await fetch('/api/proposals', {
@@ -1038,6 +1052,32 @@ export default function Generator() {
                         </Button>
                       </div>
 
+                      {/* Photo Upload Section */}
+                      {hasValidServices && (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <Camera className="w-4 h-4 text-secondary" />
+                            <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">
+                              {t.generator.photos || 'Job Site Photos'}
+                            </h3>
+                            <span className="text-xs text-slate-500 font-normal normal-case">
+                              ({t.generator.photosOptional || 'optional'})
+                            </span>
+                          </div>
+                          <ProposalPhotoUpload
+                            photos={photos}
+                            onPhotosChange={setPhotos}
+                            maxPhotos={10}
+                            disabled={isGenerating}
+                            learningContext={{
+                              tradeId: services[0]?.tradeId,
+                              jobTypeId: services[0]?.jobTypeId,
+                            }}
+                            enableLearning={true}
+                          />
+                        </div>
+                      )}
+
                       {/* Total Price Summary */}
                       {hasValidServices && (
                         <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 animate-in fade-in">
@@ -1178,6 +1218,8 @@ export default function Generator() {
                         companyPhone: user.companyPhone,
                         companyLogo: user.companyLogo,
                       } : undefined}
+                      photos={previewData.photos}
+                      showPhotos={photos.length > 0}
                    />
                 </div>
               )}

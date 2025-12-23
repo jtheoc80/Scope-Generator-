@@ -122,6 +122,9 @@ export const translations = {
       garage: "Garage",
       carport: "Carport",
       exteriorFull: "Full Exterior",
+      // Photo upload
+      photos: "Job Site Photos",
+      photosOptional: "optional - enhance your proposal",
       mainRoof: "Main Roof",
       garageRoof: "Garage Roof",
       porchRoof: "Porch Roof",
@@ -685,6 +688,9 @@ export const translations = {
       garage: "Garaje",
       carport: "Cochera",
       exteriorFull: "Exterior Completo",
+      // Photo upload
+      photos: "Fotos del Sitio",
+      photosOptional: "opcional - mejora tu propuesta",
       mainRoof: "Techo Principal",
       garageRoof: "Techo del Garaje",
       porchRoof: "Techo del Porche",
