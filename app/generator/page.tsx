@@ -420,13 +420,13 @@ export default function Generator() {
     // Get first regional info
     const firstRegionalInfo = lineItems.find(item => item?.regionalInfo)?.regionalInfo || null;
 
-    // Transform photos for preview
+    // Transform photos for preview (matching ProposalPhoto interface)
     const previewPhotos = photos.map(p => ({
-      id: parseInt(p.id.replace(/\D/g, '').slice(0, 8)) || Math.floor(Math.random() * 10000),
-      publicUrl: p.url,
+      id: p.id,
+      url: p.url,
       category: p.category,
-      caption: p.caption || null,
-      displayOrder: p.displayOrder,
+      caption: p.caption || undefined,
+      order: p.displayOrder,
     }));
 
     return {
