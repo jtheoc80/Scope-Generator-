@@ -72,6 +72,9 @@ export const users = pgTable("users", {
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 
+// Option value type - can be boolean, string, or nested object (e.g., __mobile metadata)
+export type OptionValue = boolean | string | Record<string, unknown>;
+
 // Line item interface for multi-service proposals
 export interface ProposalLineItem {
   id: string;
@@ -83,7 +86,7 @@ export interface ProposalLineItem {
   homeArea?: string;
   footage?: number;
   scope: string[];
-  options: Record<string, boolean | string>;
+  options: Record<string, OptionValue>;
   priceLow: number;
   priceHigh: number;
   estimatedDaysLow?: number;
@@ -763,6 +766,13 @@ export type ScopeItemPattern = typeof scopeItemPatterns.$inferSelect;
 export type PricingPattern = typeof pricingPatterns.$inferSelect;
 
 // Zod schemas for line items
+// Line item options can contain boolean, string, or nested objects
+const lineItemOptionValueSchema: z.ZodType<boolean | string | Record<string, unknown>> = z.union([
+  z.boolean(),
+  z.string(),
+  z.record(z.string(), z.unknown()),
+]);
+
 export const proposalLineItemSchema = z.object({
   id: z.string(),
   tradeId: z.string(),
@@ -773,7 +783,7 @@ export const proposalLineItemSchema = z.object({
   homeArea: z.string().optional(),
   footage: z.number().optional(),
   scope: z.array(z.string()),
-  options: z.record(z.string(), z.union([z.boolean(), z.string()])),
+  options: z.record(z.string(), lineItemOptionValueSchema),
   priceLow: z.number(),
   priceHigh: z.number(),
   estimatedDaysLow: z.number().optional(),
@@ -787,12 +797,19 @@ export const proposalSourceTypes = ['desktop', 'mobile'] as const;
 export type ProposalSource = typeof proposalSourceTypes[number];
 
 // Zod schemas
+// Options can contain boolean, string, or nested objects (e.g., __mobile metadata)
+const optionValueSchema: z.ZodType<boolean | string | Record<string, unknown>> = z.union([
+  z.boolean(),
+  z.string(),
+  z.record(z.string(), z.unknown()),
+]);
+
 export const insertProposalSchema = createInsertSchema(proposals).omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
   scope: z.array(z.string()),
-  options: z.record(z.string(), z.union([z.boolean(), z.string()])).optional(),
+  options: z.record(z.string(), optionValueSchema).optional(),
   lineItems: z.array(proposalLineItemSchema).optional(),
   isMultiService: z.boolean().optional(),
   estimatedDaysLow: z.number().optional(),
