@@ -37,9 +37,22 @@ export async function POST(
     }
 
     if (draft.proposalId) {
+      // Get the existing proposal to retrieve its public token
+      const existingProposal = await storage.getProposal(draft.proposalId);
       const origin =
         process.env.NEXT_PUBLIC_WEB_BASE_URL || new URL(request.url).origin;
-      const webReviewUrl = new URL(`/proposals/${draft.proposalId}`, origin).toString();
+      
+      // Use public token if available, otherwise fall back to generating one
+      let publicToken = existingProposal?.publicToken;
+      if (!publicToken) {
+        const updatedProposal = await storage.generatePublicToken(draft.proposalId, authResult.userId);
+        publicToken = updatedProposal?.publicToken;
+      }
+      
+      const webReviewUrl = publicToken 
+        ? new URL(`/p/${publicToken}`, origin).toString()
+        : new URL(`/app`, origin).toString(); // Fallback to app if token generation fails
+      
       return withRequestId(requestId, { proposalId: draft.proposalId, webReviewUrl });
     }
 
@@ -93,9 +106,15 @@ export async function POST(
     const proposal = await storage.createProposal(validation.data);
     await storage.linkDraftToProposal(draft.id, authResult.userId, proposal.id);
 
+    // Generate a public token for the proposal so it can be viewed via /p/[token]
+    const proposalWithToken = await storage.generatePublicToken(proposal.id, authResult.userId);
+    const publicToken = proposalWithToken?.publicToken;
+
     const origin =
       process.env.NEXT_PUBLIC_WEB_BASE_URL || new URL(request.url).origin;
-    const webReviewUrl = new URL(`/proposals/${proposal.id}`, origin).toString();
+    const webReviewUrl = publicToken 
+      ? new URL(`/p/${publicToken}`, origin).toString()
+      : new URL(`/app`, origin).toString(); // Fallback to app if token generation fails
 
     logEvent("mobile.submit.ok", {
       requestId,
