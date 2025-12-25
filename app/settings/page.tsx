@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
+import Link from "next/link";
 import { Loader2, Upload, X, Settings as SettingsIcon, Building2, CheckCircle, DollarSign, Wrench, CreditCard, AlertTriangle, Key, ExternalLink, Eye, EyeOff, Bell, Mail, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { templates } from "@/lib/proposal-data";
@@ -242,9 +243,12 @@ export default function Settings() {
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
           <h2 className="text-2xl font-bold mb-4">{t.settings.signInRequired}</h2>
           <p className="text-muted-foreground mb-6">{t.settings.signInDesc}</p>
-          <a href="/api/login" className="bg-primary text-white px-6 py-3 rounded-md font-semibold">
+          <Link
+            href="/sign-in?redirect_url=%2Fsettings"
+            className="bg-primary text-white px-6 py-3 rounded-md font-semibold"
+          >
             {t.settings.signInWithReplit}
-          </a>
+          </Link>
         </div>
       </Layout>
     );
