@@ -5,9 +5,8 @@ import { db } from "@/server/db";
 import { mobileJobPhotos } from "@shared/schema";
 import { and, desc, eq, isNull, lte, or } from "drizzle-orm";
 import { getRequestId, jsonError, logEvent, withRequestId } from "@/src/lib/mobile/observability";
-import { analyzeWithRekognition } from "@/src/lib/mobile/vision/rekognition";
-import { analyzeWithGptVision, validateFindings } from "@/src/lib/mobile/vision/gpt";
 import { ensureVisionWorker } from "@/src/lib/mobile/vision/worker";
+import { runVisionForPhoto } from "@/src/lib/mobile/vision/runner";
 
 export type DetectedIssue = {
   id: string;
@@ -29,17 +28,13 @@ export type AnalyzeResponse = {
 
 const LOCK_EXPIRY_MS = 2 * 60 * 1000;
 
-function backoffSeconds(attempts: number) {
-  const table = [0, 1, 3, 8, 20, 45];
-  return table[Math.min(attempts, table.length - 1)] ?? 60;
-}
-
-async function lockNextPhoto(params: {
+async function lockNextPhotos(params: {
   jobId: number;
   lockedBy: string;
   now: Date;
   lockExpiry: Date;
-}): Promise<(typeof mobileJobPhotos.$inferSelect) | null> {
+  limit: number;
+}): Promise<(typeof mobileJobPhotos.$inferSelect)[]> {
   const candidates = await db
     .select()
     .from(mobileJobPhotos)
@@ -57,9 +52,13 @@ async function lockNextPhoto(params: {
       )
     )
     .orderBy(desc(mobileJobPhotos.createdAt))
-    .limit(5);
+    .limit(params.limit * 2);
+
+  const lockedPhotos: (typeof mobileJobPhotos.$inferSelect)[] = [];
 
   for (const photo of candidates) {
+    if (lockedPhotos.length >= params.limit) break;
+
     const [locked] = await db
       .update(mobileJobPhotos)
       .set({
@@ -76,86 +75,10 @@ async function lockNextPhoto(params: {
       )
       .returning();
 
-    if (locked) return locked;
+    if (locked) lockedPhotos.push(locked);
   }
 
-  return null;
-}
-
-async function runVisionForPhoto(photo: typeof mobileJobPhotos.$inferSelect) {
-  const now = new Date();
-  const attempts = photo.findingsAttempts ?? 1;
-
-  try {
-    let rek: Awaited<ReturnType<typeof analyzeWithRekognition>> | null = null;
-    let rekError: string | undefined;
-    try {
-      rek = await analyzeWithRekognition({ imageUrl: photo.publicUrl });
-    } catch (e) {
-      rekError = e instanceof Error ? e.message : String(e);
-    }
-
-    const labelNames = rek?.labels?.map((l) => l.name) ?? [];
-
-    let gpt: Awaited<ReturnType<typeof analyzeWithGptVision>> | null = null;
-    let gptError: string | undefined;
-    try {
-      gpt = await analyzeWithGptVision({
-        imageUrl: photo.publicUrl,
-        kind: photo.kind,
-        rekognitionLabels: labelNames,
-      });
-    } catch (e) {
-      gptError = e instanceof Error ? e.message : String(e);
-    }
-
-    if (!rek && !gpt) {
-      throw new Error(`VISION_FAILED: rekognition=${rekError || "unknown"} gpt=${gptError || "unknown"}`);
-    }
-
-    const findings = validateFindings({
-      version: "v1",
-      imageUrl: photo.publicUrl,
-      kind: photo.kind,
-      detector: rek
-        ? { status: "ready", result: rek }
-        : { status: "failed", error: rekError || "REKOGNITION_FAILED" },
-      llm: gpt
-        ? { status: "ready", result: { ...gpt, provider: "openai" } }
-        : { status: "failed", error: gptError || "GPT_VISION_FAILED" },
-      combined: {
-        confidence: Math.max(0, Math.min(1, ((gpt?.confidence ?? 0.5) * 0.9) + 0.1)),
-        summaryLabels: Array.from(new Set([...(gpt?.labels || []), ...labelNames.slice(0, 5)])).slice(0, 10),
-        needsMorePhotos: gpt?.needsMorePhotos || [],
-      },
-    });
-
-    await db
-      .update(mobileJobPhotos)
-      .set({
-        findings,
-        findingsStatus: "ready",
-        findingsError: null,
-        analyzedAt: now,
-        findingsLockedBy: null,
-        findingsLockedAt: null,
-      })
-      .where(eq(mobileJobPhotos.id, photo.id));
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    const next = new Date(Date.now() + backoffSeconds(attempts) * 1000);
-
-    await db
-      .update(mobileJobPhotos)
-      .set({
-        findingsStatus: attempts >= 5 ? "failed" : "pending",
-        findingsError: msg,
-        findingsNextAttemptAt: attempts >= 5 ? null : next,
-        findingsLockedBy: null,
-        findingsLockedAt: null,
-      })
-      .where(eq(mobileJobPhotos.id, photo.id));
-  }
+  return lockedPhotos;
 }
 
 async function advanceAnalysis(params: { jobId: number; requestId: string; maxToProcess: number }) {
@@ -168,11 +91,26 @@ async function advanceAnalysis(params: { jobId: number; requestId: string; maxTo
   const lockedBy = `api-${params.requestId}-${Math.random().toString(16).slice(2)}`;
 
   let processed = 0;
+  
   while (processed < params.maxToProcess) {
-    const locked = await lockNextPhoto({ jobId: params.jobId, lockedBy, now, lockExpiry });
-    if (!locked) break;
-    await runVisionForPhoto(locked);
-    processed += 1;
+    const remaining = params.maxToProcess - processed;
+    // Process up to 5 photos in parallel per batch
+    const batchSize = Math.min(remaining, 5);
+    
+    const lockedPhotos = await lockNextPhotos({ 
+      jobId: params.jobId, 
+      lockedBy, 
+      now, 
+      lockExpiry,
+      limit: batchSize 
+    });
+
+    if (lockedPhotos.length === 0) break;
+
+    // Run analysis in parallel
+    await Promise.all(lockedPhotos.map(photo => runVisionForPhoto(photo)));
+    
+    processed += lockedPhotos.length;
   }
 }
 
@@ -403,7 +341,8 @@ export async function POST(
     }
 
     // Advance analysis (best-effort). Keeps progress moving even on serverless deployments.
-    await advanceAnalysis({ jobId: id, requestId, maxToProcess: 2 });
+    // Increased maxToProcess to 5 and parallelized to speed up initial load
+    await advanceAnalysis({ jobId: id, requestId, maxToProcess: 5 });
 
     // Get all photos for this job (post-advance)
     const photos = await db.select().from(mobileJobPhotos).where(eq(mobileJobPhotos.jobId, id));
@@ -473,7 +412,8 @@ export async function GET(
     }
 
     // Advance analysis incrementally on each poll so progress doesn't stall.
-    await advanceAnalysis({ jobId: id, requestId, maxToProcess: 1 });
+    // Increased from 1 to 2 to speed up catch-up
+    await advanceAnalysis({ jobId: id, requestId, maxToProcess: 2 });
 
     // Get all photos for this job
     const photos = await db
