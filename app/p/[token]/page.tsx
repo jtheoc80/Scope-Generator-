@@ -327,6 +327,7 @@ export default function PublicProposal() {
               <div className="mt-4 pt-4 border-t border-green-200">
                 <p className="text-sm font-medium text-green-800 mb-2">Signature:</p>
                 <div className="bg-white rounded-lg p-2 inline-block border border-green-200">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img 
                     src={data.proposal.signature} 
                     alt={t.proposal.clientSignature} 

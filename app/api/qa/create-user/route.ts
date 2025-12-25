@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { email, firstName, lastName, password, secret } = body;
+    const { email, firstName, lastName, secret } = body;
 
     // Validate secret
     const qaSecret = process.env.QA_TEST_SECRET;
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     const userId = `qa_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     // Create user in our database
-    const user = await storage.upsertUser({
+    await storage.upsertUser({
       id: userId,
       email,
       firstName: firstName || 'QA',

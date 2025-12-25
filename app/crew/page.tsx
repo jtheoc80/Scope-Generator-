@@ -118,6 +118,7 @@ export default function Crew() {
     if (user) {
       fetchCompanyInfo();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const fetchCompanyInfo = async () => {
@@ -198,7 +199,7 @@ export default function Crew() {
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to create company. Please try again.",
@@ -254,7 +255,7 @@ export default function Crew() {
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to send invite. Please try again.",
@@ -291,7 +292,7 @@ export default function Crew() {
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to remove member. Please try again.",
@@ -321,7 +322,7 @@ export default function Crew() {
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to delete invite. Please try again.",
@@ -698,6 +699,7 @@ export default function Crew() {
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center">
                         {member.user.profileImageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
                           <img 
                             src={member.user.profileImageUrl} 
                             alt={`${member.user.firstName || 'Team member'} profile photo`}
@@ -748,7 +750,7 @@ export default function Crew() {
                   Pending Invitations ({invites.length})
                 </CardTitle>
                 <CardDescription>
-                  Invites that haven't been accepted yet
+                  Invites that haven&apos;t been accepted yet
                 </CardDescription>
               </CardHeader>
               <CardContent>

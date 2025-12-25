@@ -17,7 +17,6 @@ import {
   Camera,
   Upload,
   X,
-  GripVertical,
   Star,
   ImageIcon,
   Loader2,
@@ -295,6 +294,7 @@ export function ProposalPhotoUpload({
 
     // Update with smart categories
     onPhotosChange([...photos, ...updatedPhotos]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [photos, onPhotosChange, maxPhotos, disabled, enableLearning, learningContext]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -452,7 +452,7 @@ export function ProposalPhotoUpload({
           </h4>
           <ul className="text-sm text-blue-800 space-y-1">
             <li>• <strong>First photo</strong> becomes the hero banner on your proposal</li>
-            <li>• <strong>2-6 photos</strong> work best for "Existing Conditions" section</li>
+            <li>• <strong>2-6 photos</strong> work best for &quot;Existing Conditions&quot; section</li>
             <li>• Include close-ups of problem areas (water damage, wear, etc.)</li>
             <li>• Wide shots help show the overall scope of work</li>
           </ul>

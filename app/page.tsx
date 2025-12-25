@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import Layout from "@/components/layout";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, ArrowRight, Clock, DollarSign, FileCheck, Loader2, Bath, ChefHat, Home as HomeIcon, Paintbrush, Plug, Wrench, Thermometer, TreePine, Calculator, Sparkles, Star, Users, TrendingUp, Quote, Zap, Target, FileText, Hammer } from "lucide-react";
+import { CheckCircle2, ArrowRight, Clock, DollarSign, FileCheck, Loader2, Bath, ChefHat, Home as HomeIcon, Paintbrush, Plug, Wrench, Thermometer, TreePine, Calculator, Sparkles, Star, Users, TrendingUp, Target, FileText } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useQuery } from "@tanstack/react-query";
 
@@ -145,6 +145,7 @@ function InstantPriceCalculator({ t }: { t: any }) {
     } else {
       setShowPrice(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTrade, selectedJobType, selectedSize]);
 
   const handleTradeChange = (value: string) => {
@@ -213,7 +214,7 @@ function InstantPriceCalculator({ t }: { t: any }) {
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">{t.calculator.projectSize}</label>
             <div className="grid grid-cols-3 gap-2">
-              {Object.entries(sizeMultipliers).map(([key, value]) => (
+              {Object.entries(sizeMultipliers).map(([key]) => (
                 <button
                   key={key}
                   data-testid={`button-size-${key}`}
@@ -425,6 +426,7 @@ export default function Home() {
               </div>
               <div className="order-1 md:order-2">
                 <div className="w-full h-72 md:h-80 rounded-xl shadow-lg overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img 
                     src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&h=400&fit=crop&crop=center"
                     alt="Modern bathroom renovation with white tiles and fixtures"
@@ -492,7 +494,7 @@ export default function Home() {
                 ))}
               </div>
               <p className="text-slate-700 text-lg leading-relaxed mb-4">
-                "{t.home.testimonial1}"
+                &quot;{t.home.testimonial1}&quot;
               </p>
               <div className="text-base">
                 <span className="font-medium text-slate-900">{t.home.testimonial1Author}</span>
@@ -506,7 +508,7 @@ export default function Home() {
                 ))}
               </div>
               <p className="text-slate-700 text-lg leading-relaxed mb-4">
-                "{t.home.testimonial2}"
+                &quot;{t.home.testimonial2}&quot;
               </p>
               <div className="text-base">
                 <span className="font-medium text-slate-900">{t.home.testimonial2Author}</span>
@@ -520,7 +522,7 @@ export default function Home() {
                 ))}
               </div>
               <p className="text-slate-700 text-lg leading-relaxed mb-4">
-                "{t.home.testimonial3}"
+                &quot;{t.home.testimonial3}&quot;
               </p>
               <div className="text-base">
                 <span className="font-medium text-slate-900">{t.home.testimonial3Author}</span>

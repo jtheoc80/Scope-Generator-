@@ -25,7 +25,7 @@ export default function PrivacyPolicy() {
             <section className="mb-8">
               <h2 className="text-2xl font-heading font-bold text-slate-900 mb-4">1. Introduction</h2>
               <p className="text-slate-700 mb-4">
-                Lead Ledger LLC, operating as ScopeGen ("we," "our," or "us"), is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our contractor proposal software and website at scopegenerator.com (the "Service").
+                Lead Ledger LLC, operating as ScopeGen (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;), is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our contractor proposal software and website at scopegenerator.com (the &quot;Service&quot;).
               </p>
               <p className="text-slate-700">
                 By using the Service, you agree to the collection and use of information in accordance with this policy.
@@ -119,7 +119,7 @@ export default function PrivacyPolicy() {
             </section>
 
             <section className="mb-8">
-              <h2 className="text-2xl font-heading font-bold text-slate-900 mb-4">9. Children's Privacy</h2>
+              <h2 className="text-2xl font-heading font-bold text-slate-900 mb-4">9. Children&apos;s Privacy</h2>
               <p className="text-slate-700">
                 Our Service is not intended for individuals under the age of 18. We do not knowingly collect personal information from children under 18.
               </p>
@@ -128,7 +128,7 @@ export default function PrivacyPolicy() {
             <section className="mb-8">
               <h2 className="text-2xl font-heading font-bold text-slate-900 mb-4">10. Changes to This Policy</h2>
               <p className="text-slate-700">
-                We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last updated" date.
+                We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the &quot;Last updated&quot; date.
               </p>
             </section>
 

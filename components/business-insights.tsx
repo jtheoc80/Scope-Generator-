@@ -59,7 +59,7 @@ interface BusinessInsightsProps {
   onClose?: () => void;
 }
 
-export function BusinessInsights({ onClose }: BusinessInsightsProps) {
+export function BusinessInsights({ onClose: _onClose }: BusinessInsightsProps) {
   const [insights, setInsights] = useState<InsightsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -135,7 +135,7 @@ export function BusinessInsights({ onClose }: BusinessInsightsProps) {
   if (!insights) return null;
 
   const avgWonValue = Math.round((insights.avgWonValueLow + insights.avgWonValueHigh) / 2);
-  const avgProposalValue = Math.round((insights.avgPriceLow + insights.avgPriceHigh) / 2);
+  const _avgProposalValue = Math.round((insights.avgPriceLow + insights.avgPriceHigh) / 2);
 
   return (
     <Card className="border-slate-200 shadow-sm overflow-hidden">

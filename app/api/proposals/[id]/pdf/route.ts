@@ -363,7 +363,7 @@ function generateProposalPDF(proposal: ProposalData, companyInfo: CompanyInfo | 
   if (proposal.contractorSignature) {
     try {
       pdf.addImage(proposal.contractorSignature, 'PNG', margin, y - 20, 50, 15);
-    } catch (e) {
+    } catch {
       // Signature image failed to load
     }
   }
@@ -371,7 +371,7 @@ function generateProposalPDF(proposal: ProposalData, companyInfo: CompanyInfo | 
   if (proposal.signature) {
     try {
       pdf.addImage(proposal.signature, 'PNG', margin + (contentWidth / 2) + 10, y - 20, 50, 15);
-    } catch (e) {
+    } catch {
       // Signature image failed to load
     }
   }

@@ -9,7 +9,6 @@
 import { db } from "@/server/db";
 import { 
   userActionLog, 
-  userLearnedPreferences, 
   geographicPatterns,
   photoCategorization,
   scopeItemPatterns,
@@ -17,7 +16,7 @@ import {
   type UserActionType,
   type ProposalPhotoCategory,
 } from "@shared/schema";
-import { eq, and, desc, sql, gte, count } from "drizzle-orm";
+import { eq, and, desc, sql, count } from "drizzle-orm";
 
 // ==========================================
 // Types

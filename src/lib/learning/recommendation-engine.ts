@@ -10,8 +10,6 @@ import {
   learningService,
   type LearningContext,
   type PhotoCategorySuggestion,
-  type ScopeSuggestion,
-  type PricingSuggestion,
 } from './learning-service';
 import type { ProposalPhotoCategory } from '@shared/schema';
 
@@ -143,7 +141,7 @@ export async function getSmartCaptionSuggestions(
 
 function getCaptionTemplates(
   category: ProposalPhotoCategory, 
-  jobTypeId?: string
+  _jobTypeId?: string
 ): string[] {
   const templates: Record<ProposalPhotoCategory, string[]> = {
     hero: [
@@ -251,7 +249,7 @@ function getCaptionTemplates(
 export async function getSmartScopeSuggestions(
   context: LearningContext,
   currentScope: string[],
-  templateScope: string[]
+  _templateScope: string[]
 ): Promise<SmartScopeSuggestions> {
   const { additions, removals } = await learningService.getScopeSuggestions(context, currentScope);
 

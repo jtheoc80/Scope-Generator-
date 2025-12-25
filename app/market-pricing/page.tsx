@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/layout";
@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, TrendingUp, DollarSign, Hammer, MapPin, ArrowRight, Database, Sparkles, Lock, Crown, AlertTriangle } from "lucide-react";
+// Alert components - keeping import commented for future use
+// import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Loader2, TrendingUp, DollarSign, Hammer, MapPin, ArrowRight, Database, Sparkles, Lock, Crown } from "lucide-react";
 
 const ANONYMOUS_USAGE_KEY = "market-pricing-anonymous-usage";
 const FREE_PRICING_LOOKUPS = 3;
@@ -62,7 +63,7 @@ export default function MarketPricing() {
   }, []);
   
   // Fetch user data to check subscription
-  const { data: user, isLoading: userLoading } = useQuery({
+  const { data: user } = useQuery({
     queryKey: ["/api/auth/user"],
     queryFn: async () => {
       const res = await fetch("/api/auth/user");
@@ -169,7 +170,7 @@ export default function MarketPricing() {
                 </CardHeader>
                 <CardContent className="p-8 text-center">
                   <Crown className="w-16 h-16 mx-auto mb-4 text-amber-500" />
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">You've Used All 3 Free Lookups</h3>
+                  <h3 className="text-xl font-bold text-slate-900 mb-2">You&apos;ve Used All 3 Free Lookups</h3>
                   <p className="text-slate-600 mb-6 max-w-md mx-auto">
                     Love the market pricing data? Upgrade to Pro for unlimited lookups and get real-time material costs and labor rates for every quote.
                   </p>

@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
 function getCaptionTemplates(
   category: ProposalPhotoCategory,
   jobTypeId?: string,
-  tradeId?: string
+  _tradeId?: string
 ): string[] {
   // Base templates by category
   const baseTemplates: Record<ProposalPhotoCategory, string[]> = {

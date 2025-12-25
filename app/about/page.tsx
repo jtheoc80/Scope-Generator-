@@ -27,10 +27,10 @@ export default function About() {
                 Lead Ledger Pro LLC was founded with a simple mission: to help hardworking contractors spend less time on paperwork and more time doing what they do best—building, remodeling, and transforming spaces.
               </p>
               <p className="text-muted-foreground leading-relaxed mb-4">
-                Based in Houston, Texas, we understand the challenges that small contractors face. From late-night proposal writing to chasing down clients for signatures, we've seen it all. That's why we built ScopeGen—a tool designed by people who get it.
+                Based in Houston, Texas, we understand the challenges that small contractors face. From late-night proposal writing to chasing down clients for signatures, we&apos;ve seen it all. That&apos;s why we built ScopeGen—a tool designed by people who get it.
               </p>
               <p className="text-muted-foreground leading-relaxed">
-                Our team is dedicated to creating software that's simple, powerful, and tailored to the trades. No complicated setups, no steep learning curves—just tools that work as hard as you do.
+                Our team is dedicated to creating software that&apos;s simple, powerful, and tailored to the trades. No complicated setups, no steep learning curves—just tools that work as hard as you do.
               </p>
             </div>
             
@@ -82,7 +82,7 @@ export default function About() {
               </div>
               <h3 className="text-xl font-bold text-slate-900 mb-3">Simplicity</h3>
               <p className="text-muted-foreground">
-                We believe powerful tools shouldn't be complicated. Everything we build is designed to be intuitive and easy to use.
+                We believe powerful tools shouldn&apos;t be complicated. Everything we build is designed to be intuitive and easy to use.
               </p>
             </div>
 
@@ -92,7 +92,7 @@ export default function About() {
               </div>
               <h3 className="text-xl font-bold text-slate-900 mb-3">Contractor-First</h3>
               <p className="text-muted-foreground">
-                Every feature we build starts with one question: "Will this help contractors win more jobs and save time?"
+                Every feature we build starts with one question: &quot;Will this help contractors win more jobs and save time?&quot;
               </p>
             </div>
 

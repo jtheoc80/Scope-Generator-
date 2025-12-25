@@ -3,7 +3,7 @@ import { auth } from '@clerk/nextjs/server';
 import { storage } from '@/server/storage';
 
 // GET /api/analytics/insights - Get enhanced business insights
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const { userId } = await auth();
     
