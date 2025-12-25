@@ -17,10 +17,18 @@ function backoffSeconds(attempts: number) {
   return table[Math.min(attempts, table.length - 1)] ?? 60;
 }
 
+export type SelectedIssue = {
+  id: string;
+  label: string;
+  category: string;
+};
+
 export async function enqueueDraft(params: {
   jobId: number;
   userId: string;
   draftIdempotencyKey?: string | null;
+  selectedIssues?: SelectedIssue[];
+  problemStatement?: string;
 }) {
   // If an idempotency key is provided, reuse any existing non-failed draft for this job+key.
   if (params.draftIdempotencyKey) {
@@ -56,6 +64,8 @@ export async function enqueueDraft(params: {
       finishedAt: null,
       error: null,
       payload: null,
+      // Store context in the questions field temporarily (will be overwritten when draft completes)
+      questions: params.selectedIssues?.map(i => i.label) ?? [],
     } as typeof mobileJobDrafts.$inferInsert)
     .returning();
 
@@ -179,6 +189,15 @@ async function runDraft(draft: typeof mobileJobDrafts.$inferSelect) {
         .where(eq(mobileJobPhotos.id, p.id));
     }
 
+    // Build enhanced job notes with selected issues context
+    // The questions field temporarily stores selected issue labels from enqueueDraft
+    const selectedIssueLabels = draft.questions ?? [];
+    let enhancedJobNotes = job.jobNotes ?? "";
+    if (selectedIssueLabels.length > 0) {
+      const issueContext = `\n\nSelected issues to address: ${selectedIssueLabels.join("; ")}`;
+      enhancedJobNotes = enhancedJobNotes + issueContext;
+    }
+
     const draftPayload = await generateMobileDraft({
       job: {
         id: job.id,
@@ -189,7 +208,7 @@ async function runDraft(draft: typeof mobileJobDrafts.$inferSelect) {
         jobTypeId: job.jobTypeId,
         jobTypeName: job.jobTypeName,
         jobSize: job.jobSize,
-        jobNotes: job.jobNotes,
+        jobNotes: enhancedJobNotes.trim() || null,
       },
       template,
       user,

@@ -15,7 +15,7 @@ import {
   CheckCircle,
   AlertCircle,
 } from "lucide-react";
-import { mobileApiFetch, newIdempotencyKey, PresignResponse, DraftStatus } from "../../lib/api";
+import { mobileApiFetch, newIdempotencyKey, PresignResponse } from "../../lib/api";
 
 type UploadedPhoto = {
   id: string;
@@ -31,7 +31,6 @@ export default function CapturePhotosPage() {
   const jobId = params.jobId as string;
 
   const [photos, setPhotos] = useState<UploadedPhoto[]>([]);
-  const [generatingDraft, setGeneratingDraft] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -143,7 +142,7 @@ export default function CapturePhotosPage() {
     removePhoto(id);
   };
 
-  const handleGenerateDraft = async () => {
+  const handleAnalyzePhotos = () => {
     if (photos.length === 0) {
       setError("Please add at least one photo");
       return;
@@ -161,43 +160,8 @@ export default function CapturePhotosPage() {
       return;
     }
 
-    setGeneratingDraft(true);
-    setError(null);
-
-    try {
-      // Start draft generation
-      await mobileApiFetch<{ status: string }>(`/api/mobile/jobs/${jobId}/draft`, {
-        method: "POST",
-        headers: { "Idempotency-Key": newIdempotencyKey() },
-      });
-
-      // Poll until READY
-      for (let i = 0; i < 60; i++) {
-        await new Promise((r) => setTimeout(r, 1000));
-
-        const draft = await mobileApiFetch<DraftStatus>(
-          `/api/mobile/jobs/${jobId}/draft`,
-          { method: "GET" }
-        );
-
-        if (draft.status === "READY" && draft.payload) {
-          // Navigate to preview page with draft data
-          const encodedPayload = encodeURIComponent(JSON.stringify(draft.payload));
-          router.push(`/m/preview/${jobId}?payload=${encodedPayload}`);
-          return;
-        }
-
-        if (draft.status === "FAILED") {
-          throw new Error("Draft generation failed. Please try again.");
-        }
-      }
-
-      throw new Error("Draft generation timed out. Please try again.");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to generate draft");
-    } finally {
-      setGeneratingDraft(false);
-    }
+    // Navigate to issue selection page
+    router.push(`/m/issues/${jobId}`);
   };
 
   const uploadedCount = photos.filter((p) => p.status === "uploaded").length;
@@ -231,7 +195,6 @@ export default function CapturePhotosPage() {
           size="sm"
           onClick={() => router.back()}
           className="gap-2 -ml-2"
-          disabled={generatingDraft}
         >
           <ArrowLeft className="w-4 h-4" />
           Back
@@ -261,7 +224,6 @@ export default function CapturePhotosPage() {
           variant="outline"
           className="h-20 flex-col gap-2"
           onClick={() => cameraInputRef.current?.click()}
-          disabled={generatingDraft}
         >
           <Camera className="w-6 h-6" />
           <span className="text-sm">Take Photo</span>
@@ -270,7 +232,6 @@ export default function CapturePhotosPage() {
           variant="outline"
           className="h-20 flex-col gap-2"
           onClick={() => galleryInputRef.current?.click()}
-          disabled={generatingDraft}
         >
           <ImagePlus className="w-6 h-6" />
           <span className="text-sm">From Gallery</span>
@@ -394,20 +355,11 @@ export default function CapturePhotosPage() {
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-200 safe-area-inset-bottom">
         <Button
           className="w-full h-12 text-base gap-2"
-          onClick={handleGenerateDraft}
-          disabled={generatingDraft || uploadedCount === 0 || uploadingCount > 0}
+          onClick={handleAnalyzePhotos}
+          disabled={uploadedCount === 0 || uploadingCount > 0}
         >
-          {generatingDraft ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Generating Draft...
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-5 h-5" />
-              Generate Proposal Draft
-            </>
-          )}
+          <Sparkles className="w-5 h-5" />
+          Analyze & Select Issues
         </Button>
         {uploadingCount > 0 && (
           <p className="text-xs text-center text-slate-500 mt-2">

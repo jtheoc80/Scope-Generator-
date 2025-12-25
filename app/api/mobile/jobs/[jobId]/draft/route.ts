@@ -7,6 +7,13 @@ import { and, eq, desc } from "drizzle-orm";
 import { enqueueDraft, ensureDraftWorker } from "@/src/lib/mobile/draft/worker";
 import { getRequestId, jsonError, logEvent, withRequestId } from "@/src/lib/mobile/observability";
 
+// Selected issue from client
+type SelectedIssue = {
+  id: string;
+  label: string;
+  category: string;
+};
+
 // POST /api/mobile/jobs/:jobId/draft (trigger generation)
 export async function POST(
   request: NextRequest,
@@ -29,12 +36,38 @@ export async function POST(
       return jsonError(requestId, 404, "NOT_FOUND", "Job not found");
     }
 
+    // Parse body for selected issues context
+    let selectedIssues: SelectedIssue[] | undefined;
+    let problemStatement: string | undefined;
+    try {
+      const body = await request.json();
+      if (body.selectedIssues && Array.isArray(body.selectedIssues)) {
+        selectedIssues = body.selectedIssues;
+      }
+      if (body.problemStatement && typeof body.problemStatement === "string") {
+        problemStatement = body.problemStatement;
+      }
+    } catch {
+      // Body parsing failed, continue without context
+    }
+
     // Enqueue and return immediately
     const idem = request.headers.get("idempotency-key") || undefined;
-    await enqueueDraft({ jobId: job.id, userId: authResult.userId, draftIdempotencyKey: idem });
+    await enqueueDraft({ 
+      jobId: job.id, 
+      userId: authResult.userId, 
+      draftIdempotencyKey: idem,
+      selectedIssues,
+      problemStatement,
+    });
     ensureDraftWorker();
 
-    logEvent("mobile.draft.enqueue.ok", { requestId, jobId: job.id, ms: Date.now() - t0 });
+    logEvent("mobile.draft.enqueue.ok", { 
+      requestId, 
+      jobId: job.id, 
+      issuesCount: selectedIssues?.length ?? 0,
+      ms: Date.now() - t0 
+    });
     return withRequestId(requestId, { status: "DRAFTING" });
   } catch (error) {
     console.error("Error generating mobile draft:", error);

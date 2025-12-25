@@ -118,3 +118,21 @@ export type SubmitResponse = {
   proposalId: number;
   webReviewUrl: string;
 };
+
+// Types for issue analysis
+export type DetectedIssue = {
+  id: string;
+  label: string;
+  description?: string;
+  confidence: number;
+  category: "damage" | "repair" | "maintenance" | "upgrade" | "inspection" | "other";
+  photoIds: number[];
+};
+
+export type AnalyzeResponse = {
+  status: "ready" | "analyzing" | "no_photos";
+  detectedIssues: DetectedIssue[];
+  photosAnalyzed: number;
+  photosTotal: number;
+  suggestedProblem?: string;
+};
