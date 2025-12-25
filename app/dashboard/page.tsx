@@ -362,7 +362,7 @@ function MobileProposalMenu({
 }
 
 export default function Dashboard() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, error: authError } = useAuth();
   const { t, language } = useLanguage();
   const router = useRouter();
   const [proposals, setProposals] = useState<Proposal[]>([]);
@@ -579,6 +579,28 @@ export default function Dashboard() {
       <Layout>
         <div className="flex items-center justify-center min-h-[60vh]">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (authError) {
+    return (
+      <Layout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+          <h2 className="text-2xl font-bold mb-4 text-red-600">Authentication Error</h2>
+          <p className="text-muted-foreground mb-6">
+            We couldn't verify your session. This might be due to a connection issue.
+          </p>
+          <Button onClick={() => window.location.reload()} variant="outline" className="mr-2">
+            Retry
+          </Button>
+          <Link
+            href="/sign-in"
+            className="bg-primary text-white px-6 py-2.5 rounded-md font-semibold hover:bg-primary/90"
+          >
+            Sign In Again
+          </Link>
         </div>
       </Layout>
     );

@@ -34,7 +34,7 @@ interface User {
 }
 
 export function useAuth() {
-  const { data: user, isLoading, refetch } = useQuery<User | null>({
+  const { data: user, isLoading, error, refetch } = useQuery<User | null>({
     queryKey: ["/api/auth/user"],
     retry: false,
   });
@@ -42,6 +42,7 @@ export function useAuth() {
   return {
     user,
     isLoading,
+    error,
     isAuthenticated: !!user,
     refetch,
   };
