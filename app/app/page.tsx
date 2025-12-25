@@ -12,7 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, ChevronRight, Wand2, Download, FileText, Sparkles, Plus, Trash2, GripVertical, Save } from "lucide-react";
+import { Loader2, ChevronRight, Wand2, Download, FileText, Sparkles, Plus, Trash2, GripVertical, Save, Mail } from "lucide-react";
+import EmailProposalModal from "@/components/email-proposal-modal";
 import ProposalPreview from "@/components/proposal-preview";
 import { CostInsights } from "@/components/cost-insights";
 import { useToast } from "@/hooks/use-toast";
@@ -230,6 +231,9 @@ export default function Generator() {
   const [enhancedScopes, setEnhancedScopes] = useState<Record<string, string[]>>({});
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [savedProposalId, setSavedProposalId] = useState<number | null>(null);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [isSavingForEmail, setIsSavingForEmail] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const { t, language } = useLanguage();
@@ -627,6 +631,9 @@ export default function Generator() {
         throw new Error(t.generator.failedToSaveDraft);
       }
 
+      const savedProposal = await response.json();
+      setSavedProposalId(savedProposal.id);
+
       toast({ 
         title: t.common.success, 
         description: t.generator.draftSaved,
@@ -644,6 +651,99 @@ export default function Generator() {
   };
 
   const previewData = generateProposalData();
+
+  // Handle email button click - save draft first if needed, then open email modal
+  const handleEmailClick = async () => {
+    if (!user) {
+      toast({ 
+        title: t.common.error, 
+        description: t.toast.loginRequired,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // If we already have a saved proposal ID, just open the modal
+    if (savedProposalId) {
+      setEmailModalOpen(true);
+      return;
+    }
+
+    // Otherwise, save the proposal first
+    const validServices = services.filter(s => s.tradeId && s.jobTypeId);
+    if (validServices.length === 0) {
+      toast({ 
+        title: t.common.error, 
+        description: t.generator.pleaseAddServiceFirst,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!watchedValues.clientName || !watchedValues.address) {
+      toast({ 
+        title: t.common.error, 
+        description: t.generator.pleaseFillClientInfo,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSavingForEmail(true);
+    try {
+      const firstService = validServices[0];
+      const serviceData = generateServiceData(firstService);
+      if (!serviceData) throw new Error(t.generator.invalidServiceData);
+
+      const booleanOptions: Record<string, boolean> = {};
+      for (const [key, value] of Object.entries(firstService.options)) {
+        if (typeof value === 'boolean') {
+          booleanOptions[key] = value;
+        }
+      }
+
+      const proposalData = {
+        clientName: watchedValues.clientName,
+        address: watchedValues.address,
+        tradeId: firstService.tradeId,
+        jobTypeId: firstService.jobTypeId,
+        jobTypeName: serviceData.jobTypeName,
+        jobSize: firstService.jobSize,
+        scope: enhancedScopes[firstService.id] || serviceData.scope,
+        options: booleanOptions,
+        priceLow: serviceData.priceRange.low,
+        priceHigh: serviceData.priceRange.high,
+        status: "draft",
+        isUnlocked: false,
+      };
+
+      const response = await fetch('/api/proposals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(proposalData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save proposal');
+      }
+
+      const savedProposal = await response.json();
+      setSavedProposalId(savedProposal.id);
+      
+      // Now open the email modal
+      setEmailModalOpen(true);
+    } catch (error) {
+      console.error("Error saving proposal for email:", error);
+      toast({ 
+        title: t.common.error, 
+        description: t.generator.failedToSaveDraft,
+        variant: "destructive"
+      });
+    } finally {
+      setIsSavingForEmail(false);
+    }
+  };
 
   const renderServiceCard = (service: ServiceItem, index: number) => {
     const jobType = getJobTypeForService(service);
@@ -1078,6 +1178,23 @@ export default function Generator() {
                             {isDownloading ? t.generator.generatingPDF : t.generator.downloadPDF}
                           </Button>
                         )}
+                        {step === 2 && user && (
+                          <Button 
+                            variant="default"
+                            size="sm"
+                            className="gap-2 bg-blue-600 hover:bg-blue-700"
+                            onClick={handleEmailClick}
+                            disabled={isSavingForEmail}
+                            data-testid="button-email-proposal"
+                          >
+                            {isSavingForEmail ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Mail className="w-4 h-4" />
+                            )}
+                            {isSavingForEmail ? 'Saving...' : (t.generator.emailProposal || 'Email Proposal')}
+                          </Button>
+                        )}
                       </div>
                    </div>
 
@@ -1100,6 +1217,20 @@ export default function Generator() {
         </div>
       </div>
 
+      {savedProposalId && (
+        <EmailProposalModal
+          isOpen={emailModalOpen}
+          onClose={() => setEmailModalOpen(false)}
+          proposalId={savedProposalId}
+          clientName={watchedValues.clientName || ''}
+          onSuccess={() => {
+            toast({
+              title: t.common.success,
+              description: t.generator.proposalSent || 'Proposal sent successfully!',
+            });
+          }}
+        />
+      )}
     </Layout>
   );
 }
