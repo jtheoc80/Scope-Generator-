@@ -131,6 +131,9 @@ export const translations = {
       porchRoof: "Porch Roof",
       additionRoof: "Addition Roof",
       fullRoof: "Full Roof (Entire Home)",
+      // Email proposal
+      emailProposal: "Email Proposal",
+      proposalSent: "Proposal sent successfully!",
     },
     dashboard: {
       title: "Your Proposals",
@@ -698,6 +701,9 @@ export const translations = {
       porchRoof: "Techo del Porche",
       additionRoof: "Techo de Ampliación",
       fullRoof: "Techo Completo (Toda la Casa)",
+      // Email proposal
+      emailProposal: "Enviar Propuesta",
+      proposalSent: "¡Propuesta enviada con éxito!",
     },
     dashboard: {
       title: "Sus Propuestas",
