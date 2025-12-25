@@ -192,6 +192,7 @@ function extractIssuesFromFindings(
       llm?: {
         result?: {
           damage?: string[];
+          issues?: string[];
           materials?: string[];
           objects?: Array<{ name: string; notes?: string }>;
           labels?: string[];
@@ -227,18 +228,55 @@ function extractIssuesFromFindings(
       issueMap.get(key)!.photoIds.push(photo.id);
     }
 
+    // Extract general issues (missing components, dated items, things needing replacement)
+    const issueItems = llmResult.issues || [];
+    for (const issue of issueItems) {
+      const lowerIssue = issue.toLowerCase();
+      // Determine category based on issue description
+      let category: DetectedIssue["category"] = "repair";
+      if (lowerIssue.includes("missing") || lowerIssue.includes("incomplete")) {
+        category = "repair";
+      } else if (lowerIssue.includes("dated") || lowerIssue.includes("outdated") || lowerIssue.includes("replace") || lowerIssue.includes("upgrade")) {
+        category = "upgrade";
+      } else if (lowerIssue.includes("safety") || lowerIssue.includes("hazard") || lowerIssue.includes("exposed")) {
+        category = "damage";
+      }
+
+      const key = `issue:${lowerIssue}`;
+      if (!issueMap.has(key)) {
+        issueMap.set(key, {
+          id: key,
+          label: issue,
+          description: `Issue detected: ${issue}`,
+          confidence: combined.confidence ?? 0.7,
+          category,
+          photoIds: [],
+        });
+      }
+      issueMap.get(key)!.photoIds.push(photo.id);
+    }
+
     // Extract objects that might indicate repair needs
     const objects = llmResult.objects || [];
     for (const obj of objects) {
       if (obj.notes) {
-        const key = `repair:${obj.name.toLowerCase()}`;
+        const key = `repair:${obj.name.toLowerCase()}:${obj.notes.toLowerCase().slice(0, 30)}`;
         if (!issueMap.has(key)) {
+          // Determine category based on notes content
+          const notesLower = obj.notes.toLowerCase();
+          let category: DetectedIssue["category"] = "repair";
+          if (notesLower.includes("dated") || notesLower.includes("outdated") || notesLower.includes("old") || notesLower.includes("replace")) {
+            category = "upgrade";
+          } else if (notesLower.includes("damage") || notesLower.includes("broken") || notesLower.includes("crack")) {
+            category = "damage";
+          }
+
           issueMap.set(key, {
             id: key,
             label: `${obj.name} - ${obj.notes}`,
             description: obj.notes,
-            confidence: combined.confidence ?? 0.5,
-            category: "repair",
+            confidence: combined.confidence ?? 0.65,
+            category,
             photoIds: [],
           });
         }
@@ -249,8 +287,11 @@ function extractIssuesFromFindings(
     // Use high-confidence Rekognition labels for context
     for (const label of detectorLabels.slice(0, 5)) {
       const lowerName = label.name.toLowerCase();
-      // Only include labels that suggest issues
-      const issueKeywords = ["crack", "rust", "damage", "leak", "stain", "mold", "rot", "wear", "broken"];
+      // Include labels that suggest issues - expanded keyword list
+      const issueKeywords = [
+        "crack", "rust", "damage", "leak", "stain", "mold", "rot", "wear", "broken",
+        "missing", "incomplete", "old", "worn", "faded", "peeling", "chipped", "dent"
+      ];
       if (issueKeywords.some(kw => lowerName.includes(kw))) {
         const key = `detected:${lowerName}`;
         if (!issueMap.has(key)) {
@@ -267,20 +308,28 @@ function extractIssuesFromFindings(
       }
     }
 
-    // Add summary labels as potential issues
+    // Add summary labels as potential issues only if they indicate a problem
     const summaryLabels = combined.summaryLabels || llmResult.labels || [];
-    for (const label of summaryLabels.slice(0, 3)) {
-      const key = `label:${label.toLowerCase()}`;
-      if (!issueMap.has(key)) {
-        issueMap.set(key, {
-          id: key,
-          label: label,
-          confidence: 0.7,
-          category: "other",
-          photoIds: [],
-        });
+    const problemIndicators = [
+      "missing", "broken", "damaged", "worn", "dated", "old", "replace", "repair",
+      "crack", "stain", "leak", "rust", "mold", "incomplete", "needs"
+    ];
+    for (const label of summaryLabels.slice(0, 5)) {
+      const lowerLabel = label.toLowerCase();
+      // Only add labels that suggest actual issues
+      if (problemIndicators.some(ind => lowerLabel.includes(ind))) {
+        const key = `label:${lowerLabel}`;
+        if (!issueMap.has(key)) {
+          issueMap.set(key, {
+            id: key,
+            label: label,
+            confidence: 0.7,
+            category: "other",
+            photoIds: [],
+          });
+        }
+        issueMap.get(key)!.photoIds.push(photo.id);
       }
-      issueMap.get(key)!.photoIds.push(photo.id);
     }
   }
 
