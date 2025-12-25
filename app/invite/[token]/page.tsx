@@ -181,7 +181,13 @@ export default function Invite() {
                 <p className="text-sm text-muted-foreground">
                   Please log in to accept this invitation.
                 </p>
-                <Button onClick={() => window.location.href = "/api/login"} className="gap-2" data-testid="button-login-to-accept">
+                <Button
+                  onClick={() => {
+                    window.location.href = `/sign-in?redirect_url=${encodeURIComponent(window.location.pathname)}`;
+                  }}
+                  className="gap-2"
+                  data-testid="button-login-to-accept"
+                >
                   <LogIn className="w-4 h-4" />
                   Log In to Accept
                 </Button>

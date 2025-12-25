@@ -506,9 +506,13 @@ export default function PricingInsights() {
                     <Target className="w-12 h-12 text-slate-300 mx-auto mb-4" />
                     <h3 className="text-lg font-semibold text-slate-900 mb-2">Sign In to View Your Performance</h3>
                     <p className="text-slate-500 mb-6">Track your proposal acceptance rates and compare your pricing to benchmarks.</p>
-                    <a href="/api/login" className="bg-primary text-white px-6 py-3 rounded-md font-semibold" data-testid="link-signin">
-                      Sign In with Replit
-                    </a>
+                    <Link
+                      href="/sign-in?redirect_url=%2Fpricing-insights"
+                      className="bg-primary text-white px-6 py-3 rounded-md font-semibold"
+                      data-testid="link-signin"
+                    >
+                      Sign In
+                    </Link>
                   </CardContent>
                 </Card>
               ) : summaryLoading ? (

@@ -18,6 +18,43 @@ export default function App() {
   const [step, setStep] = useState<Step | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const header = useMemo(() => {
+    if (!step || step.name === "signin") return null;
+
+    const title =
+      step.name === "create"
+        ? "Create Job"
+        : step.name === "photos"
+          ? "Capture Photos"
+          : step.name === "draft"
+            ? "Draft Preview"
+            : "Settings";
+
+    const showSettings = step.name !== "settings";
+    return (
+      <View
+        style={{
+          padding: 16,
+          borderBottomWidth: 1,
+          borderColor: "#eee",
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <Text style={{ fontSize: 20, fontWeight: "600" }}>{title}</Text>
+        {showSettings ? (
+          <Pressable
+            onPress={() => setStep((s) => ({ name: "settings", returnTo: s }))}
+            style={{ paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: "#ddd", borderRadius: 10 }}
+          >
+            <Text style={{ fontWeight: "600" }}>Settings</Text>
+          </Pressable>
+        ) : null}
+      </View>
+    );
+  }, [step]);
+
   // Check if user is signed in on app start
   useEffect(() => {
     (async () => {
@@ -59,41 +96,6 @@ export default function App() {
       </SafeAreaView>
     );
   }
-
-  const header = useMemo(() => {
-    const title =
-      step.name === "create"
-        ? "Create Job"
-        : step.name === "photos"
-          ? "Capture Photos"
-          : step.name === "draft"
-            ? "Draft Preview"
-            : "Settings";
-
-    const showSettings = step.name !== "settings";
-    return (
-      <View
-        style={{
-          padding: 16,
-          borderBottomWidth: 1,
-          borderColor: "#eee",
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <Text style={{ fontSize: 20, fontWeight: "600" }}>{title}</Text>
-        {showSettings ? (
-          <Pressable
-            onPress={() => setStep((s) => ({ name: "settings", returnTo: s }))}
-            style={{ paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: "#ddd", borderRadius: 10 }}
-          >
-            <Text style={{ fontWeight: "600" }}>Settings</Text>
-          </Pressable>
-        ) : null}
-      </View>
-    );
-  }, [step]);
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
