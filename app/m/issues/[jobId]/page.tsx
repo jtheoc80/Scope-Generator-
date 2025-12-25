@@ -215,9 +215,61 @@ export default function SelectIssuesPage() {
   if (loading) {
     return (
       <div className="p-4 flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-primary" />
-        <p className="text-slate-600">Analyzing your photos...</p>
-        <p className="text-sm text-slate-500">Using AI to detect issues</p>
+        {/* Progress indicator */}
+        <div className="relative">
+          <Loader2 className="w-12 h-12 animate-spin text-primary" />
+          <Sparkles className="w-5 h-5 text-amber-500 absolute -top-1 -right-1 animate-pulse" />
+        </div>
+        
+        <div className="text-center space-y-2">
+          <p className="text-lg font-medium text-slate-800">Analyzing Photos</p>
+          
+          {/* Progress bar */}
+          {photosTotal > 0 && (
+            <div className="w-48 mx-auto">
+              <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-primary rounded-full transition-all duration-300"
+                  style={{ width: `${Math.max(10, (photosAnalyzed / photosTotal) * 100)}%` }}
+                />
+              </div>
+              <p className="text-sm text-slate-600 mt-2">
+                {photosAnalyzed} of {photosTotal} photos processed
+              </p>
+            </div>
+          )}
+          
+          {photosTotal === 0 && (
+            <p className="text-sm text-slate-500">Starting analysis...</p>
+          )}
+        </div>
+        
+        {/* Steps indicator */}
+        <div className="mt-4 text-xs text-slate-500 space-y-1 text-center">
+          <p className="flex items-center gap-2 justify-center">
+            <CheckCircle className="w-3 h-3 text-green-500" />
+            Photos uploaded
+          </p>
+          <p className="flex items-center gap-2 justify-center">
+            <Loader2 className="w-3 h-3 animate-spin text-primary" />
+            AI detecting issues...
+          </p>
+          <p className="flex items-center gap-2 justify-center text-slate-400">
+            <span className="w-3 h-3 rounded-full border border-slate-300" />
+            Select issues
+          </p>
+        </div>
+
+        {/* Back button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.back()}
+          className="mt-4 text-slate-500"
+        >
+          <ArrowLeft className="w-4 h-4 mr-1" />
+          Cancel
+        </Button>
       </div>
     );
   }
