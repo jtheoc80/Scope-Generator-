@@ -81,8 +81,13 @@ export default function PreviewPage() {
   };
 
   const handleOpenReview = () => {
-    if (submitted?.webReviewUrl) {
-      window.open(submitted.webReviewUrl, "_blank");
+    if (!submitted?.webReviewUrl) {
+      setError("Review URL is not available. Please try again or contact support.");
+      return;
+    }
+    const newWindow = window.open(submitted.webReviewUrl, "_blank");
+    if (!newWindow) {
+      setError("Unable to open the review page. Please check if pop-ups are blocked.");
     }
   };
 
@@ -145,6 +150,14 @@ export default function PreviewPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Error message */}
+        {error && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            {error}
+          </div>
+        )}
 
         <div className="space-y-3">
           <Button
