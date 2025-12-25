@@ -100,6 +100,8 @@ export default function CapturePhotosPage() {
   const handleFiles = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
+    setError(null); // Clear any previous error
+
     const newPhotos: UploadedPhoto[] = [];
     const filesToUpload: { photo: UploadedPhoto; file: File }[] = [];
 
@@ -126,6 +128,7 @@ export default function CapturePhotosPage() {
   }, [jobId]);
 
   const removePhoto = (id: string) => {
+    setError(null); // Clear any previous error
     setPhotos((prev) => {
       const photo = prev.find((p) => p.id === id);
       if (photo?.localUrl.startsWith("blob:")) {
@@ -138,10 +141,13 @@ export default function CapturePhotosPage() {
   const retryPhoto = (id: string) => {
     // For retry, we'd need to keep the original file reference
     // For simplicity, just remove the errored photo and let user re-add
+    setError(null); // Clear any previous error
     removePhoto(id);
   };
 
   const handleAnalyzePhotos = () => {
+    setError(null); // Clear any previous error first
+
     if (photos.length === 0) {
       setError("Please add at least one photo");
       return;

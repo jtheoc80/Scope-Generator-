@@ -81,6 +81,7 @@ export default function PreviewPage() {
   };
 
   const handleOpenReview = () => {
+    setError(null); // Clear any previous error
     if (!submitted?.webReviewUrl) {
       setError("Review URL is not available. Please try again or contact support.");
       return;
