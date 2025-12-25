@@ -24,6 +24,7 @@ export type AnalyzeResponse = {
   photosAnalyzed: number;
   photosTotal: number;
   suggestedProblem?: string;
+  needsMorePhotos?: string[];
 };
 
 const LOCK_EXPIRY_MS = 2 * 60 * 1000;
@@ -86,25 +87,46 @@ async function runVisionForPhoto(photo: typeof mobileJobPhotos.$inferSelect) {
   const attempts = photo.findingsAttempts ?? 1;
 
   try {
-    const rek = await analyzeWithRekognition({ imageUrl: photo.publicUrl });
-    const labelNames = rek.labels.map((l) => l.name);
+    let rek: Awaited<ReturnType<typeof analyzeWithRekognition>> | null = null;
+    let rekError: string | undefined;
+    try {
+      rek = await analyzeWithRekognition({ imageUrl: photo.publicUrl });
+    } catch (e) {
+      rekError = e instanceof Error ? e.message : String(e);
+    }
 
-    const gpt = await analyzeWithGptVision({
-      imageUrl: photo.publicUrl,
-      kind: photo.kind,
-      rekognitionLabels: labelNames,
-    });
+    const labelNames = rek?.labels?.map((l) => l.name) ?? [];
+
+    let gpt: Awaited<ReturnType<typeof analyzeWithGptVision>> | null = null;
+    let gptError: string | undefined;
+    try {
+      gpt = await analyzeWithGptVision({
+        imageUrl: photo.publicUrl,
+        kind: photo.kind,
+        rekognitionLabels: labelNames,
+      });
+    } catch (e) {
+      gptError = e instanceof Error ? e.message : String(e);
+    }
+
+    if (!rek && !gpt) {
+      throw new Error(`VISION_FAILED: rekognition=${rekError || "unknown"} gpt=${gptError || "unknown"}`);
+    }
 
     const findings = validateFindings({
       version: "v1",
       imageUrl: photo.publicUrl,
       kind: photo.kind,
-      detector: { status: "ready", result: rek },
-      llm: { status: "ready", result: { ...gpt, provider: "openai" } },
+      detector: rek
+        ? { status: "ready", result: rek }
+        : { status: "failed", error: rekError || "REKOGNITION_FAILED" },
+      llm: gpt
+        ? { status: "ready", result: { ...gpt, provider: "openai" } }
+        : { status: "failed", error: gptError || "GPT_VISION_FAILED" },
       combined: {
-        confidence: Math.max(0, Math.min(1, (gpt.confidence ?? 0.5) * 0.9 + 0.1)),
-        summaryLabels: Array.from(new Set([...(gpt.labels || []), ...labelNames.slice(0, 5)])).slice(0, 10),
-        needsMorePhotos: gpt.needsMorePhotos || [],
+        confidence: Math.max(0, Math.min(1, ((gpt?.confidence ?? 0.5) * 0.9) + 0.1)),
+        summaryLabels: Array.from(new Set([...(gpt?.labels || []), ...labelNames.slice(0, 5)])).slice(0, 10),
+        needsMorePhotos: gpt?.needsMorePhotos || [],
       },
     });
 
@@ -268,6 +290,29 @@ function extractIssuesFromFindings(
     .slice(0, 10);
 }
 
+function extractNeedsMorePhotos(
+  photos: Array<typeof mobileJobPhotos.$inferSelect>
+): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+
+  for (const photo of photos) {
+    const findings = photo.findings as { combined?: { needsMorePhotos?: string[] } } | null;
+    const needs = findings?.combined?.needsMorePhotos || [];
+    for (const item of needs) {
+      const normalized = item.trim();
+      if (!normalized) continue;
+      const key = normalized.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(normalized);
+      if (out.length >= 6) return out;
+    }
+  }
+
+  return out;
+}
+
 // Generate suggested problem statement from issues
 function generateSuggestedProblem(issues: DetectedIssue[]): string | undefined {
   const damageIssues = issues.filter(i => i.category === "damage");
@@ -329,6 +374,7 @@ export async function POST(
     // Extract issues from analyzed photos (ready only)
     const detectedIssues = extractIssuesFromFindings(readyPhotos);
     const suggestedProblem = generateSuggestedProblem(detectedIssues);
+    const needsMorePhotos = extractNeedsMorePhotos(readyPhotos);
 
     const stillPending = photos.length - doneCount;
 
@@ -347,6 +393,7 @@ export async function POST(
       photosAnalyzed: doneCount,
       photosTotal: photos.length,
       suggestedProblem,
+      needsMorePhotos,
     } as AnalyzeResponse);
   } catch (error) {
     console.error("Error analyzing photos:", error);
@@ -398,6 +445,7 @@ export async function GET(
     const doneCount = photos.filter((p) => p.findingsStatus === "ready" || p.findingsStatus === "failed").length;
     const detectedIssues = extractIssuesFromFindings(readyPhotos);
     const suggestedProblem = generateSuggestedProblem(detectedIssues);
+    const needsMorePhotos = extractNeedsMorePhotos(readyPhotos);
 
     return withRequestId(requestId, {
       status: doneCount === photos.length ? "ready" : "analyzing",
@@ -405,6 +453,7 @@ export async function GET(
       photosAnalyzed: doneCount,
       photosTotal: photos.length,
       suggestedProblem,
+      needsMorePhotos,
     } as AnalyzeResponse);
   } catch (error) {
     console.error("Error getting analysis status:", error);

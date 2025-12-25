@@ -135,4 +135,5 @@ export type AnalyzeResponse = {
   photosAnalyzed: number;
   photosTotal: number;
   suggestedProblem?: string;
+  needsMorePhotos?: string[];
 };

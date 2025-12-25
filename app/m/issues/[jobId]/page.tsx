@@ -57,6 +57,7 @@ export default function SelectIssuesPage() {
   const [customIssue, setCustomIssue] = useState("");
   const [customIssues, setCustomIssues] = useState<DetectedIssue[]>([]);
   const [suggestedProblem, setSuggestedProblem] = useState<string | undefined>();
+  const [needsMorePhotos, setNeedsMorePhotos] = useState<string[]>([]);
   const [photosAnalyzed, setPhotosAnalyzed] = useState(0);
   const [photosTotal, setPhotosTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -74,6 +75,7 @@ export default function SelectIssuesPage() {
 
       setIssues(response.detectedIssues);
       setSuggestedProblem(response.suggestedProblem);
+      setNeedsMorePhotos(response.needsMorePhotos ?? []);
       setPhotosAnalyzed(response.photosAnalyzed);
       setPhotosTotal(response.photosTotal);
 
@@ -155,16 +157,17 @@ export default function SelectIssuesPage() {
     });
   };
 
-  const addCustomIssue = () => {
-    if (!customIssue.trim()) return;
+  const addCustomIssue = (opts?: { label?: string; category?: DetectedIssue["category"] }) => {
+    const label = (opts?.label ?? customIssue).trim();
+    if (!label) return;
 
     setError(null); // Clear any previous error
 
     const newIssue: DetectedIssue = {
       id: `custom-${Date.now()}`,
-      label: customIssue.trim(),
+      label,
       confidence: 1,
-      category: "other",
+      category: opts?.category ?? "other",
       photoIds: [],
     };
 
@@ -172,6 +175,15 @@ export default function SelectIssuesPage() {
     setSelectedIssues(prev => new Set(prev).add(newIssue.id));
     setCustomIssue("");
   };
+
+  const addSuggestedUpgrade = (label: string) => addCustomIssue({ label, category: "upgrade" });
+
+  const allIssues = [...issues, ...customIssues];
+  const selectedCount = selectedIssues.size;
+
+  const shouldPromptForMorePhotos =
+    photosTotal > 0 &&
+    (photosTotal < 3 || (needsMorePhotos?.length ?? 0) > 0 || (!analyzing && allIssues.length === 0));
 
   const handleGenerateScope = async () => {
     const allSelectedIssues = [...issues, ...customIssues].filter(i => selectedIssues.has(i.id));
@@ -229,9 +241,6 @@ export default function SelectIssuesPage() {
       setGeneratingDraft(false);
     }
   };
-
-  const allIssues = [...issues, ...customIssues];
-  const selectedCount = selectedIssues.size;
 
   if (loading) {
     return (
@@ -351,6 +360,43 @@ export default function SelectIssuesPage() {
         </Card>
       )}
 
+      {/* Ask for more photos when helpful */}
+      {shouldPromptForMorePhotos && (
+        <Card className="border-slate-200">
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-slate-700 shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="font-medium text-slate-900">Add more photos for better results</p>
+                <p className="text-sm text-slate-600 mt-1">
+                  Wide shot + close-up + a “context” angle helps the AI find issues and write a cleaner scope.
+                </p>
+              </div>
+            </div>
+
+            {needsMorePhotos.length > 0 && (
+              <div className="text-sm text-slate-700">
+                <p className="font-medium text-slate-900 mb-1">Suggested shots:</p>
+                <ul className="list-disc pl-5 space-y-1">
+                  {needsMorePhotos.slice(0, 4).map((tip) => (
+                    <li key={tip}>{tip}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => router.push(`/m/capture/${jobId}`)}
+              disabled={generatingDraft}
+            >
+              Add more photos
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Detected Issues */}
       {allIssues.length > 0 ? (
         <Card>
@@ -422,10 +468,57 @@ export default function SelectIssuesPage() {
         <Card className="border-dashed border-2 border-slate-300">
           <CardContent className="p-6 text-center">
             <Search className="w-10 h-10 text-slate-400 mx-auto mb-3" />
-            <p className="text-slate-600 font-medium">No issues detected</p>
-            <p className="text-sm text-slate-500 mt-1">
-              Add a custom issue below to describe the problem
+            <p className="text-slate-800 font-medium">No obvious issues found</p>
+            <p className="text-sm text-slate-600 mt-1">
+              If this is more of a refresh, pick a common upgrade below or add your own.
             </p>
+
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="justify-start"
+                onClick={() => addSuggestedUpgrade("Change paint color (walls/ceiling/trim)")}
+                disabled={generatingDraft}
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                New paint color
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="justify-start"
+                onClick={() => addSuggestedUpgrade("Replace or refresh trim / baseboards")}
+                disabled={generatingDraft}
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                New trim
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="justify-start"
+                onClick={() => addSuggestedUpgrade("Upgrade hardware (handles, hinges, knobs)")}
+                disabled={generatingDraft}
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Hardware refresh
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="justify-start"
+                onClick={() => addSuggestedUpgrade("Replace fixtures (lighting/faucets)")}
+                disabled={generatingDraft}
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                New fixtures
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -450,7 +543,7 @@ export default function SelectIssuesPage() {
             />
             <Button
               variant="outline"
-              onClick={addCustomIssue}
+              onClick={() => addCustomIssue()}
               disabled={!customIssue.trim() || generatingDraft}
             >
               <Plus className="w-4 h-4" />
