@@ -1,4 +1,6 @@
 import { SignIn } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { isClerkConfigured } from "@/lib/authUtils";
 import { Hammer, CheckCircle2 } from "lucide-react";
@@ -10,6 +12,15 @@ export default async function SignInPage({
 }) {
   const params = await searchParams;
   const redirectUrl = params?.redirect_url || "/dashboard";
+
+  // Check if user is already signed in
+  if (isClerkConfigured()) {
+    const { userId } = await auth();
+    if (userId) {
+      redirect(redirectUrl);
+    }
+  }
+
   const selectedPlan = params?.plan;
 
   if (!isClerkConfigured()) {
