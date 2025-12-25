@@ -591,7 +591,7 @@ export default function Dashboard() {
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
           <h2 className="text-2xl font-bold mb-4 text-red-600">Authentication Error</h2>
           <p className="text-muted-foreground mb-6">
-            We couldn't verify your session. This might be due to a connection issue.
+            We couldn&apos;t verify your session. This might be due to a connection issue.
           </p>
           <Button onClick={() => window.location.reload()} variant="outline" className="mr-2">
             Retry
