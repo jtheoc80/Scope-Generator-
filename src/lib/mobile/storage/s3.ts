@@ -13,6 +13,35 @@ function requireEnv(name: string) {
   return v;
 }
 
+/**
+ * Check if S3 storage is properly configured.
+ * Returns an object with `configured` boolean and optional `missing` array of env vars.
+ */
+export function isS3Configured(): { configured: boolean; missing: string[] } {
+  const required = ["S3_BUCKET", "S3_PUBLIC_BASE_URL"];
+  const missing = required.filter((name) => !process.env[name]);
+  
+  // Also check for credentials (either AWS_* or S3_* or IAM role)
+  const hasCredentials = 
+    (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) ||
+    (process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY) ||
+    // IAM roles are available when running on AWS infrastructure
+    process.env.AWS_EXECUTION_ENV;
+  
+  if (!hasCredentials && !process.env.AWS_EXECUTION_ENV) {
+    // Only warn about credentials if not in AWS environment
+    const credMissing = !process.env.AWS_ACCESS_KEY_ID && !process.env.S3_ACCESS_KEY_ID 
+      ? ["AWS_ACCESS_KEY_ID or S3_ACCESS_KEY_ID"] 
+      : [];
+    if (!process.env.AWS_SECRET_ACCESS_KEY && !process.env.S3_SECRET_ACCESS_KEY) {
+      credMissing.push("AWS_SECRET_ACCESS_KEY or S3_SECRET_ACCESS_KEY");
+    }
+    missing.push(...credMissing);
+  }
+  
+  return { configured: missing.length === 0, missing };
+}
+
 function getAwsCredentials() {
   // Prefer standard AWS_* credentials, fallback to legacy S3_* keys.
   const accessKeyId = process.env.AWS_ACCESS_KEY_ID || process.env.S3_ACCESS_KEY_ID;

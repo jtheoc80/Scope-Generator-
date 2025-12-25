@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { requireMobileAuth } from "@/src/lib/mobile/auth";
 import { presignPhotoRequestSchema } from "@/src/lib/mobile/types";
 import { storage } from "@/lib/services/storage";
-import { presignPutObject } from "@/src/lib/mobile/storage/s3";
+import { presignPutObject, isS3Configured } from "@/src/lib/mobile/storage/s3";
 import { getRequestId, jsonError, logEvent, withRequestId } from "@/src/lib/mobile/observability";
 
 // POST /api/mobile/jobs/:jobId/photos/presign
@@ -13,6 +13,21 @@ export async function POST(
   const requestId = getRequestId(request.headers);
   const t0 = Date.now();
   try {
+    // Early check for S3 configuration
+    const s3Status = isS3Configured();
+    if (!s3Status.configured) {
+      logEvent("mobile.photos.presign.config_error", {
+        requestId,
+        missing: s3Status.missing,
+      });
+      return jsonError(
+        requestId,
+        503,
+        "FAILED_PRECONDITION",
+        `S3 storage not configured. Missing: ${s3Status.missing.join(", ")}`
+      );
+    }
+
     const authResult = await requireMobileAuth(request);
     if (!authResult.ok) return authResult.response;
 
@@ -63,6 +78,31 @@ export async function POST(
     });
   } catch (error) {
     console.error("Error presigning mobile photo upload:", error);
-    return jsonError(requestId, 500, "INTERNAL", "Failed to presign upload");
+    
+    // Provide more specific error messages
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    
+    // Check for common configuration issues
+    const s3Status = isS3Configured();
+    if (!s3Status.configured) {
+      logEvent("mobile.photos.presign.config_error", {
+        requestId,
+        missing: s3Status.missing,
+      });
+      return jsonError(
+        requestId,
+        503,
+        "FAILED_PRECONDITION",
+        `S3 storage not configured. Missing: ${s3Status.missing.join(", ")}`
+      );
+    }
+    
+    // Log the actual error for debugging
+    logEvent("mobile.photos.presign.error", {
+      requestId,
+      error: errorMessage,
+    });
+    
+    return jsonError(requestId, 500, "INTERNAL", `Failed to presign upload: ${errorMessage}`);
   }
 }

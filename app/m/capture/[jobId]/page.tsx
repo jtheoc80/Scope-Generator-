@@ -2,7 +2,6 @@
 
 import { useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -268,12 +267,12 @@ export default function CapturePhotosPage() {
           {photos.map((photo, index) => (
             <Card key={photo.id} className="overflow-hidden">
               <div className="relative aspect-square bg-slate-100">
-                <Image
+                {/* Use native img for blob URLs - more reliable on mobile browsers */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
                   src={photo.localUrl}
                   alt={`Photo ${index + 1}`}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 50vw, 200px"
+                  className="absolute inset-0 w-full h-full object-cover"
                 />
 
                 {/* Status overlay */}
