@@ -77,6 +77,8 @@ export default function CreateJob(props: { onCreated: (jobId: number) => void })
             style={styles.input}
             placeholder="Jane Doe"
             placeholderTextColor="#94a3b8"
+            textContentType="name"
+            autoComplete="name"
           />
         </View>
 
@@ -88,6 +90,8 @@ export default function CreateJob(props: { onCreated: (jobId: number) => void })
             style={styles.input}
             placeholder="123 Main St, City, State"
             placeholderTextColor="#94a3b8"
+            textContentType="fullStreetAddress"
+            autoComplete="street-address"
           />
         </View>
 

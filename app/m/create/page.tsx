@@ -143,6 +143,7 @@ export default function CreateJobPage() {
                   setCustomer(e.target.value);
                 }}
                 placeholder="Jane Doe"
+                autoComplete="name"
                 disabled={busy}
               />
             </div>
@@ -160,6 +161,7 @@ export default function CreateJobPage() {
                   setAddress(e.target.value);
                 }}
                 placeholder="123 Main St, City, State"
+                autoComplete="street-address"
                 disabled={busy}
               />
             </div>
