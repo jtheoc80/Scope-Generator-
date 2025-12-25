@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   Eye,
   HelpCircle,
+  Lightbulb,
 } from "lucide-react";
 import { 
   mobileApiFetch, 
@@ -266,7 +267,7 @@ export default function SelectIssuesPage() {
       <div className="p-4 flex flex-col items-center justify-center min-h-[300px] gap-3">
         <div className="relative">
           <Loader2 className="w-10 h-10 animate-spin text-primary" />
-          <Sparkles className="w-4 h-4 text-amber-500 absolute -top-1 -right-1 animate-pulse" />
+          <Lightbulb className="w-4 h-4 text-amber-500 absolute -top-1 -right-1 animate-pulse" />
         </div>
         <p className="text-base font-medium text-slate-800">Detecting issues...</p>
         <p className="text-sm text-slate-500">This only takes a moment</p>
@@ -427,7 +428,7 @@ export default function SelectIssuesPage() {
                         </span>
                         {isSuggested && (
                           <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 flex items-center gap-1">
-                            <Sparkles className="w-3 h-3" />
+                            <Lightbulb className="w-3 h-3" />
                             Suggested
                           </span>
                         )}
