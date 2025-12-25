@@ -35,18 +35,18 @@ export default async function SignInPage({
             To enable Clerk, set <code className="rounded bg-slate-100 px-1 py-0.5">NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY</code>{" "}
             and <code className="rounded bg-slate-100 px-1 py-0.5">CLERK_SECRET_KEY</code>.
           </p>
-          <div className="mt-6 flex gap-3">
+          <div className="mt-6 flex flex-col gap-3">
             <Link
-              href="/"
-              className="inline-flex items-center justify-center rounded-md border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50 transition-colors"
+              href="/api/login"
+              className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors w-full"
             >
-              Back home
+              Sign in with Replit
             </Link>
             <Link
-              href="/sign-up"
-              className="inline-flex flex-1 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+              href="/"
+              className="inline-flex items-center justify-center rounded-md border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50 transition-colors w-full"
             >
-              Sign up
+              Back home
             </Link>
           </div>
         </div>
