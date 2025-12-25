@@ -37,6 +37,11 @@ export function useAuth() {
   const { data: user, isLoading, refetch } = useQuery<User | null>({
     queryKey: ["/api/auth/user"],
     retry: false,
+    // Auth state can change outside React Query (e.g. completing Clerk sign-in in another route).
+    // Never treat a previous "null" response as permanently fresh.
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 
   return {
