@@ -21,6 +21,7 @@ export type DetectedIssue = {
 export type AnalyzeResponse = {
   status: "ready" | "analyzing" | "no_photos";
   detectedIssues: DetectedIssue[];
+  suggestedIssues: DetectedIssue[]; // Instant suggestions based on detected objects
   photosAnalyzed: number;
   photosTotal: number;
   suggestedProblem?: string;
@@ -28,6 +29,209 @@ export type AnalyzeResponse = {
 };
 
 const LOCK_EXPIRY_MS = 2 * 60 * 1000;
+
+// Object-to-suggestions mapping for instant results
+// When Rekognition detects these objects, we suggest common issues contractors address
+const OBJECT_SUGGESTIONS: Record<string, Array<{ label: string; category: DetectedIssue["category"] }>> = {
+  // Lighting
+  "chandelier": [
+    { label: "Replace or update light fixture", category: "upgrade" },
+    { label: "Missing or broken light shades/globes", category: "repair" },
+    { label: "Update to modern lighting", category: "upgrade" },
+  ],
+  "light fixture": [
+    { label: "Replace or update light fixture", category: "upgrade" },
+    { label: "Update to modern lighting", category: "upgrade" },
+  ],
+  "lamp": [
+    { label: "Replace or update lighting", category: "upgrade" },
+  ],
+  "ceiling light": [
+    { label: "Replace ceiling light fixture", category: "upgrade" },
+    { label: "Update to recessed lighting", category: "upgrade" },
+  ],
+  // Ceiling
+  "ceiling": [
+    { label: "Popcorn ceiling removal", category: "upgrade" },
+    { label: "Ceiling repair or repaint", category: "repair" },
+    { label: "Crown molding installation", category: "upgrade" },
+  ],
+  // Walls
+  "wall": [
+    { label: "Repaint walls", category: "upgrade" },
+    { label: "Repair drywall damage", category: "repair" },
+    { label: "Update wall texture", category: "upgrade" },
+  ],
+  "tile": [
+    { label: "Replace or update tile", category: "upgrade" },
+    { label: "Regrout tile", category: "repair" },
+    { label: "Repair cracked/damaged tile", category: "repair" },
+  ],
+  // Windows & Doors
+  "window": [
+    { label: "Replace windows", category: "upgrade" },
+    { label: "Update window trim", category: "upgrade" },
+    { label: "Repair window seals", category: "repair" },
+  ],
+  "door": [
+    { label: "Replace door", category: "upgrade" },
+    { label: "Update door hardware", category: "upgrade" },
+    { label: "Repair/adjust door", category: "repair" },
+  ],
+  // Flooring
+  "floor": [
+    { label: "Replace flooring", category: "upgrade" },
+    { label: "Refinish hardwood floors", category: "repair" },
+    { label: "Repair damaged flooring", category: "repair" },
+  ],
+  "hardwood": [
+    { label: "Refinish hardwood floors", category: "repair" },
+    { label: "Repair scratched/damaged hardwood", category: "repair" },
+  ],
+  "carpet": [
+    { label: "Replace carpet", category: "upgrade" },
+    { label: "Deep clean carpet", category: "maintenance" },
+  ],
+  // Kitchen
+  "cabinet": [
+    { label: "Repaint or refinish cabinets", category: "upgrade" },
+    { label: "Replace cabinet hardware", category: "upgrade" },
+    { label: "Replace cabinets", category: "upgrade" },
+  ],
+  "countertop": [
+    { label: "Replace countertops", category: "upgrade" },
+    { label: "Repair countertop damage", category: "repair" },
+  ],
+  "sink": [
+    { label: "Replace sink", category: "upgrade" },
+    { label: "Replace faucet", category: "upgrade" },
+    { label: "Fix sink leak", category: "repair" },
+  ],
+  "faucet": [
+    { label: "Replace faucet", category: "upgrade" },
+    { label: "Fix leaky faucet", category: "repair" },
+  ],
+  // Bathroom
+  "toilet": [
+    { label: "Replace toilet", category: "upgrade" },
+    { label: "Repair toilet", category: "repair" },
+  ],
+  "bathtub": [
+    { label: "Refinish or replace bathtub", category: "upgrade" },
+    { label: "Repair tub/shower", category: "repair" },
+  ],
+  "shower": [
+    { label: "Update shower fixtures", category: "upgrade" },
+    { label: "Repair shower leak", category: "repair" },
+    { label: "Replace showerhead", category: "upgrade" },
+  ],
+  // Exterior
+  "roof": [
+    { label: "Roof repair", category: "repair" },
+    { label: "Replace roofing", category: "upgrade" },
+    { label: "Clean gutters", category: "maintenance" },
+  ],
+  "siding": [
+    { label: "Repair siding", category: "repair" },
+    { label: "Replace siding", category: "upgrade" },
+    { label: "Power wash exterior", category: "maintenance" },
+  ],
+  "deck": [
+    { label: "Refinish deck", category: "repair" },
+    { label: "Repair deck boards", category: "repair" },
+    { label: "Replace deck", category: "upgrade" },
+  ],
+  "fence": [
+    { label: "Repair fence", category: "repair" },
+    { label: "Replace fence", category: "upgrade" },
+    { label: "Stain/paint fence", category: "maintenance" },
+  ],
+  // Trim & Molding
+  "baseboard": [
+    { label: "Replace baseboards", category: "upgrade" },
+    { label: "Repaint trim", category: "upgrade" },
+  ],
+  "molding": [
+    { label: "Replace or update molding", category: "upgrade" },
+    { label: "Add crown molding", category: "upgrade" },
+  ],
+  "trim": [
+    { label: "Replace or update trim", category: "upgrade" },
+    { label: "Repaint trim", category: "upgrade" },
+  ],
+};
+
+// Generate instant suggestions based on Rekognition labels (no AI wait required)
+function generateInstantSuggestions(
+  photos: Array<typeof mobileJobPhotos.$inferSelect>
+): DetectedIssue[] {
+  const suggestionMap = new Map<string, DetectedIssue>();
+  const seenObjects = new Set<string>();
+
+  for (const photo of photos) {
+    // Try to get Rekognition labels from findings or quickLabels
+    const findings = photo.findings as {
+      detector?: {
+        result?: {
+          labels?: Array<{ name: string; confidence: number }>;
+        };
+      };
+    } | null;
+    
+    const quickLabels = (photo as { quickLabels?: string[] }).quickLabels || [];
+    const detectorLabels = findings?.detector?.result?.labels || [];
+    
+    // Combine quick labels and detector labels
+    const allLabels = [
+      ...quickLabels.map(l => ({ name: l, confidence: 85 })),
+      ...detectorLabels,
+    ];
+
+    for (const label of allLabels) {
+      const lowerName = label.name.toLowerCase();
+      
+      // Check each object type for matching suggestions
+      for (const [objectType, suggestions] of Object.entries(OBJECT_SUGGESTIONS)) {
+        if (lowerName.includes(objectType) && !seenObjects.has(objectType)) {
+          seenObjects.add(objectType);
+          
+          // Add suggestions for this object type
+          for (const suggestion of suggestions) {
+            const key = `suggest:${suggestion.label.toLowerCase()}`;
+            if (!suggestionMap.has(key)) {
+              suggestionMap.set(key, {
+                id: key,
+                label: suggestion.label,
+                description: `Common issue for ${objectType}`,
+                confidence: 0.75,
+                category: suggestion.category,
+                photoIds: [photo.id],
+              });
+            } else {
+              suggestionMap.get(key)!.photoIds.push(photo.id);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return Array.from(suggestionMap.values()).slice(0, 8);
+}
+
+// Fast Rekognition-only analysis for instant results
+async function runQuickAnalysis(photo: typeof mobileJobPhotos.$inferSelect): Promise<string[]> {
+  try {
+    const rek = await analyzeWithRekognition({ 
+      imageUrl: photo.publicUrl,
+      maxLabels: 10,
+      minConfidence: 60,
+    });
+    return rek.labels.map(l => l.name);
+  } catch {
+    return [];
+  }
+}
 
 function backoffSeconds(attempts: number) {
   const table = [0, 1, 3, 8, 20, 45];
@@ -402,27 +606,93 @@ export async function POST(
       return jsonError(requestId, 404, "NOT_FOUND", "Job not found");
     }
 
-    // Advance analysis (best-effort). Keeps progress moving even on serverless deployments.
-    await advanceAnalysis({ jobId: id, requestId, maxToProcess: 2 });
-
-    // Get all photos for this job (post-advance)
+    // Get all photos for this job first (for instant suggestions)
     const photos = await db.select().from(mobileJobPhotos).where(eq(mobileJobPhotos.jobId, id));
 
     if (photos.length === 0) {
       return withRequestId(requestId, {
         status: "no_photos",
         detectedIssues: [],
+        suggestedIssues: [],
         photosAnalyzed: 0,
         photosTotal: 0,
       } as AnalyzeResponse);
     }
 
+    // INSTANT: Run quick Rekognition analysis in PARALLEL for photos without labels
+    // This gives us object detection in ~1-2 seconds total (not per photo)
+    const photosNeedingQuickAnalysis = photos.filter(p => {
+      const findings = p.findings as { detector?: { result?: { labels?: unknown[] } } } | null;
+      const hasLabels = findings?.detector?.result?.labels?.length;
+      return !hasLabels && p.findingsStatus !== "ready";
+    });
+
+    if (photosNeedingQuickAnalysis.length > 0) {
+      // Run Rekognition in parallel for all photos (fast ~1-2s total)
+      const quickResults = await Promise.allSettled(
+        photosNeedingQuickAnalysis.map(async (photo) => {
+          const labels = await runQuickAnalysis(photo);
+          return { photoId: photo.id, labels };
+        })
+      );
+
+      // Store quick labels for instant suggestions
+      for (const result of quickResults) {
+        if (result.status === "fulfilled" && result.value.labels.length > 0) {
+          const photo = photos.find(p => p.id === result.value.photoId);
+          if (photo) {
+            // Attach labels to photo object for suggestion generation
+            (photo as { quickLabels?: string[] }).quickLabels = result.value.labels;
+            
+            // Also store partial findings so we have them for future requests
+            const existingFindings = photo.findings as Record<string, unknown> | null;
+            await db
+              .update(mobileJobPhotos)
+              .set({
+                findings: {
+                  ...existingFindings,
+                  version: "v1",
+                  imageUrl: photo.publicUrl,
+                  kind: photo.kind,
+                  detector: {
+                    status: "ready",
+                    result: {
+                      provider: "aws",
+                      service: "rekognition",
+                      model: "DetectLabels",
+                      labels: result.value.labels.map(name => ({ name, confidence: 80 })),
+                    },
+                  },
+                  llm: existingFindings?.llm || { status: "pending" },
+                  combined: {
+                    confidence: 0.5,
+                    summaryLabels: result.value.labels.slice(0, 5),
+                    needsMorePhotos: [],
+                  },
+                },
+              })
+              .where(eq(mobileJobPhotos.id, photo.id));
+          }
+        }
+      }
+    }
+
+    // Generate INSTANT suggestions based on detected objects (no GPT wait)
+    const suggestedIssues = generateInstantSuggestions(photos);
+
+    // Start background full analysis (non-blocking)
+    // Don't await this - let it run in background
+    advanceAnalysis({ jobId: id, requestId, maxToProcess: 2 }).catch(() => {});
+
+    // Ensure the vision worker is running for continued background processing
+    ensureVisionWorker();
+
     const readyPhotos = photos.filter((p) => p.findingsStatus === "ready");
     const doneCount = photos.filter((p) => p.findingsStatus === "ready" || p.findingsStatus === "failed").length;
 
-    // Extract issues from analyzed photos (ready only)
+    // Extract issues from fully analyzed photos
     const detectedIssues = extractIssuesFromFindings(readyPhotos);
-    const suggestedProblem = generateSuggestedProblem(detectedIssues);
+    const suggestedProblem = generateSuggestedProblem([...detectedIssues, ...suggestedIssues]);
     const needsMorePhotos = extractNeedsMorePhotos(readyPhotos);
 
     const stillPending = photos.length - doneCount;
@@ -433,12 +703,14 @@ export async function POST(
       photosTotal: photos.length,
       photosAnalyzed: doneCount,
       issuesDetected: detectedIssues.length,
+      suggestedIssues: suggestedIssues.length,
       ms: Date.now() - t0,
     });
 
     return withRequestId(requestId, {
       status: stillPending > 0 ? "analyzing" : "ready",
       detectedIssues,
+      suggestedIssues,
       photosAnalyzed: doneCount,
       photosTotal: photos.length,
       suggestedProblem,
@@ -472,9 +744,6 @@ export async function GET(
       return jsonError(requestId, 404, "NOT_FOUND", "Job not found");
     }
 
-    // Advance analysis incrementally on each poll so progress doesn't stall.
-    await advanceAnalysis({ jobId: id, requestId, maxToProcess: 1 });
-
     // Get all photos for this job
     const photos = await db
       .select()
@@ -485,20 +754,29 @@ export async function GET(
       return withRequestId(requestId, {
         status: "no_photos",
         detectedIssues: [],
+        suggestedIssues: [],
         photosAnalyzed: 0,
         photosTotal: 0,
       } as AnalyzeResponse);
     }
 
+    // Advance analysis incrementally on each poll (non-blocking best-effort)
+    advanceAnalysis({ jobId: id, requestId, maxToProcess: 1 }).catch(() => {});
+
     const readyPhotos = photos.filter((p) => p.findingsStatus === "ready");
     const doneCount = photos.filter((p) => p.findingsStatus === "ready" || p.findingsStatus === "failed").length;
     const detectedIssues = extractIssuesFromFindings(readyPhotos);
-    const suggestedProblem = generateSuggestedProblem(detectedIssues);
+    
+    // Always include instant suggestions based on detected objects
+    const suggestedIssues = generateInstantSuggestions(photos);
+    
+    const suggestedProblem = generateSuggestedProblem([...detectedIssues, ...suggestedIssues]);
     const needsMorePhotos = extractNeedsMorePhotos(readyPhotos);
 
     return withRequestId(requestId, {
       status: doneCount === photos.length ? "ready" : "analyzing",
       detectedIssues,
+      suggestedIssues,
       photosAnalyzed: doneCount,
       photosTotal: photos.length,
       suggestedProblem,

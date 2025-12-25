@@ -132,6 +132,7 @@ export type DetectedIssue = {
 export type AnalyzeResponse = {
   status: "ready" | "analyzing" | "no_photos";
   detectedIssues: DetectedIssue[];
+  suggestedIssues: DetectedIssue[]; // Instant suggestions based on detected objects
   photosAnalyzed: number;
   photosTotal: number;
   suggestedProblem?: string;

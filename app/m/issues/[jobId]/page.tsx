@@ -53,6 +53,7 @@ export default function SelectIssuesPage() {
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [issues, setIssues] = useState<DetectedIssue[]>([]);
+  const [suggestedIssues, setSuggestedIssues] = useState<DetectedIssue[]>([]);
   const [selectedIssues, setSelectedIssues] = useState<Set<string>>(new Set());
   const [customIssue, setCustomIssue] = useState("");
   const [customIssues, setCustomIssues] = useState<DetectedIssue[]>([]);
@@ -74,19 +75,26 @@ export default function SelectIssuesPage() {
       );
 
       setIssues(response.detectedIssues);
+      setSuggestedIssues(response.suggestedIssues || []);
       setSuggestedProblem(response.suggestedProblem);
       setNeedsMorePhotos(response.needsMorePhotos ?? []);
       setPhotosAnalyzed(response.photosAnalyzed);
       setPhotosTotal(response.photosTotal);
 
-      // Auto-select high confidence issues (only once)
-      if (response.detectedIssues.length > 0 && !hasAutoSelected.current) {
+      // Auto-select from both detected issues AND suggested issues (only once)
+      const allAvailableIssues = [...response.detectedIssues, ...(response.suggestedIssues || [])];
+      if (allAvailableIssues.length > 0 && !hasAutoSelected.current) {
         hasAutoSelected.current = true;
         const autoSelect = new Set<string>();
+        // Auto-select high confidence detected issues
         response.detectedIssues
           .filter(i => i.confidence > 0.6)
-          .slice(0, 3)
+          .slice(0, 2)
           .forEach(i => autoSelect.add(i.id));
+        // Also auto-select first suggested issue if no detected issues
+        if (autoSelect.size === 0 && response.suggestedIssues?.length) {
+          autoSelect.add(response.suggestedIssues[0].id);
+        }
         if (autoSelect.size > 0) {
           setSelectedIssues(autoSelect);
         }
@@ -99,7 +107,7 @@ export default function SelectIssuesPage() {
     }
   }, [jobId]);
 
-  // Initial load - trigger analysis
+  // Initial load - trigger analysis and show instant results
   useEffect(() => {
     let pollTimeout: ReturnType<typeof setTimeout> | null = null;
     let isMounted = true;
@@ -108,13 +116,15 @@ export default function SelectIssuesPage() {
       setLoading(true);
       setAnalyzing(true);
       
-      // Trigger analysis
+      // Trigger analysis - this now returns instant suggestions immediately
       const status = await fetchAnalysis(true);
       
       if (!isMounted) return;
+      
+      // Stop loading immediately - we have instant suggestions to show
       setLoading(false);
       
-      // If still analyzing, poll for results
+      // If still analyzing in background, poll for enhanced results
       if (status === "analyzing") {
         const poll = async () => {
           const newStatus = await fetchAnalysis(false);
@@ -125,11 +135,12 @@ export default function SelectIssuesPage() {
             return;
           }
 
-          // Schedule next poll only after the previous request finishes
-          pollTimeout = setTimeout(poll, 2000);
+          // Poll less frequently since user already has suggestions
+          pollTimeout = setTimeout(poll, 3000);
         };
 
-        pollTimeout = setTimeout(poll, 2000);
+        // Start polling after a delay
+        pollTimeout = setTimeout(poll, 3000);
       } else {
         setAnalyzing(false);
       }
@@ -178,7 +189,15 @@ export default function SelectIssuesPage() {
 
   const addSuggestedUpgrade = (label: string) => addCustomIssue({ label, category: "upgrade" });
 
-  const allIssues = [...issues, ...customIssues];
+  // Combine all issues: detected (from full analysis) + suggested (instant) + custom
+  // Dedupe by label to avoid showing duplicates
+  const seenLabels = new Set<string>();
+  const allIssues = [...issues, ...suggestedIssues, ...customIssues].filter(issue => {
+    const key = issue.label.toLowerCase();
+    if (seenLabels.has(key)) return false;
+    seenLabels.add(key);
+    return true;
+  });
   const selectedCount = selectedIssues.size;
 
   const shouldPromptForMorePhotos =
@@ -244,62 +263,13 @@ export default function SelectIssuesPage() {
 
   if (loading) {
     return (
-      <div className="p-4 flex flex-col items-center justify-center min-h-[400px] gap-4">
-        {/* Progress indicator */}
+      <div className="p-4 flex flex-col items-center justify-center min-h-[300px] gap-3">
         <div className="relative">
-          <Loader2 className="w-12 h-12 animate-spin text-primary" />
-          <Sparkles className="w-5 h-5 text-amber-500 absolute -top-1 -right-1 animate-pulse" />
+          <Loader2 className="w-10 h-10 animate-spin text-primary" />
+          <Sparkles className="w-4 h-4 text-amber-500 absolute -top-1 -right-1 animate-pulse" />
         </div>
-        
-        <div className="text-center space-y-2">
-          <p className="text-lg font-medium text-slate-800">Analyzing Photos</p>
-          
-          {/* Progress bar */}
-          {photosTotal > 0 && (
-            <div className="w-48 mx-auto">
-              <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-primary rounded-full transition-all duration-300"
-                  style={{ width: `${Math.max(10, (photosAnalyzed / photosTotal) * 100)}%` }}
-                />
-              </div>
-              <p className="text-sm text-slate-600 mt-2">
-                {photosAnalyzed} of {photosTotal} photos processed
-              </p>
-            </div>
-          )}
-          
-          {photosTotal === 0 && (
-            <p className="text-sm text-slate-500">Starting analysis...</p>
-          )}
-        </div>
-        
-        {/* Steps indicator */}
-        <div className="mt-4 text-xs text-slate-500 space-y-1 text-center">
-          <p className="flex items-center gap-2 justify-center">
-            <CheckCircle className="w-3 h-3 text-green-500" />
-            Photos uploaded
-          </p>
-          <p className="flex items-center gap-2 justify-center">
-            <Loader2 className="w-3 h-3 animate-spin text-primary" />
-            AI detecting issues...
-          </p>
-          <p className="flex items-center gap-2 justify-center text-slate-400">
-            <span className="w-3 h-3 rounded-full border border-slate-300" />
-            Select issues
-          </p>
-        </div>
-
-        {/* Back button */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => router.back()}
-          className="mt-4 text-slate-500"
-        >
-          <ArrowLeft className="w-4 h-4 mr-1" />
-          Cancel
-        </Button>
+        <p className="text-base font-medium text-slate-800">Detecting issues...</p>
+        <p className="text-sm text-slate-500">This only takes a moment</p>
       </div>
     );
   }
@@ -397,14 +367,14 @@ export default function SelectIssuesPage() {
         </Card>
       )}
 
-      {/* Detected Issues */}
+      {/* Detected & Suggested Issues */}
       {allIssues.length > 0 ? (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center justify-between">
               <span className="flex items-center gap-2">
                 <Search className="w-4 h-4" />
-                Detected Issues
+                {issues.length > 0 ? "Detected Issues" : "Suggested Issues"}
               </span>
               <span className="text-sm font-normal text-slate-500">
                 {selectedCount} selected
@@ -412,56 +382,72 @@ export default function SelectIssuesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {allIssues.map((issue) => (
-              <button
-                key={issue.id}
-                onClick={() => toggleIssue(issue.id)}
-                disabled={generatingDraft}
-                className={`
-                  w-full p-3 rounded-lg border-2 transition-all text-left
-                  ${selectedIssues.has(issue.id)
-                    ? "border-primary bg-primary/5"
-                    : "border-slate-200 hover:border-slate-300"}
-                  ${generatingDraft ? "opacity-50" : ""}
-                `}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5">
-                    <Checkbox
-                      checked={selectedIssues.has(issue.id)}
-                      className="pointer-events-none"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      {categoryIcons[issue.category]}
-                      <span className="font-medium text-sm">{issue.label}</span>
+            {/* Show analyzing indicator if still processing */}
+            {analyzing && (
+              <div className="text-xs text-blue-600 flex items-center gap-1.5 mb-2 px-1">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Enhancing with AI analysis...
+              </div>
+            )}
+            {allIssues.map((issue) => {
+              const isSuggested = issue.id.startsWith("suggest:");
+              return (
+                <button
+                  key={issue.id}
+                  onClick={() => toggleIssue(issue.id)}
+                  disabled={generatingDraft}
+                  className={`
+                    w-full p-3 rounded-lg border-2 transition-all text-left
+                    ${selectedIssues.has(issue.id)
+                      ? "border-primary bg-primary/5"
+                      : "border-slate-200 hover:border-slate-300"}
+                    ${generatingDraft ? "opacity-50" : ""}
+                  `}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5">
+                      <Checkbox
+                        checked={selectedIssues.has(issue.id)}
+                        className="pointer-events-none"
+                      />
                     </div>
-                    {issue.description && (
-                      <p className="text-xs text-slate-500 mt-1 line-clamp-2">
-                        {issue.description}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                        {categoryLabels[issue.category]}
-                      </span>
-                      {issue.confidence >= 0.8 && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 flex items-center gap-1">
-                          <CheckCircle className="w-3 h-3" />
-                          High confidence
-                        </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        {categoryIcons[issue.category]}
+                        <span className="font-medium text-sm">{issue.label}</span>
+                      </div>
+                      {issue.description && (
+                        <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                          {issue.description}
+                        </p>
                       )}
-                      {issue.photoIds.length > 0 && (
-                        <span className="text-xs text-slate-500">
-                          {issue.photoIds.length} photo{issue.photoIds.length > 1 ? "s" : ""}
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                          {categoryLabels[issue.category]}
                         </span>
-                      )}
+                        {isSuggested && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 flex items-center gap-1">
+                            <Sparkles className="w-3 h-3" />
+                            Suggested
+                          </span>
+                        )}
+                        {!isSuggested && issue.confidence >= 0.8 && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 flex items-center gap-1">
+                            <CheckCircle className="w-3 h-3" />
+                            High confidence
+                          </span>
+                        )}
+                        {issue.photoIds.length > 0 && (
+                          <span className="text-xs text-slate-500">
+                            {issue.photoIds.length} photo{issue.photoIds.length > 1 ? "s" : ""}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </CardContent>
         </Card>
       ) : (
