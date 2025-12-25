@@ -268,6 +268,7 @@ export default function Generator() {
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [savedProposalId, setSavedProposalId] = useState<number | null>(null);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [isSavingForEmail, setIsSavingForEmail] = useState(false);
   const [photos, setPhotos] = useState<UploadedPhoto[]>([]);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -782,6 +783,142 @@ export default function Generator() {
 
   const previewData = generateProposalData();
 
+  // Handle email button click - save draft first if needed, then open email modal
+  const handleEmailClick = async () => {
+    if (!user) {
+      toast({ 
+        title: t.common.error, 
+        description: t.toast.loginRequired,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // If we already have a saved proposal ID, just open the modal
+    if (savedProposalId) {
+      setEmailModalOpen(true);
+      return;
+    }
+
+    // Otherwise, save the proposal first
+    const validServices = services.filter(s => s.tradeId && s.jobTypeId);
+    if (validServices.length === 0) {
+      toast({ 
+        title: t.common.error, 
+        description: t.generator.pleaseAddServiceFirst,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!watchedValues.clientName || !watchedValues.address) {
+      toast({ 
+        title: t.common.error, 
+        description: t.generator.pleaseFillClientInfo,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSavingForEmail(true);
+    try {
+      const firstService = validServices[0];
+      const firstServiceData = generateServiceData(firstService);
+      if (!firstServiceData) throw new Error(t.generator.invalidServiceData);
+
+      const isMultiService = validServices.length > 1;
+      
+      // Build line items for multi-service proposals
+      const lineItems = validServices.map(service => {
+        const serviceData = generateServiceData(service);
+        if (!serviceData) return null;
+        
+        const trade = availableTemplates.find(t => t.id === service.tradeId);
+        
+        return {
+          id: service.id,
+          tradeId: service.tradeId,
+          tradeName: trade?.trade || service.tradeId,
+          jobTypeId: service.jobTypeId,
+          jobTypeName: serviceData.jobTypeName,
+          jobSize: service.jobSize,
+          homeArea: service.homeArea,
+          footage: service.footage || undefined,
+          scope: enhancedScopes[service.id] || serviceData.scope,
+          options: service.options,
+          priceLow: serviceData.priceRange.low,
+          priceHigh: serviceData.priceRange.high,
+          estimatedDaysLow: serviceData.estimatedDays.low,
+          estimatedDaysHigh: serviceData.estimatedDays.high,
+          warranty: serviceData.warranty,
+          exclusions: serviceData.exclusions,
+        };
+      }).filter((item): item is NonNullable<typeof item> => item !== null);
+
+      // Calculate totals
+      const totalPriceLow = lineItems.reduce((sum, item) => sum + item.priceLow, 0);
+      const totalPriceHigh = lineItems.reduce((sum, item) => sum + item.priceHigh, 0);
+      const totalDaysLow = lineItems.reduce((sum, item) => sum + (item.estimatedDaysLow || 0), 0);
+      const totalDaysHigh = lineItems.reduce((sum, item) => sum + (item.estimatedDaysHigh || 0), 0);
+
+      // Combine all scopes for the main scope field (backwards compatibility)
+      const allScope = lineItems.flatMap(item => item.scope);
+
+      const proposalData = {
+        clientName: watchedValues.clientName,
+        address: watchedValues.address,
+        // Primary service info (backwards compatibility)
+        tradeId: firstService.tradeId,
+        jobTypeId: firstService.jobTypeId,
+        jobTypeName: isMultiService 
+          ? `Multi-Service (${lineItems.length} services)` 
+          : firstServiceData.jobTypeName,
+        jobSize: firstService.jobSize,
+        scope: allScope,
+        options: firstService.options,
+        // Pricing
+        priceLow: totalPriceLow,
+        priceHigh: totalPriceHigh,
+        // Multi-service fields
+        lineItems: isMultiService ? lineItems : undefined,
+        isMultiService,
+        estimatedDaysLow: totalDaysLow,
+        estimatedDaysHigh: totalDaysHigh,
+        // Status
+        status: "draft",
+        isUnlocked: false,
+        // Photo count
+        photoCount: photos.length,
+      };
+
+      const response = await fetch('/api/proposals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(proposalData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save proposal');
+      }
+
+      const savedProposal = await response.json();
+      setSavedProposalId(savedProposal.id);
+      
+      // Now open the email modal
+      setEmailModalOpen(true);
+    } catch (error) {
+      console.error("Error saving proposal for email:", error);
+      toast({ 
+        title: t.common.error, 
+        description: t.generator.failedToSaveDraft,
+        variant: "destructive"
+      });
+    } finally {
+      setIsSavingForEmail(false);
+    }
+  };
+
   const renderServiceCard = (service: ServiceItem, index: number) => {
     const jobType = getJobTypeForService(service);
     const trade = availableTemplates.find((t) => t.id === service.tradeId);
@@ -1241,16 +1378,21 @@ export default function Generator() {
                             {isDownloading ? t.generator.generatingPDF : t.generator.downloadPDF}
                           </Button>
                         )}
-                        {step === 2 && user && savedProposalId && (
+                        {step === 2 && user && (
                           <Button 
                             variant="default"
                             size="sm"
                             className="gap-2 bg-blue-600 hover:bg-blue-700"
-                            onClick={() => setEmailModalOpen(true)}
+                            onClick={handleEmailClick}
+                            disabled={isSavingForEmail}
                             data-testid="button-email-proposal"
                           >
-                            <Mail className="w-4 h-4" />
-                            {t.generator.emailProposal || 'Email Proposal'}
+                            {isSavingForEmail ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Mail className="w-4 h-4" />
+                            )}
+                            {isSavingForEmail ? 'Saving...' : (t.generator.emailProposal || 'Email Proposal')}
                           </Button>
                         )}
                       </div>
