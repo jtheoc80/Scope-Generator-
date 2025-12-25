@@ -17,6 +17,7 @@ const isProtectedRoute = createRouteMatcher([
 const isPublicRoute = createRouteMatcher([
   '/',
   '/app(.*)',
+  '/m(.*)',
   '/generator(.*)',
   '/calculator(.*)',
   '/market-pricing(.*)',
@@ -28,6 +29,7 @@ const isPublicRoute = createRouteMatcher([
   '/p/(.*)',
   '/invite/(.*)',
   '/api/public/(.*)',
+  '/api/mobile/(.*)',
   '/api/stripe/webhook(.*)',
   '/api/stripe/config(.*)',
   '/api/stripe/verify-session(.*)',
