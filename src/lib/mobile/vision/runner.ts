@@ -14,38 +14,34 @@ export async function runVisionForPhoto(photo: typeof mobileJobPhotos.$inferSele
   const attempts = photo.findingsAttempts ?? 1;
 
   try {
-    // Run Rekognition
-    let rek: Awaited<ReturnType<typeof analyzeWithRekognition>> | null = null;
-    let rekError: string | undefined;
-    try {
-      rek = await analyzeWithRekognition({ imageUrl: photo.publicUrl });
-    } catch (e) {
-      rekError = e instanceof Error ? e.message : String(e);
-    }
+    // Run Rekognition and GPT in parallel
+    // We pass empty rekognition labels to GPT initially to avoid waiting
+    // The findings combination logic later will still merge both results if available
 
-    const labelNames = rek?.labels?.map((l) => l.name) ?? [];
+    const rekPromise = analyzeWithRekognition({ imageUrl: photo.publicUrl })
+      .then(res => ({ result: res, error: undefined }))
+      .catch(e => ({ result: null, error: e instanceof Error ? e.message : String(e) }));
 
-    // Run GPT Vision
-    // Note: We use Rekognition labels as hints for GPT, so we run them sequentially.
-    // However, if we wanted to speed this up further, we could run them in parallel
-    // and drop the hint dependency, or optimistically start GPT.
-    // For now, we keep the hint but we will parallelize the *processing of multiple photos*
-    // at the API level.
-    let gpt: Awaited<ReturnType<typeof analyzeWithGptVision>> | null = null;
-    let gptError: string | undefined;
-    try {
-      gpt = await analyzeWithGptVision({
+    const gptPromise = analyzeWithGptVision({
         imageUrl: photo.publicUrl,
         kind: photo.kind,
-        rekognitionLabels: labelNames,
-      });
-    } catch (e) {
-      gptError = e instanceof Error ? e.message : String(e);
-    }
+        rekognitionLabels: [], // Don't wait for Rekognition hints
+      })
+      .then(res => ({ result: res, error: undefined }))
+      .catch(e => ({ result: null, error: e instanceof Error ? e.message : String(e) }));
+
+    const [rekOutcome, gptOutcome] = await Promise.all([rekPromise, gptPromise]);
+
+    const rek = rekOutcome.result;
+    const rekError = rekOutcome.error;
+    const gpt = gptOutcome.result;
+    const gptError = gptOutcome.error;
 
     if (!rek && !gpt) {
       throw new Error(`VISION_FAILED: rekognition=${rekError || "unknown"} gpt=${gptError || "unknown"}`);
     }
+
+    const labelNames = rek?.labels?.map((l) => l.name) ?? [];
 
     const findings = validateFindings({
       version: "v1",
