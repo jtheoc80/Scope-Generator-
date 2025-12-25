@@ -1,6 +1,5 @@
 'use client';
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Layout from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,7 +18,6 @@ import CancelFeedbackModal from "@/components/cancel-feedback-modal";
 
 export default function Settings() {
   const { user, isLoading: authLoading, refetch } = useAuth();
-  const _router = useRouter();
   const { toast } = useToast();
   const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);

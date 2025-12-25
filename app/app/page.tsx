@@ -449,7 +449,7 @@ export default function Generator() {
 
   const hasValidServices = services.some(s => s.tradeId && s.jobTypeId);
 
-  const onSubmit = async (_data: z.infer<typeof formSchema>) => {
+  const onSubmit = async () => {
     if (!hasValidServices) {
       toast({
         title: t.common.error,

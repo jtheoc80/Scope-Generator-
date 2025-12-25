@@ -35,7 +35,8 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const { userStripeSecretKey: _userStripeSecretKey, ...safeUser } = user;
+    const { userStripeSecretKey: _, ...safeUser } = user;
+    void _; // Explicitly unused - excluded from response for security
     return NextResponse.json(safeUser);
   } catch (error) {
     console.error('Error updating notification preferences:', error);

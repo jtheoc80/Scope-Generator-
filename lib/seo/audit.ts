@@ -4,7 +4,7 @@
  */
 
 import { seoConfig, pagesSeoConfig } from "./config";
-import { validateMetadata, shouldIndex } from "./metadata";
+import { validateMetadata } from "./metadata";
 
 export type SeverityLevel = "error" | "warning" | "info";
 
@@ -71,8 +71,7 @@ export function runSeoAudit(): AuditReport {
   for (const [pagePath, pageConfig] of Object.entries(pagesSeoConfig)) {
     const pageIssues: AuditIssue[] = [];
 
-    // Skip non-indexable pages from certain audits
-    const _isIndexable = shouldIndex(pagePath);
+    // Note: shouldIndex(pagePath) can be used to skip non-indexable pages from certain audits
 
     // Validate metadata
     const validation = validateMetadata({
