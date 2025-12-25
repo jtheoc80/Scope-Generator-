@@ -112,7 +112,7 @@ export default function CreateJob(props: { onCreated: (jobId: number) => void })
       <View style={styles.infoCard}>
         <Text style={styles.infoTitle}>📸 Next: Capture Photos</Text>
         <Text style={styles.infoText}>
-          After creating the job, you'll be able to take photos of the job site. 
+          After creating the job, you&apos;ll be able to take photos of the job site. 
           Our AI will analyze your photos and generate a detailed proposal with pricing.
         </Text>
       </View>
