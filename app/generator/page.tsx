@@ -12,7 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, ChevronRight, Wand2, Download, FileText, Sparkles, Plus, Trash2, GripVertical, Save, Camera } from "lucide-react";
+import { Loader2, ChevronRight, Wand2, Download, FileText, Sparkles, Plus, Trash2, GripVertical, Save, Camera, Mail } from "lucide-react";
+import EmailProposalModal from "@/components/email-proposal-modal";
 import ProposalPreview from "@/components/proposal-preview";
 import { CostInsights } from "@/components/cost-insights";
 import ProposalPhotoUpload, { type UploadedPhoto } from "@/components/proposal-photo-upload";
@@ -265,6 +266,8 @@ export default function Generator() {
   const [enhancedScopes, setEnhancedScopes] = useState<Record<string, string[]>>({});
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [savedProposalId, setSavedProposalId] = useState<number | null>(null);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [photos, setPhotos] = useState<UploadedPhoto[]>([]);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -758,6 +761,9 @@ export default function Generator() {
         throw new Error('Failed to save draft');
       }
 
+      const savedProposal = await response.json();
+      setSavedProposalId(savedProposal.id);
+
       toast({ 
         title: t.common.success, 
         description: t.generator.draftSaved,
@@ -1235,6 +1241,18 @@ export default function Generator() {
                             {isDownloading ? t.generator.generatingPDF : t.generator.downloadPDF}
                           </Button>
                         )}
+                        {step === 2 && user && savedProposalId && (
+                          <Button 
+                            variant="default"
+                            size="sm"
+                            className="gap-2 bg-blue-600 hover:bg-blue-700"
+                            onClick={() => setEmailModalOpen(true)}
+                            data-testid="button-email-proposal"
+                          >
+                            <Mail className="w-4 h-4" />
+                            {t.generator.emailProposal || 'Email Proposal'}
+                          </Button>
+                        )}
                       </div>
                    </div>
 
@@ -1259,6 +1277,20 @@ export default function Generator() {
         </div>
       </div>
 
+      {savedProposalId && (
+        <EmailProposalModal
+          isOpen={emailModalOpen}
+          onClose={() => setEmailModalOpen(false)}
+          proposalId={savedProposalId}
+          clientName={watchedValues.clientName || ''}
+          onSuccess={() => {
+            toast({
+              title: t.common.success,
+              description: t.generator.proposalSent || 'Proposal sent successfully!',
+            });
+          }}
+        />
+      )}
     </Layout>
   );
 }
