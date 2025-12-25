@@ -58,6 +58,7 @@ const areaMultipliers: Record<string, number> = {
   "home-office": 0.8,
   "closet": 0.4,
   "mudroom": 0.5,
+  "laundry-room": 0.7,
   "basement": 1.5,
   "attic": 1.3,
   "whole-house": 3.5,
@@ -131,6 +132,7 @@ const areaLabelKeys: Record<string, string> = {
   "home-office": "homeOffice",
   "closet": "closet",
   "mudroom": "mudroom",
+  "laundry-room": "laundryRoom",
   "basement": "basement",
   "attic": "attic",
   "whole-house": "wholeHouseInterior",
@@ -169,7 +171,7 @@ const getLocalizedLabel = (value: string, t: any): string => {
 
 const interiorRoomValues = [
   "living-room", "dining-room", "bedroom", "master-bedroom", "hallway", 
-  "home-office", "closet", "mudroom", "basement", "attic", "whole-house"
+  "home-office", "closet", "mudroom", "laundry-room", "basement", "attic", "whole-house"
 ];
 
 const bathroomAreaValues = ["bathroom", "master-bathroom", "half-bath", "guest-bathroom"];
@@ -182,6 +184,32 @@ const exteriorAreaValues = [
 ];
 
 const roofingAreaValues = ["main-roof", "garage-roof", "porch-roof", "addition-roof", "full-roof"];
+
+// Areas where plumbing work typically occurs
+const plumbingAreaValues = [
+  ...bathroomAreaValues,           // All bathroom types
+  ...kitchenAreaValues,            // All kitchen types  
+  "laundry-room",                  // Washer/dryer hookups, utility sink
+  "basement",                      // Water heater, sump pump, main lines
+  "garage",                        // Water heater, utility sink
+  "whole-house",                   // Re-piping, main line work
+];
+
+// Areas where electrical work typically occurs (broader than plumbing)
+const electricalAreaValues = [
+  ...bathroomAreaValues,
+  ...kitchenAreaValues,
+  "laundry-room",
+  "basement",
+  "garage",
+  "attic",                         // Wiring runs, HVAC connections
+  "living-room",
+  "dining-room",
+  "bedroom",
+  "master-bedroom",
+  "home-office",
+  "whole-house",
+];
 
 const getAreaOptionsForTrade = (tradeId: string, t: any): { value: string; label: string }[] => {
   const toOptions = (values: string[]) => values.map(v => ({ value: v, label: getLocalizedLabel(v, t) }));
@@ -202,11 +230,25 @@ const getAreaOptionsForTrade = (tradeId: string, t: any): { value: string; label
     case "landscape":
       return toOptions(exteriorAreaValues);
     case "plumbing":
+      // Plumbing only in areas with water fixtures: bathrooms, kitchens, laundry, basement, garage
+      return toOptions(plumbingAreaValues);
     case "electrical":
+      // Electrical can be in more areas than plumbing, but not exterior
+      return toOptions(electricalAreaValues);
+    case "hvac":
+      // HVAC typically affects whole house or specific rooms
+      return toOptions([...interiorRoomValues, "garage"]);
     case "handyman":
-      return toOptions([...bathroomAreaValues, ...kitchenAreaValues, ...interiorRoomValues.filter(r => r !== "whole-house"), "whole-house"]);
+      // Handyman can work anywhere
+      return toOptions([...interiorRoomValues, ...exteriorAreaValues]);
     case "windows-doors":
-      return toOptions([...interiorRoomValues.filter(r => !["whole-house", "closet"].includes(r)), ...exteriorAreaValues.filter(r => ["front-yard", "backyard", "patio", "garage"].includes(r))]);
+      return toOptions([...interiorRoomValues.filter(r => !["whole-house", "closet", "laundry-room"].includes(r)), ...exteriorAreaValues.filter(r => ["front-yard", "backyard", "patio", "garage"].includes(r))]);
+    case "fencing":
+      // Fencing is exterior only
+      return toOptions(exteriorAreaValues.filter(r => ["front-yard", "backyard", "side-yard"].includes(r)));
+    case "decks-patios":
+      // Decks/patios are exterior
+      return toOptions(["deck", "patio", "backyard", "front-yard"]);
     default:
       return toOptions([...interiorRoomValues, ...exteriorAreaValues]);
   }
