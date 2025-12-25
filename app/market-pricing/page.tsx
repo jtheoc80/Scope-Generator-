@@ -175,7 +175,7 @@ export default function MarketPricing() {
                   </p>
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
                     {!user ? (
-                      <a href="/api/login">
+                      <a href="/sign-in">
                         <Button className="gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700" data-testid="button-login">
                           <ArrowRight className="w-4 h-4" />
                           Sign In to Upgrade

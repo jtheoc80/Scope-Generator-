@@ -244,7 +244,7 @@ export default function Settings() {
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
           <h2 className="text-2xl font-bold mb-4">{t.settings.signInRequired}</h2>
           <p className="text-muted-foreground mb-6">{t.settings.signInDesc}</p>
-          <a href="/api/login" className="bg-primary text-white px-6 py-3 rounded-md font-semibold">
+          <a href="/sign-in" className="bg-primary text-white px-6 py-3 rounded-md font-semibold">
             {t.settings.signInWithReplit}
           </a>
         </div>
