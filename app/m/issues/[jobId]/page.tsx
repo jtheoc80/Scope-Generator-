@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,9 +61,10 @@ export default function SelectIssuesPage() {
   const [photosTotal, setPhotosTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [generatingDraft, setGeneratingDraft] = useState(false);
+  const hasAutoSelected = useRef(false);
 
   // Fetch analysis results
-  const fetchAnalysis = useCallback(async (trigger = false) => {
+  const fetchAnalysis = useCallback(async (trigger = false): Promise<string> => {
     try {
       const endpoint = `/api/mobile/jobs/${jobId}/photos/analyze`;
       const response = await mobileApiFetch<AnalyzeResponse>(
@@ -76,14 +77,17 @@ export default function SelectIssuesPage() {
       setPhotosAnalyzed(response.photosAnalyzed);
       setPhotosTotal(response.photosTotal);
 
-      // Auto-select high confidence issues
-      if (response.detectedIssues.length > 0 && selectedIssues.size === 0) {
+      // Auto-select high confidence issues (only once)
+      if (response.detectedIssues.length > 0 && !hasAutoSelected.current) {
+        hasAutoSelected.current = true;
         const autoSelect = new Set<string>();
         response.detectedIssues
           .filter(i => i.confidence > 0.6)
           .slice(0, 3)
           .forEach(i => autoSelect.add(i.id));
-        setSelectedIssues(autoSelect);
+        if (autoSelect.size > 0) {
+          setSelectedIssues(autoSelect);
+        }
       }
 
       return response.status;
@@ -91,10 +95,13 @@ export default function SelectIssuesPage() {
       setError(e instanceof Error ? e.message : "Failed to analyze photos");
       return "error";
     }
-  }, [jobId, selectedIssues.size]);
+  }, [jobId]);
 
   // Initial load - trigger analysis
   useEffect(() => {
+    let pollInterval: NodeJS.Timeout | null = null;
+    let isMounted = true;
+
     const init = async () => {
       setLoading(true);
       setAnalyzing(true);
@@ -102,29 +109,35 @@ export default function SelectIssuesPage() {
       // Trigger analysis
       const status = await fetchAnalysis(true);
       
+      if (!isMounted) return;
       setLoading(false);
       
       // If still analyzing, poll for results
       if (status === "analyzing") {
-        const pollInterval = setInterval(async () => {
+        pollInterval = setInterval(async () => {
           const newStatus = await fetchAnalysis(false);
+          if (!isMounted) return;
           if (newStatus === "ready" || newStatus === "error" || newStatus === "no_photos") {
-            clearInterval(pollInterval);
+            if (pollInterval) clearInterval(pollInterval);
             setAnalyzing(false);
           }
         }, 2000);
-
-        // Cleanup
-        return () => clearInterval(pollInterval);
       } else {
         setAnalyzing(false);
       }
     };
 
     init();
+
+    // Cleanup
+    return () => {
+      isMounted = false;
+      if (pollInterval) clearInterval(pollInterval);
+    };
   }, [fetchAnalysis]);
 
   const toggleIssue = (issueId: string) => {
+    setError(null); // Clear any previous error
     setSelectedIssues(prev => {
       const newSet = new Set(prev);
       if (newSet.has(issueId)) {
@@ -138,6 +151,8 @@ export default function SelectIssuesPage() {
 
   const addCustomIssue = () => {
     if (!customIssue.trim()) return;
+
+    setError(null); // Clear any previous error
 
     const newIssue: DetectedIssue = {
       id: `custom-${Date.now()}`,

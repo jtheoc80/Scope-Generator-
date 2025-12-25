@@ -76,7 +76,10 @@ export default function CreateJobPage() {
               <select
                 id="jobType"
                 value={jobType}
-                onChange={(e) => setJobType(e.target.value)}
+                onChange={(e) => {
+                  setError(null);
+                  setJobType(e.target.value);
+                }}
                 className="w-full h-10 rounded-md border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 disabled={busy}
               >
@@ -114,8 +117,12 @@ export default function CreateJobPage() {
                 placeholder="Template ID (optional)"
                 value={/^\d+$/.test(jobType) ? jobType : ""}
                 onChange={(e) => {
+                  setError(null);
                   if (e.target.value) {
                     setJobType(e.target.value);
+                  } else {
+                    // Reset to default dropdown selection when cleared
+                    setJobType("bathroom-remodel");
                   }
                 }}
                 type="number"
@@ -131,7 +138,10 @@ export default function CreateJobPage() {
               <Input
                 id="customer"
                 value={customer}
-                onChange={(e) => setCustomer(e.target.value)}
+                onChange={(e) => {
+                  setError(null);
+                  setCustomer(e.target.value);
+                }}
                 placeholder="Jane Doe"
                 disabled={busy}
               />
@@ -145,7 +155,10 @@ export default function CreateJobPage() {
               <Input
                 id="address"
                 value={address}
-                onChange={(e) => setAddress(e.target.value)}
+                onChange={(e) => {
+                  setError(null);
+                  setAddress(e.target.value);
+                }}
                 placeholder="123 Main St, City, State"
                 disabled={busy}
               />
