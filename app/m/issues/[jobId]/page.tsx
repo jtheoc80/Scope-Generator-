@@ -99,7 +99,7 @@ export default function SelectIssuesPage() {
 
   // Initial load - trigger analysis
   useEffect(() => {
-    let pollInterval: NodeJS.Timeout | null = null;
+    let pollTimeout: ReturnType<typeof setTimeout> | null = null;
     let isMounted = true;
 
     const init = async () => {
@@ -114,14 +114,20 @@ export default function SelectIssuesPage() {
       
       // If still analyzing, poll for results
       if (status === "analyzing") {
-        pollInterval = setInterval(async () => {
+        const poll = async () => {
           const newStatus = await fetchAnalysis(false);
           if (!isMounted) return;
+
           if (newStatus === "ready" || newStatus === "error" || newStatus === "no_photos") {
-            if (pollInterval) clearInterval(pollInterval);
             setAnalyzing(false);
+            return;
           }
-        }, 2000);
+
+          // Schedule next poll only after the previous request finishes
+          pollTimeout = setTimeout(poll, 2000);
+        };
+
+        pollTimeout = setTimeout(poll, 2000);
       } else {
         setAnalyzing(false);
       }
@@ -132,7 +138,7 @@ export default function SelectIssuesPage() {
     // Cleanup
     return () => {
       isMounted = false;
-      if (pollInterval) clearInterval(pollInterval);
+      if (pollTimeout) clearTimeout(pollTimeout);
     };
   }, [fetchAnalysis]);
 
