@@ -1,18 +1,64 @@
-import { useMemo, useState } from "react";
-import { Pressable, SafeAreaView, Text, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { Pressable, SafeAreaView, Text, View, ActivityIndicator } from "react-native";
 import CreateJob from "./src/screens/CreateJob";
 import CapturePhotos from "./src/screens/CapturePhotos";
 import DraftPreview from "./src/screens/DraftPreview";
 import Settings from "./src/screens/Settings";
+import SignIn from "./src/screens/SignIn";
+import { getStoredMobileConfig } from "./src/lib/config";
 
 type Step =
+  | { name: "signin" }
   | { name: "create" }
   | { name: "photos"; jobId: number }
   | { name: "draft"; jobId: number; draftId: number; draftPayload: unknown }
   | { name: "settings"; returnTo?: Step };
 
 export default function App() {
-  const [step, setStep] = useState<Step>({ name: "create" });
+  const [step, setStep] = useState<Step | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Check if user is signed in on app start
+  useEffect(() => {
+    (async () => {
+      try {
+        const config = await getStoredMobileConfig();
+        if (config?.userId) {
+          // User has signed in before
+          setStep({ name: "create" });
+        } else {
+          // Show sign in screen
+          setStep({ name: "signin" });
+        }
+      } catch {
+        setStep({ name: "signin" });
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  // Show loading while checking auth status
+  if (loading || !step) {
+    return (
+      <SafeAreaView style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#f8fafc" }}>
+        <ActivityIndicator size="large" color="#f97316" />
+        <Text style={{ marginTop: 16, color: "#64748b" }}>Loading...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  // Show sign in screen
+  if (step.name === "signin") {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
+        <SignIn
+          onSignedIn={() => setStep({ name: "create" })}
+          onSkip={() => setStep({ name: "create" })}
+        />
+      </SafeAreaView>
+    );
+  }
 
   const header = useMemo(() => {
     const title =
@@ -53,7 +99,10 @@ export default function App() {
     <SafeAreaView style={{ flex: 1 }}>
       {header}
       {step.name === "settings" && (
-        <Settings onDone={() => setStep(step.returnTo || { name: "create" })} />
+        <Settings 
+          onDone={() => setStep(step.returnTo || { name: "create" })} 
+          onSignOut={() => setStep({ name: "signin" })}
+        />
       )}
       {step.name === "create" && (
         <CreateJob
