@@ -1,9 +1,21 @@
+import type { Metadata } from "next";
 import { SignIn } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { isClerkConfigured } from "@/lib/authUtils";
 import { Hammer, CheckCircle2 } from "lucide-react";
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: true,
+    googleBot: {
+      index: false,
+      follow: true,
+    },
+  },
+};
 
 export default async function SignInPage({
   searchParams,

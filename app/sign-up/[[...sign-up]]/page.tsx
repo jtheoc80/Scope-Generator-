@@ -1,7 +1,19 @@
+import type { Metadata } from "next";
 import { SignUp } from "@clerk/nextjs";
 import Link from "next/link";
 import { isClerkConfigured } from "@/lib/authUtils";
 import { Hammer, CheckCircle2 } from "lucide-react";
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: true,
+    googleBot: {
+      index: false,
+      follow: true,
+    },
+  },
+};
 
 export default async function SignUpPage({
   searchParams,

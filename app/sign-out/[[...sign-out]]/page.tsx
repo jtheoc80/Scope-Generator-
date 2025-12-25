@@ -1,6 +1,18 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { isClerkConfigured } from "@/lib/authUtils";
 import SignOutClient from "./sign-out-client";
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: true,
+    googleBot: {
+      index: false,
+      follow: true,
+    },
+  },
+};
 
 export default function SignOutPage() {
   if (!isClerkConfigured()) {
