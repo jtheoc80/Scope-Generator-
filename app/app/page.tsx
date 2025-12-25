@@ -12,9 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, ChevronRight, Wand2, Download, FileText, Sparkles, Plus, Trash2, GripVertical, Lock, Save } from "lucide-react";
+import { Loader2, ChevronRight, Wand2, Download, FileText, Sparkles, Plus, Trash2, GripVertical, Save } from "lucide-react";
 import ProposalPreview from "@/components/proposal-preview";
-import PaywallModal from "@/components/paywall-modal";
 import { CostInsights } from "@/components/cost-insights";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -227,8 +226,7 @@ export default function Generator() {
   ]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [showPaywall, setShowPaywall] = useState(false);
-  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [isUnlocked] = useState(true);
   const [enhancedScopes, setEnhancedScopes] = useState<Record<string, string[]>>({});
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
@@ -1046,7 +1044,7 @@ export default function Generator() {
                             {isEnhancing ? t.generator.enhancing : t.generator.enhanceWithAI}
                           </Button>
                         )}
-                        {step === 2 && user && !isUnlocked && (
+                        {step === 2 && user && (
                           <Button 
                             variant="outline" 
                             size="sm"
@@ -1065,27 +1063,19 @@ export default function Generator() {
                         )}
                         {step === 2 && (
                           <Button 
-                            variant={isUnlocked ? "outline" : "default"}
+                            variant="outline"
                             size="sm"
-                            className={`gap-2 ${!isUnlocked ? "bg-primary hover:bg-primary/90" : ""}`}
-                            onClick={() => {
-                              if (!isUnlocked) {
-                                setShowPaywall(true);
-                              } else {
-                                handleDownload();
-                              }
-                            }}
+                            className="gap-2"
+                            onClick={handleDownload}
                             disabled={isDownloading}
                             data-testid="button-download-pdf"
                           >
                             {isDownloading ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : isUnlocked ? (
-                              <Download className="w-4 h-4" />
                             ) : (
-                              <Lock className="w-4 h-4" />
+                              <Download className="w-4 h-4" />
                             )}
-                            {isDownloading ? t.generator.generatingPDF : isUnlocked ? t.generator.downloadPDF : t.generator.downloadPreview}
+                            {isDownloading ? t.generator.generatingPDF : t.generator.downloadPDF}
                           </Button>
                         )}
                       </div>
@@ -1096,7 +1086,6 @@ export default function Generator() {
                       ref={previewRef}
                       data={previewData} 
                       blurred={!isUnlocked} 
-                      onUnlock={() => setShowPaywall(true)}
                       companyInfo={user ? {
                         companyName: user.companyName,
                         companyAddress: user.companyAddress,
@@ -1111,10 +1100,6 @@ export default function Generator() {
         </div>
       </div>
 
-      <PaywallModal 
-        isOpen={showPaywall} 
-        onClose={() => setShowPaywall(false)} 
-      />
     </Layout>
   );
 }

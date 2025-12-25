@@ -38,7 +38,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import PaywallModal from "@/components/paywall-modal";
 import EmailProposalModal from "@/components/email-proposal-modal";
 import EditPriceModal from "@/components/edit-price-modal";
 import CountersignModal from "@/components/countersign-modal";
@@ -368,7 +367,6 @@ export default function Dashboard() {
   const router = useRouter();
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showPaywall, setShowPaywall] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState<boolean>(true);
   const [emailModalData, setEmailModalData] = useState<{ id: number; clientName: string } | null>(null);
@@ -962,32 +960,8 @@ export default function Dashboard() {
             </CardContent>
           </Card>
           
-          {!user.isPro && (
-            <div className="bg-slate-900 rounded-xl p-4 md:p-8 text-white flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 shadow-lg relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-secondary opacity-10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-              
-              <div className="relative z-10 text-center md:text-left">
-                <h3 className="text-lg md:text-2xl font-heading font-bold mb-1 md:mb-2">{t.dashboard.unlockUnlimited}</h3>
-                <p className="text-slate-300 max-w-xl text-sm md:text-base">
-                  {t.dashboard.upgradeDescription}
-                </p>
-              </div>
-              <Button 
-                data-testid="button-upgrade"
-                onClick={() => setShowPaywall(true)}
-                className="bg-secondary hover:bg-secondary/90 text-slate-900 font-bold px-6 md:px-8 relative z-10 shadow-lg shadow-secondary/20 w-full md:w-auto"
-              >
-                {t.dashboard.upgradeNow}
-              </Button>
-            </div>
-          )}
         </div>
       </div>
-
-      <PaywallModal 
-        isOpen={showPaywall} 
-        onClose={() => setShowPaywall(false)} 
-      />
 
       {emailModalData && (
         <EmailProposalModal
