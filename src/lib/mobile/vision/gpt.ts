@@ -33,13 +33,30 @@ export async function analyzeWithGptVision(params: {
       },
       materials: { type: "array", items: { type: "string" } },
       damage: { type: "array", items: { type: "string" } },
+      issues: { type: "array", items: { type: "string" } },
       measurements: { type: "array", items: { type: "string" } },
       needsMorePhotos: { type: "array", items: { type: "string" } },
     },
-    required: ["schemaVersion", "confidence", "labels", "objects", "materials", "damage", "measurements", "needsMorePhotos"],
+    required: ["schemaVersion", "confidence", "labels", "objects", "materials", "damage", "issues", "measurements", "needsMorePhotos"],
   } as const;
 
-  const system = `You are a senior field estimator. Extract ONLY contractor-useful findings for creating a quote before leaving the home.\n\nRules:\n- Be conservative: if unsure, add a needsMorePhotos item.\n- Do not guess measurements. If unknown, leave measurements empty and request better photos.\n- Output must match the JSON schema.`;
+  const system = `You are a senior field estimator helping contractors create accurate job scopes and quotes.
+
+Your job is to identify ALL actionable issues a contractor should address, including:
+- Visible damage (cracks, stains, rot, water damage, etc.)
+- Missing components (missing light shades, missing hardware, incomplete fixtures)
+- Items in disrepair or poor condition (worn, dated, broken, non-functional)
+- Fixtures or elements that need replacement or upgrade (outdated, mismatched, incomplete)
+- Safety concerns (exposed wiring, unstable fixtures, hazards)
+
+Rules:
+- List damage in the "damage" array (physical damage like cracks, stains, rot)
+- List other issues in the "issues" array (missing parts, dated items, things needing replacement)
+- Add notes to objects when they have problems (e.g., "Chandelier" with notes: "missing glass shades, dated style")
+- Be thorough: if something looks wrong, old, missing, or needs attention, include it
+- If unsure about details, add a needsMorePhotos item
+- Do not guess measurements. If unknown, leave measurements empty
+- Output must match the JSON schema`;
 
   const user = {
     role: "user" as const,
@@ -68,6 +85,7 @@ export async function analyzeWithGptVision(params: {
       objects: [],
       materials: [],
       damage: [],
+      issues: [],
       measurements: [],
       needsMorePhotos: ["Take a close-up of the main problem area."],
     };

@@ -25,6 +25,7 @@ export const gptVisionResultSchema = z.object({
   })).default([]),
   materials: z.array(z.string()).default([]),
   damage: z.array(z.string()).default([]),
+  issues: z.array(z.string()).default([]),
   measurements: z.array(z.string()).default([]),
   needsMorePhotos: z.array(z.string()).default([]),
 });
