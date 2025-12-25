@@ -422,11 +422,11 @@ export default function Generator() {
 
     // Transform photos for preview
     const previewPhotos = photos.map(p => ({
-      id: parseInt(p.id.replace(/\D/g, '').slice(0, 8)) || Math.floor(Math.random() * 10000),
-      publicUrl: p.url,
+      id: p.id,
+      url: p.url,
       category: p.category,
-      caption: p.caption || null,
-      displayOrder: p.displayOrder,
+      caption: p.caption,
+      order: p.displayOrder,
     }));
 
     return {
