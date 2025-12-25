@@ -3,10 +3,11 @@ import { requireMobileAuth } from "@/src/lib/mobile/auth";
 import { storage } from "@/lib/services/storage";
 import { db } from "@/server/db";
 import { mobileJobPhotos } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { and, desc, eq, isNull, lte, or } from "drizzle-orm";
 import { getRequestId, jsonError, logEvent, withRequestId } from "@/src/lib/mobile/observability";
 import { analyzeWithRekognition } from "@/src/lib/mobile/vision/rekognition";
-import { analyzeWithGptVision } from "@/src/lib/mobile/vision/gpt";
+import { analyzeWithGptVision, validateFindings } from "@/src/lib/mobile/vision/gpt";
+import { ensureVisionWorker } from "@/src/lib/mobile/vision/worker";
 
 export type DetectedIssue = {
   id: string;
@@ -24,6 +25,134 @@ export type AnalyzeResponse = {
   photosTotal: number;
   suggestedProblem?: string;
 };
+
+const LOCK_EXPIRY_MS = 2 * 60 * 1000;
+
+function backoffSeconds(attempts: number) {
+  const table = [0, 1, 3, 8, 20, 45];
+  return table[Math.min(attempts, table.length - 1)] ?? 60;
+}
+
+async function lockNextPhoto(params: {
+  jobId: number;
+  lockedBy: string;
+  now: Date;
+  lockExpiry: Date;
+}): Promise<(typeof mobileJobPhotos.$inferSelect) | null> {
+  const candidates = await db
+    .select()
+    .from(mobileJobPhotos)
+    .where(
+      and(
+        eq(mobileJobPhotos.jobId, params.jobId),
+        or(
+          eq(mobileJobPhotos.findingsStatus, "pending"),
+          and(
+            eq(mobileJobPhotos.findingsStatus, "processing"),
+            or(isNull(mobileJobPhotos.findingsLockedAt), lte(mobileJobPhotos.findingsLockedAt, params.lockExpiry))
+          )
+        ),
+        or(isNull(mobileJobPhotos.findingsNextAttemptAt), lte(mobileJobPhotos.findingsNextAttemptAt, params.now))
+      )
+    )
+    .orderBy(desc(mobileJobPhotos.createdAt))
+    .limit(5);
+
+  for (const photo of candidates) {
+    const [locked] = await db
+      .update(mobileJobPhotos)
+      .set({
+        findingsStatus: "processing",
+        findingsLockedBy: params.lockedBy,
+        findingsLockedAt: params.now,
+        findingsAttempts: (photo.findingsAttempts ?? 0) + 1,
+      })
+      .where(
+        and(
+          eq(mobileJobPhotos.id, photo.id),
+          or(isNull(mobileJobPhotos.findingsLockedAt), lte(mobileJobPhotos.findingsLockedAt, params.lockExpiry))
+        )
+      )
+      .returning();
+
+    if (locked) return locked;
+  }
+
+  return null;
+}
+
+async function runVisionForPhoto(photo: typeof mobileJobPhotos.$inferSelect) {
+  const now = new Date();
+  const attempts = photo.findingsAttempts ?? 1;
+
+  try {
+    const rek = await analyzeWithRekognition({ imageUrl: photo.publicUrl });
+    const labelNames = rek.labels.map((l) => l.name);
+
+    const gpt = await analyzeWithGptVision({
+      imageUrl: photo.publicUrl,
+      kind: photo.kind,
+      rekognitionLabels: labelNames,
+    });
+
+    const findings = validateFindings({
+      version: "v1",
+      imageUrl: photo.publicUrl,
+      kind: photo.kind,
+      detector: { status: "ready", result: rek },
+      llm: { status: "ready", result: { ...gpt, provider: "openai" } },
+      combined: {
+        confidence: Math.max(0, Math.min(1, (gpt.confidence ?? 0.5) * 0.9 + 0.1)),
+        summaryLabels: Array.from(new Set([...(gpt.labels || []), ...labelNames.slice(0, 5)])).slice(0, 10),
+        needsMorePhotos: gpt.needsMorePhotos || [],
+      },
+    });
+
+    await db
+      .update(mobileJobPhotos)
+      .set({
+        findings,
+        findingsStatus: "ready",
+        findingsError: null,
+        analyzedAt: now,
+        findingsLockedBy: null,
+        findingsLockedAt: null,
+      })
+      .where(eq(mobileJobPhotos.id, photo.id));
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    const next = new Date(Date.now() + backoffSeconds(attempts) * 1000);
+
+    await db
+      .update(mobileJobPhotos)
+      .set({
+        findingsStatus: attempts >= 5 ? "failed" : "pending",
+        findingsError: msg,
+        findingsNextAttemptAt: attempts >= 5 ? null : next,
+        findingsLockedBy: null,
+        findingsLockedAt: null,
+      })
+      .where(eq(mobileJobPhotos.id, photo.id));
+  }
+}
+
+async function advanceAnalysis(params: { jobId: number; requestId: string; maxToProcess: number }) {
+  // Best-effort: start the in-process worker (useful on Node deployments).
+  // On serverless, this likely doesn't persist; the inline processing below still advances progress.
+  ensureVisionWorker();
+
+  const now = new Date();
+  const lockExpiry = new Date(now.getTime() - LOCK_EXPIRY_MS);
+  const lockedBy = `api-${params.requestId}-${Math.random().toString(16).slice(2)}`;
+
+  let processed = 0;
+  while (processed < params.maxToProcess) {
+    const locked = await lockNextPhoto({ jobId: params.jobId, lockedBy, now, lockExpiry });
+    if (!locked) break;
+    await runVisionForPhoto(locked);
+    processed += 1;
+  }
+}
 
 // Helper to extract issues from vision findings
 function extractIssuesFromFindings(
@@ -179,11 +308,11 @@ export async function POST(
       return jsonError(requestId, 404, "NOT_FOUND", "Job not found");
     }
 
-    // Get all photos for this job
-    const photos = await db
-      .select()
-      .from(mobileJobPhotos)
-      .where(eq(mobileJobPhotos.jobId, id));
+    // Advance analysis (best-effort). Keeps progress moving even on serverless deployments.
+    await advanceAnalysis({ jobId: id, requestId, maxToProcess: 2 });
+
+    // Get all photos for this job (post-advance)
+    const photos = await db.select().from(mobileJobPhotos).where(eq(mobileJobPhotos.jobId, id));
 
     if (photos.length === 0) {
       return withRequestId(requestId, {
@@ -194,68 +323,20 @@ export async function POST(
       } as AnalyzeResponse);
     }
 
-    // Check if any photos need analysis
-    const pendingPhotos = photos.filter(p => p.findingsStatus === "pending" || p.findingsStatus === "processing");
-    const analyzedPhotos = photos.filter(p => p.findingsStatus === "ready");
+    const readyPhotos = photos.filter((p) => p.findingsStatus === "ready");
+    const doneCount = photos.filter((p) => p.findingsStatus === "ready" || p.findingsStatus === "failed").length;
 
-    // For photos without findings, try to analyze them directly
-    for (const photo of pendingPhotos.slice(0, 3)) { // Limit to 3 for performance
-      try {
-        // Run Rekognition
-        const rek = await analyzeWithRekognition({ imageUrl: photo.publicUrl });
-        const labelNames = rek.labels.map(l => l.name);
-
-        // Run GPT Vision
-        const gpt = await analyzeWithGptVision({
-          imageUrl: photo.publicUrl,
-          kind: photo.kind,
-          rekognitionLabels: labelNames,
-        });
-
-        // Build findings object
-        const findings = {
-          version: "v1",
-          imageUrl: photo.publicUrl,
-          kind: photo.kind,
-          detector: { status: "ready", result: rek },
-          llm: { status: "ready", result: { ...gpt, provider: "openai" } },
-          combined: {
-            confidence: Math.max(0, Math.min(1, (gpt.confidence ?? 0.5) * 0.9 + 0.1)),
-            summaryLabels: Array.from(new Set([...(gpt.labels || []), ...labelNames.slice(0, 5)])).slice(0, 10),
-            needsMorePhotos: gpt.needsMorePhotos || [],
-          },
-        };
-
-        // Update photo with findings
-        await db
-          .update(mobileJobPhotos)
-          .set({
-            findings,
-            findingsStatus: "ready",
-            findingsError: null,
-            analyzedAt: new Date(),
-          })
-          .where(eq(mobileJobPhotos.id, photo.id));
-
-        // Add to analyzed list
-        analyzedPhotos.push({ ...photo, findings, findingsStatus: "ready" });
-      } catch (err) {
-        console.error(`Failed to analyze photo ${photo.id}:`, err);
-        // Continue with other photos
-      }
-    }
-
-    // Extract issues from analyzed photos
-    const detectedIssues = extractIssuesFromFindings(analyzedPhotos);
+    // Extract issues from analyzed photos (ready only)
+    const detectedIssues = extractIssuesFromFindings(readyPhotos);
     const suggestedProblem = generateSuggestedProblem(detectedIssues);
 
-    const stillPending = photos.length - analyzedPhotos.length;
+    const stillPending = photos.length - doneCount;
 
     logEvent("mobile.photos.analyze.ok", {
       requestId,
       jobId: id,
       photosTotal: photos.length,
-      photosAnalyzed: analyzedPhotos.length,
+      photosAnalyzed: doneCount,
       issuesDetected: detectedIssues.length,
       ms: Date.now() - t0,
     });
@@ -263,7 +344,7 @@ export async function POST(
     return withRequestId(requestId, {
       status: stillPending > 0 ? "analyzing" : "ready",
       detectedIssues,
-      photosAnalyzed: analyzedPhotos.length,
+      photosAnalyzed: doneCount,
       photosTotal: photos.length,
       suggestedProblem,
     } as AnalyzeResponse);
@@ -295,6 +376,9 @@ export async function GET(
       return jsonError(requestId, 404, "NOT_FOUND", "Job not found");
     }
 
+    // Advance analysis incrementally on each poll so progress doesn't stall.
+    await advanceAnalysis({ jobId: id, requestId, maxToProcess: 1 });
+
     // Get all photos for this job
     const photos = await db
       .select()
@@ -310,14 +394,15 @@ export async function GET(
       } as AnalyzeResponse);
     }
 
-    const analyzedPhotos = photos.filter(p => p.findingsStatus === "ready");
-    const detectedIssues = extractIssuesFromFindings(analyzedPhotos);
+    const readyPhotos = photos.filter((p) => p.findingsStatus === "ready");
+    const doneCount = photos.filter((p) => p.findingsStatus === "ready" || p.findingsStatus === "failed").length;
+    const detectedIssues = extractIssuesFromFindings(readyPhotos);
     const suggestedProblem = generateSuggestedProblem(detectedIssues);
 
     return withRequestId(requestId, {
-      status: analyzedPhotos.length === photos.length ? "ready" : "analyzing",
+      status: doneCount === photos.length ? "ready" : "analyzing",
       detectedIssues,
-      photosAnalyzed: analyzedPhotos.length,
+      photosAnalyzed: doneCount,
       photosTotal: photos.length,
       suggestedProblem,
     } as AnalyzeResponse);
