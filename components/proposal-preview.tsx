@@ -3,7 +3,7 @@ import { forwardRef, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
-import { Clock, Shield, AlertCircle, MapPin, Layers } from "lucide-react";
+import { Clock, Shield, AlertCircle, Layers } from "lucide-react";
 import { 
   HeroPhoto, 
   ExistingConditionsGrid, 
@@ -434,27 +434,6 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
           </div>
         )}
 
-        {/* Regional Pricing Info */}
-        {data.regionalInfo && (
-          <div className="mb-6 flex items-center gap-3 bg-purple-50 border border-purple-200 rounded-lg px-4 py-3">
-            <MapPin className="w-5 h-5 text-purple-600 shrink-0" />
-            <div>
-              <span className="font-bold text-purple-900">Regional Pricing: </span>
-              <span className="text-purple-800">
-                {data.regionalInfo.state} ({data.regionalInfo.region})
-                {data.regionalInfo.multiplier !== 1 && (
-                  <span className={cn(
-                    "ml-2 font-medium",
-                    data.regionalInfo.multiplier > 1 ? "text-orange-600" : "text-green-600"
-                  )}>
-                    {data.regionalInfo.multiplier > 1 ? "+" : ""}{Math.round((data.regionalInfo.multiplier - 1) * 100)}% adjustment
-                  </span>
-                )}
-              </span>
-            </div>
-          </div>
-        )}
-
         {/* Pricing - Only show for single service (multi-service shows in table) */}
         {!hasMultipleServices && (
           <div className="mb-8 break-inside-avoid">
@@ -469,9 +448,6 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
               </div>
               <p className="text-xs text-slate-500">
                 *Price includes all labor, materials, and taxes as specified above. Valid for 30 days.
-                {data.regionalInfo && data.regionalInfo.multiplier !== 1 && (
-                  <> Pricing adjusted for {data.regionalInfo.state} market rates.</>
-                )}
               </p>
             </div>
           </div>
