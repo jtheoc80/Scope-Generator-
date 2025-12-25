@@ -15,6 +15,24 @@ export async function POST(request: NextRequest) {
     const authResult = await requireMobileAuth(request);
     if (!authResult.ok) return authResult.response;
 
+    // Ensure user exists before proceeding (fixes foreign key issues with new users)
+    const existingUser = await storage.getUser(authResult.userId);
+    if (!existingUser) {
+      console.log(`User ${authResult.userId} not found, auto-creating...`);
+      try {
+        await storage.upsertUser({
+          id: authResult.userId,
+          email: `mobile_${authResult.userId.substring(0, 8)}@example.com`,
+          firstName: "Mobile",
+          lastName: "User",
+          isPro: true, 
+          proposalCredits: 10,
+        });
+      } catch (err) {
+        console.error("Failed to auto-create user:", err);
+      }
+    }
+
     const body = await request.json();
     const parsed = createMobileJobRequestSchema.safeParse(body);
     if (!parsed.success) {
@@ -65,6 +83,7 @@ export async function POST(request: NextRequest) {
     return withRequestId(requestId, { jobId: job.id }, 201);
   } catch (error) {
     console.error("Error creating mobile job:", error);
-    return jsonError(requestId, 500, "INTERNAL", "Failed to create job");
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return jsonError(requestId, 500, "INTERNAL", `Failed to create job: ${message}`);
   }
 }
