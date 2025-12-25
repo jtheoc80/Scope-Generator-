@@ -80,25 +80,46 @@ async function runPhoto(photo: typeof mobileJobPhotos.$inferSelect) {
   const attempts = photo.findingsAttempts ?? 1;
 
   try {
-    const rek = await analyzeWithRekognition({ imageUrl: photo.publicUrl });
-    const labelNames = rek.labels.map((l) => l.name);
+    let rek: Awaited<ReturnType<typeof analyzeWithRekognition>> | null = null;
+    let rekError: string | undefined;
+    try {
+      rek = await analyzeWithRekognition({ imageUrl: photo.publicUrl });
+    } catch (e) {
+      rekError = e instanceof Error ? e.message : String(e);
+    }
 
-    const gpt = await analyzeWithGptVision({
-      imageUrl: photo.publicUrl,
-      kind: photo.kind,
-      rekognitionLabels: labelNames,
-    });
+    const labelNames = rek?.labels?.map((l) => l.name) ?? [];
+
+    let gpt: Awaited<ReturnType<typeof analyzeWithGptVision>> | null = null;
+    let gptError: string | undefined;
+    try {
+      gpt = await analyzeWithGptVision({
+        imageUrl: photo.publicUrl,
+        kind: photo.kind,
+        rekognitionLabels: labelNames,
+      });
+    } catch (e) {
+      gptError = e instanceof Error ? e.message : String(e);
+    }
+
+    if (!rek && !gpt) {
+      throw new Error(`VISION_FAILED: rekognition=${rekError || "unknown"} gpt=${gptError || "unknown"}`);
+    }
 
     const findings = validateFindings({
       version: "v1",
       imageUrl: photo.publicUrl,
       kind: photo.kind,
-      detector: { status: "ready", result: rek },
-      llm: { status: "ready", result: { ...gpt, provider: "openai" } },
+      detector: rek
+        ? { status: "ready", result: rek }
+        : { status: "failed", error: rekError || "REKOGNITION_FAILED" },
+      llm: gpt
+        ? { status: "ready", result: { ...gpt, provider: "openai" } }
+        : { status: "failed", error: gptError || "GPT_VISION_FAILED" },
       combined: {
-        confidence: Math.max(0, Math.min(1, (gpt.confidence ?? 0.5) * 0.9 + 0.1)),
-        summaryLabels: Array.from(new Set([...(gpt.labels || []), ...labelNames.slice(0, 5)])).slice(0, 10),
-        needsMorePhotos: gpt.needsMorePhotos || [],
+        confidence: Math.max(0, Math.min(1, ((gpt?.confidence ?? 0.5) * 0.9) + 0.1)),
+        summaryLabels: Array.from(new Set([...(gpt?.labels || []), ...labelNames.slice(0, 5)])).slice(0, 10),
+        needsMorePhotos: gpt?.needsMorePhotos || [],
       },
     });
 
