@@ -134,6 +134,10 @@ export const proposals = pgTable("proposals", {
   source: varchar("source", { length: 20 }).notNull().default("desktop"), // desktop, mobile
   // Photo count for quick dashboard display
   photoCount: integer("photo_count").notNull().default(0),
+  // Email tracking for follow-up
+  lastEmailedAt: timestamp("last_emailed_at"),
+  emailCount: integer("email_count").notNull().default(0),
+  lastEmailedTo: varchar("last_emailed_to"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

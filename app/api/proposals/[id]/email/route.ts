@@ -88,10 +88,18 @@ export async function POST(
       );
     }
 
-    // Update proposal status to 'sent' if currently 'draft'
+    // Update proposal: status to 'sent' if draft, and track email send
+    const updateData: Record<string, unknown> = {
+      lastEmailedAt: new Date(),
+      lastEmailedTo: recipientEmail,
+      emailCount: (proposal.emailCount || 0) + 1,
+    };
+    
     if (proposal.status === 'draft') {
-      await storage.updateProposal(proposalId, userId, { status: 'sent' });
+      updateData.status = 'sent';
     }
+    
+    await storage.updateProposal(proposalId, userId, updateData);
 
     return NextResponse.json({ 
       success: true, 

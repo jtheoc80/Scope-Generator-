@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Download, Edit, Pen } from "lucide-react";
+import { Download, Edit, Pen, Clock } from "lucide-react";
 import Layout from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -66,6 +66,9 @@ interface Proposal {
   paidAmount?: number | null;
   viewCount?: number | null;
   lastViewedAt?: string | null;
+  lastEmailedAt?: string | null;
+  lastEmailedTo?: string | null;
+  emailCount?: number | null;
 }
 
 function StatusBadge({ status, t }: { status: string; t: TranslationKeys }) {
@@ -574,6 +577,31 @@ export default function Dashboard() {
     return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
   };
 
+  // Check if a proposal needs follow-up (sent more than 3 days ago without response)
+  const needsFollowUp = (proposal: Proposal) => {
+    if (!proposal.lastEmailedAt) return false;
+    if (proposal.status === 'won' || proposal.status === 'lost' || proposal.status === 'accepted') return false;
+    
+    const lastEmailed = new Date(proposal.lastEmailedAt);
+    const now = new Date();
+    const daysSinceEmail = Math.floor((now.getTime() - lastEmailed.getTime()) / (1000 * 60 * 60 * 24));
+    return daysSinceEmail >= 3;
+  };
+
+  const formatLastEmailed = (dateString: string | null | undefined) => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    
+    if (days === 0) return t.dashboard.emailedToday || 'Emailed today';
+    if (days === 1) return t.dashboard.emailedYesterday || 'Emailed yesterday';
+    if (days < 7) return `${t.dashboard.emailed || 'Emailed'} ${days} ${t.dashboard.daysAgo || 'days ago'}`;
+    const locale = language === 'es' ? 'es-ES' : 'en-US';
+    return `${t.dashboard.emailed || 'Emailed'} ${date.toLocaleDateString(locale, { month: 'short', day: 'numeric' })}`;
+  };
+
   if (authLoading || loading) {
     return (
       <Layout>
@@ -794,6 +822,18 @@ export default function Dashboard() {
                           </div>
                           <StatusBadge status={proposal.status} t={t} />
                         </div>
+                        {/* Follow-up indicator for mobile */}
+                        {proposal.lastEmailedAt && (
+                          <div className={`flex items-center gap-1 mt-2 text-xs ${needsFollowUp(proposal) ? 'text-amber-600 font-medium' : 'text-slate-400'}`}>
+                            <Mail className="w-3 h-3" />
+                            <span>{formatLastEmailed(proposal.lastEmailedAt)}</span>
+                            {needsFollowUp(proposal) && (
+                              <span className="ml-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-[10px] font-bold">
+                                {t.dashboard.followUp || 'Follow up'}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -807,6 +847,7 @@ export default function Dashboard() {
                           <th className="px-6 py-3 font-semibold">{t.dashboard.jobType}</th>
                           <th className="px-6 py-3 font-semibold">{t.dashboard.value}</th>
                           <th className="px-6 py-3 font-semibold">{t.dashboard.date}</th>
+                          <th className="px-6 py-3 font-semibold">{t.dashboard.lastEmailed || 'Last Emailed'}</th>
                           <th className="px-6 py-3 font-semibold">{t.dashboard.status}</th>
                           <th className="px-6 py-3 font-semibold text-right">{t.dashboard.actions}</th>
                         </tr>
@@ -830,6 +871,24 @@ export default function Dashboard() {
                               <div className="flex items-center gap-1">
                                 <Calendar className="w-3 h-3" /> {formatDate(proposal.createdAt)}
                               </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              {proposal.lastEmailedAt ? (
+                                <div className={`flex flex-col gap-1 ${needsFollowUp(proposal) ? 'text-amber-600' : 'text-slate-500'}`}>
+                                  <div className="flex items-center gap-1 text-xs">
+                                    <Mail className="w-3 h-3" />
+                                    <span>{formatLastEmailed(proposal.lastEmailedAt)}</span>
+                                  </div>
+                                  {needsFollowUp(proposal) && (
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-[10px] font-bold w-fit">
+                                      <Clock className="w-3 h-3" />
+                                      {t.dashboard.followUp || 'Follow up'}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-slate-300 text-xs">{t.dashboard.notSent || 'Not sent'}</span>
+                              )}
                             </td>
                             <td className="px-6 py-4">
                               <StatusBadge status={proposal.status} t={t} />
