@@ -13,6 +13,9 @@ export default async function SignInPage({
   const selectedPlan = params?.plan;
 
   if (!isClerkConfigured()) {
+    // Check if coming from mobile web
+    const isMobileRedirect = redirectUrl.includes("/m");
+    
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 px-6">
         <div className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
@@ -20,8 +23,24 @@ export default async function SignInPage({
           <p className="mt-2 text-sm text-slate-600">
             Sign in isn't available right now because authentication isn't configured.
           </p>
+          
+          {isMobileRedirect && (
+            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-800 font-medium">📱 Mobile Web Access</p>
+              <p className="text-sm text-green-700 mt-1">
+                You can still use the mobile web app in demo mode without signing in.
+              </p>
+              <Link
+                href="/m"
+                className="mt-3 inline-flex w-full items-center justify-center rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 transition-colors"
+              >
+                Continue to Mobile Web →
+              </Link>
+            </div>
+          )}
+          
           <p className="mt-4 text-sm text-slate-600">
-            To enable Clerk, set <code className="rounded bg-slate-100 px-1 py-0.5">NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY</code>{" "}
+            To enable Clerk authentication, set <code className="rounded bg-slate-100 px-1 py-0.5">NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY</code>{" "}
             and <code className="rounded bg-slate-100 px-1 py-0.5">CLERK_SECRET_KEY</code>.
           </p>
           <div className="mt-6 flex gap-3">
@@ -31,12 +50,14 @@ export default async function SignInPage({
             >
               Back home
             </Link>
-            <Link
-              href="/sign-up"
-              className="inline-flex flex-1 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
-            >
-              Sign up
-            </Link>
+            {!isMobileRedirect && (
+              <Link
+                href="/m"
+                className="inline-flex flex-1 items-center justify-center rounded-md bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600 transition-colors"
+              >
+                Try Mobile Web
+              </Link>
+            )}
           </div>
         </div>
       </div>

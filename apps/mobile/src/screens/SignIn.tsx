@@ -40,9 +40,12 @@ export default function SignIn({ onSignedIn, onSkip }: SignInProps) {
     setError(null);
 
     try {
+      // Determine the base URL to use
+      const finalBaseUrl = baseUrl.trim() || "http://localhost:3000";
+      
       // Save configuration
       await saveStoredMobileConfig({
-        baseUrl: baseUrl.trim() || "https://scopegen.app",
+        baseUrl: finalBaseUrl,
         apiKey: apiKey.trim() || undefined,
         userId: userId.trim(),
       });
@@ -50,18 +53,7 @@ export default function SignIn({ onSignedIn, onSkip }: SignInProps) {
       // Invalidate any cached config
       invalidateApiConfigCache();
 
-      // Test the connection by making a simple API call
-      try {
-        await apiFetch("/api/mobile/jobs", { method: "GET" });
-      } catch (apiError) {
-        // If it's a 401, the credentials might be wrong
-        const errorMessage = apiError instanceof Error ? apiError.message : "Unknown error";
-        if (errorMessage.includes("401") || errorMessage.toLowerCase().includes("unauthorized")) {
-          throw new Error("Invalid credentials. Please check your User ID and API Key.");
-        }
-        // Other errors might be ok (e.g., empty response is fine)
-      }
-
+      // Sign in successful - credentials saved
       onSignedIn();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Sign in failed. Please try again.");
@@ -191,11 +183,23 @@ export default function SignIn({ onSignedIn, onSkip }: SignInProps) {
 
         {/* Help Section */}
         <View style={styles.helpSection}>
-          <Text style={styles.helpTitle}>Need help signing in?</Text>
+          <Text style={styles.helpTitle}>🔑 How to get your credentials</Text>
           <Text style={styles.helpText}>
             1. Open ScopeGen on your computer{"\n"}
             2. Go to Settings → Mobile App{"\n"}
-            3. Copy your User ID and API Key
+            3. Copy your User ID and API Key{"\n"}
+            {"\n"}
+            Or for development/testing:{"\n"}
+            • Enter any User ID (e.g., "test-user"){"\n"}
+            • Tap "Advanced Settings" to set server URL
+          </Text>
+        </View>
+
+        {/* Quick Start for Dev */}
+        <View style={styles.devSection}>
+          <Text style={styles.devTitle}>🧪 Quick Start (Development)</Text>
+          <Text style={styles.devText}>
+            For local development, enter any User ID and set the API Base URL to your local server (e.g., http://192.168.x.x:3000)
           </Text>
         </View>
 
@@ -334,6 +338,25 @@ const styles = StyleSheet.create({
   helpText: {
     fontSize: 13,
     color: "#3b82f6",
+    lineHeight: 20,
+  },
+  devSection: {
+    backgroundColor: "#fefce8",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: "#fef08a",
+  },
+  devTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#a16207",
+    marginBottom: 8,
+  },
+  devText: {
+    fontSize: 13,
+    color: "#ca8a04",
     lineHeight: 20,
   },
   footer: {

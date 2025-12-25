@@ -1,6 +1,5 @@
 import { Metadata, Viewport } from "next";
 import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import { isClerkConfigured } from "@/lib/authUtils";
 
@@ -24,15 +23,20 @@ export default async function MobileWebLayout({
 }) {
   // Check if user is authenticated when Clerk is configured
   let userId: string | null = null;
+  let isAuthenticated = false;
   
   if (isClerkConfigured()) {
-    const authResult = await auth();
-    userId = authResult.userId;
-    
-    // Redirect to sign-in if not authenticated
-    if (!userId) {
-      redirect("/sign-in?redirect_url=/m");
+    try {
+      const authResult = await auth();
+      userId = authResult.userId;
+      isAuthenticated = !!userId;
+    } catch {
+      // Auth check failed, allow access in dev mode
+      isAuthenticated = false;
     }
+  } else {
+    // Clerk not configured - allow access (dev mode)
+    isAuthenticated = true;
   }
 
   return (
@@ -44,9 +48,22 @@ export default async function MobileWebLayout({
             ScopeGen
           </Link>
           <div className="flex items-center gap-2">
-            {userId && (
-              <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                ✓ Signed In
+            {isClerkConfigured() ? (
+              isAuthenticated ? (
+                <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                  ✓ Signed In
+                </span>
+              ) : (
+                <Link 
+                  href="/sign-in?redirect_url=/m"
+                  className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-full hover:bg-orange-100"
+                >
+                  Sign In
+                </Link>
+              )
+            ) : (
+              <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
+                Dev Mode
               </span>
             )}
             <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
