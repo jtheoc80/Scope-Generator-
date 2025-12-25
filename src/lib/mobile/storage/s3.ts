@@ -57,8 +57,24 @@ export type PresignPutResult = {
   publicUrl: string;
 };
 
+/**
+ * Extracts the AWS region code from a string that may contain the full display name.
+ * e.g., "US East (Ohio) us-east-2" -> "us-east-2"
+ *       "us-east-2" -> "us-east-2"
+ */
+function normalizeAwsRegion(regionInput: string): string {
+  // AWS region codes follow the pattern: xx-xxxx-N (e.g., us-east-2, eu-west-1, ap-southeast-1)
+  const regionCodeMatch = regionInput.match(/[a-z]{2}-[a-z]+-\d/);
+  if (regionCodeMatch) {
+    return regionCodeMatch[0];
+  }
+  // Return as-is if no pattern found (will let AWS SDK handle validation)
+  return regionInput;
+}
+
 export function createS3Client() {
-  const region = process.env.AWS_REGION || process.env.S3_REGION || "us-east-1";
+  const rawRegion = process.env.AWS_REGION || process.env.S3_REGION || "us-east-1";
+  const region = normalizeAwsRegion(rawRegion);
 
   return new S3Client({
     region,
