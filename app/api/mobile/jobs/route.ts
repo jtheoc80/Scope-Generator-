@@ -6,6 +6,7 @@ import { db } from "@/server/db";
 import { proposalTemplates } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { getRequestId, jsonError, logEvent, withRequestId } from "@/src/lib/mobile/observability";
+import { ensureActiveTemplates, getDefaultTemplateForJobType } from "@/lib/services/template-seeder";
 
 // POST /api/mobile/jobs
 export async function POST(request: NextRequest) {
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
 
     // Resolve jobType into an actual template so the client only needs one identifier.
     const jobType = parsed.data.jobType;
-    const [template] =
+    let [template] =
       typeof jobType === "number"
         ? await db
             .select()
@@ -58,6 +59,28 @@ export async function POST(request: NextRequest) {
             .from(proposalTemplates)
             .where(and(eq(proposalTemplates.jobTypeId, jobType), eq(proposalTemplates.isActive, true)))
             .limit(1);
+
+    // If template not found and jobType is a string, try to auto-seed templates
+    if (!template && typeof jobType === "string") {
+      console.log(`[mobile.jobs] Template not found for jobType: ${jobType}, attempting to seed...`);
+      await ensureActiveTemplates();
+      
+      // Try again after seeding
+      [template] = await db
+        .select()
+        .from(proposalTemplates)
+        .where(and(eq(proposalTemplates.jobTypeId, jobType), eq(proposalTemplates.isActive, true)))
+        .limit(1);
+      
+      // If still not found, use fallback default template data
+      if (!template) {
+        const defaultTemplate = getDefaultTemplateForJobType(jobType);
+        if (defaultTemplate) {
+          console.log(`[mobile.jobs] Using fallback template data for: ${jobType}`);
+          template = defaultTemplate as typeof template;
+        }
+      }
+    }
 
     if (!template) {
       return jsonError(requestId, 400, "INVALID_INPUT", "Unknown or inactive jobType");
