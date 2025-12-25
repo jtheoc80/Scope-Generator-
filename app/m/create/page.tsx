@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, User, MapPin, Briefcase, Loader2 } from "lucide-react";
+import { ArrowLeft, User, MapPin, Briefcase, Loader2, LocateFixed } from "lucide-react";
 import { mobileApiFetch, newIdempotencyKey, MobileJob } from "../lib/api";
+import { useLocationToAddress } from "@/hooks/useLocationToAddress";
 
 export default function CreateJobPage() {
   const router = useRouter();
@@ -16,6 +17,42 @@ export default function CreateJobPage() {
   const [address, setAddress] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const geoOptions = useMemo(
+    () => ({ enableHighAccuracy: true, timeout: 10_000, maximumAge: 0, autoGeocode: true }),
+    []
+  );
+  const {
+    getLocationAndAddress,
+    isLoading: isGettingLocationAddress,
+    error: locationError,
+    isSupported: isLocationSupported,
+  } = useLocationToAddress(geoOptions);
+
+  const hasAutoAttemptedAddress = useRef(false);
+  const hasUserEditedAddress = useRef(false);
+
+  const applyDetectedAddress = (formattedAddress: string) => {
+    if (hasUserEditedAddress.current) return;
+    setAddress(formattedAddress);
+  };
+
+  const fetchLocationAddress = async () => {
+    setError(null);
+    const result = await getLocationAndAddress();
+    if (result?.formattedAddress) applyDetectedAddress(result.formattedAddress);
+  };
+
+  // Auto-attempt once (non-blocking) when the user hasn't typed anything yet.
+  useEffect(() => {
+    if (hasAutoAttemptedAddress.current) return;
+    if (!isLocationSupported) return;
+    if (address.trim()) return;
+
+    hasAutoAttemptedAddress.current = true;
+    void fetchLocationAddress();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLocationSupported]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,20 +185,50 @@ export default function CreateJobPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="address" className="flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
-                Job Address
-              </Label>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="address" className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4" />
+                  Job Address
+                </Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={fetchLocationAddress}
+                  disabled={busy || isGettingLocationAddress || !isLocationSupported}
+                >
+                  {isGettingLocationAddress ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <LocateFixed className="w-4 h-4" />
+                  )}
+                  Use my location
+                </Button>
+              </div>
               <Input
                 id="address"
                 value={address}
                 onChange={(e) => {
                   setError(null);
+                  hasUserEditedAddress.current = true;
                   setAddress(e.target.value);
                 }}
                 placeholder="123 Main St, City, State"
                 disabled={busy}
               />
+              {!isLocationSupported && (
+                <p className="text-xs text-slate-500">
+                  Location services aren’t available on this device/browser.
+                </p>
+              )}
+              {locationError && (
+                <p className="text-xs text-red-600">
+                  {locationError.type === "geolocation"
+                    ? "Couldn’t access location. You can type the address manually."
+                    : "Couldn’t look up an address from your location. You can type it manually."}
+                </p>
+              )}
             </div>
 
             <Button type="submit" className="w-full h-12 text-base" disabled={busy}>
