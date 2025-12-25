@@ -53,7 +53,7 @@ export default function PreviewPage() {
       try {
         const decoded = JSON.parse(decodeURIComponent(payloadParam));
         setPayload(decoded);
-      } catch (e) {
+      } catch {
         setError("Failed to load draft data");
       }
     }

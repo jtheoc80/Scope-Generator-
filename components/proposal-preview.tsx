@@ -77,7 +77,8 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
     })();
 
     const hasMultipleServices = data.lineItems && data.lineItems.length > 1;
-    const lineItems = data.lineItems || [];
+    // Memoize lineItems to prevent useMemo dependency issues
+    const lineItems = useMemo(() => data.lineItems || [], [data.lineItems]);
 
     // Organize photos for display
     const organizedPhotos = useMemo(() => {

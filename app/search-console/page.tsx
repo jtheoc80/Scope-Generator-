@@ -50,7 +50,7 @@ interface Sitemap {
 
 export default function SearchConsolePage() {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const _queryClient = useQueryClient();
   const [selectedSite, setSelectedSite] = useState<string>("");
   const [inspectUrl, setInspectUrl] = useState("");
   const [newSitemapUrl, setNewSitemapUrl] = useState("");
@@ -76,7 +76,7 @@ export default function SearchConsolePage() {
     retry: false,
   });
 
-  const { data: sites, isLoading: sitesLoading } = useQuery<Site[]>({
+  const { data: sites } = useQuery<Site[]>({
     queryKey: ["/api/search-console/sites"],
     queryFn: async () => {
       const res = await fetch("/api/search-console/sites");
@@ -240,7 +240,7 @@ export default function SearchConsolePage() {
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-heading font-bold text-primary mb-2">Search Console</h1>
-          <p className="text-muted-foreground">Monitor your site's search performance and indexing status.</p>
+          <p className="text-muted-foreground">Monitor your site&apos;s search performance and indexing status.</p>
         </div>
 
         {testLoading ? (
@@ -455,7 +455,7 @@ export default function SearchConsolePage() {
                     <CardHeader className="flex flex-row items-center justify-between">
                       <div>
                         <CardTitle>Submitted Sitemaps</CardTitle>
-                        <CardDescription>Your site's sitemaps and their status</CardDescription>
+                        <CardDescription>Your site&apos;s sitemaps and their status</CardDescription>
                       </div>
                       <Button 
                         variant="outline" 

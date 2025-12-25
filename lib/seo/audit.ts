@@ -72,7 +72,7 @@ export function runSeoAudit(): AuditReport {
     const pageIssues: AuditIssue[] = [];
 
     // Skip non-indexable pages from certain audits
-    const isIndexable = shouldIndex(pagePath);
+    const _isIndexable = shouldIndex(pagePath);
 
     // Validate metadata
     const validation = validateMetadata({

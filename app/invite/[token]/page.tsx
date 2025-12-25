@@ -39,6 +39,7 @@ export default function Invite() {
     if (token) {
       fetchInviteInfo();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const fetchInviteInfo = async () => {
@@ -53,7 +54,7 @@ export default function Invite() {
         const errorData = await res.json();
         setError(errorData.message || "Invalid or expired invite link");
       }
-    } catch (err) {
+    } catch {
       setError("Failed to load invite information");
     } finally {
       setLoading(false);
@@ -94,7 +95,7 @@ export default function Invite() {
           variant: "destructive",
         });
       }
-    } catch (err) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to accept invite. Please try again.",
@@ -149,9 +150,9 @@ export default function Invite() {
               <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
                 <CheckCircle2 className="w-8 h-8 text-green-500" />
               </div>
-              <CardTitle className="text-xl">You're In!</CardTitle>
+              <CardTitle className="text-xl">You&apos;re In!</CardTitle>
               <CardDescription className="text-base mt-2">
-                You've successfully joined {inviteInfo?.companyName}. Redirecting you to the team page...
+                You&apos;ve successfully joined {inviteInfo?.companyName}. Redirecting you to the team page...
               </CardDescription>
             </CardHeader>
           </Card>
@@ -170,7 +171,7 @@ export default function Invite() {
             </div>
             <CardTitle className="text-xl">Team Invitation</CardTitle>
             <CardDescription className="text-base mt-2">
-              You've been invited to join <strong>{inviteInfo?.companyName}</strong> as a{" "}
+              You&apos;ve been invited to join <strong>{inviteInfo?.companyName}</strong> as a{" "}
               <span className="capitalize">{inviteInfo?.role}</span>.
             </CardDescription>
           </CardHeader>

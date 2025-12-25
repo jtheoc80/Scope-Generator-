@@ -92,6 +92,7 @@ export default function CameraUpload() {
       {/* 2. Image Preview */}
       {preview && (
         <div className="relative">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={preview}
             alt="Site Preview"

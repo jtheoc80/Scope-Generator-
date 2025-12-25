@@ -25,7 +25,7 @@ export default function TermsOfService() {
             <section className="mb-8">
               <h2 className="text-2xl font-heading font-bold text-slate-900 mb-4">1. Acceptance of Terms</h2>
               <p className="text-slate-700 mb-4">
-                By accessing or using ScopeGen, a service operated by Lead Ledger LLC ("the Service"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, you may not use the Service.
+                By accessing or using ScopeGen, a service operated by Lead Ledger LLC (&quot;the Service&quot;), you agree to be bound by these Terms of Service (&quot;Terms&quot;). If you do not agree to these Terms, you may not use the Service.
               </p>
               <p className="text-slate-700">
                 We reserve the right to modify these Terms at any time. Continued use of the Service after changes constitutes acceptance of the modified Terms.
@@ -113,7 +113,7 @@ export default function TermsOfService() {
             <section className="mb-8">
               <h2 className="text-2xl font-heading font-bold text-slate-900 mb-4">7. Disclaimer of Warranties</h2>
               <p className="text-slate-700 mb-4">
-                THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+                THE SERVICE IS PROVIDED &quot;AS IS&quot; AND &quot;AS AVAILABLE&quot; WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
               </p>
               <p className="text-slate-700">
                 We do not warrant that the Service will be uninterrupted, error-free, or secure. We are not responsible for the accuracy of proposals you create using the Service.

@@ -532,7 +532,7 @@ function learnPhotoPattern(profile: UserProfile, action: ActionEvent): void {
  * Learn workflow patterns
  */
 function learnWorkflowPattern(profile: UserProfile, action: ActionEvent): void {
-  const { jobTypeId, zipcode, photoCount, scopeCount } = action.data as {
+  const { jobTypeId: _jobTypeId, zipcode: _zipcode, photoCount: _photoCount, scopeCount: _scopeCount } = action.data as {
     jobTypeId?: string;
     zipcode?: string;
     photoCount?: number;

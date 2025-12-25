@@ -19,7 +19,7 @@ import CancelFeedbackModal from "@/components/cancel-feedback-modal";
 
 export default function Settings() {
   const { user, isLoading: authLoading, refetch } = useAuth();
-  const router = useRouter();
+  const _router = useRouter();
   const { toast } = useToast();
   const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -286,6 +286,7 @@ export default function Settings() {
                 <div className="flex items-start gap-4">
                   {companyLogo ? (
                     <div className="relative">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={companyLogo}
                         alt="Company logo"
@@ -618,7 +619,7 @@ export default function Settings() {
                         if (data.url) {
                           window.location.href = data.url;
                         }
-                      } catch (error) {
+                      } catch {
                         toast({
                           title: t.common.error,
                           description: t.settings.couldNotOpenBilling,

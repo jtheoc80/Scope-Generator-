@@ -124,6 +124,7 @@ export default function CapturePhotosPage() {
     for (const { photo, file } of filesToUpload) {
       uploadPhoto(photo, file);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId]);
 
   const removePhoto = (id: string) => {

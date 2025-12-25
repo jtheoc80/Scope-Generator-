@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { currentScope, tradeId, jobTypeId, zipcode } = body;
+    const { currentScope, tradeId, jobTypeId } = body;
 
     if (!tradeId || !jobTypeId) {
       return NextResponse.json(

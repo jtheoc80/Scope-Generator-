@@ -107,6 +107,7 @@ export function SmartPricingSuggestion({
 
     fetchSuggestion();
     setApplied(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [basePriceLow, basePriceHigh, jobSize, learningContext.tradeId, learningContext.jobTypeId, learningContext.zipcode]);
 
   // Check if current price matches suggestion

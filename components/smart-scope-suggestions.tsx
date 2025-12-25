@@ -12,7 +12,6 @@ import {
   ChevronDown,
   ChevronUp,
   TrendingUp,
-  MapPin,
 } from 'lucide-react';
 
 interface ScopeSuggestion {
@@ -85,6 +84,7 @@ export function SmartScopeSuggestions({
     };
 
     fetchSuggestions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentScope.length, learningContext.tradeId, learningContext.jobTypeId, learningContext.zipcode]);
 
   const handleAddItem = (item: string) => {

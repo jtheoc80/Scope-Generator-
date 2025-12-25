@@ -53,7 +53,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const { userStripeSecretKey: _, ...safeUser } = user;
+    const { userStripeSecretKey: _stripeKey, ...safeUser } = user;
     const hasStripeKey = !!user.userStripeSecretKey;
     
     return NextResponse.json({ ...safeUser, hasStripeKey });

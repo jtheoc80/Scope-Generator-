@@ -91,7 +91,7 @@ export default function PricingInsights() {
     enabled: !!user,
   });
 
-  const { data: benchmarks, isLoading: benchmarksLoading } = useQuery<Benchmarks>({
+  const { isLoading: benchmarksLoading } = useQuery<Benchmarks>({
     queryKey: ["/api/analytics/benchmarks"],
     queryFn: async () => {
       const res = await fetch("/api/analytics/benchmarks");

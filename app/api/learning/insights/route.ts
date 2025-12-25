@@ -7,7 +7,7 @@ import {
   pricingPatterns,
   geographicPatterns,
 } from '@shared/schema';
-import { eq, and, count, gte, sql } from 'drizzle-orm';
+import { eq, and, count, gte } from 'drizzle-orm';
 
 /**
  * POST /api/learning/insights
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { tradeId, jobTypeId, zipcode, city } = body;
+    const { zipcode, city } = body;
 
     // Get user's total actions (data points)
     const [actionCount] = await db

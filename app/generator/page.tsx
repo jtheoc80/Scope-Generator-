@@ -4,7 +4,7 @@ import Layout from "@/components/layout";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { templates, JobType, JobOption, Template, getLocalizedJobType, getLocalizedJobTypes } from "@/lib/proposal-data";
+import { templates, JobType, getLocalizedJobType, getLocalizedJobTypes } from "@/lib/proposal-data";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -491,7 +491,7 @@ export default function Generator() {
 
   const hasValidServices = services.some(s => s.tradeId && s.jobTypeId);
 
-  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+  const onSubmit = async (_data: z.infer<typeof formSchema>) => {
     if (!hasValidServices) {
       toast({
         title: t.common.error,

@@ -18,7 +18,7 @@ export default async function SignUpPage({
         <div className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
           <h1 className="text-xl font-semibold text-slate-900">Create account</h1>
           <p className="mt-2 text-sm text-slate-600">
-            Sign up isn't available right now because authentication isn't configured.
+            Sign up isn&apos;t available right now because authentication isn&apos;t configured.
           </p>
           <p className="mt-4 text-sm text-slate-600">
             To enable Clerk, set <code className="rounded bg-slate-100 px-1 py-0.5">NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY</code>{" "}
