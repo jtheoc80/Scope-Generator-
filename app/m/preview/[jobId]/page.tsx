@@ -307,16 +307,33 @@ export default function PreviewPage() {
         </Card>
       )}
 
-      {/* Raw JSON fallback for debugging */}
-      {!payload.scopeItems && !payload.summary && (
+      {/* Pricing Details - shown when no scope items or summary available */}
+      {!payload.scopeItems && !payload.summary && payload.packages && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Draft Data</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              Pricing Summary
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <pre className="text-xs bg-slate-50 p-3 rounded-lg overflow-auto max-h-64">
-              {JSON.stringify(payload, null, 2)}
-            </pre>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-slate-600">
+              Your proposal includes three pricing options. Select your preferred package above to submit.
+            </p>
+            <div className="bg-slate-50 rounded-lg p-3 space-y-2">
+              {(["GOOD", "BETTER", "BEST"] as PackageKey[]).map((pkg) => {
+                const price = payload.packages?.[pkg]?.total;
+                return price !== undefined ? (
+                  <div key={pkg} className="flex justify-between items-center text-sm">
+                    <span className="text-slate-600 flex items-center gap-1">
+                      {pkg === "BETTER" && <Star className="w-3 h-3 text-amber-500" />}
+                      {pkg}
+                    </span>
+                    <span className="font-medium text-slate-900">{formatCurrency(price)}</span>
+                  </div>
+                ) : null;
+              })}
+            </div>
           </CardContent>
         </Card>
       )}
