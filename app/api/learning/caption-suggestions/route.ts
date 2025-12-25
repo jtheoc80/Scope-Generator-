@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { category, tradeId, jobTypeId } = body;
+    const { category, jobTypeId } = body;
 
     if (!category) {
       return NextResponse.json(
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       .map(c => c.caption as string);
 
     // Get template suggestions based on category
-    const templates = getCaptionTemplates(category as ProposalPhotoCategory, jobTypeId, tradeId);
+    const templates = getCaptionTemplates(category as ProposalPhotoCategory, jobTypeId);
 
     // Combine user captions with templates, removing duplicates
     const allSuggestions = [
@@ -76,8 +76,7 @@ export async function POST(request: NextRequest) {
 
 function getCaptionTemplates(
   category: ProposalPhotoCategory,
-  jobTypeId?: string,
-  _tradeId?: string
+  jobTypeId?: string
 ): string[] {
   // Base templates by category
   const baseTemplates: Record<ProposalPhotoCategory, string[]> = {

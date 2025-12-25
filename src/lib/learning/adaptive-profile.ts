@@ -531,14 +531,9 @@ function learnPhotoPattern(profile: UserProfile, action: ActionEvent): void {
 /**
  * Learn workflow patterns
  */
-function learnWorkflowPattern(profile: UserProfile, action: ActionEvent): void {
-  const { jobTypeId: _jobTypeId, zipcode: _zipcode, photoCount: _photoCount, scopeCount: _scopeCount } = action.data as {
-    jobTypeId?: string;
-    zipcode?: string;
-    photoCount?: number;
-    scopeCount?: number;
-  };
-  
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function learnWorkflowPattern(profile: UserProfile, _action: ActionEvent): void {
+  // Note: This function processes ALL historical workflow patterns, not just the current action
   const prefs = profile.preferences.workflow;
   const history = getActionHistory(profile.userId)
     .filter(a => a.type === 'proposal_create');

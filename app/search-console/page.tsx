@@ -1,6 +1,6 @@
 'use client';
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import Layout from "@/components/layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,7 +50,6 @@ interface Sitemap {
 
 export default function SearchConsolePage() {
   const { toast } = useToast();
-  const _queryClient = useQueryClient();
   const [selectedSite, setSelectedSite] = useState<string>("");
   const [inspectUrl, setInspectUrl] = useState("");
   const [newSitemapUrl, setNewSitemapUrl] = useState("");

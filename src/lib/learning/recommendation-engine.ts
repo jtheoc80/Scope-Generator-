@@ -131,7 +131,7 @@ export async function getSmartCaptionSuggestions(
   const userCaptions = await learningService.getCommonCaptions(context, category);
 
   // Category-specific templates
-  const templates = getCaptionTemplates(category, context.jobTypeId);
+  const templates = getCaptionTemplates(category);
 
   return {
     suggestions: userCaptions,
@@ -140,8 +140,7 @@ export async function getSmartCaptionSuggestions(
 }
 
 function getCaptionTemplates(
-  category: ProposalPhotoCategory, 
-  _jobTypeId?: string
+  category: ProposalPhotoCategory
 ): string[] {
   const templates: Record<ProposalPhotoCategory, string[]> = {
     hero: [
@@ -248,8 +247,7 @@ function getCaptionTemplates(
  */
 export async function getSmartScopeSuggestions(
   context: LearningContext,
-  currentScope: string[],
-  _templateScope: string[]
+  currentScope: string[]
 ): Promise<SmartScopeSuggestions> {
   const { additions, removals } = await learningService.getScopeSuggestions(context, currentScope);
 
@@ -419,7 +417,7 @@ export async function getProposalRecommendations(
     pricingRecommendation,
   ] = await Promise.all([
     getSmartPhotoSuggestions(context, currentData.photoCount),
-    getSmartScopeSuggestions(context, currentData.scope, currentData.templateScope),
+    getSmartScopeSuggestions(context, currentData.scope),
     getSmartPricingRecommendation(
       context, 
       currentData.basePriceLow, 
