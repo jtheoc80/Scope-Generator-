@@ -27,7 +27,8 @@ import {
   Columns,
   Eye,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  Camera
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -662,6 +663,16 @@ export default function Dashboard() {
                   <LayoutDashboard className="w-4 h-4" />
                   {t.dashboard.manageTemplates}
                 </Button>
+                <Link 
+                  href="/m/create" 
+                  className="inline-flex items-center justify-center h-9 md:h-10 px-3 md:px-4 py-2 rounded-md border border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100 font-medium text-xs md:text-sm transition-colors gap-2" 
+                  data-testid="button-photo-capture"
+                  title="Take photos to generate a proposal"
+                >
+                  <Camera className="w-4 h-4" />
+                  <span className="hidden sm:inline">📷 Photo Capture</span>
+                  <span className="sm:hidden">📷</span>
+                </Link>
                 <Link href="/app" className="inline-flex items-center justify-center h-9 md:h-10 px-3 md:px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 font-medium text-xs md:text-sm transition-colors gap-2" data-testid="button-new-proposal">
                   <Plus className="w-4 h-4" />
                   <span className="hidden sm:inline">{t.dashboard.newProposal}</span>
@@ -742,10 +753,24 @@ export default function Dashboard() {
                   <FileText className="w-10 h-10 md:w-12 md:h-12 mx-auto text-slate-300 mb-3 md:mb-4" />
                   <h3 className="font-bold text-slate-700 mb-2 text-sm md:text-base">{t.dashboard.noProposals}</h3>
                   <p className="text-slate-500 text-xs md:text-sm mb-4">{t.dashboard.noProposalsDesc}</p>
-                  <Link href="/app" className="inline-flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-md font-medium text-sm">
-                    <Plus className="w-4 h-4" />
-                    {t.dashboard.createProposal}
-                  </Link>
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                    <Link 
+                      href="/m/create" 
+                      className="inline-flex items-center gap-2 bg-orange-500 text-white px-4 py-2 rounded-md font-medium text-sm hover:bg-orange-600 transition-colors"
+                      data-testid="button-photo-capture-empty"
+                    >
+                      <Camera className="w-4 h-4" />
+                      📷 Photo Capture
+                    </Link>
+                    <span className="text-slate-400 text-xs">or</span>
+                    <Link href="/app" className="inline-flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-md font-medium text-sm">
+                      <Plus className="w-4 h-4" />
+                      {t.dashboard.createProposal}
+                    </Link>
+                  </div>
+                  <p className="text-slate-400 text-xs mt-4">
+                    📸 Use Photo Capture to snap job site photos and generate proposals instantly
+                  </p>
                 </div>
               ) : isViewSwitching ? (
                 <div className="flex items-center justify-center py-12">

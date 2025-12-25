@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Hammer, Menu, X } from "lucide-react";
+import { Hammer, Menu, X, Camera } from "lucide-react";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useQuery } from "@tanstack/react-query";
@@ -86,6 +86,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 {t.nav.signIn}
               </Link>
             )}
+            {user && (
+              <Link 
+                href="/m/create" 
+                className="flex items-center gap-1.5 text-sm font-medium text-orange-600 hover:text-orange-700 transition-colors"
+                title="Take photos to generate proposals"
+                data-testid="nav-photo-capture"
+              >
+                <Camera className="w-4 h-4" />
+                <span>📷</span>
+              </Link>
+            )}
             {location === "/" && (
               <Link href="/app" className="bg-orange-500 text-white px-4 py-2 rounded-md text-sm font-semibold hover:bg-orange-600 transition-colors">
                 {t.hero.cta}
@@ -108,6 +119,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         {mobileMenuOpen && (
           <nav className="md:hidden border-t border-border bg-white animate-in slide-in-from-top-2 duration-200">
             <div className="container mx-auto px-4 py-4 flex flex-col gap-4">
+              {/* Photo Capture - Featured prominently */}
+              <Link 
+                href="/m/create" 
+                className="flex items-center gap-3 text-base font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-3 py-3 hover:bg-orange-100 transition-colors"
+                onClick={() => setMobileMenuOpen(false)}
+                data-testid="nav-photo-capture-mobile"
+              >
+                <Camera className="w-5 h-5" />
+                <div>
+                  <span className="block">📷 Photo Capture</span>
+                  <span className="text-xs text-orange-600 font-normal">Snap photos → Generate proposal</span>
+                </div>
+              </Link>
               <Link 
                 href="/dashboard" 
                 className="text-base font-medium text-slate-700 hover:text-primary transition-colors py-2"
