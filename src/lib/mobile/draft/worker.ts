@@ -157,49 +157,9 @@ async function runDraft(draft: typeof mobileJobDrafts.$inferSelect) {
       .from(mobileJobPhotos)
       .where(eq(mobileJobPhotos.jobId, job.id));
 
-    if (!photos.length) throw new Error("NO_PHOTOS");
-
-    // Ensure vision worker is running
+    // Best-effort: keep vision moving in the background, but never block draft generation on it.
+    // This keeps scope generation "instant" even if image analysis is slow/unavailable (e.g. job #16).
     ensureVisionWorker();
-
-    // Wait for vision analysis to complete (with timeout)
-    const maxWaitMs = 45000; // 45 seconds max wait
-    const pollIntervalMs = 1000;
-    const startWait = Date.now();
-    
-    let pendingCount = photos.filter(p => p.findingsStatus !== "ready" && p.findingsStatus !== "failed").length;
-    
-    while (pendingCount > 0 && (Date.now() - startWait) < maxWaitMs) {
-      await new Promise(r => setTimeout(r, pollIntervalMs));
-      
-      // Re-fetch photos to check status
-      const updatedPhotos = await db
-        .select()
-        .from(mobileJobPhotos)
-        .where(eq(mobileJobPhotos.jobId, job.id));
-      
-      pendingCount = updatedPhotos.filter(p => p.findingsStatus !== "ready" && p.findingsStatus !== "failed").length;
-      
-      // Update photos reference with latest data
-      photos.length = 0;
-      photos.push(...updatedPhotos);
-    }
-
-    const readyPhotos = photos.filter(p => p.findingsStatus === "ready");
-    const failedPhotos = photos.filter(p => p.findingsStatus === "failed");
-    
-    console.log("mobileDraftWorker.visionWait.complete", {
-      jobId: job.id,
-      totalPhotos: photos.length,
-      readyPhotos: readyPhotos.length,
-      failedPhotos: failedPhotos.length,
-      waitTimeMs: Date.now() - startWait,
-    });
-
-    // Proceed even if some photos failed - use what we have
-    if (readyPhotos.length === 0) {
-      throw new Error("VISION_ANALYSIS_FAILED: No photos were successfully analyzed");
-    }
 
     const [template] = await db
       .select()
@@ -217,6 +177,18 @@ async function runDraft(draft: typeof mobileJobDrafts.$inferSelect) {
       const issueContext = `\n\nSelected issues to address: ${selectedIssueLabels.join("; ")}`;
       enhancedJobNotes = enhancedJobNotes + issueContext;
     }
+
+    const readyCount = photos.filter((p) => p.findingsStatus === "ready").length;
+    const failedCount = photos.filter((p) => p.findingsStatus === "failed").length;
+    const pendingCount = photos.filter((p) => p.findingsStatus !== "ready" && p.findingsStatus !== "failed").length;
+
+    console.log("mobileDraftWorker.visionWait.skipped", {
+      jobId: job.id,
+      totalPhotos: photos.length,
+      readyPhotos: readyCount,
+      failedPhotos: failedCount,
+      pendingPhotos: pendingCount,
+    });
 
     const draftPayload = await generateMobileDraft({
       job: {
