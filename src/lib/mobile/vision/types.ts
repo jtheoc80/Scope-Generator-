@@ -13,10 +13,11 @@ export const rekognitionResultSchema = z.object({
 });
 
 // Scope option suggested by vision analysis
+// Note: nullable() used to match OpenAI JSON schema which sends null for optional fields
 export const suggestedScopeOptionSchema = z.object({
   id: z.string(),
   label: z.string(),
-  description: z.string().optional(),
+  description: z.string().nullable(), // OpenAI sends null, not undefined
 });
 
 export const gptVisionResultSchema = z.object({
@@ -24,11 +25,11 @@ export const gptVisionResultSchema = z.object({
   model: z.string(),
   schemaVersion: z.literal("v1"),
   confidence: z.number().min(0).max(1),
-  kindGuess: z.string().optional(),
+  kindGuess: z.string().nullable(), // OpenAI sends null, not undefined
   labels: z.array(z.string()).default([]),
   objects: z.array(z.object({
     name: z.string(),
-    notes: z.string().optional(),
+    notes: z.string().nullable(), // OpenAI sends null, not undefined
   })).default([]),
   materials: z.array(z.string()).default([]),
   damage: z.array(z.string()).default([]),
@@ -40,9 +41,9 @@ export const gptVisionResultSchema = z.object({
   scopeAmbiguous: z.boolean().default(false),
   clarificationReasons: z.array(z.string()).default([]),
   suggestedScopeOptions: z.array(suggestedScopeOptionSchema).default([]),
-  detectedTrade: z.string().optional(),
+  detectedTrade: z.string().nullable(), // OpenAI sends null, not undefined
   isPaintingRelated: z.boolean().default(false),
-  estimatedSeverity: z.enum(["spot", "partial", "full"]).optional(),
+  estimatedSeverity: z.enum(["spot", "partial", "full"]).nullable(), // OpenAI sends null, not undefined
 });
 
 export const photoFindingsSchema = z.object({

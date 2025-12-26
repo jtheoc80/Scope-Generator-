@@ -110,6 +110,29 @@ async function fetchImageAsDataUrl(imageUrl: string, s3Ref: S3ObjectRef | null):
   return bytesToDataUrl(bytes);
 }
 
+/**
+ * Helper to create a strict JSON schema object for OpenAI structured outputs.
+ * OpenAI strict mode requires:
+ * - type: "object"
+ * - additionalProperties: false
+ * - required: must include ALL property keys (no optional properties)
+ * 
+ * For optional fields, use nullable types: { type: ["string", "null"] }
+ */
+function strictObject<T extends Record<string, unknown>>(properties: T): {
+  type: "object";
+  additionalProperties: false;
+  properties: T;
+  required: (keyof T)[];
+} {
+  return {
+    type: "object",
+    additionalProperties: false,
+    properties,
+    required: Object.keys(properties) as (keyof T)[],
+  };
+}
+
 export async function analyzeWithGptVision(params: {
   imageUrl: string;
   s3Ref?: S3ObjectRef | null;
@@ -118,56 +141,41 @@ export async function analyzeWithGptVision(params: {
 }) {
   const model = process.env.OPENAI_VISION_MODEL || "gpt-4o-mini";
 
-  const schema = {
-    type: "object",
-    additionalProperties: false,
-    properties: {
-      schemaVersion: { type: "string", enum: ["v1"] },
-      confidence: { type: "number" },
-      kindGuess: { type: "string" },
-      labels: { type: "array", items: { type: "string" } },
-      objects: {
-        type: "array",
-        items: {
-          type: "object",
-          additionalProperties: false,
-          properties: { name: { type: "string" }, notes: { type: "string" } },
-          required: ["name"],
-        },
-      },
-      materials: { type: "array", items: { type: "string" } },
-      damage: { type: "array", items: { type: "string" } },
-      issues: { type: "array", items: { type: "string" } },
-      measurements: { type: "array", items: { type: "string" } },
-      needsMorePhotos: { type: "array", items: { type: "string" } },
-      // Scope clarification fields
-      needsClarification: { type: "boolean" },
-      scopeAmbiguous: { type: "boolean" },
-      clarificationReasons: { type: "array", items: { type: "string" } },
-      suggestedScopeOptions: {
-        type: "array",
-        items: {
-          type: "object",
-          additionalProperties: false,
-          properties: {
-            id: { type: "string" },
-            label: { type: "string" },
-            description: { type: "string" },
-          },
-          required: ["id", "label"],
-        },
-      },
-      detectedTrade: { type: "string" },
-      isPaintingRelated: { type: "boolean" },
-      estimatedSeverity: { type: "string" }, // "spot", "partial", "full"
+  // Build schema using strictObject helper to ensure all properties are in required.
+  // For optional fields, use nullable types: ["string", "null"]
+  const schema = strictObject({
+    schemaVersion: { type: "string", enum: ["v1"] },
+    confidence: { type: "number" },
+    kindGuess: { type: ["string", "null"] }, // nullable - may not always have a guess
+    labels: { type: "array", items: { type: "string" } },
+    objects: {
+      type: "array",
+      items: strictObject({
+        name: { type: "string" },
+        notes: { type: ["string", "null"] }, // nullable - not all objects have notes
+      }),
     },
-    required: [
-      "schemaVersion", "confidence", "labels", "objects", "materials", 
-      "damage", "issues", "measurements", "needsMorePhotos",
-      "needsClarification", "scopeAmbiguous", "clarificationReasons",
-      "suggestedScopeOptions", "detectedTrade", "isPaintingRelated", "estimatedSeverity"
-    ],
-  } as const;
+    materials: { type: "array", items: { type: "string" } },
+    damage: { type: "array", items: { type: "string" } },
+    issues: { type: "array", items: { type: "string" } },
+    measurements: { type: "array", items: { type: "string" } },
+    needsMorePhotos: { type: "array", items: { type: "string" } },
+    // Scope clarification fields
+    needsClarification: { type: "boolean" },
+    scopeAmbiguous: { type: "boolean" },
+    clarificationReasons: { type: "array", items: { type: "string" } },
+    suggestedScopeOptions: {
+      type: "array",
+      items: strictObject({
+        id: { type: "string" },
+        label: { type: "string" },
+        description: { type: ["string", "null"] }, // nullable - description is optional
+      }),
+    },
+    detectedTrade: { type: ["string", "null"] }, // nullable - may not detect a trade
+    isPaintingRelated: { type: "boolean" },
+    estimatedSeverity: { type: ["string", "null"] }, // nullable - "spot", "partial", "full", or null
+  });
 
   const system = `You are a senior field estimator helping contractors create accurate job scopes and quotes.
 
