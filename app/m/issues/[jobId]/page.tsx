@@ -188,17 +188,18 @@ export default function SelectIssuesPage() {
   const handleGenerateScope = async () => {
     const allSelectedIssues = [...issues, ...customIssues].filter(i => selectedIssues.has(i.id));
 
+    // Require at least one issue to be selected
+    if (allSelectedIssues.length === 0) {
+      setError("Please select at least one issue to generate a scope.");
+      return;
+    }
+
     setGeneratingDraft(true);
     setError(null);
 
     try {
-      // If the user didn't select anything, generate a "basic" scope immediately.
-      // This avoids blocking on slow/unavailable photo analysis.
       const selectedIssueLabels = allSelectedIssues.map((i) => i.label).join("; ");
-      const problemStatement =
-        selectedIssueLabels ||
-        suggestedProblem ||
-        "General scope estimate (no specific issues selected)";
+      const problemStatement = selectedIssueLabels || suggestedProblem || "";
       
       // Start draft generation with selected issues context
       await mobileApiFetch<{ status: string }>(`/api/mobile/jobs/${jobId}/draft`, {
@@ -291,32 +292,12 @@ export default function SelectIssuesPage() {
         </div>
 
         {/* Back button */}
-        <div className="mt-4 w-full max-w-xs space-y-2">
-          <Button
-            variant="default"
-            className="w-full"
-            onClick={handleGenerateScope}
-            disabled={generatingDraft}
-          >
-            {generatingDraft ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Generating Scope...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4 mr-2" />
-                Generate Scope Now (skip analysis)
-              </>
-            )}
-          </Button>
-
+        <div className="mt-4 w-full max-w-xs">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => router.back()}
             className="w-full text-slate-500"
-            disabled={generatingDraft}
           >
             <ArrowLeft className="w-4 h-4 mr-1" />
             Cancel
@@ -592,7 +573,7 @@ export default function SelectIssuesPage() {
         <Button
           className="w-full h-12 text-base gap-2"
           onClick={handleGenerateScope}
-          disabled={generatingDraft}
+          disabled={generatingDraft || selectedCount === 0}
         >
           {generatingDraft ? (
             <>
@@ -604,13 +585,13 @@ export default function SelectIssuesPage() {
               <Sparkles className="w-5 h-5" />
               {selectedCount > 0
                 ? `Generate Scope (${selectedCount} issue${selectedCount !== 1 ? "s" : ""})`
-                : "Generate Scope (basic)"}
+                : "Select issues to generate scope"}
             </>
           )}
         </Button>
         {selectedCount === 0 && (
           <p className="text-xs text-center text-slate-500 mt-2">
-            No issues selected — we'll generate a general scope you can edit.
+            Select at least one issue above to generate a scope.
           </p>
         )}
       </div>
