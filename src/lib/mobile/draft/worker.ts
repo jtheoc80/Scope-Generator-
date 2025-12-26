@@ -159,8 +159,47 @@ async function runDraft(draft: typeof mobileJobDrafts.$inferSelect) {
 
     if (!photos.length) throw new Error("NO_PHOTOS");
 
-    // Ensure vision worker is running; draft quality improves as findings arrive.
+    // Ensure vision worker is running
     ensureVisionWorker();
+
+    // Wait for vision analysis to complete (with timeout)
+    const maxWaitMs = 45000; // 45 seconds max wait
+    const pollIntervalMs = 1000;
+    const startWait = Date.now();
+    
+    let pendingCount = photos.filter(p => p.findingsStatus !== "ready" && p.findingsStatus !== "failed").length;
+    
+    while (pendingCount > 0 && (Date.now() - startWait) < maxWaitMs) {
+      await new Promise(r => setTimeout(r, pollIntervalMs));
+      
+      // Re-fetch photos to check status
+      const updatedPhotos = await db
+        .select()
+        .from(mobileJobPhotos)
+        .where(eq(mobileJobPhotos.jobId, job.id));
+      
+      pendingCount = updatedPhotos.filter(p => p.findingsStatus !== "ready" && p.findingsStatus !== "failed").length;
+      
+      // Update photos reference with latest data
+      photos.length = 0;
+      photos.push(...updatedPhotos);
+    }
+
+    const readyPhotos = photos.filter(p => p.findingsStatus === "ready");
+    const failedPhotos = photos.filter(p => p.findingsStatus === "failed");
+    
+    console.log("mobileDraftWorker.visionWait.complete", {
+      jobId: job.id,
+      totalPhotos: photos.length,
+      readyPhotos: readyPhotos.length,
+      failedPhotos: failedPhotos.length,
+      waitTimeMs: Date.now() - startWait,
+    });
+
+    // Proceed even if some photos failed - use what we have
+    if (readyPhotos.length === 0) {
+      throw new Error("VISION_ANALYSIS_FAILED: No photos were successfully analyzed");
+    }
 
     const [template] = await db
       .select()
@@ -169,25 +208,6 @@ async function runDraft(draft: typeof mobileJobDrafts.$inferSelect) {
       .limit(1);
 
     if (!template) throw new Error("TEMPLATE_NOT_FOUND");
-
-    // Vision stub: create deterministic findings per photo (replace with real vision later)
-    for (const p of photos) {
-      if (p.findingsStatus === "ready") continue;
-      const findings = {
-        kind: p.kind,
-        url: p.publicUrl,
-        detected: {
-          damage: p.kind === "damage" ? ["visible damage"] : [],
-          materials: ["unknown"],
-          measurements: [],
-        },
-      };
-
-      await db
-        .update(mobileJobPhotos)
-        .set({ findings, findingsStatus: "ready", analyzedAt: now })
-        .where(eq(mobileJobPhotos.id, p.id));
-    }
 
     // Build enhanced job notes with selected issues context
     // The questions field temporarily stores selected issue labels from enqueueDraft

@@ -91,11 +91,13 @@ async function advanceAnalysis(params: { jobId: number; requestId: string; maxTo
   const lockedBy = `api-${params.requestId}-${Math.random().toString(16).slice(2)}`;
 
   let processed = 0;
+  const startTime = Date.now();
+  const maxTimeMs = 25000; // Max 25 seconds of processing per request
   
-  while (processed < params.maxToProcess) {
+  while (processed < params.maxToProcess && (Date.now() - startTime) < maxTimeMs) {
     const remaining = params.maxToProcess - processed;
-    // Process up to 5 photos in parallel per batch
-    const batchSize = Math.min(remaining, 5);
+    // Process up to 8 photos in parallel per batch for faster analysis
+    const batchSize = Math.min(remaining, 8);
     
     const lockedPhotos = await lockNextPhotos({ 
       jobId: params.jobId, 
@@ -107,11 +109,38 @@ async function advanceAnalysis(params: { jobId: number; requestId: string; maxTo
 
     if (lockedPhotos.length === 0) break;
 
-    // Run analysis in parallel
-    await Promise.all(lockedPhotos.map(photo => runVisionForPhoto(photo)));
+    // Run analysis in parallel with timeout protection
+    const results = await Promise.allSettled(
+      lockedPhotos.map(photo => 
+        Promise.race([
+          runVisionForPhoto(photo),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("ANALYSIS_TIMEOUT")), 20000)
+          )
+        ])
+      )
+    );
+    
+    // Log any failures
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
+      if (result.status === "rejected") {
+        console.warn("advanceAnalysis.photoFailed", {
+          photoId: lockedPhotos[i].id,
+          error: result.reason instanceof Error ? result.reason.message : String(result.reason),
+        });
+      }
+    }
     
     processed += lockedPhotos.length;
   }
+  
+  logEvent("mobile.photos.analyze.advance", {
+    requestId: params.requestId,
+    jobId: params.jobId,
+    processed,
+    durationMs: Date.now() - startTime,
+  });
 }
 
 // Helper to extract issues from vision findings
@@ -341,8 +370,8 @@ export async function POST(
     }
 
     // Advance analysis (best-effort). Keeps progress moving even on serverless deployments.
-    // Increased maxToProcess to 5 and parallelized to speed up initial load
-    await advanceAnalysis({ jobId: id, requestId, maxToProcess: 5 });
+    // Process up to 10 photos to ensure quick initial analysis
+    await advanceAnalysis({ jobId: id, requestId, maxToProcess: 10 });
 
     // Get all photos for this job (post-advance)
     const photos = await db.select().from(mobileJobPhotos).where(eq(mobileJobPhotos.jobId, id));
@@ -412,8 +441,8 @@ export async function GET(
     }
 
     // Advance analysis incrementally on each poll so progress doesn't stall.
-    // Increased from 1 to 2 to speed up catch-up
-    await advanceAnalysis({ jobId: id, requestId, maxToProcess: 2 });
+    // Process up to 5 photos per poll for faster catch-up
+    await advanceAnalysis({ jobId: id, requestId, maxToProcess: 5 });
 
     // Get all photos for this job
     const photos = await db

@@ -4,6 +4,10 @@ import { registerPhotoRequestSchema } from "@/src/lib/mobile/types";
 import { storage } from "@/lib/services/storage";
 import { getRequestId, jsonError, logEvent, withRequestId } from "@/src/lib/mobile/observability";
 import { ensureVisionWorker } from "@/src/lib/mobile/vision/worker";
+import { runVisionForPhoto } from "@/src/lib/mobile/vision/runner";
+import { db } from "@/server/db";
+import { mobileJobPhotos } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 // POST /api/mobile/jobs/:jobId/photos (register uploaded photo public URL)
 export async function POST(
@@ -38,8 +42,44 @@ export async function POST(
       kind: parsed.data.kind,
     });
 
-    // Kick off vision analysis ASAP (best-effort).
+    // Start background worker for other photos
     ensureVisionWorker();
+
+    // IMMEDIATELY start analyzing this photo (don't wait for worker)
+    // This provides instant feedback on the uploaded photo
+    void (async () => {
+      try {
+        // Mark as processing
+        await db
+          .update(mobileJobPhotos)
+          .set({
+            findingsStatus: "processing",
+            findingsAttempts: 1,
+          })
+          .where(eq(mobileJobPhotos.id, photo.id));
+
+        // Fetch the full photo record
+        const [fullPhoto] = await db
+          .select()
+          .from(mobileJobPhotos)
+          .where(eq(mobileJobPhotos.id, photo.id))
+          .limit(1);
+
+        if (fullPhoto) {
+          const result = await runVisionForPhoto(fullPhoto);
+          logEvent("mobile.photos.immediateAnalysis", {
+            requestId,
+            photoId: photo.id,
+            success: result.success,
+            error: result.error,
+            ms: Date.now() - t0,
+          });
+        }
+      } catch (err) {
+        console.error("Immediate photo analysis failed:", err);
+        // Don't fail the request - the background worker will retry
+      }
+    })();
 
     logEvent("mobile.photos.register.ok", {
       requestId,
