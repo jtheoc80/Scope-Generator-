@@ -164,13 +164,18 @@ function applyGenericGuardrails(
     warnings.push("No scope tier selected - using recommended scope");
   }
   
-  // Count high-severity findings
+  // Count findings by severity
   const highSeverityCount = findings.filter(f => f.severity === "high").length;
   const totalFindings = findings.length;
   
   // Warn if many findings but minimum tier selected
   if (selectedTier?.includes("minimum") && totalFindings > 3) {
     warnings.push(`${totalFindings} issues identified but minimum scope selected - some issues may not be addressed`);
+  }
+  
+  // Warn if high-severity issues and minimum scope
+  if (selectedTier?.includes("minimum") && highSeverityCount > 0) {
+    warnings.push(`${highSeverityCount} high-severity issue(s) may require attention beyond minimum scope`);
   }
   
   return {
@@ -211,6 +216,14 @@ export function validateScopeVsFindings(
   // Check if scope seems too small for findings
   if (paintScope === "spot_repair" && paintingFindings.length > 3) {
     warnings.push("Multiple painting issues detected - spot repair may not address all issues");
+  }
+  
+  // Validate tier pricing makes sense for the number of findings
+  if (tier.priceRange && findings.length > 0) {
+    const avgPricePerFinding = (tier.priceRange.high - tier.priceRange.low) / findings.length;
+    if (avgPricePerFinding < 20 && findings.some(f => f.severity === "high")) {
+      warnings.push("Selected tier price seems low for high-severity findings");
+    }
   }
   
   return {

@@ -10,10 +10,8 @@ import {
   type Finding,
   type Unknown,
   type ClarifyingQuestion,
-  type ScopeTier,
   type FindingsSummary,
   PAINTING_CLARIFYING_QUESTIONS,
-  PAINTING_SCOPE_TIERS,
   detectPaintingJob,
   requiresScopeConfirmation,
   generateScopeTiers,
@@ -418,6 +416,43 @@ function generateClarifyingQuestions(
   // Add painting-specific questions if painting job detected
   if (isPaintingJob) {
     questions.push(...PAINTING_CLARIFYING_QUESTIONS);
+  } else if (clarificationReasons.length > 0 || scopeReason) {
+    // Add dynamic scope question based on AI-detected ambiguity
+    const helpText = scopeReason 
+      ? `Based on analysis: ${scopeReason}`
+      : clarificationReasons.length > 0 
+        ? `Clarification needed: ${clarificationReasons.slice(0, 2).join("; ")}`
+        : undefined;
+    
+    questions.push({
+      id: "scope_level",
+      question: "What level of work are you looking for?",
+      questionType: "single_select",
+      options: [
+        {
+          value: "minimum",
+          label: "Minimum repair",
+          description: "Fix only the critical issues",
+          priceMultiplier: 1.0,
+        },
+        {
+          value: "recommended",
+          label: "Recommended",
+          description: "Address all identified issues",
+          priceMultiplier: 1.5,
+          isDefault: true,
+        },
+        {
+          value: "premium",
+          label: "Premium",
+          description: "Complete overhaul with preventive work",
+          priceMultiplier: 2.0,
+        },
+      ],
+      required: true,
+      impactArea: "scope",
+      helpText,
+    });
   } else {
     // Generic scope question for non-painting jobs
     questions.push({
