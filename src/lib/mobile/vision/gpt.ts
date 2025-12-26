@@ -140,8 +140,33 @@ export async function analyzeWithGptVision(params: {
       issues: { type: "array", items: { type: "string" } },
       measurements: { type: "array", items: { type: "string" } },
       needsMorePhotos: { type: "array", items: { type: "string" } },
+      // Scope clarification fields
+      needsClarification: { type: "boolean" },
+      scopeAmbiguous: { type: "boolean" },
+      clarificationReasons: { type: "array", items: { type: "string" } },
+      suggestedScopeOptions: {
+        type: "array",
+        items: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            id: { type: "string" },
+            label: { type: "string" },
+            description: { type: "string" },
+          },
+          required: ["id", "label"],
+        },
+      },
+      detectedTrade: { type: "string" },
+      isPaintingRelated: { type: "boolean" },
+      estimatedSeverity: { type: "string" }, // "spot", "partial", "full"
     },
-    required: ["schemaVersion", "confidence", "labels", "objects", "materials", "damage", "issues", "measurements", "needsMorePhotos"],
+    required: [
+      "schemaVersion", "confidence", "labels", "objects", "materials", 
+      "damage", "issues", "measurements", "needsMorePhotos",
+      "needsClarification", "scopeAmbiguous", "clarificationReasons",
+      "suggestedScopeOptions", "detectedTrade", "isPaintingRelated", "estimatedSeverity"
+    ],
   } as const;
 
   const system = `You are a senior field estimator helping contractors create accurate job scopes and quotes.
@@ -152,6 +177,28 @@ Your job is to identify ALL actionable issues a contractor should address, inclu
 - Items in disrepair or poor condition (worn, dated, broken, non-functional)
 - Fixtures or elements that need replacement or upgrade (outdated, mismatched, incomplete)
 - Safety concerns (exposed wiring, unstable fixtures, hazards)
+
+CRITICAL SCOPE RULES:
+- NEVER assume full-room painting unless there is clear evidence across multiple walls/angles
+- NEVER assume entire house/building scope from a single area photo
+- If you can only see one wall or one area, assume the scope is limited to that area
+- For painting issues: default to "spot repair" scope unless photos clearly show full walls/rooms needing paint
+- When scope is ambiguous, set needsClarification: true and suggest scope options
+
+Trade Detection:
+- Set detectedTrade to the primary trade category: "painting", "plumbing", "electrical", "hvac", "roofing", "flooring", "structural", "general"
+- Set isPaintingRelated: true if ANY painting work is detected (peeling, fading, stains that need paint)
+
+Scope Assessment:
+- estimatedSeverity should be: "spot" (localized issue), "partial" (one wall/section), or "full" (entire room/system)
+- If painting is detected, be VERY conservative - default to "spot" unless obvious otherwise
+- Set scopeAmbiguous: true if you cannot determine exact scope from photos alone
+- Add reasons to clarificationReasons explaining what information is missing
+
+For scopeAmbiguous situations, provide suggestedScopeOptions with:
+- Minimum option (spot/localized repair)
+- Mid option (one wall/section)  
+- Maximum option (entire room/area)
 
 Rules:
 - List damage in the "damage" array (physical damage like cracks, stains, rot)

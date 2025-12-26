@@ -20,6 +20,7 @@ function isSupportedImageFormat(mimeType?: string | null): boolean {
 
 export default function CapturePhotos(props: {
   jobId: number;
+  onPhotosReady?: () => void;
   onDraftReady: (draftId: number, payload: unknown) => void;
   onBack: () => void;
 }) {
@@ -266,27 +267,42 @@ export default function CapturePhotos(props: {
         </View>
       )}
 
-      {/* Generate Draft button */}
-      <TouchableOpacity
-        style={[
-          styles.generateButton,
-          (generatingDraft || uploadedCount === 0 || uploadingCount > 0) && styles.buttonDisabled
-        ]}
-        onPress={generateDraft}
-        disabled={generatingDraft || uploadedCount === 0 || uploadingCount > 0}
-      >
-        {generatingDraft ? (
-          <>
-            <ActivityIndicator color="#ffffff" style={{ marginRight: 8 }} />
-            <Text style={styles.generateButtonText}>Generating Proposal...</Text>
-          </>
-        ) : (
-          <>
-            <Text style={styles.generateButtonIcon}>✨</Text>
-            <Text style={styles.generateButtonText}>Generate Proposal</Text>
-          </>
-        )}
-      </TouchableOpacity>
+      {/* Review Findings button (gated flow) OR Generate Draft button (legacy flow) */}
+      {props.onPhotosReady ? (
+        <TouchableOpacity
+          style={[
+            styles.generateButton,
+            styles.reviewButton,
+            (uploadedCount === 0 || uploadingCount > 0) && styles.buttonDisabled
+          ]}
+          onPress={props.onPhotosReady}
+          disabled={uploadedCount === 0 || uploadingCount > 0}
+        >
+          <Text style={styles.generateButtonIcon}>🔍</Text>
+          <Text style={styles.generateButtonText}>Review Findings</Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity
+          style={[
+            styles.generateButton,
+            (generatingDraft || uploadedCount === 0 || uploadingCount > 0) && styles.buttonDisabled
+          ]}
+          onPress={generateDraft}
+          disabled={generatingDraft || uploadedCount === 0 || uploadingCount > 0}
+        >
+          {generatingDraft ? (
+            <>
+              <ActivityIndicator color="#ffffff" style={{ marginRight: 8 }} />
+              <Text style={styles.generateButtonText}>Generating Proposal...</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.generateButtonIcon}>✨</Text>
+              <Text style={styles.generateButtonText}>Generate Proposal</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      )}
 
       {uploadingCount > 0 && (
         <Text style={styles.waitingText}>
@@ -500,6 +516,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     marginBottom: 12,
+  },
+  reviewButton: {
+    backgroundColor: "#f97316",
   },
   generateButtonIcon: {
     fontSize: 20,

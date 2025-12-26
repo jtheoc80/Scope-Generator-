@@ -12,6 +12,13 @@ export const rekognitionResultSchema = z.object({
   labels: z.array(rekognitionLabelSchema),
 });
 
+// Scope option suggested by vision analysis
+export const suggestedScopeOptionSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  description: z.string().optional(),
+});
+
 export const gptVisionResultSchema = z.object({
   provider: z.literal("openai"),
   model: z.string(),
@@ -28,6 +35,14 @@ export const gptVisionResultSchema = z.object({
   issues: z.array(z.string()).default([]),
   measurements: z.array(z.string()).default([]),
   needsMorePhotos: z.array(z.string()).default([]),
+  // Scope clarification fields
+  needsClarification: z.boolean().default(false),
+  scopeAmbiguous: z.boolean().default(false),
+  clarificationReasons: z.array(z.string()).default([]),
+  suggestedScopeOptions: z.array(suggestedScopeOptionSchema).default([]),
+  detectedTrade: z.string().optional(),
+  isPaintingRelated: z.boolean().default(false),
+  estimatedSeverity: z.enum(["spot", "partial", "full"]).optional(),
 });
 
 export const photoFindingsSchema = z.object({
@@ -48,7 +63,15 @@ export const photoFindingsSchema = z.object({
     confidence: z.number().min(0).max(1),
     summaryLabels: z.array(z.string()).default([]),
     needsMorePhotos: z.array(z.string()).default([]),
+    // Scope clarification aggregates
+    needsClarification: z.boolean().default(false),
+    scopeAmbiguous: z.boolean().default(false),
+    clarificationReasons: z.array(z.string()).default([]),
+    detectedTrade: z.string().optional(),
+    isPaintingRelated: z.boolean().default(false),
+    estimatedSeverity: z.enum(["spot", "partial", "full"]).optional(),
   }),
 });
 
 export type PhotoFindings = z.infer<typeof photoFindingsSchema>;
+export type SuggestedScopeOption = z.infer<typeof suggestedScopeOptionSchema>;
