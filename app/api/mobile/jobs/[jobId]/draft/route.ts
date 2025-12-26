@@ -14,6 +14,20 @@ type SelectedIssue = {
   category: string;
 };
 
+// Scope selection from FindingsSummary screen
+type ScopeSelection = {
+  selectedTierId?: string;
+  answers: Record<string, string | number | boolean | string[]>;
+  measurements?: {
+    squareFeet?: number;
+    linearFeet?: number;
+    roomCount?: number;
+    wallCount?: number;
+    ceilingHeight?: number;
+  };
+  problemStatement?: string;
+};
+
 // POST /api/mobile/jobs/:jobId/draft (trigger generation)
 export async function POST(
   request: NextRequest,
@@ -36,9 +50,10 @@ export async function POST(
       return jsonError(requestId, 404, "NOT_FOUND", "Job not found");
     }
 
-    // Parse body for selected issues context
+    // Parse body for selected issues context and scope selection
     let selectedIssues: SelectedIssue[] | undefined;
     let problemStatement: string | undefined;
+    let scopeSelection: ScopeSelection | undefined;
     try {
       const body = await request.json();
       if (body.selectedIssues && Array.isArray(body.selectedIssues)) {
@@ -46,6 +61,19 @@ export async function POST(
       }
       if (body.problemStatement && typeof body.problemStatement === "string") {
         problemStatement = body.problemStatement;
+      }
+      // Parse scope selection from findings flow
+      if (body.scopeSelection && typeof body.scopeSelection === "object") {
+        scopeSelection = body.scopeSelection as ScopeSelection;
+        // Use problemStatement from scopeSelection if not provided directly
+        if (!problemStatement && scopeSelection.problemStatement) {
+          problemStatement = scopeSelection.problemStatement;
+        }
+      }
+      // Use selectedTierId from body if provided
+      if (body.selectedTierId && typeof body.selectedTierId === "string") {
+        scopeSelection = scopeSelection || { answers: {} };
+        scopeSelection.selectedTierId = body.selectedTierId;
       }
     } catch {
       // Body parsing failed, continue without context
@@ -59,6 +87,7 @@ export async function POST(
       draftIdempotencyKey: idem,
       selectedIssues,
       problemStatement,
+      scopeSelection,
     });
     ensureDraftWorker();
 
@@ -66,6 +95,8 @@ export async function POST(
       requestId, 
       jobId: job.id, 
       issuesCount: selectedIssues?.length ?? 0,
+      hasScopeSelection: !!scopeSelection,
+      selectedTier: scopeSelection?.selectedTierId,
       ms: Date.now() - t0 
     });
     return withRequestId(requestId, { status: "DRAFTING" });

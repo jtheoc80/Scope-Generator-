@@ -2,16 +2,32 @@ import { useEffect, useMemo, useState } from "react";
 import { Pressable, SafeAreaView, Text, View, ActivityIndicator } from "react-native";
 import CreateJob from "./src/screens/CreateJob";
 import CapturePhotos from "./src/screens/CapturePhotos";
+import FindingsSummary from "./src/screens/FindingsSummary";
 import DraftPreview from "./src/screens/DraftPreview";
 import Settings from "./src/screens/Settings";
 import SignIn from "./src/screens/SignIn";
 import { getStoredMobileConfig } from "./src/lib/config";
 
+// Scope selection from FindingsSummary screen
+type ScopeSelection = {
+  selectedTierId?: string;
+  answers: Record<string, string | number | boolean | string[]>;
+  measurements?: {
+    squareFeet?: number;
+    linearFeet?: number;
+    roomCount?: number;
+    wallCount?: number;
+    ceilingHeight?: number;
+  };
+  problemStatement?: string;
+};
+
 type Step =
   | { name: "signin" }
   | { name: "create" }
   | { name: "photos"; jobId: number }
-  | { name: "draft"; jobId: number; draftId: number; draftPayload: unknown }
+  | { name: "findings"; jobId: number }
+  | { name: "draft"; jobId: number; draftId: number; draftPayload: unknown; scopeSelection?: ScopeSelection }
   | { name: "settings"; returnTo?: Step };
 
 export default function App() {
@@ -26,9 +42,11 @@ export default function App() {
         ? "Create Job"
         : step.name === "photos"
           ? "Capture Photos"
-          : step.name === "draft"
-            ? "Draft Preview"
-            : "Settings";
+          : step.name === "findings"
+            ? "Quick Findings"
+            : step.name === "draft"
+              ? "Draft Preview"
+              : "Settings";
 
     const showSettings = step.name !== "settings";
     return (
@@ -114,10 +132,20 @@ export default function App() {
       {step.name === "photos" && (
         <CapturePhotos
           jobId={step.jobId}
+          onPhotosReady={() => setStep({ name: "findings", jobId: step.jobId })}
           onDraftReady={(draftId, draftPayload) =>
             setStep({ name: "draft", jobId: step.jobId, draftId, draftPayload })
           }
           onBack={() => setStep({ name: "create" })}
+        />
+      )}
+      {step.name === "findings" && (
+        <FindingsSummary
+          jobId={step.jobId}
+          onScopeConfirmed={(selection) =>
+            setStep({ name: "draft", jobId: step.jobId, draftId: 0, draftPayload: null, scopeSelection: selection })
+          }
+          onBack={() => setStep({ name: "photos", jobId: step.jobId })}
         />
       )}
       {step.name === "draft" && (
@@ -125,8 +153,9 @@ export default function App() {
           jobId={step.jobId}
           draftId={step.draftId}
           payload={step.draftPayload}
+          scopeSelection={step.scopeSelection}
           onDone={() => setStep({ name: "create" })}
-          onBack={() => setStep({ name: "photos", jobId: step.jobId })}
+          onBack={() => setStep({ name: "findings", jobId: step.jobId })}
         />
       )}
     </SafeAreaView>

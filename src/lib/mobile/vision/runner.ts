@@ -208,6 +208,13 @@ export async function runVisionForPhoto(photo: typeof mobileJobPhotos.$inferSele
         confidence: Math.max(0, Math.min(1, ((gpt?.confidence ?? 0.5) * 0.9) + 0.1)),
         summaryLabels: Array.from(new Set([...(gpt?.labels || []), ...labelNames.slice(0, 5)])).slice(0, 10),
         needsMorePhotos: gpt?.needsMorePhotos || [],
+        // Scope clarification data from GPT
+        needsClarification: gpt?.needsClarification ?? false,
+        scopeAmbiguous: gpt?.scopeAmbiguous ?? false,
+        clarificationReasons: gpt?.clarificationReasons || [],
+        detectedTrade: gpt?.detectedTrade,
+        isPaintingRelated: gpt?.isPaintingRelated ?? false,
+        estimatedSeverity: gpt?.estimatedSeverity,
       },
     });
 

@@ -24,12 +24,27 @@ export type SelectedIssue = {
   category: string;
 };
 
+// Scope selection from FindingsSummary screen
+export type ScopeSelection = {
+  selectedTierId?: string;
+  answers: Record<string, string | number | boolean | string[]>;
+  measurements?: {
+    squareFeet?: number;
+    linearFeet?: number;
+    roomCount?: number;
+    wallCount?: number;
+    ceilingHeight?: number;
+  };
+  problemStatement?: string;
+};
+
 export async function enqueueDraft(params: {
   jobId: number;
   userId: string;
   draftIdempotencyKey?: string | null;
   selectedIssues?: SelectedIssue[];
   problemStatement?: string;
+  scopeSelection?: ScopeSelection;
 }) {
   // If an idempotency key is provided, reuse any existing non-failed draft for this job+key.
   if (params.draftIdempotencyKey) {
@@ -51,6 +66,27 @@ export async function enqueueDraft(params: {
     }
   }
 
+  // Build questions array with scope context
+  const questions: string[] = params.selectedIssues?.map(i => i.label) ?? [];
+  
+  // Add scope selection context to questions for the draft generator
+  if (params.scopeSelection) {
+    if (params.scopeSelection.selectedTierId) {
+      questions.push(`SCOPE_TIER:${params.scopeSelection.selectedTierId}`);
+    }
+    // Add scope answers (e.g., paint_scope: spot_repair)
+    for (const [key, value] of Object.entries(params.scopeSelection.answers)) {
+      questions.push(`SCOPE_ANSWER:${key}=${String(value)}`);
+    }
+    // Add measurements
+    if (params.scopeSelection.measurements?.squareFeet) {
+      questions.push(`MEASUREMENT:squareFeet=${params.scopeSelection.measurements.squareFeet}`);
+    }
+    if (params.scopeSelection.measurements?.ceilingHeight) {
+      questions.push(`MEASUREMENT:ceilingHeight=${params.scopeSelection.measurements.ceilingHeight}`);
+    }
+  }
+  
   const [created] = await db
     .insert(mobileJobDrafts)
     .values({
@@ -66,7 +102,7 @@ export async function enqueueDraft(params: {
       error: null,
       payload: null,
       // Store context in the questions field temporarily (will be overwritten when draft completes)
-      questions: params.selectedIssues?.map(i => i.label) ?? [],
+      questions,
     } as typeof mobileJobDrafts.$inferInsert)
     .returning();
 
@@ -181,13 +217,71 @@ async function runDraft(draft: typeof mobileJobDrafts.$inferSelect) {
 
     if (!template) throw new Error("TEMPLATE_NOT_FOUND");
 
-    // Build enhanced job notes with selected issues context
-    // The questions field temporarily stores selected issue labels from enqueueDraft
-    const selectedIssueLabels = draft.questions ?? [];
+    // Build enhanced job notes with selected issues and scope context
+    // The questions field temporarily stores selected issue labels and scope data from enqueueDraft
+    const questionsData = draft.questions ?? [];
+    
+    // Parse scope context from questions
+    const issueLabels: string[] = [];
+    const scopeContext: Record<string, string> = {};
+    const measurements: Record<string, number> = {};
+    let selectedTier: string | undefined;
+    
+    for (const item of questionsData) {
+      if (item.startsWith("SCOPE_TIER:")) {
+        selectedTier = item.replace("SCOPE_TIER:", "");
+      } else if (item.startsWith("SCOPE_ANSWER:")) {
+        const [key, value] = item.replace("SCOPE_ANSWER:", "").split("=");
+        if (key && value) scopeContext[key] = value;
+      } else if (item.startsWith("MEASUREMENT:")) {
+        const [key, value] = item.replace("MEASUREMENT:", "").split("=");
+        if (key && value) measurements[key] = parseFloat(value);
+      } else {
+        issueLabels.push(item);
+      }
+    }
+    
+    // Build enhanced job notes
     let enhancedJobNotes = job.jobNotes ?? "";
-    if (selectedIssueLabels.length > 0) {
-      const issueContext = `\n\nSelected issues to address: ${selectedIssueLabels.join("; ")}`;
-      enhancedJobNotes = enhancedJobNotes + issueContext;
+    
+    // Add selected issues
+    if (issueLabels.length > 0) {
+      enhancedJobNotes += `\n\nSelected issues to address: ${issueLabels.join("; ")}`;
+    }
+    
+    // Add scope context (critical for accurate pricing)
+    if (selectedTier) {
+      enhancedJobNotes += `\n\nCONFIRMED SCOPE TIER: ${selectedTier}`;
+    }
+    
+    // Add painting scope if selected
+    if (scopeContext.paint_scope) {
+      const scopeLabels: Record<string, string> = {
+        spot_repair: "SPOT REPAIR ONLY (10-30 sq ft area)",
+        one_wall: "ONE WALL ONLY",
+        entire_room: "ENTIRE ROOM (all walls)",
+        entire_house: "ENTIRE HOUSE/BUILDING",
+      };
+      const label = scopeLabels[scopeContext.paint_scope] || scopeContext.paint_scope;
+      enhancedJobNotes += `\n\nCONFIRMED PAINTING SCOPE: ${label}`;
+      enhancedJobNotes += `\nIMPORTANT: Price ONLY for the confirmed scope above. Do NOT assume larger scope.`;
+    }
+    
+    // Add measurements if provided
+    if (measurements.squareFeet) {
+      enhancedJobNotes += `\n\nCONFIRMED MEASUREMENTS: ${measurements.squareFeet} sq ft`;
+    }
+    if (measurements.ceilingHeight) {
+      enhancedJobNotes += `\nCeiling height: ${measurements.ceilingHeight} ft`;
+    }
+    
+    // Add other scope answers
+    const otherAnswers = Object.entries(scopeContext).filter(([k]) => k !== "paint_scope");
+    if (otherAnswers.length > 0) {
+      enhancedJobNotes += `\n\nAdditional scope details:`;
+      for (const [key, value] of otherAnswers) {
+        enhancedJobNotes += `\n- ${key.replace(/_/g, " ")}: ${value}`;
+      }
     }
 
     const readyCount = photos.filter((p) => p.findingsStatus === "ready").length;
