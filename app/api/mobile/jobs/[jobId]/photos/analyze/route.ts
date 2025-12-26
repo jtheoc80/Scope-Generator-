@@ -95,6 +95,7 @@ type CriticalErrorReason =
   | "OPENAI_QUOTA_EXCEEDED" 
   | "OPENAI_RATE_LIMITED" 
   | "OPENAI_AUTH_ERROR"
+  | "OPENAI_SCHEMA_ERROR"
   | "AWS_AUTH_ERROR"
   | "ALL_PROVIDERS_FAILED";
 
@@ -135,6 +136,14 @@ function detectCriticalError(errorMessage: string): AdvanceAnalysisResult["criti
     return {
       reason: "AWS_AUTH_ERROR",
       message: "AWS credentials invalid or missing.",
+      httpStatus: 503,
+    };
+  }
+  // Schema validation errors - critical because they affect ALL photos
+  if (msg.includes("gpt_schema_error") || msg.includes("invalid schema") || msg.includes("response_format")) {
+    return {
+      reason: "OPENAI_SCHEMA_ERROR",
+      message: "OpenAI structured output schema error - contact support.",
       httpStatus: 503,
     };
   }
