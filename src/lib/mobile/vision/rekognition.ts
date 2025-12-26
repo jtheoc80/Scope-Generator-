@@ -77,9 +77,38 @@ function validateImageFormat(bytes: Uint8Array): { valid: boolean; format?: stri
 }
 
 async function fetchImageBytes(url: string): Promise<Uint8Array> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to fetch image (${res.status})`);
+  // Explicitly follow redirects - S3 signed URLs may redirect
+  const res = await fetch(url, { 
+    redirect: "follow",
+    headers: {
+      // Some CDNs/S3 configurations need explicit accept header
+      "Accept": "image/*,*/*",
+    },
+  });
+  
+  if (!res.ok) {
+    // Provide more helpful error messages for common HTTP errors
+    if (res.status === 301 || res.status === 302 || res.status === 307 || res.status === 308) {
+      const location = res.headers.get("location");
+      throw new Error(`FETCH_REDIRECT_ERROR: Image URL returned redirect (${res.status}) to ${location?.substring(0, 80) || "unknown"} - URL may be expired or misconfigured`);
+    }
+    if (res.status === 403) {
+      throw new Error(`FETCH_FORBIDDEN: Access denied to image (403) - check S3 bucket permissions or URL signature expiration`);
+    }
+    if (res.status === 404) {
+      throw new Error(`FETCH_NOT_FOUND: Image not found (404) - file may have been deleted`);
+    }
+    if (res.status >= 500) {
+      throw new Error(`FETCH_SERVER_ERROR: Image host returned server error (${res.status}) - try again later`);
+    }
+    throw new Error(`FETCH_ERROR: Failed to fetch image (${res.status})`);
+  }
+  
   const buf = await res.arrayBuffer();
+  if (buf.byteLength === 0) {
+    throw new Error("FETCH_EMPTY: Image response was empty (0 bytes)");
+  }
+  
   return new Uint8Array(buf);
 }
 

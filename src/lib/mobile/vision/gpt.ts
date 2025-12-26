@@ -163,10 +163,17 @@ Rules:
         throw new Error("GPT_AUTH_ERROR: Invalid OpenAI API key");
       }
       if (error.status === 429) {
-        throw new Error("GPT_RATE_LIMITED: OpenAI rate limit exceeded, please retry");
+        // Distinguish between quota exceeded (billing issue) and rate limiting (temporary)
+        if (error.code === "insufficient_quota") {
+          throw new Error("GPT_QUOTA_EXCEEDED: OpenAI API quota exceeded - check billing at https://platform.openai.com/account/billing");
+        }
+        throw new Error("GPT_RATE_LIMITED: OpenAI rate limit exceeded, please retry later");
       }
       if (error.status === 400 && error.message?.includes("image")) {
         throw new Error("GPT_IMAGE_ERROR: OpenAI could not process the image - ensure it's a valid JPEG/PNG");
+      }
+      if (error.status === 500 || error.status === 502 || error.status === 503) {
+        throw new Error(`GPT_SERVER_ERROR: OpenAI service temporarily unavailable (${error.status}), please retry`);
       }
     }
     
