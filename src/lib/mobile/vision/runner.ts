@@ -22,49 +22,42 @@ export async function runVisionForPhoto(photo: typeof mobileJobPhotos.$inferSele
   });
 
   try {
-    // Run Rekognition and GPT Vision in parallel for speed
-    const [rekResult, gptResult] = await Promise.allSettled([
-      analyzeWithRekognition({ imageUrl: photo.publicUrl }),
-      // Start GPT immediately - we'll pass empty labels if Rekognition fails
-      (async () => {
-        // Give Rekognition a small head start (500ms) to get labels as hints
-        await new Promise(r => setTimeout(r, 500));
-        // Try to get Rekognition result for hints (best-effort)
-        let labelHints: string[] = [];
-        try {
-          const rekQuick = await analyzeWithRekognition({ imageUrl: photo.publicUrl });
-          labelHints = rekQuick?.labels?.map(l => l.name) ?? [];
-        } catch {
-          // Ignore - GPT can work without hints
-        }
-        return analyzeWithGptVision({
-          imageUrl: photo.publicUrl,
-          kind: photo.kind,
-          rekognitionLabels: labelHints,
-        });
-      })(),
-    ]);
-
-    // Extract results
+    // Step 1: Run Rekognition first (fast, ~1-2s)
     let rek: Awaited<ReturnType<typeof analyzeWithRekognition>> | null = null;
     let rekError: string | undefined;
-    if (rekResult.status === "fulfilled") {
-      rek = rekResult.value;
-    } else {
-      rekError = rekResult.reason instanceof Error ? rekResult.reason.message : String(rekResult.reason);
+    try {
+      rek = await analyzeWithRekognition({ imageUrl: photo.publicUrl });
+      console.log("vision.rekognition.success", {
+        photoId: photo.id,
+        labelsCount: rek.labels.length,
+        topLabels: rek.labels.slice(0, 3).map(l => l.name),
+      });
+    } catch (e) {
+      rekError = e instanceof Error ? e.message : String(e);
       console.warn("vision.rekognition.failed", { photoId: photo.id, error: rekError });
     }
 
+    const labelNames = rek?.labels?.map((l) => l.name) ?? [];
+
+    // Step 2: Run GPT Vision (slower, ~3-8s) - use Rekognition labels as hints
     let gpt: Awaited<ReturnType<typeof analyzeWithGptVision>> | null = null;
     let gptError: string | undefined;
-    if (gptResult.status === "fulfilled") {
-      gpt = gptResult.value;
-    } else {
-      gptError = gptResult.reason instanceof Error ? gptResult.reason.message : String(gptResult.reason);
+    try {
+      gpt = await analyzeWithGptVision({
+        imageUrl: photo.publicUrl,
+        kind: photo.kind,
+        rekognitionLabels: labelNames,
+      });
+      console.log("vision.gpt.success", {
+        photoId: photo.id,
+        confidence: gpt.confidence,
+        damageCount: gpt.damage?.length ?? 0,
+        issuesCount: gpt.issues?.length ?? 0,
+      });
+    } catch (e) {
+      gptError = e instanceof Error ? e.message : String(e);
       console.warn("vision.gpt.failed", { photoId: photo.id, error: gptError });
     }
-
-    const labelNames = rek?.labels?.map((l) => l.name) ?? [];
 
     // We need at least one AI provider to succeed
     if (!rek && !gpt) {

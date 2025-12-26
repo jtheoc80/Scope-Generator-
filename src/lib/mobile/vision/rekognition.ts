@@ -1,27 +1,46 @@
 import { RekognitionClient, DetectLabelsCommand } from "@aws-sdk/client-rekognition";
 
-function requireEnv(name: string) {
-  const v = process.env[name];
-  if (!v) throw new Error(`${name} is required`);
-  return v;
-}
-
 function getRekognitionClient() {
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+  
+  if (!accessKeyId || !secretAccessKey) {
+    console.warn("vision.rekognition.noCredentials", {
+      message: "AWS credentials not configured - Rekognition will be skipped",
+      hasAccessKey: !!accessKeyId,
+      hasSecretKey: !!secretAccessKey,
+    });
+    return null;
+  }
+  
   return new RekognitionClient({
     region: process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "us-east-1",
-    credentials: process.env.AWS_ACCESS_KEY_ID
-      ? {
-          accessKeyId: requireEnv("AWS_ACCESS_KEY_ID"),
-          secretAccessKey: requireEnv("AWS_SECRET_ACCESS_KEY"),
-        }
-      : undefined,
+    credentials: { accessKeyId, secretAccessKey },
   });
 }
 
 async function fetchImageBytes(url: string): Promise<Uint8Array> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to fetch image (${res.status})`);
+  console.log("vision.rekognition.fetchImage", { url: url.substring(0, 80) + "..." });
+  
+  const res = await fetch(url, {
+    headers: {
+      // Some CDNs need a user-agent
+      "User-Agent": "ScopeGen-Vision/1.0",
+    },
+  });
+  
+  if (!res.ok) {
+    const errorDetail = `Failed to fetch image: status=${res.status} statusText=${res.statusText}`;
+    console.error("vision.rekognition.fetchFailed", { 
+      url: url.substring(0, 80), 
+      status: res.status,
+      statusText: res.statusText,
+    });
+    throw new Error(errorDetail);
+  }
+  
   const buf = await res.arrayBuffer();
+  console.log("vision.rekognition.imageFetched", { bytes: buf.byteLength });
   return new Uint8Array(buf);
 }
 
@@ -31,6 +50,11 @@ export async function analyzeWithRekognition(params: {
   minConfidence?: number;
 }) {
   const client = getRekognitionClient();
+  
+  if (!client) {
+    throw new Error("REKOGNITION_NO_CREDENTIALS: AWS credentials not configured");
+  }
+  
   const bytes = await fetchImageBytes(params.imageUrl);
 
   const cmd = new DetectLabelsCommand({
