@@ -187,30 +187,30 @@ export default function SelectIssuesPage() {
 
   const handleGenerateScope = async () => {
     const allSelectedIssues = [...issues, ...customIssues].filter(i => selectedIssues.has(i.id));
-    
-    if (allSelectedIssues.length === 0) {
-      setError("Please select at least one issue to address");
-      return;
-    }
 
     setGeneratingDraft(true);
     setError(null);
 
     try {
-      // Store selected issues for the draft generation
-      const selectedIssueLabels = allSelectedIssues.map(i => i.label).join("; ");
+      // If the user didn't select anything, generate a "basic" scope immediately.
+      // This avoids blocking on slow/unavailable photo analysis.
+      const selectedIssueLabels = allSelectedIssues.map((i) => i.label).join("; ");
+      const problemStatement =
+        selectedIssueLabels ||
+        suggestedProblem ||
+        "General scope estimate (no specific issues selected)";
       
       // Start draft generation with selected issues context
       await mobileApiFetch<{ status: string }>(`/api/mobile/jobs/${jobId}/draft`, {
         method: "POST",
         headers: { "Idempotency-Key": newIdempotencyKey() },
         body: JSON.stringify({ 
-          selectedIssues: allSelectedIssues.map(i => ({
+          selectedIssues: allSelectedIssues.map((i) => ({
             id: i.id,
             label: i.label,
             category: i.category,
           })),
-          problemStatement: selectedIssueLabels,
+          problemStatement,
         }),
       });
 
@@ -291,15 +291,37 @@ export default function SelectIssuesPage() {
         </div>
 
         {/* Back button */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => router.back()}
-          className="mt-4 text-slate-500"
-        >
-          <ArrowLeft className="w-4 h-4 mr-1" />
-          Cancel
-        </Button>
+        <div className="mt-4 w-full max-w-xs space-y-2">
+          <Button
+            variant="default"
+            className="w-full"
+            onClick={handleGenerateScope}
+            disabled={generatingDraft}
+          >
+            {generatingDraft ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Generating Scope...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 mr-2" />
+                Generate Scope Now (skip analysis)
+              </>
+            )}
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.back()}
+            className="w-full text-slate-500"
+            disabled={generatingDraft}
+          >
+            <ArrowLeft className="w-4 h-4 mr-1" />
+            Cancel
+          </Button>
+        </div>
       </div>
     );
   }
@@ -570,7 +592,7 @@ export default function SelectIssuesPage() {
         <Button
           className="w-full h-12 text-base gap-2"
           onClick={handleGenerateScope}
-          disabled={generatingDraft || selectedCount === 0}
+          disabled={generatingDraft}
         >
           {generatingDraft ? (
             <>
@@ -580,13 +602,15 @@ export default function SelectIssuesPage() {
           ) : (
             <>
               <Sparkles className="w-5 h-5" />
-              Generate Scope ({selectedCount} issue{selectedCount !== 1 ? "s" : ""})
+              {selectedCount > 0
+                ? `Generate Scope (${selectedCount} issue${selectedCount !== 1 ? "s" : ""})`
+                : "Generate Scope (basic)"}
             </>
           )}
         </Button>
         {selectedCount === 0 && (
           <p className="text-xs text-center text-slate-500 mt-2">
-            Select at least one issue to continue
+            No issues selected — we'll generate a general scope you can edit.
           </p>
         )}
       </div>

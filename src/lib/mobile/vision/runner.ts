@@ -22,28 +22,32 @@ export async function runVisionForPhoto(photo: typeof mobileJobPhotos.$inferSele
   });
 
   try {
-    // Run Rekognition and GPT Vision in parallel for speed
-    const [rekResult, gptResult] = await Promise.allSettled([
-      analyzeWithRekognition({ imageUrl: photo.publicUrl }),
-      // Start GPT immediately - we'll pass empty labels if Rekognition fails
-      (async () => {
-        // Give Rekognition a small head start (500ms) to get labels as hints
-        await new Promise(r => setTimeout(r, 500));
-        // Try to get Rekognition result for hints (best-effort)
-        let labelHints: string[] = [];
-        try {
-          const rekQuick = await analyzeWithRekognition({ imageUrl: photo.publicUrl });
-          labelHints = rekQuick?.labels?.map(l => l.name) ?? [];
-        } catch {
-          // Ignore - GPT can work without hints
-        }
-        return analyzeWithGptVision({
-          imageUrl: photo.publicUrl,
-          kind: photo.kind,
-          rekognitionLabels: labelHints,
-        });
-      })(),
-    ]);
+    // Run Rekognition and GPT Vision in parallel for speed.
+    // IMPORTANT: Do not call Rekognition twice (it was previously called twice per photo).
+    const rekPromise = analyzeWithRekognition({ imageUrl: photo.publicUrl });
+
+    const gptPromise = (async () => {
+      // Best-effort: use Rekognition labels as hints if they resolve quickly.
+      // Never block GPT on Rekognition for long.
+      let labelHints: string[] = [];
+      try {
+        const rekQuick = await Promise.race([
+          rekPromise,
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error("REKOGNITION_HINT_TIMEOUT")), 800)),
+        ]);
+        labelHints = rekQuick?.labels?.map((l) => l.name) ?? [];
+      } catch {
+        // Ignore - GPT can work without hints
+      }
+
+      return analyzeWithGptVision({
+        imageUrl: photo.publicUrl,
+        kind: photo.kind,
+        rekognitionLabels: labelHints,
+      });
+    })();
+
+    const [rekResult, gptResult] = await Promise.allSettled([rekPromise, gptPromise]);
 
     // Extract results
     let rek: Awaited<ReturnType<typeof analyzeWithRekognition>> | null = null;
