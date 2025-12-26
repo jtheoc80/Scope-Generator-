@@ -610,7 +610,7 @@ export default function SelectIssuesPage() {
         </Button>
         {selectedCount === 0 && (
           <p className="text-xs text-center text-slate-500 mt-2">
-            No issues selected — we'll generate a general scope you can edit.
+            No issues selected — we&apos;ll generate a general scope you can edit.
           </p>
         )}
       </div>
