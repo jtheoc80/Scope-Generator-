@@ -1,30 +1,124 @@
 import { RekognitionClient, DetectLabelsCommand } from "@aws-sdk/client-rekognition";
+import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 
-function getRekognitionClient() {
+function getAwsCredentials() {
   const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
   const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
   
   if (!accessKeyId || !secretAccessKey) {
+    return null;
+  }
+  
+  return { accessKeyId, secretAccessKey };
+}
+
+function getRekognitionClient() {
+  const credentials = getAwsCredentials();
+  
+  if (!credentials) {
     console.warn("vision.rekognition.noCredentials", {
       message: "AWS credentials not configured - Rekognition will be skipped",
-      hasAccessKey: !!accessKeyId,
-      hasSecretKey: !!secretAccessKey,
     });
     return null;
   }
   
   return new RekognitionClient({
     region: process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "us-east-1",
-    credentials: { accessKeyId, secretAccessKey },
+    credentials,
   });
+}
+
+function getS3Client() {
+  const credentials = getAwsCredentials();
+  if (!credentials) return null;
+  
+  return new S3Client({
+    region: process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "us-east-1",
+    credentials,
+  });
+}
+
+// Extract bucket and key from S3 URL
+function parseS3Url(url: string): { bucket: string; key: string } | null {
+  // Try various S3 URL formats:
+  // https://bucket.s3.amazonaws.com/key
+  // https://bucket.s3.region.amazonaws.com/key  
+  // https://s3.amazonaws.com/bucket/key
+  // https://s3.region.amazonaws.com/bucket/key
+  // Or custom domain from S3_PUBLIC_BASE_URL
+  
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname;
+    const pathname = urlObj.pathname;
+    
+    // Format: bucket.s3.amazonaws.com or bucket.s3.region.amazonaws.com
+    const bucketDomainMatch = hostname.match(/^([^.]+)\.s3(?:\.[^.]+)?\.amazonaws\.com$/);
+    if (bucketDomainMatch) {
+      return {
+        bucket: bucketDomainMatch[1],
+        key: pathname.slice(1), // Remove leading /
+      };
+    }
+    
+    // Format: s3.amazonaws.com/bucket/key or s3.region.amazonaws.com/bucket/key
+    const pathStyleMatch = hostname.match(/^s3(?:\.[^.]+)?\.amazonaws\.com$/);
+    if (pathStyleMatch) {
+      const parts = pathname.slice(1).split('/');
+      if (parts.length >= 2) {
+        return {
+          bucket: parts[0],
+          key: parts.slice(1).join('/'),
+        };
+      }
+    }
+    
+    // Try using S3_PUBLIC_BASE_URL to parse
+    const baseUrl = process.env.S3_PUBLIC_BASE_URL;
+    const bucket = process.env.S3_BUCKET;
+    if (baseUrl && bucket && url.startsWith(baseUrl)) {
+      const key = url.slice(baseUrl.length).replace(/^\/+/, '');
+      return { bucket, key };
+    }
+    
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 async function fetchImageBytes(url: string): Promise<Uint8Array> {
   console.log("vision.rekognition.fetchImage", { url: url.substring(0, 80) + "..." });
   
+  // Try to fetch from S3 using credentials first (handles private buckets)
+  const s3Info = parseS3Url(url);
+  const s3Client = getS3Client();
+  
+  if (s3Info && s3Client) {
+    console.log("vision.rekognition.fetchFromS3", { bucket: s3Info.bucket, key: s3Info.key.substring(0, 50) });
+    try {
+      const response = await s3Client.send(new GetObjectCommand({
+        Bucket: s3Info.bucket,
+        Key: s3Info.key,
+      }));
+      
+      if (response.Body) {
+        const bytes = await response.Body.transformToByteArray();
+        console.log("vision.rekognition.s3Fetched", { bytes: bytes.length });
+        return bytes;
+      }
+    } catch (s3Err) {
+      console.warn("vision.rekognition.s3FetchFailed", { 
+        error: s3Err instanceof Error ? s3Err.message : String(s3Err),
+        bucket: s3Info.bucket,
+      });
+      // Fall through to try public URL
+    }
+  }
+  
+  // Fallback: try fetching as public URL
   const res = await fetch(url, {
     headers: {
-      // Some CDNs need a user-agent
       "User-Agent": "ScopeGen-Vision/1.0",
     },
   });

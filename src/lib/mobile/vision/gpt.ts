@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { photoFindingsSchema } from "./types";
 
 function getOpenAIClient() {
@@ -10,6 +11,119 @@ function getOpenAIClient() {
     return null;
   }
   return new OpenAI({ apiKey, timeout: 60000 }); // 60s timeout
+}
+
+function getS3Client() {
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+  if (!accessKeyId || !secretAccessKey) return null;
+  
+  return new S3Client({
+    region: process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "us-east-1",
+    credentials: { accessKeyId, secretAccessKey },
+  });
+}
+
+// Extract bucket and key from S3 URL
+function parseS3Url(url: string): { bucket: string; key: string } | null {
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname;
+    const pathname = urlObj.pathname;
+    
+    // Format: bucket.s3.amazonaws.com or bucket.s3.region.amazonaws.com
+    const bucketDomainMatch = hostname.match(/^([^.]+)\.s3(?:\.[^.]+)?\.amazonaws\.com$/);
+    if (bucketDomainMatch) {
+      return {
+        bucket: bucketDomainMatch[1],
+        key: pathname.slice(1),
+      };
+    }
+    
+    // Format: s3.amazonaws.com/bucket/key
+    const pathStyleMatch = hostname.match(/^s3(?:\.[^.]+)?\.amazonaws\.com$/);
+    if (pathStyleMatch) {
+      const parts = pathname.slice(1).split('/');
+      if (parts.length >= 2) {
+        return {
+          bucket: parts[0],
+          key: parts.slice(1).join('/'),
+        };
+      }
+    }
+    
+    // Try using S3_PUBLIC_BASE_URL to parse
+    const baseUrl = process.env.S3_PUBLIC_BASE_URL;
+    const bucket = process.env.S3_BUCKET;
+    if (baseUrl && bucket && url.startsWith(baseUrl)) {
+      const key = url.slice(baseUrl.length).replace(/^\/+/, '');
+      return { bucket, key };
+    }
+    
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// Fetch image and convert to base64 data URL for OpenAI
+async function fetchImageAsBase64(imageUrl: string): Promise<string> {
+  console.log("vision.gpt.fetchImage", { url: imageUrl.substring(0, 80) + "..." });
+  
+  // Try to fetch from S3 using credentials first (handles private buckets)
+  const s3Info = parseS3Url(imageUrl);
+  const s3Client = getS3Client();
+  
+  if (s3Info && s3Client) {
+    console.log("vision.gpt.fetchFromS3", { bucket: s3Info.bucket, key: s3Info.key.substring(0, 50) });
+    try {
+      const response = await s3Client.send(new GetObjectCommand({
+        Bucket: s3Info.bucket,
+        Key: s3Info.key,
+      }));
+      
+      if (response.Body) {
+        const bytes = await response.Body.transformToByteArray();
+        const contentType = response.ContentType || "image/jpeg";
+        const base64 = Buffer.from(bytes).toString("base64");
+        
+        console.log("vision.gpt.s3Fetched", { 
+          bytes: bytes.length,
+          contentType,
+        });
+        
+        return `data:${contentType};base64,${base64}`;
+      }
+    } catch (s3Err) {
+      console.warn("vision.gpt.s3FetchFailed", { 
+        error: s3Err instanceof Error ? s3Err.message : String(s3Err),
+        bucket: s3Info.bucket,
+      });
+      // Fall through to try public URL
+    }
+  }
+  
+  // Fallback: try fetching as public URL
+  const response = await fetch(imageUrl, {
+    headers: {
+      "User-Agent": "ScopeGen-Vision/1.0",
+    },
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch image for GPT: status=${response.status}`);
+  }
+  
+  const contentType = response.headers.get("content-type") || "image/jpeg";
+  const arrayBuffer = await response.arrayBuffer();
+  const base64 = Buffer.from(arrayBuffer).toString("base64");
+  
+  console.log("vision.gpt.imageFetched", { 
+    bytes: arrayBuffer.byteLength,
+    contentType,
+  });
+  
+  return `data:${contentType};base64,${base64}`;
 }
 
 export async function analyzeWithGptVision(params: {
@@ -63,20 +177,6 @@ Rules:
 - Do not guess measurements. If unknown, leave measurements empty
 - Output must match the JSON schema`;
 
-  const user = {
-    role: "user" as const,
-    content: [
-      {
-        type: "text" as const,
-        text: `Photo kind hint: ${params.kind}\nRekognition labels (hints): ${params.rekognitionLabels.join(", ")}`,
-      },
-      {
-        type: "image_url" as const,
-        image_url: { url: params.imageUrl },
-      },
-    ],
-  };
-
   const client = getOpenAIClient();
   if (!client) {
     // Throw error instead of returning fake data - this ensures proper error handling upstream
@@ -92,6 +192,24 @@ Rules:
       kind: params.kind,
       rekognitionLabelsCount: params.rekognitionLabels.length,
     });
+
+    // Fetch and convert image to base64 - this ensures OpenAI can access it
+    // even if the S3 bucket is not publicly accessible
+    const imageDataUrl = await fetchImageAsBase64(params.imageUrl);
+    
+    const user = {
+      role: "user" as const,
+      content: [
+        {
+          type: "text" as const,
+          text: `Photo kind hint: ${params.kind}\nRekognition labels (hints): ${params.rekognitionLabels.join(", ")}`,
+        },
+        {
+          type: "image_url" as const,
+          image_url: { url: imageDataUrl },
+        },
+      ],
+    };
 
     const resp = await client.chat.completions.create({
       model,
