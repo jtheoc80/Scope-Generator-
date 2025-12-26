@@ -345,7 +345,6 @@ export default function PublicProposal() {
         <ProposalPreview
           ref={previewRef}
           data={proposalData}
-          blurred={false}
           companyInfo={data.companyInfo || undefined}
         />
       </div>
