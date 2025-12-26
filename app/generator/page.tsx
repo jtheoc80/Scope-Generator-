@@ -13,6 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { Loader2, ChevronRight, Wand2, Download, FileText, Sparkles, Plus, Trash2, GripVertical, Save, Camera, Mail } from "lucide-react";
+import JobAddressField from "@/components/job-address-field";
 import EmailProposalModal from "@/components/email-proposal-modal";
 import ProposalPreview from "@/components/proposal-preview";
 import { CostInsights } from "@/components/cost-insights";
@@ -1195,7 +1196,12 @@ export default function Generator() {
                             <FormItem>
                               <FormLabel>{t.generator.jobAddress}</FormLabel>
                               <FormControl>
-                                <Input placeholder={t.generator.jobAddressPlaceholder} {...field} data-testid="input-address" />
+                                <JobAddressField 
+                                  value={field.value}
+                                  onChange={field.onChange}
+                                  placeholder={t.generator.jobAddressPlaceholder}
+                                  data-testid="input-address"
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
