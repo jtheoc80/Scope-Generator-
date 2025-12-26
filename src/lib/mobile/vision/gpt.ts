@@ -122,7 +122,7 @@ export async function analyzeWithGptVision(params: {
     type: "object",
     additionalProperties: false,
     properties: {
-      schemaVersion: { const: "v1" },
+      schemaVersion: { type: "string", enum: ["v1"] },
       confidence: { type: "number" },
       kindGuess: { type: "string" },
       labels: { type: "array", items: { type: "string" } },
@@ -230,8 +230,10 @@ Rules:
       imageUrl: params.imageUrl.substring(0, 80) + "...",
       usingBase64: true,
       model,
+      apiType: "chat.completions",  // Using Chat Completions API with response_format
       kind: params.kind,
       rekognitionLabelsCount: params.rekognitionLabels.length,
+      schemaName: "photo_findings_v1",
     });
 
     const user = {
@@ -286,6 +288,16 @@ Rules:
       throw new Error("GPT_PARSE_ERROR: Failed to parse OpenAI response as JSON");
     }
 
+    // Validate schemaVersion exists and is correct
+    if (!parsed.schemaVersion || parsed.schemaVersion !== "v1") {
+      console.error("vision.gpt.invalidSchemaVersion", {
+        received: parsed.schemaVersion,
+        expected: "v1",
+        rawOutput: text.substring(0, 200),
+      });
+      throw new Error(`GPT_INVALID_SCHEMA_VERSION: Expected schemaVersion "v1", got "${parsed.schemaVersion}"`);
+    }
+
     console.log("vision.gpt.success", {
       model,
       durationMs: Date.now() - startTime,
@@ -324,8 +336,21 @@ Rules:
         }
         throw new Error("GPT_RATE_LIMITED: OpenAI rate limit exceeded, please retry later");
       }
-      if (error.status === 400 && error.message?.includes("image")) {
-        throw new Error("GPT_IMAGE_ERROR: OpenAI could not process the image - ensure it's a valid JPEG/PNG");
+      if (error.status === 400) {
+        // Schema validation error
+        if (error.message?.includes("schema") || error.message?.includes("response_format")) {
+          console.error("vision.gpt.schemaError", {
+            message: error.message?.substring(0, 300),
+            status: error.status,
+          });
+          throw new Error("GPT_SCHEMA_ERROR: Invalid JSON schema for structured output - check schema definition");
+        }
+        // Image processing error
+        if (error.message?.includes("image")) {
+          throw new Error("GPT_IMAGE_ERROR: OpenAI could not process the image - ensure it's a valid JPEG/PNG");
+        }
+        // Generic 400 error
+        throw new Error(`GPT_BAD_REQUEST: OpenAI request failed (400) - ${error.message?.substring(0, 100)}`);
       }
       if (error.status === 500 || error.status === 502 || error.status === 503) {
         throw new Error(`GPT_SERVER_ERROR: OpenAI service temporarily unavailable (${error.status}), please retry`);
