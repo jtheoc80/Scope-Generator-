@@ -3,7 +3,6 @@ import { requireMobileAuth } from "@/src/lib/mobile/auth";
 import { registerPhotoRequestSchema } from "@/src/lib/mobile/types";
 import { storage } from "@/lib/services/storage";
 import { getRequestId, jsonError, logEvent, withRequestId } from "@/src/lib/mobile/observability";
-import { ensureVisionWorker } from "@/src/lib/mobile/vision/worker";
 import { runVisionForPhoto } from "@/src/lib/mobile/vision/runner";
 import { db } from "@/server/db";
 import { mobileJobPhotos } from "@shared/schema";
@@ -42,53 +41,71 @@ export async function POST(
       kind: parsed.data.kind,
     });
 
-    // Start background worker for other photos
-    ensureVisionWorker();
+    // IMMEDIATELY analyze this photo SYNCHRONOUSLY before returning
+    // This is critical for serverless - background tasks don't work reliably
+    let analysisResult: { success: boolean; error?: string } = { success: false };
+    
+    try {
+      // Mark as processing
+      await db
+        .update(mobileJobPhotos)
+        .set({
+          findingsStatus: "processing",
+          findingsAttempts: 1,
+        })
+        .where(eq(mobileJobPhotos.id, photo.id));
 
-    // IMMEDIATELY start analyzing this photo (don't wait for worker)
-    // This provides instant feedback on the uploaded photo
-    void (async () => {
-      try {
-        // Mark as processing
-        await db
-          .update(mobileJobPhotos)
-          .set({
-            findingsStatus: "processing",
-            findingsAttempts: 1,
-          })
-          .where(eq(mobileJobPhotos.id, photo.id));
+      // Fetch the full photo record
+      const [fullPhoto] = await db
+        .select()
+        .from(mobileJobPhotos)
+        .where(eq(mobileJobPhotos.id, photo.id))
+        .limit(1);
 
-        // Fetch the full photo record
-        const [fullPhoto] = await db
-          .select()
-          .from(mobileJobPhotos)
-          .where(eq(mobileJobPhotos.id, photo.id))
-          .limit(1);
-
-        if (fullPhoto) {
-          const result = await runVisionForPhoto(fullPhoto);
-          logEvent("mobile.photos.immediateAnalysis", {
-            requestId,
-            photoId: photo.id,
-            success: result.success,
-            error: result.error,
-            ms: Date.now() - t0,
-          });
-        }
-      } catch (err) {
-        console.error("Immediate photo analysis failed:", err);
-        // Don't fail the request - the background worker will retry
+      if (fullPhoto) {
+        analysisResult = await runVisionForPhoto(fullPhoto);
+        
+        logEvent("mobile.photos.analysis.complete", {
+          requestId,
+          photoId: photo.id,
+          jobId: id,
+          success: analysisResult.success,
+          error: analysisResult.error,
+          analysisMs: Date.now() - t0,
+        });
       }
-    })();
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      console.error("Photo analysis failed:", {
+        photoId: photo.id,
+        error: errorMsg,
+      });
+      analysisResult = { success: false, error: errorMsg };
+      
+      // Update photo with error status
+      await db
+        .update(mobileJobPhotos)
+        .set({
+          findingsStatus: "failed",
+          findingsError: errorMsg,
+        })
+        .where(eq(mobileJobPhotos.id, photo.id));
+    }
 
     logEvent("mobile.photos.register.ok", {
       requestId,
       jobId: id,
       photoId: photo.id,
-      ms: Date.now() - t0,
+      analyzed: analysisResult.success,
+      totalMs: Date.now() - t0,
     });
 
-    return withRequestId(requestId, { photoId: photo.id }, 201);
+    // Return analysis status along with photoId
+    return withRequestId(requestId, { 
+      photoId: photo.id,
+      analyzed: analysisResult.success,
+      analysisError: analysisResult.error,
+    }, 201);
   } catch (error) {
     console.error("Error registering mobile job photo:", error);
     return jsonError(requestId, 500, "INTERNAL", "Failed to register photo");
