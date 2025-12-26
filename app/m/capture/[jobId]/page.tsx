@@ -24,6 +24,57 @@ type UploadedPhoto = {
   error?: string;
 };
 
+/**
+ * Convert any image file to JPEG format.
+ * This is critical because AWS Rekognition only supports JPEG/PNG.
+ * iPhones often capture photos as HEIC/HEIF which will cause Rekognition to fail silently.
+ */
+async function convertToJpeg(file: File, quality = 0.85): Promise<File> {
+  // Already a supported format - return as-is
+  if (file.type === "image/jpeg" || file.type === "image/png") {
+    return file;
+  }
+
+  try {
+    // Create an image bitmap from the file
+    const bmp = await createImageBitmap(file);
+    
+    // Create a canvas to draw the image
+    const canvas = document.createElement("canvas");
+    canvas.width = bmp.width;
+    canvas.height = bmp.height;
+    
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      console.warn("Canvas not supported, returning original file");
+      return file;
+    }
+    
+    // Draw the image onto the canvas
+    ctx.drawImage(bmp, 0, 0);
+    
+    // Convert to JPEG blob
+    const blob: Blob = await new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error("toBlob failed"))),
+        "image/jpeg",
+        quality
+      );
+    });
+    
+    // Create a new File with .jpg extension
+    const newFileName = file.name.replace(/\.\w+$/, ".jpg");
+    const convertedFile = new File([blob], newFileName, { type: "image/jpeg" });
+    
+    console.log(`Converted ${file.name} (${file.type}) to JPEG: ${convertedFile.size} bytes`);
+    return convertedFile;
+  } catch (err) {
+    console.error("Failed to convert image to JPEG:", err);
+    // Return original file if conversion fails - let backend handle the error
+    return file;
+  }
+}
+
 export default function CapturePhotosPage() {
   const params = useParams();
   const router = useRouter();
@@ -108,14 +159,18 @@ export default function CapturePhotosPage() {
     for (const file of Array.from(files)) {
       if (!file.type.startsWith("image/")) continue;
 
+      // CRITICAL: Convert HEIC/WEBP and other formats to JPEG before upload.
+      // AWS Rekognition only supports JPEG/PNG. iPhones often capture as HEIC.
+      const convertedFile = await convertToJpeg(file);
+
       const photo: UploadedPhoto = {
         id: generateId(),
-        localUrl: URL.createObjectURL(file),
+        localUrl: URL.createObjectURL(convertedFile),
         status: "pending",
       };
 
       newPhotos.push(photo);
-      filesToUpload.push({ photo, file });
+      filesToUpload.push({ photo, file: convertedFile });
     }
 
     setPhotos((prev) => [...prev, ...newPhotos]);

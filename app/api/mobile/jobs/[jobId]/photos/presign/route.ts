@@ -5,6 +5,9 @@ import { storage } from "@/lib/services/storage";
 import { presignPutObject, isS3Configured } from "@/src/lib/mobile/storage/s3";
 import { getRequestId, jsonError, logEvent, withRequestId } from "@/src/lib/mobile/observability";
 
+// IMPORTANT: Use Node.js runtime for AWS SDK compatibility.
+export const runtime = "nodejs";
+
 // POST /api/mobile/jobs/:jobId/photos/presign
 export async function POST(
   request: NextRequest,
@@ -51,6 +54,31 @@ export async function POST(
         "INVALID_INPUT",
         parsed.error.issues[0]?.message ?? "Invalid presign payload"
       );
+    }
+
+    // CRITICAL: Validate image format before presigning.
+    // AWS Rekognition ONLY supports JPEG and PNG images.
+    // HEIC (common from iPhone) and WebP will cause silent analysis failures.
+    const contentType = parsed.data.contentType.toLowerCase();
+    const supportedTypes = ["image/jpeg", "image/png", "image/jpg"];
+    
+    if (!supportedTypes.includes(contentType)) {
+      logEvent("mobile.photos.presign.formatWarning", {
+        requestId,
+        jobId: job.id,
+        contentType,
+        message: "Unsupported image format - convert to JPEG/PNG before upload",
+      });
+      
+      // Return a clear error for HEIC/WebP which are known to fail with Rekognition
+      if (contentType === "image/heic" || contentType === "image/heif" || contentType === "image/webp") {
+        return jsonError(
+          requestId,
+          400,
+          "INVALID_INPUT",
+          `Image format '${contentType}' is not supported by our image analysis. Please convert to JPEG or PNG before uploading. On iPhone, you can change Settings > Camera > Formats to 'Most Compatible' to capture as JPEG.`
+        );
+      }
     }
 
     const safeName = (parsed.data.filename || "photo")

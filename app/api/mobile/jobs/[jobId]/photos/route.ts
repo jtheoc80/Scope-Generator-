@@ -9,6 +9,9 @@ import { db } from "@/server/db";
 import { mobileJobPhotos } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
+// IMPORTANT: Use Node.js runtime for AWS SDK compatibility and Buffer support.
+export const runtime = "nodejs";
+
 // POST /api/mobile/jobs/:jobId/photos (register uploaded photo public URL)
 export async function POST(
   request: NextRequest,

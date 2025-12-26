@@ -8,6 +8,10 @@ import { getRequestId, jsonError, logEvent, withRequestId } from "@/src/lib/mobi
 import { ensureVisionWorker } from "@/src/lib/mobile/vision/worker";
 import { runVisionForPhoto } from "@/src/lib/mobile/vision/runner";
 
+// IMPORTANT: Use Node.js runtime for AWS SDK compatibility and Buffer support.
+// Edge runtime causes issues with AWS SDK and image buffer operations.
+export const runtime = "nodejs";
+
 export type DetectedIssue = {
   id: string;
   label: string;

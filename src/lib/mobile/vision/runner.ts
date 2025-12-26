@@ -14,12 +14,28 @@ export async function runVisionForPhoto(photo: typeof mobileJobPhotos.$inferSele
   const attempts = photo.findingsAttempts ?? 1;
   const startTime = Date.now();
 
+  // Extract filename/extension from URL for format debugging
+  const urlParts = photo.publicUrl.split('/');
+  const filename = urlParts[urlParts.length - 1]?.split('?')[0] || 'unknown';
+  const extension = filename.includes('.') ? filename.split('.').pop()?.toLowerCase() : 'none';
+
   console.log("vision.photo.start", {
     photoId: photo.id,
     jobId: photo.jobId,
     publicUrl: photo.publicUrl.substring(0, 80) + "...",
+    filename,
+    extension,
     attempt: attempts,
   });
+
+  // Early warning for potentially problematic formats
+  if (extension && !['jpg', 'jpeg', 'png'].includes(extension)) {
+    console.warn("vision.photo.formatWarning", {
+      photoId: photo.id,
+      extension,
+      message: `Image extension '${extension}' may not be supported by Rekognition (requires JPEG/PNG)`,
+    });
+  }
 
   try {
     // Run Rekognition and GPT Vision in parallel for speed.
@@ -72,7 +88,26 @@ export async function runVisionForPhoto(photo: typeof mobileJobPhotos.$inferSele
 
     // We need at least one AI provider to succeed
     if (!rek && !gpt) {
-      throw new Error(`VISION_FAILED: rekognition=${rekError || "unknown"} gpt=${gptError || "unknown"}`);
+      // Provide detailed error for debugging "no summary" issues
+      const errorDetails = {
+        rekognitionError: rekError || "unknown",
+        gptError: gptError || "unknown",
+        photoId: photo.id,
+        imageUrl: photo.publicUrl.substring(0, 80),
+      };
+      console.error("vision.photo.allProvidersFailed", errorDetails);
+      
+      // Surface specific, actionable error messages
+      let userMessage = "VISION_FAILED";
+      if (rekError?.includes("FORMAT_ERROR")) {
+        userMessage = "IMAGE_FORMAT_ERROR: Image must be JPEG or PNG (HEIC/WebP not supported by Rekognition)";
+      } else if (gptError?.includes("API_KEY")) {
+        userMessage = "CONFIG_ERROR: OpenAI API key not configured";
+      } else if (rekError?.includes("credentials") || rekError?.includes("Access")) {
+        userMessage = "CONFIG_ERROR: AWS credentials invalid or missing";
+      }
+      
+      throw new Error(`${userMessage}: rekognition=${rekError || "unknown"} gpt=${gptError || "unknown"}`);
     }
 
     console.log("vision.photo.analyzed", {
