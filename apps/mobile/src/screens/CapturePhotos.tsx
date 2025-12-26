@@ -9,6 +9,15 @@ type UploadedPhoto = {
   status: "uploading" | "uploaded" | "error";
 };
 
+/**
+ * Check if the mime type is supported by AWS Rekognition.
+ * Rekognition only supports JPEG and PNG.
+ */
+function isSupportedImageFormat(mimeType?: string | null): boolean {
+  if (!mimeType) return false;
+  return mimeType === "image/jpeg" || mimeType === "image/png";
+}
+
 export default function CapturePhotos(props: {
   jobId: number;
   onDraftReady: (draftId: number, payload: unknown) => void;
@@ -72,15 +81,22 @@ export default function CapturePhotos(props: {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) throw new Error("Media library permission denied");
 
+      // CRITICAL: exif: false ensures we don't get HEIC format on iOS
+      // quality: 0.85 ensures reasonable file size
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         quality: 0.85,
         allowsMultipleSelection: true,
+        exif: false, // Reduces file complexity
       });
 
       if (result.canceled) return;
 
       for (const asset of result.assets) {
+        // Warn if format might not be supported (HEIC from iOS gallery)
+        if (!isSupportedImageFormat(asset.mimeType)) {
+          console.warn(`Image format ${asset.mimeType} may not be supported by Rekognition. Converting...`);
+        }
         await uploadAsset(asset);
       }
     } catch (e) {
@@ -97,13 +113,20 @@ export default function CapturePhotos(props: {
       const perm = await ImagePicker.requestCameraPermissionsAsync();
       if (!perm.granted) throw new Error("Camera permission denied");
 
+      // CRITICAL: exif: false helps ensure JPEG output instead of HEIC on iOS
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         quality: 0.85,
+        exif: false,
       });
 
       if (result.canceled) return;
-      await uploadAsset(result.assets[0]);
+      
+      const asset = result.assets[0];
+      if (!isSupportedImageFormat(asset.mimeType)) {
+        console.warn(`Camera captured ${asset.mimeType} format - may need server-side conversion`);
+      }
+      await uploadAsset(asset);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Capture failed");
     } finally {
