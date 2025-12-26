@@ -2,7 +2,6 @@
 import { forwardRef, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { cn } from "@/lib/utils";
 import { Clock, Shield, AlertCircle, Layers } from "lucide-react";
 import { 
   HeroPhoto, 
@@ -60,7 +59,7 @@ interface ProposalPreviewProps {
 }
 
 const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
-  ({ data, blurred = true, onUnlock, companyInfo, photos = [], showPhotos = true }, ref) => {
+  ({ data, companyInfo, photos = [], showPhotos = true }, ref) => {
     const today = new Date().toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
@@ -92,26 +91,10 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
 
     return (
       <div ref={ref} className="bg-white shadow-xl min-h-[800px] w-full max-w-[800px] mx-auto p-8 md:p-12 relative text-slate-800 text-sm leading-relaxed font-serif">
-        {/* Preview Mode Banner */}
-        {blurred && (
-          <div className="absolute top-0 left-0 right-0 bg-amber-500 text-white text-center py-2 px-4 text-xs font-bold uppercase tracking-wide z-10 flex items-center justify-center gap-2">
-            <AlertCircle className="w-4 h-4" />
-            Preview Mode – Some content is hidden. Unlock to see full proposal.
-          </div>
-        )}
-
-        {/* DRAFT Watermark */}
-        {blurred && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
-            <span className="text-[180px] font-bold text-slate-200/40 tracking-wider -rotate-45 select-none whitespace-nowrap">
-              DRAFT
-            </span>
-          </div>
-        )}
 
         {/* Hero Photo Banner (if available) */}
         {hasPhotos && organizedPhotos.hero && (
-          <div className={cn("mb-6", blurred && "mt-8")}>
+          <div className="mb-6">
             <HeroPhoto
               photo={organizedPhotos.hero}
               companyLogo={companyInfo?.companyLogo}
@@ -123,10 +106,7 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
         )}
 
         {/* Header */}
-        <div className={cn(
-          "flex justify-between items-start border-b-2 border-slate-900 pb-6 mb-8", 
-          blurred && !organizedPhotos.hero && "mt-8"
-        )}>
+        <div className="flex justify-between items-start border-b-2 border-slate-900 pb-6 mb-8">
           <div>
             <h1 className="text-3xl font-heading font-bold text-slate-900 uppercase tracking-wide">Proposal</h1>
             <p className="text-slate-500 mt-1">#{proposalNumber}</p>
@@ -303,44 +283,19 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
                     </h3>
 
                     {/* Inline scope photos for this service */}
-                    {hasPhotos && servicePhotos.length > 0 && !blurred && (
+                    {hasPhotos && servicePhotos.length > 0 && (
                       <ScopePhotoInline 
                         photos={servicePhotos} 
                         variant={servicePhotos.length > 1 ? 'pair' : 'single'}
                       />
                     )}
 
-                    {/* First 4 items shown */}
-                    <ul className="list-disc pl-5 space-y-2 marker:text-secondary mb-2">
-                      {item.scope.slice(0, 4).map((scopeItem, i) => (
+                    {/* All scope items shown */}
+                    <ul className="list-disc pl-5 space-y-2 marker:text-secondary">
+                      {item.scope.map((scopeItem, i) => (
                         <li key={i}>{scopeItem}</li>
                       ))}
                     </ul>
-
-                    {/* BLURRED SECTION for remaining items */}
-                    {item.scope.length > 4 && (
-                      <div className="relative mt-2">
-                        {blurred && serviceIndex === 0 && (
-                          <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center text-center border-2 border-dashed border-slate-200 rounded">
-                            <p className="text-slate-900 font-bold mb-2">Detailed scope & pricing hidden</p>
-                            <button 
-                              onClick={onUnlock}
-                              className="bg-secondary text-slate-900 px-4 py-2 rounded font-bold text-sm shadow-lg hover:scale-105 transition-transform"
-                            >
-                              Unlock Full Proposal
-                            </button>
-                          </div>
-                        )}
-                        
-                        <div className={cn("space-y-2", blurred && "opacity-30 select-none filter blur-[1px]")}>
-                          <ul className="list-disc pl-5 space-y-2 marker:text-secondary">
-                            {item.scope.slice(4).map((scopeItem, i) => (
-                              <li key={i}>{scopeItem}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 );
               })}
@@ -357,7 +312,7 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
               </p>
 
               {/* Inline scope photos for single service (show first matching photos) */}
-              {hasPhotos && !blurred && (() => {
+              {hasPhotos && (() => {
                 const singleServicePhotos = Object.values(organizedPhotos.scopePhotos).flat().slice(0, 2);
                 return singleServicePhotos.length > 0 ? (
                   <ScopePhotoInline 
@@ -369,7 +324,7 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
 
               <ul className="list-disc pl-5 space-y-2 marker:text-secondary">
                 {data.scope && data.scope.length > 0 ? (
-                  data.scope.slice(0, 4).map((item: string, i: number) => (
+                  data.scope.map((item: string, i: number) => (
                     <li key={i}>{item}</li>
                   ))
                 ) : (
@@ -377,49 +332,21 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
                     <li>Consultation and site preparation.</li>
                     <li>Demolition of existing structures as required.</li>
                     <li>Installation of new materials per manufacturer specifications.</li>
+                    <li>Detailed plumbing rough-in and trim-out specifications.</li>
+                    <li>Electrical fixture installation and safety checks.</li>
+                    <li>Final site cleanup and debris removal.</li>
+                    <li>Walkthrough and final inspection with homeowner.</li>
+                    <li>Warranty documentation handover.</li>
                   </>
                 )}
               </ul>
-
-              {/* BLURRED SECTION */}
-              <div className="relative mt-2">
-                {blurred && (
-                  <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center text-center border-2 border-dashed border-slate-200 rounded">
-                    <p className="text-slate-900 font-bold mb-2">Detailed scope & pricing hidden</p>
-                    <button 
-                      onClick={onUnlock}
-                      className="bg-secondary text-slate-900 px-4 py-2 rounded font-bold text-sm shadow-lg hover:scale-105 transition-transform"
-                    >
-                      Unlock Full Proposal
-                    </button>
-                  </div>
-                )}
-                
-                <div className={cn("space-y-4", blurred && "opacity-30 select-none filter blur-[1px]")}>
-                  <ul className="list-disc pl-5 space-y-2 marker:text-secondary">
-                    {data.scope && data.scope.length > 4 ? (
-                      data.scope.slice(4).map((item: string, i: number) => (
-                        <li key={i}>{item}</li>
-                      ))
-                    ) : (
-                      <>
-                        <li>Detailed plumbing rough-in and trim-out specifications.</li>
-                        <li>Electrical fixture installation and safety checks.</li>
-                        <li>Final site cleanup and debris removal.</li>
-                        <li>Walkthrough and final inspection with homeowner.</li>
-                        <li>Warranty documentation handover.</li>
-                      </>
-                    )}
-                  </ul>
-                </div>
-              </div>
             </div>
           </div>
         )}
 
         {/* Exclusions Section */}
         {data.exclusions && data.exclusions.length > 0 && (
-          <div className={cn("mb-8", blurred && "opacity-30 blur-[1px]")}>
+          <div className="mb-8">
             <h2 className="text-lg font-heading font-bold text-white bg-amber-600 px-3 py-1 inline-block mb-4">
               <AlertCircle className="w-4 h-4 inline mr-2 -mt-0.5" />
               Not Included
@@ -440,7 +367,7 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
           <div className="mb-8 break-inside-avoid">
             <h2 className="text-lg font-heading font-bold text-white bg-slate-900 px-3 py-1 inline-block mb-4">Investment</h2>
             
-            <div className={cn("border border-slate-200 rounded-lg p-6 bg-slate-50", blurred && "opacity-30 blur-[2px]")}>
+            <div className="border border-slate-200 rounded-lg p-6 bg-slate-50">
               <div className="flex justify-between items-end mb-2">
                 <span className="font-bold text-slate-700">Total Project Estimate</span>
                 <span className="text-2xl font-bold text-slate-900">
@@ -456,7 +383,7 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
 
         {/* Warranty Section */}
         {data.warranty && (
-          <div className={cn("mb-8", blurred && "opacity-30 blur-[1px]")}>
+          <div className="mb-8">
             <h2 className="text-lg font-heading font-bold text-white bg-green-700 px-3 py-1 inline-block mb-4">
               <Shield className="w-4 h-4 inline mr-2 -mt-0.5" />
               Warranty
@@ -468,7 +395,7 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
         )}
 
         {/* Terms & Conditions */}
-        <div className={cn("mb-8 text-xs text-slate-500", blurred && "opacity-30 blur-[1px]")}>
+        <div className="mb-8 text-xs text-slate-500">
           <h3 className="font-bold text-slate-700 mb-2 uppercase tracking-wider">Terms & Conditions</h3>
           <ol className="list-decimal pl-4 space-y-1">
             <li>Payment terms: 50% deposit due upon acceptance, balance due upon completion.</li>
@@ -480,7 +407,7 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
         </div>
 
         {/* Photo Appendix Gallery (all remaining photos) */}
-        {hasPhotos && organizedPhotos.appendix.length > 0 && !blurred && (
+        {hasPhotos && organizedPhotos.appendix.length > 0 && (
           <AppendixGallery 
             photos={organizedPhotos.appendix}
             title="Photo Appendix"

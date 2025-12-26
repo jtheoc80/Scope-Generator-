@@ -210,7 +210,6 @@ export default function ProposalViewPage() {
         <ProposalPreview
           ref={previewRef}
           data={proposalData}
-          blurred={!proposal.isUnlocked}
         />
       </div>
 

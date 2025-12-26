@@ -262,7 +262,6 @@ export default function Generator() {
   ]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [isUnlocked] = useState(true);
   const [enhancedScopes, setEnhancedScopes] = useState<Record<string, string[]>>({});
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
@@ -746,7 +745,7 @@ export default function Generator() {
         estimatedDaysHigh: totalDaysHigh,
         // Status
         status: "draft",
-        isUnlocked: false,
+        isUnlocked: true,
         // Photo count
         photoCount: photos.length,
       };
@@ -886,7 +885,7 @@ export default function Generator() {
         estimatedDaysHigh: totalDaysHigh,
         // Status
         status: "draft",
-        isUnlocked: false,
+        isUnlocked: true,
         // Photo count
         photoCount: photos.length,
       };
@@ -1402,7 +1401,6 @@ export default function Generator() {
                    <ProposalPreview 
                       ref={previewRef}
                       data={previewData} 
-                      blurred={!isUnlocked} 
                       companyInfo={user ? {
                         companyName: user.companyName,
                         companyAddress: user.companyAddress,
