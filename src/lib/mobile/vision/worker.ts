@@ -2,6 +2,7 @@ import { db } from "@/server/db";
 import { mobileJobPhotos } from "@shared/schema";
 import { and, desc, eq, isNull, lte, or } from "drizzle-orm";
 import { runVisionForPhoto } from "./runner";
+import { logError } from "../error-logger";
 
 const WORKER_ID = `vision-${process.pid}-${Math.random().toString(16).slice(2)}`;
 let started = false;
@@ -19,9 +20,20 @@ export function ensureVisionWorker() {
       try {
         await processOne();
       } catch (e) {
+        const errorMsg = e instanceof Error ? e.message : String(e);
         console.error("mobileVisionWorker.error", {
           workerId: WORKER_ID,
-          message: e instanceof Error ? e.message : String(e),
+          message: errorMsg,
+        });
+        
+        // Log worker-level errors to persistent file
+        logError({
+          category: "UNKNOWN",
+          error: e instanceof Error ? e : errorMsg,
+          details: {
+            workerId: WORKER_ID,
+            context: "vision_worker_loop",
+          },
         });
       }
       await sleep(300);
