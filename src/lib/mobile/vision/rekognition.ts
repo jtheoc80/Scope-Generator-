@@ -1,4 +1,5 @@
 import { RekognitionClient, DetectLabelsCommand } from "@aws-sdk/client-rekognition";
+import { parseS3Url, fetchS3ObjectBytes, type S3ObjectRef } from "../storage/s3";
 
 function requireEnv(name: string) {
   const v = process.env[name];
@@ -76,7 +77,28 @@ function validateImageFormat(bytes: Uint8Array): { valid: boolean; format?: stri
   return { valid: false, error: "Unknown image format - Rekognition requires JPEG or PNG" };
 }
 
-async function fetchImageBytes(url: string, maxRedirects = 3): Promise<Uint8Array> {
+/**
+ * Fetch image bytes directly from S3 using the SDK (no redirect issues).
+ * Falls back to HTTP fetch if URL is not a recognized S3 URL.
+ */
+async function fetchImageBytesFromS3OrUrl(url: string, s3Ref: S3ObjectRef | null): Promise<Uint8Array> {
+  // If we have an S3 reference, fetch directly from S3 (avoids 301 redirect issues)
+  if (s3Ref) {
+    console.log("rekognition.fetchS3Direct", {
+      bucket: s3Ref.bucket,
+      key: s3Ref.key.substring(0, 60) + "...",
+    });
+    return fetchS3ObjectBytes(s3Ref);
+  }
+  
+  // Fallback: fetch via HTTP for non-S3 URLs
+  return fetchImageBytesViaHttp(url);
+}
+
+/**
+ * Fetch image bytes via HTTP (fallback for non-S3 URLs).
+ */
+async function fetchImageBytesViaHttp(url: string, maxRedirects = 3): Promise<Uint8Array> {
   let currentUrl = url;
   let redirectCount = 0;
   
@@ -145,11 +167,57 @@ async function fetchImageBytes(url: string, maxRedirects = 3): Promise<Uint8Arra
 
 export async function analyzeWithRekognition(params: {
   imageUrl: string;
+  s3Ref?: S3ObjectRef | null;
   maxLabels?: number;
   minConfidence?: number;
 }) {
   const client = getRekognitionClient();
-  const bytes = await fetchImageBytes(params.imageUrl);
+  
+  // Try to parse S3 reference from URL if not provided
+  const s3Ref = params.s3Ref !== undefined ? params.s3Ref : parseS3Url(params.imageUrl);
+  
+  // PREFERRED: Use S3Object to let Rekognition read directly from S3
+  // This avoids 301 redirect issues that occur when S3 URLs are accessed via HTTP
+  // with wrong region in the URL.
+  if (s3Ref) {
+    console.log("rekognition.request.s3Object", {
+      bucket: s3Ref.bucket,
+      key: s3Ref.key.substring(0, 60) + "...",
+    });
+    
+    const cmd = new DetectLabelsCommand({
+      Image: { 
+        S3Object: { 
+          Bucket: s3Ref.bucket, 
+          Name: s3Ref.key 
+        } 
+      },
+      MaxLabels: params.maxLabels ?? 20,
+      MinConfidence: params.minConfidence ?? 70,
+    });
+
+    const out = await client.send(cmd);
+    const labels = (out.Labels || [])
+      .filter((l) => l.Name && typeof l.Confidence === "number")
+      .map((l) => ({ name: l.Name as string, confidence: l.Confidence as number }))
+      .sort((a, b) => b.confidence - a.confidence);
+
+    console.log("rekognition.success.s3Object", {
+      bucket: s3Ref.bucket,
+      labelCount: labels.length,
+      topLabels: labels.slice(0, 5).map(l => l.name),
+    });
+
+    return {
+      provider: "aws" as const,
+      service: "rekognition" as const,
+      model: "DetectLabels",
+      labels,
+    };
+  }
+  
+  // FALLBACK: Fetch bytes and send to Rekognition (for non-S3 URLs)
+  const bytes = await fetchImageBytesFromS3OrUrl(params.imageUrl, null);
 
   // CRITICAL: Validate image format before sending to Rekognition.
   // Rekognition only supports JPEG/PNG. HEIC (common from iPhones) will fail silently.
@@ -164,7 +232,7 @@ export async function analyzeWithRekognition(params: {
     throw new Error(`REKOGNITION_FORMAT_ERROR: ${formatCheck.error}`);
   }
 
-  console.log("rekognition.request", {
+  console.log("rekognition.request.bytes", {
     url: params.imageUrl.substring(0, 80) + "...",
     format: formatCheck.format,
     byteLength: bytes.length,
@@ -182,7 +250,7 @@ export async function analyzeWithRekognition(params: {
     .map((l) => ({ name: l.Name as string, confidence: l.Confidence as number }))
     .sort((a, b) => b.confidence - a.confidence);
 
-  console.log("rekognition.success", {
+  console.log("rekognition.success.bytes", {
     labelCount: labels.length,
     topLabels: labels.slice(0, 5).map(l => l.name),
   });

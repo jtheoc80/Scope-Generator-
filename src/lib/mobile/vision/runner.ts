@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { analyzeWithRekognition } from "./rekognition";
 import { analyzeWithGptVision, validateFindings } from "./gpt";
 import { logVisionError, logFormatError } from "../error-logger";
+import { parseS3Url } from "../storage/s3";
 
 function backoffSeconds(attempts: number) {
   const table = [0, 1, 3, 8, 20, 45];
@@ -39,9 +40,31 @@ export async function runVisionForPhoto(photo: typeof mobileJobPhotos.$inferSele
   }
 
   try {
+    // Parse S3 reference once and pass to both vision functions.
+    // This avoids 301 redirect issues when S3 URLs have wrong region in the URL.
+    // With S3 reference, Rekognition reads directly from S3, and GPT gets base64.
+    const s3Ref = parseS3Url(photo.publicUrl);
+    
+    if (s3Ref) {
+      console.log("vision.photo.s3Ref", {
+        photoId: photo.id,
+        bucket: s3Ref.bucket,
+        key: s3Ref.key.substring(0, 60) + "...",
+      });
+    } else {
+      console.log("vision.photo.noS3Ref", {
+        photoId: photo.id,
+        publicUrl: photo.publicUrl.substring(0, 80) + "...",
+        message: "Could not parse S3 reference from URL - will use HTTP fetch",
+      });
+    }
+    
     // Run Rekognition and GPT Vision in parallel for speed.
     // IMPORTANT: Do not call Rekognition twice (it was previously called twice per photo).
-    const rekPromise = analyzeWithRekognition({ imageUrl: photo.publicUrl });
+    const rekPromise = analyzeWithRekognition({ 
+      imageUrl: photo.publicUrl,
+      s3Ref, // Pass S3 reference to avoid redirect issues
+    });
 
     const gptPromise = (async () => {
       // Best-effort: use Rekognition labels as hints if they resolve quickly.
@@ -59,6 +82,7 @@ export async function runVisionForPhoto(photo: typeof mobileJobPhotos.$inferSele
 
       return analyzeWithGptVision({
         imageUrl: photo.publicUrl,
+        s3Ref, // Pass S3 reference to avoid redirect issues
         kind: photo.kind,
         rekognitionLabels: labelHints,
       });
