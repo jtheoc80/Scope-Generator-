@@ -22,12 +22,17 @@ export type DetectedIssue = {
 };
 
 export type AnalyzeResponse = {
-  status: "ready" | "analyzing" | "no_photos";
+  status: "ready" | "analyzing" | "no_photos" | "error";
   detectedIssues: DetectedIssue[];
   photosAnalyzed: number;
   photosTotal: number;
   suggestedProblem?: string;
   needsMorePhotos?: string[];
+  // Error information for UI display
+  error?: {
+    reason: string;
+    message: string;
+  };
 };
 
 const LOCK_EXPIRY_MS = 2 * 60 * 1000;
@@ -85,7 +90,59 @@ async function lockNextPhotos(params: {
   return lockedPhotos;
 }
 
-async function advanceAnalysis(params: { jobId: number; requestId: string; maxToProcess: number }) {
+// Critical error types that should stop processing and return error to client
+type CriticalErrorReason = 
+  | "OPENAI_QUOTA_EXCEEDED" 
+  | "OPENAI_RATE_LIMITED" 
+  | "OPENAI_AUTH_ERROR"
+  | "AWS_AUTH_ERROR"
+  | "ALL_PROVIDERS_FAILED";
+
+type AdvanceAnalysisResult = {
+  processed: number;
+  criticalError?: {
+    reason: CriticalErrorReason;
+    message: string;
+    httpStatus: number;
+  };
+};
+
+function detectCriticalError(errorMessage: string): AdvanceAnalysisResult["criticalError"] | null {
+  const msg = errorMessage.toLowerCase();
+  
+  if (msg.includes("quota_exceeded") || msg.includes("billing_error") || msg.includes("quota exceeded")) {
+    return {
+      reason: "OPENAI_QUOTA_EXCEEDED",
+      message: "OpenAI API quota exceeded. Check billing at https://platform.openai.com/account/billing",
+      httpStatus: 503,
+    };
+  }
+  if (msg.includes("rate_limit") || msg.includes("gpt_rate_limited")) {
+    return {
+      reason: "OPENAI_RATE_LIMITED",
+      message: "OpenAI rate limit exceeded. Please try again in a few moments.",
+      httpStatus: 429,
+    };
+  }
+  if (msg.includes("gpt_auth_error") || msg.includes("config_error: openai api key")) {
+    return {
+      reason: "OPENAI_AUTH_ERROR",
+      message: "OpenAI API key is invalid or not configured.",
+      httpStatus: 503,
+    };
+  }
+  if (msg.includes("config_error: aws") || msg.includes("aws credentials")) {
+    return {
+      reason: "AWS_AUTH_ERROR",
+      message: "AWS credentials invalid or missing.",
+      httpStatus: 503,
+    };
+  }
+  
+  return null;
+}
+
+async function advanceAnalysis(params: { jobId: number; requestId: string; maxToProcess: number }): Promise<AdvanceAnalysisResult> {
   // Best-effort: start the in-process worker (useful on Node deployments).
   // On serverless, this likely doesn't persist; the inline processing below still advances progress.
   ensureVisionWorker();
@@ -95,6 +152,7 @@ async function advanceAnalysis(params: { jobId: number; requestId: string; maxTo
   const lockedBy = `api-${params.requestId}-${Math.random().toString(16).slice(2)}`;
 
   let processed = 0;
+  let criticalError: AdvanceAnalysisResult["criticalError"] | undefined;
   const startTime = Date.now();
   const maxTimeMs = 25000; // Max 25 seconds of processing per request
   
@@ -125,26 +183,61 @@ async function advanceAnalysis(params: { jobId: number; requestId: string; maxTo
       )
     );
     
-    // Log any failures
+    // Check for critical errors that should stop processing
     for (let i = 0; i < results.length; i++) {
       const result = results[i];
       if (result.status === "rejected") {
+        const errorMsg = result.reason instanceof Error ? result.reason.message : String(result.reason);
         console.warn("advanceAnalysis.photoFailed", {
           photoId: lockedPhotos[i].id,
-          error: result.reason instanceof Error ? result.reason.message : String(result.reason),
+          error: errorMsg,
         });
+        
+        // Check if this is a critical error that should stop all processing
+        const detected = detectCriticalError(errorMsg);
+        if (detected) {
+          criticalError = detected;
+          console.error("advanceAnalysis.criticalError", {
+            photoId: lockedPhotos[i].id,
+            reason: detected.reason,
+            message: detected.message,
+          });
+          // Stop processing immediately on critical errors
+          break;
+        }
+      } else if (result.status === "fulfilled") {
+        // runVisionForPhoto returns { success, error? } - check for critical errors even on "success" false
+        const visionResult = result.value as { success: boolean; error?: string };
+        if (!visionResult.success && visionResult.error) {
+          const detected = detectCriticalError(visionResult.error);
+          if (detected) {
+            criticalError = detected;
+            console.error("advanceAnalysis.criticalError", {
+              photoId: lockedPhotos[i].id,
+              reason: detected.reason,
+              message: detected.message,
+            });
+            break;
+          }
+        }
       }
     }
     
     processed += lockedPhotos.length;
+    
+    // Stop if we hit a critical error
+    if (criticalError) break;
   }
   
   logEvent("mobile.photos.analyze.advance", {
     requestId: params.requestId,
     jobId: params.jobId,
     processed,
+    criticalError: criticalError?.reason,
     durationMs: Date.now() - startTime,
   });
+  
+  return { processed, criticalError };
 }
 
 // Helper to extract issues from vision findings
@@ -333,6 +426,21 @@ function extractNeedsMorePhotos(
   return out;
 }
 
+// Check for critical errors in already-failed photos
+function detectCriticalErrorFromPhotos(
+  photos: Array<typeof mobileJobPhotos.$inferSelect>
+): { reason: string; message: string } | null {
+  for (const photo of photos) {
+    if (photo.findingsStatus === "failed" && photo.findingsError) {
+      const detected = detectCriticalError(photo.findingsError);
+      if (detected) {
+        return { reason: detected.reason, message: detected.message };
+      }
+    }
+  }
+  return null;
+}
+
 // Generate suggested problem statement from issues
 function generateSuggestedProblem(issues: DetectedIssue[]): string | undefined {
   const damageIssues = issues.filter(i => i.category === "damage");
@@ -373,9 +481,28 @@ export async function POST(
       return jsonError(requestId, 404, "NOT_FOUND", "Job not found");
     }
 
-    // Advance analysis (best-effort). Keeps progress moving even on serverless deployments.
+    // Advance analysis. Keeps progress moving even on serverless deployments.
     // Process up to 10 photos to ensure quick initial analysis
-    await advanceAnalysis({ jobId: id, requestId, maxToProcess: 10 });
+    const analysisResult = await advanceAnalysis({ jobId: id, requestId, maxToProcess: 10 });
+
+    // If we hit a critical error (quota exceeded, auth failure, etc.), return error immediately
+    if (analysisResult.criticalError) {
+      logEvent("mobile.photos.analyze.criticalError", {
+        requestId,
+        jobId: id,
+        reason: analysisResult.criticalError.reason,
+        message: analysisResult.criticalError.message,
+      });
+      
+      return Response.json(
+        {
+          ok: false,
+          reason: analysisResult.criticalError.reason,
+          message: analysisResult.criticalError.message,
+        },
+        { status: analysisResult.criticalError.httpStatus, headers: { "X-Request-Id": requestId } }
+      );
+    }
 
     // Get all photos for this job (post-advance)
     const photos = await db.select().from(mobileJobPhotos).where(eq(mobileJobPhotos.jobId, id));
@@ -390,7 +517,8 @@ export async function POST(
     }
 
     const readyPhotos = photos.filter((p) => p.findingsStatus === "ready");
-    const doneCount = photos.filter((p) => p.findingsStatus === "ready" || p.findingsStatus === "failed").length;
+    const failedPhotos = photos.filter((p) => p.findingsStatus === "failed");
+    const doneCount = readyPhotos.length + failedPhotos.length;
 
     // Extract issues from analyzed photos (ready only)
     const detectedIssues = extractIssuesFromFindings(readyPhotos);
@@ -398,15 +526,32 @@ export async function POST(
     const needsMorePhotos = extractNeedsMorePhotos(readyPhotos);
 
     const stillPending = photos.length - doneCount;
+    
+    // Check if any photos failed with critical errors (quota, auth, etc.)
+    const criticalError = detectCriticalErrorFromPhotos(failedPhotos);
 
     logEvent("mobile.photos.analyze.ok", {
       requestId,
       jobId: id,
       photosTotal: photos.length,
       photosAnalyzed: doneCount,
+      photosFailed: failedPhotos.length,
       issuesDetected: detectedIssues.length,
+      criticalError: criticalError?.reason,
       ms: Date.now() - t0,
     });
+
+    // If all photos failed with critical errors, return error status
+    if (failedPhotos.length > 0 && readyPhotos.length === 0 && stillPending === 0 && criticalError) {
+      return Response.json(
+        {
+          ok: false,
+          reason: criticalError.reason,
+          message: criticalError.message,
+        },
+        { status: 503, headers: { "X-Request-Id": requestId } }
+      );
+    }
 
     return withRequestId(requestId, {
       status: stillPending > 0 ? "analyzing" : "ready",
@@ -415,6 +560,8 @@ export async function POST(
       photosTotal: photos.length,
       suggestedProblem,
       needsMorePhotos,
+      // Include error info for UI even if some photos succeeded
+      ...(criticalError && { error: criticalError }),
     } as AnalyzeResponse);
   } catch (error) {
     console.error("Error analyzing photos:", error);
@@ -446,7 +593,26 @@ export async function GET(
 
     // Advance analysis incrementally on each poll so progress doesn't stall.
     // Process up to 5 photos per poll for faster catch-up
-    await advanceAnalysis({ jobId: id, requestId, maxToProcess: 5 });
+    const analysisResult = await advanceAnalysis({ jobId: id, requestId, maxToProcess: 5 });
+
+    // If we hit a critical error (quota exceeded, auth failure, etc.), return error immediately
+    if (analysisResult.criticalError) {
+      logEvent("mobile.photos.analyze.criticalError", {
+        requestId,
+        jobId: id,
+        reason: analysisResult.criticalError.reason,
+        message: analysisResult.criticalError.message,
+      });
+      
+      return Response.json(
+        {
+          ok: false,
+          reason: analysisResult.criticalError.reason,
+          message: analysisResult.criticalError.message,
+        },
+        { status: analysisResult.criticalError.httpStatus, headers: { "X-Request-Id": requestId } }
+      );
+    }
 
     // Get all photos for this job
     const photos = await db
@@ -464,18 +630,38 @@ export async function GET(
     }
 
     const readyPhotos = photos.filter((p) => p.findingsStatus === "ready");
-    const doneCount = photos.filter((p) => p.findingsStatus === "ready" || p.findingsStatus === "failed").length;
+    const failedPhotos = photos.filter((p) => p.findingsStatus === "failed");
+    const doneCount = readyPhotos.length + failedPhotos.length;
+    const stillPending = photos.length - doneCount;
+    
     const detectedIssues = extractIssuesFromFindings(readyPhotos);
     const suggestedProblem = generateSuggestedProblem(detectedIssues);
     const needsMorePhotos = extractNeedsMorePhotos(readyPhotos);
+    
+    // Check if any photos failed with critical errors (quota, auth, etc.)
+    const criticalError = detectCriticalErrorFromPhotos(failedPhotos);
+    
+    // If all photos failed with critical errors, return error status
+    if (failedPhotos.length > 0 && readyPhotos.length === 0 && stillPending === 0 && criticalError) {
+      return Response.json(
+        {
+          ok: false,
+          reason: criticalError.reason,
+          message: criticalError.message,
+        },
+        { status: 503, headers: { "X-Request-Id": requestId } }
+      );
+    }
 
     return withRequestId(requestId, {
-      status: doneCount === photos.length ? "ready" : "analyzing",
+      status: stillPending > 0 ? "analyzing" : "ready",
       detectedIssues,
       photosAnalyzed: doneCount,
       photosTotal: photos.length,
       suggestedProblem,
       needsMorePhotos,
+      // Include error info for UI even if some photos succeeded
+      ...(criticalError && { error: criticalError }),
     } as AnalyzeResponse);
   } catch (error) {
     console.error("Error getting analysis status:", error);
