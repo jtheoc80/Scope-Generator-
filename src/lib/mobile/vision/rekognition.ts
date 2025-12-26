@@ -76,40 +76,71 @@ function validateImageFormat(bytes: Uint8Array): { valid: boolean; format?: stri
   return { valid: false, error: "Unknown image format - Rekognition requires JPEG or PNG" };
 }
 
-async function fetchImageBytes(url: string): Promise<Uint8Array> {
-  // Explicitly follow redirects - S3 signed URLs may redirect
-  const res = await fetch(url, { 
-    redirect: "follow",
-    headers: {
-      // Some CDNs/S3 configurations need explicit accept header
-      "Accept": "image/*,*/*",
-    },
-  });
+async function fetchImageBytes(url: string, maxRedirects = 3): Promise<Uint8Array> {
+  let currentUrl = url;
+  let redirectCount = 0;
   
-  if (!res.ok) {
-    // Provide more helpful error messages for common HTTP errors
+  while (redirectCount <= maxRedirects) {
+    // Use redirect: "manual" so we can handle and log redirects ourselves
+    // Some runtimes don't follow redirects properly with "follow"
+    const res = await fetch(currentUrl, { 
+      redirect: "manual",
+      headers: {
+        // Some CDNs/S3 configurations need explicit accept header
+        "Accept": "image/*,*/*",
+      },
+    });
+    
+    // Handle redirects manually for better debugging and control
     if (res.status === 301 || res.status === 302 || res.status === 307 || res.status === 308) {
       const location = res.headers.get("location");
-      throw new Error(`FETCH_REDIRECT_ERROR: Image URL returned redirect (${res.status}) to ${location?.substring(0, 80) || "unknown"} - URL may be expired or misconfigured`);
+      if (!location) {
+        throw new Error(`FETCH_REDIRECT_ERROR: Image URL returned redirect (${res.status}) with no location header - URL may be expired or misconfigured`);
+      }
+      
+      // Resolve relative redirects
+      const nextUrl = location.startsWith("http") ? location : new URL(location, currentUrl).href;
+      
+      console.log("fetch.redirect", {
+        from: currentUrl.substring(0, 80) + "...",
+        to: nextUrl.substring(0, 80) + "...",
+        status: res.status,
+        redirectCount: redirectCount + 1,
+      });
+      
+      currentUrl = nextUrl;
+      redirectCount++;
+      
+      if (redirectCount > maxRedirects) {
+        throw new Error(`FETCH_TOO_MANY_REDIRECTS: Image URL exceeded ${maxRedirects} redirects - URL may be misconfigured`);
+      }
+      continue;
     }
-    if (res.status === 403) {
-      throw new Error(`FETCH_FORBIDDEN: Access denied to image (403) - check S3 bucket permissions or URL signature expiration`);
+    
+    if (!res.ok) {
+      // Provide more helpful error messages for common HTTP errors
+      if (res.status === 403) {
+        throw new Error(`FETCH_FORBIDDEN: Access denied to image (403) - check S3 bucket permissions or URL signature expiration`);
+      }
+      if (res.status === 404) {
+        throw new Error(`FETCH_NOT_FOUND: Image not found (404) - file may have been deleted`);
+      }
+      if (res.status >= 500) {
+        throw new Error(`FETCH_SERVER_ERROR: Image host returned server error (${res.status}) - try again later`);
+      }
+      throw new Error(`FETCH_ERROR: Failed to fetch image (${res.status})`);
     }
-    if (res.status === 404) {
-      throw new Error(`FETCH_NOT_FOUND: Image not found (404) - file may have been deleted`);
+    
+    const buf = await res.arrayBuffer();
+    if (buf.byteLength === 0) {
+      throw new Error("FETCH_EMPTY: Image response was empty (0 bytes)");
     }
-    if (res.status >= 500) {
-      throw new Error(`FETCH_SERVER_ERROR: Image host returned server error (${res.status}) - try again later`);
-    }
-    throw new Error(`FETCH_ERROR: Failed to fetch image (${res.status})`);
+    
+    return new Uint8Array(buf);
   }
   
-  const buf = await res.arrayBuffer();
-  if (buf.byteLength === 0) {
-    throw new Error("FETCH_EMPTY: Image response was empty (0 bytes)");
-  }
-  
-  return new Uint8Array(buf);
+  // This shouldn't be reached due to the throw inside the loop
+  throw new Error(`FETCH_REDIRECT_ERROR: Exceeded max redirects`);
 }
 
 export async function analyzeWithRekognition(params: {

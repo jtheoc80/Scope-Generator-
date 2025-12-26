@@ -1,8 +1,26 @@
 import * as fs from "fs";
 import * as path from "path";
 
-// Error log file path - uses build-logs directory for consistency
-const ERROR_LOG_DIR = path.join(process.cwd(), "build-logs");
+/**
+ * Determines the appropriate log directory based on the runtime environment.
+ * In serverless environments (AWS Lambda, Vercel), the filesystem is read-only
+ * except for /tmp, so we use that. In local development, we use build-logs.
+ */
+function getLogDirectory(): string {
+  // Check for serverless environment indicators
+  const isLambda = !!process.env.AWS_LAMBDA_FUNCTION_NAME;
+  const isVercel = !!process.env.VERCEL;
+  const isServerless = isLambda || isVercel;
+  
+  if (isServerless) {
+    return "/tmp";
+  }
+  
+  return path.join(process.cwd(), "build-logs");
+}
+
+// Error log file path - uses /tmp in serverless, build-logs locally
+const ERROR_LOG_DIR = getLogDirectory();
 const ERROR_LOG_FILE = path.join(ERROR_LOG_DIR, "vision_errors.log");
 
 export type ErrorCategory = 
