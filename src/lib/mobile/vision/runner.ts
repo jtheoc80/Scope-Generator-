@@ -3,6 +3,7 @@ import { mobileJobPhotos } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { analyzeWithRekognition } from "./rekognition";
 import { analyzeWithGptVision, validateFindings } from "./gpt";
+import { logVisionError, logFormatError } from "../error-logger";
 
 function backoffSeconds(attempts: number) {
   const table = [0, 1, 3, 8, 20, 45];
@@ -73,6 +74,25 @@ export async function runVisionForPhoto(photo: typeof mobileJobPhotos.$inferSele
     } else {
       rekError = rekResult.reason instanceof Error ? rekResult.reason.message : String(rekResult.reason);
       console.warn("vision.rekognition.failed", { photoId: photo.id, error: rekError });
+      
+      // Log to persistent error file
+      if (rekError.includes("FORMAT_ERROR")) {
+        logFormatError({
+          photoId: photo.id,
+          jobId: photo.jobId,
+          detectedFormat: extension,
+          imageUrl: photo.publicUrl,
+          error: rekError,
+        });
+      } else {
+        logVisionError({
+          photoId: photo.id,
+          jobId: photo.jobId,
+          provider: "rekognition",
+          error: rekError,
+          imageUrl: photo.publicUrl,
+        });
+      }
     }
 
     let gpt: Awaited<ReturnType<typeof analyzeWithGptVision>> | null = null;
@@ -82,6 +102,15 @@ export async function runVisionForPhoto(photo: typeof mobileJobPhotos.$inferSele
     } else {
       gptError = gptResult.reason instanceof Error ? gptResult.reason.message : String(gptResult.reason);
       console.warn("vision.gpt.failed", { photoId: photo.id, error: gptError });
+      
+      // Log to persistent error file
+      logVisionError({
+        photoId: photo.id,
+        jobId: photo.jobId,
+        provider: "gpt",
+        error: gptError,
+        imageUrl: photo.publicUrl,
+      });
     }
 
     const labelNames = rek?.labels?.map((l) => l.name) ?? [];
@@ -96,6 +125,21 @@ export async function runVisionForPhoto(photo: typeof mobileJobPhotos.$inferSele
         imageUrl: photo.publicUrl.substring(0, 80),
       };
       console.error("vision.photo.allProvidersFailed", errorDetails);
+      
+      // Log critical failure to persistent error file
+      logVisionError({
+        photoId: photo.id,
+        jobId: photo.jobId,
+        provider: "all",
+        error: `ALL_PROVIDERS_FAILED: rekognition=${rekError || "unknown"} gpt=${gptError || "unknown"}`,
+        imageUrl: photo.publicUrl,
+        details: {
+          rekognitionError: rekError,
+          gptError: gptError,
+          attempt: attempts,
+          extension,
+        },
+      });
       
       // Surface specific, actionable error messages
       let userMessage = "VISION_FAILED";

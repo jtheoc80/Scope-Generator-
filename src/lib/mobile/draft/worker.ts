@@ -3,6 +3,7 @@ import { mobileJobDrafts, mobileJobs, mobileJobPhotos, proposalTemplates, users 
 import { and, eq, isNull, lte, or, desc } from "drizzle-orm";
 import { generateMobileDraft } from "./pipeline";
 import { ensureVisionWorker } from "@/src/lib/mobile/vision/worker";
+import { logDraftError, logError } from "../error-logger";
 
 const WORKER_ID = `api-${process.pid}-${Math.random().toString(16).slice(2)}`;
 let started = false;
@@ -83,9 +84,20 @@ export function startDraftWorker() {
       try {
         await processOne();
       } catch (e) {
+        const errorMsg = e instanceof Error ? e.message : String(e);
         console.error("mobileDraftWorker.error", {
           workerId: WORKER_ID,
-          message: e instanceof Error ? e.message : String(e),
+          message: errorMsg,
+        });
+        
+        // Log worker-level errors to persistent file
+        logError({
+          category: "UNKNOWN",
+          error: e instanceof Error ? e : errorMsg,
+          details: {
+            workerId: WORKER_ID,
+            context: "draft_worker_loop",
+          },
         });
       }
 
@@ -230,14 +242,15 @@ async function runDraft(draft: typeof mobileJobDrafts.$inferSelect) {
     const msg = e instanceof Error ? e.message : String(e);
     const attempts = draft.attempts ?? 1;
     const next = new Date(Date.now() + backoffSeconds(attempts) * 1000);
+    const isFinalFailure = attempts >= 5;
 
     await db
       .update(mobileJobDrafts)
       .set({
-        status: attempts >= 5 ? "failed" : "pending",
+        status: isFinalFailure ? "failed" : "pending",
         error: msg,
-        nextAttemptAt: attempts >= 5 ? null : next,
-        finishedAt: attempts >= 5 ? now : null,
+        nextAttemptAt: isFinalFailure ? null : next,
+        finishedAt: isFinalFailure ? now : null,
         updatedAt: now,
         lockedBy: null,
         lockedAt: null,
@@ -246,7 +259,7 @@ async function runDraft(draft: typeof mobileJobDrafts.$inferSelect) {
 
     await db
       .update(mobileJobs)
-      .set({ status: attempts >= 5 ? "drafting" : "drafting", updatedAt: now })
+      .set({ status: isFinalFailure ? "drafting" : "drafting", updatedAt: now })
       .where(eq(mobileJobs.id, draft.jobId));
 
     console.error("mobileDraftWorker.runDraft.failed", {
@@ -254,6 +267,18 @@ async function runDraft(draft: typeof mobileJobDrafts.$inferSelect) {
       draftId: draft.id,
       attempts,
       error: msg,
+    });
+
+    // Log to persistent error file
+    logDraftError({
+      jobId: draft.jobId,
+      draftId: draft.id,
+      error: e instanceof Error ? e : msg,
+      attempts,
+      details: {
+        isFinalFailure,
+        errorType: msg.includes("NOT_FOUND") ? "missing_data" : "generation_error",
+      },
     });
   }
 }
