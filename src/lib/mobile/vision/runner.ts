@@ -145,10 +145,16 @@ export async function runVisionForPhoto(photo: typeof mobileJobPhotos.$inferSele
       let userMessage = "VISION_FAILED";
       if (rekError?.includes("FORMAT_ERROR")) {
         userMessage = "IMAGE_FORMAT_ERROR: Image must be JPEG or PNG (HEIC/WebP not supported by Rekognition)";
+      } else if (gptError?.includes("QUOTA_EXCEEDED")) {
+        userMessage = "BILLING_ERROR: OpenAI API quota exceeded - check billing at https://platform.openai.com/account/billing";
       } else if (gptError?.includes("API_KEY")) {
         userMessage = "CONFIG_ERROR: OpenAI API key not configured";
       } else if (rekError?.includes("credentials") || rekError?.includes("Access")) {
         userMessage = "CONFIG_ERROR: AWS credentials invalid or missing";
+      } else if (rekError?.includes("FETCH_REDIRECT") || rekError?.includes("FETCH_FORBIDDEN")) {
+        userMessage = "IMAGE_ACCESS_ERROR: Could not fetch image - URL may be expired or inaccessible";
+      } else if (rekError?.includes("FETCH_NOT_FOUND")) {
+        userMessage = "IMAGE_MISSING: Image file not found - may have been deleted";
       }
       
       throw new Error(`${userMessage}: rekognition=${rekError || "unknown"} gpt=${gptError || "unknown"}`);
