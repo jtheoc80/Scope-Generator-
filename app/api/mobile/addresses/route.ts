@@ -29,13 +29,6 @@ export async function GET(request: NextRequest) {
     const customerId = searchParams.get("customerId");
     const limit = Math.min(parseInt(searchParams.get("limit") || "20"), 50);
 
-    let query = db
-      .select()
-      .from(savedAddresses)
-      .where(eq(savedAddresses.userId, authResult.userId))
-      .orderBy(desc(savedAddresses.lastUsedAt))
-      .limit(limit);
-
     let addresses;
 
     if (customerId) {

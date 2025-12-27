@@ -164,8 +164,6 @@ function applyGenericGuardrails(
     warnings.push("No scope tier selected - using recommended scope");
   }
   
-  // Count high-severity findings
-  const highSeverityCount = findings.filter(f => f.severity === "high").length;
   const totalFindings = findings.length;
   
   // Warn if many findings but minimum tier selected
@@ -189,6 +187,7 @@ function applyGenericGuardrails(
 export function validateScopeVsFindings(
   findings: Finding[],
   scopeSelection: ScopeSelection,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   tier: ScopeTier
 ): { valid: boolean; warnings: string[] } {
   const warnings: string[] = [];

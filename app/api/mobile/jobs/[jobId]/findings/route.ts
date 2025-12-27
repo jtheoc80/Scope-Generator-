@@ -10,10 +10,8 @@ import {
   type Finding,
   type Unknown,
   type ClarifyingQuestion,
-  type ScopeTier,
   type FindingsSummary,
   PAINTING_CLARIFYING_QUESTIONS,
-  PAINTING_SCOPE_TIERS,
   detectPaintingJob,
   requiresScopeConfirmation,
   generateScopeTiers,
@@ -410,7 +408,9 @@ function getSeverityFromEstimate(estimate?: string): Finding["severity"] {
 function generateClarifyingQuestions(
   findings: Finding[],
   isPaintingJob: boolean,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   clarificationReasons: string[],
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   scopeReason?: string
 ): ClarifyingQuestion[] {
   const questions: ClarifyingQuestion[] = [];
