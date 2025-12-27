@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +39,7 @@ import {
   ChevronDown,
   X,
   Settings2,
+  RefreshCw,
 } from "lucide-react";
 import { mobileApiFetch, newIdempotencyKey, MobileJob } from "../lib/api";
 import {
@@ -58,6 +59,7 @@ import {
   addRecentJobType,
   getLastJobSetup,
   saveLastJobSetup,
+  syncAllData,
   JOB_TYPES,
   PRIMARY_JOB_TYPES,
   getJobTypeLabel,
@@ -142,10 +144,12 @@ function CustomerSelector({
   value,
   onChange,
   disabled,
+  onRefresh,
 }: {
   value: SavedCustomer | null;
   onChange: (customer: SavedCustomer | null) => void;
   disabled?: boolean;
+  onRefresh?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -153,22 +157,31 @@ function CustomerSelector({
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [newEmail, setNewEmail] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const customers = search ? searchCustomers(search) : getRecentCustomers(8);
 
-  const handleAddNew = () => {
+  const handleAddNew = async () => {
     if (!newName.trim()) return;
-    const customer = saveCustomer({
-      name: newName.trim(),
-      phone: newPhone.trim() || undefined,
-      email: newEmail.trim() || undefined,
-    });
-    onChange(customer);
-    setOpen(false);
-    setShowNewForm(false);
-    setNewName("");
-    setNewPhone("");
-    setNewEmail("");
+    setSaving(true);
+    try {
+      const customer = await saveCustomer({
+        name: newName.trim(),
+        phone: newPhone.trim() || undefined,
+        email: newEmail.trim() || undefined,
+      });
+      onChange(customer);
+      setOpen(false);
+      setShowNewForm(false);
+      setNewName("");
+      setNewPhone("");
+      setNewEmail("");
+      onRefresh?.();
+    } catch (e) {
+      console.error("Failed to save customer:", e);
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (value) {
@@ -226,6 +239,7 @@ function CustomerSelector({
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowNewForm(false)}
+                disabled={saving}
               >
                 <X className="w-4 h-4" />
               </Button>
@@ -235,6 +249,7 @@ function CustomerSelector({
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               autoFocus
+              disabled={saving}
             />
             <div className="grid grid-cols-2 gap-2">
               <Input
@@ -242,21 +257,27 @@ function CustomerSelector({
                 value={newPhone}
                 onChange={(e) => setNewPhone(e.target.value)}
                 type="tel"
+                disabled={saving}
               />
               <Input
                 placeholder="Email (optional)"
                 value={newEmail}
                 onChange={(e) => setNewEmail(e.target.value)}
                 type="email"
+                disabled={saving}
               />
             </div>
             <Button
               type="button"
               className="w-full"
               onClick={handleAddNew}
-              disabled={!newName.trim()}
+              disabled={!newName.trim() || saving}
             >
-              <Plus className="w-4 h-4 mr-2" />
+              {saving ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Plus className="w-4 h-4 mr-2" />
+              )}
               Add Customer
             </Button>
           </div>
@@ -290,8 +311,8 @@ function CustomerSelector({
                   <CommandItem
                     key={customer.id}
                     value={customer.name}
-                    onSelect={() => {
-                      updateCustomerUsage(customer.id);
+                    onSelect={async () => {
+                      await updateCustomerUsage(customer.id);
                       onChange(customer);
                       setOpen(false);
                     }}
@@ -336,15 +357,18 @@ function AddressSelector({
   customerId,
   onChange,
   disabled,
+  onRefresh,
 }: {
   value: SavedAddress | null;
-  customerId?: string;
+  customerId?: number;
   onChange: (address: SavedAddress | null) => void;
   disabled?: boolean;
+  onRefresh?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [isLocating, setIsLocating] = useState(false);
+  const [saving, setSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const addresses = search ? searchAddresses(search) : getRecentAddresses(5);
@@ -373,29 +397,42 @@ function AddressSelector({
         6
       )}, ${position.coords.longitude.toFixed(6)}`;
 
-      const address = saveAddress({
+      setSaving(true);
+      const address = await saveAddress({
         formatted,
         customerId,
+        lat: position.coords.latitude.toString(),
+        lng: position.coords.longitude.toString(),
       });
       onChange(address);
       setOpen(false);
+      onRefresh?.();
     } catch (err) {
       console.error("Geolocation error:", err);
       alert("Unable to get your location. Please enter the address manually.");
     } finally {
       setIsLocating(false);
+      setSaving(false);
     }
   };
 
-  const handleManualAddress = () => {
+  const handleManualAddress = async () => {
     if (!search.trim()) return;
-    const address = saveAddress({
-      formatted: search.trim(),
-      customerId,
-    });
-    onChange(address);
-    setOpen(false);
-    setSearch("");
+    setSaving(true);
+    try {
+      const address = await saveAddress({
+        formatted: search.trim(),
+        customerId,
+      });
+      onChange(address);
+      setOpen(false);
+      setSearch("");
+      onRefresh?.();
+    } catch (e) {
+      console.error("Failed to save address:", e);
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (value) {
@@ -461,8 +498,13 @@ function AddressSelector({
                     size="sm"
                     className="w-full"
                     onClick={handleManualAddress}
+                    disabled={saving}
                   >
-                    <Plus className="w-4 h-4 mr-2" />
+                    {saving ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Plus className="w-4 h-4 mr-2" />
+                    )}
                     Use &quot;{search}&quot;
                   </Button>
                 </div>
@@ -473,8 +515,8 @@ function AddressSelector({
                     <CommandItem
                       key={address.id}
                       value={address.formatted}
-                      onSelect={() => {
-                        updateAddressUsage(address.id);
+                      onSelect={async () => {
+                        await updateAddressUsage(address.id);
                         onChange(address);
                         setOpen(false);
                       }}
@@ -500,7 +542,7 @@ function AddressSelector({
           size="sm"
           className="flex-1 text-xs h-9"
           onClick={handleUseLocation}
-          disabled={disabled || isLocating}
+          disabled={disabled || isLocating || saving}
         >
           {isLocating ? (
             <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
@@ -515,8 +557,8 @@ function AddressSelector({
             variant="outline"
             size="sm"
             className="flex-1 text-xs h-9"
-            onClick={() => {
-              updateAddressUsage(lastAddress.id);
+            onClick={async () => {
+              await updateAddressUsage(lastAddress.id);
               onChange(lastAddress);
             }}
             disabled={disabled}
@@ -541,35 +583,62 @@ export default function CreateJobPage() {
   const [error, setError] = useState<string | null>(null);
   const [recentJobTypes, setRecentJobTypes] = useState<string[]>([]);
   const [initialized, setInitialized] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [, forceUpdate] = useState(0);
 
-  // Load saved state on mount
+  // Load saved state on mount and sync with backend
   useEffect(() => {
-    const lastSetup = getLastJobSetup();
-    const recent = getRecentJobTypes(3);
-    setRecentJobTypes(recent);
+    const initializeData = async () => {
+      // First, load from localStorage for instant display
+      const lastSetup = getLastJobSetup();
+      const recent = getRecentJobTypes(3);
+      setRecentJobTypes(recent);
 
-    if (lastSetup) {
-      setJobType(lastSetup.jobType);
-      if (lastSetup.customerId) {
-        const customer = getCustomerById(lastSetup.customerId);
-        if (customer) setSelectedCustomer(customer);
+      if (lastSetup) {
+        setJobType(lastSetup.jobType);
+        if (lastSetup.customerId) {
+          const customer = getCustomerById(lastSetup.customerId);
+          if (customer) setSelectedCustomer(customer);
+        }
+        if (lastSetup.addressId) {
+          const address = getAddressById(lastSetup.addressId);
+          if (address) setSelectedAddress(address);
+        }
+      } else if (recent.length > 0) {
+        setJobType(recent[0]);
       }
-      if (lastSetup.addressId) {
-        const address = getAddressById(lastSetup.addressId);
-        if (address) setSelectedAddress(address);
+
+      setInitialized(true);
+
+      // Then sync with backend in background
+      setSyncing(true);
+      try {
+        await syncAllData();
+        // Refresh local state after sync
+        const newRecent = getRecentJobTypes(3);
+        setRecentJobTypes(newRecent);
+        forceUpdate((n) => n + 1);
+      } catch (e) {
+        console.error("Background sync failed:", e);
+      } finally {
+        setSyncing(false);
       }
-    } else if (recent.length > 0) {
-      setJobType(recent[0]);
-    }
-    setInitialized(true);
+    };
+
+    initializeData();
   }, []);
+
+  const handleRefresh = () => {
+    forceUpdate((n) => n + 1);
+    setRecentJobTypes(getRecentJobTypes(3));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setError(null);
 
-    // Save to memory
+    // Save to memory (both local and API)
     addRecentJobType(jobType);
     saveLastJobSetup({
       jobType,
@@ -614,16 +683,24 @@ export default function CreateJobPage() {
   return (
     <div className="p-4 space-y-5 pb-8">
       {/* Back button */}
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => router.back()}
-        className="gap-2 -ml-2"
-        disabled={busy}
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back
-      </Button>
+      <div className="flex items-center justify-between">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.back()}
+          className="gap-2 -ml-2"
+          disabled={busy}
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </Button>
+        {syncing && (
+          <div className="flex items-center gap-1 text-xs text-slate-400">
+            <RefreshCw className="w-3 h-3 animate-spin" />
+            Syncing…
+          </div>
+        )}
+      </div>
 
       {/* Progress indicator */}
       <ProgressPill currentStep={1} />
@@ -739,6 +816,7 @@ export default function CreateJobPage() {
               value={selectedCustomer}
               onChange={setSelectedCustomer}
               disabled={busy}
+              onRefresh={handleRefresh}
             />
           </CardContent>
         </Card>
@@ -755,6 +833,7 @@ export default function CreateJobPage() {
               customerId={selectedCustomer?.id}
               onChange={setSelectedAddress}
               disabled={busy}
+              onRefresh={handleRefresh}
             />
           </CardContent>
         </Card>
