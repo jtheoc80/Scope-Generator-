@@ -37,21 +37,23 @@ export default async function MobileWebLayout({
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Mobile header */}
-      <header className="sticky top-0 z-50 bg-white border-b border-slate-200 px-4 py-3 safe-area-inset-top">
-        <div className="flex items-center justify-between">
-          <Link href="/" className="text-lg font-semibold text-slate-900 hover:text-orange-600 transition-colors">
-            ScopeGen
-          </Link>
-          <div className="flex items-center gap-2">
-            {userId && (
-              <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                ✓ Signed In
+      {/* Header - responsive for mobile and desktop */}
+      <header className="sticky top-0 z-50 bg-white border-b border-slate-200 safe-area-inset-top">
+        <div className="mx-auto max-w-4xl px-4 py-3 lg:px-8">
+          <div className="flex items-center justify-between">
+            <Link href="/" className="text-lg font-semibold text-slate-900 hover:text-orange-600 transition-colors">
+              ScopeGen
+            </Link>
+            <div className="flex items-center gap-2">
+              {userId && (
+                <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                  ✓ Signed In
+                </span>
+              )}
+              <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
+                Mobile Web
               </span>
-            )}
-            <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
-              Mobile Web
-            </span>
+            </div>
           </div>
         </div>
       </header>
