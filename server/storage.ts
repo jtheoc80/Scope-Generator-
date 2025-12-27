@@ -55,6 +55,7 @@ export interface IStorage {
   completeOnboarding(userId: string, data: {
     phone?: string;
     companyName?: string;
+    companyAddress?: string;
     businessSize?: string;
     referralSource?: string;
     primaryTrade?: string;
@@ -368,6 +369,7 @@ export class DatabaseStorage implements IStorage {
   async completeOnboarding(userId: string, data: {
     phone?: string;
     companyName?: string;
+    companyAddress?: string;
     businessSize?: string;
     referralSource?: string;
     primaryTrade?: string;

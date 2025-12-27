@@ -438,11 +438,17 @@ Sitemap: ${baseUrl}/sitemap.xml`;
   app.post('/api/onboarding', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { phone, companyName, businessSize, referralSource, primaryTrade, yearsInBusiness } = req.body;
+      const { phone, companyName, companyAddress, businessSize, referralSource, primaryTrade, yearsInBusiness } = req.body;
+      
+      // Validate required fields
+      if (!companyName || !companyAddress || !primaryTrade) {
+        return res.status(400).json({ message: "Company name, address, and primary trade are required" });
+      }
       
       const user = await storage.completeOnboarding(userId, {
         phone,
         companyName,
+        companyAddress,
         businessSize,
         referralSource,
         primaryTrade,

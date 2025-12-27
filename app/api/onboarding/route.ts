@@ -16,7 +16,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { 
       phone, 
-      companyName, 
+      companyName,
+      companyAddress,
       businessSize, 
       referralSource, 
       primaryTrade,
@@ -24,9 +25,9 @@ export async function POST(request: NextRequest) {
     } = body;
     
     // Validate required fields
-    if (!companyName || !primaryTrade) {
+    if (!companyName || !companyAddress || !primaryTrade) {
       return NextResponse.json(
-        { message: 'Company name and primary trade are required' },
+        { message: 'Company name, address, and primary trade are required' },
         { status: 400 }
       );
     }
@@ -39,6 +40,7 @@ export async function POST(request: NextRequest) {
     const user = await storage.completeOnboarding(userId, {
       phone,
       companyName,
+      companyAddress,
       businessSize,
       referralSource,
       primaryTrade,
