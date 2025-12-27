@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { isClerkConfigured } from "@/lib/authUtils";
-import { Hammer, CheckCircle2 } from "lucide-react";
+import { Hammer, CheckCircle2, UserPlus, HelpCircle, ArrowRight } from "lucide-react";
 
 export default async function SignInPage({
   searchParams,
@@ -127,11 +127,35 @@ export default async function SignInPage({
         </div>
         
         <div className="w-full max-w-md">
-          <div className="text-center mb-8">
+          <div className="text-center mb-6">
             <h2 className="text-2xl font-bold text-slate-900 mb-2">Sign in to your account</h2>
             <p className="text-slate-600">
               Welcome back! Please enter your details.
             </p>
+          </div>
+          
+          {/* Prominent Sign Up CTA - shown before sign-in form for new users */}
+          <div className="mb-6 p-4 bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-xl">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                <UserPlus className="w-5 h-5 text-orange-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-semibold text-slate-900 mb-1">
+                  New to ScopeGen?
+                </h3>
+                <p className="text-sm text-slate-600 mb-3">
+                  Create a free account to start generating professional proposals in seconds.
+                </p>
+                <Link 
+                  href={`/sign-up${selectedPlan ? `?plan=${selectedPlan}&redirect_url=${encodeURIComponent(redirectUrl)}` : ''}`}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-colors"
+                >
+                  Create free account
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            </div>
           </div>
           
           <SignIn 
@@ -144,25 +168,41 @@ export default async function SignInPage({
                 socialButtonsBlockButton: "border border-slate-300 hover:bg-slate-50",
                 formButtonPrimary: "bg-orange-500 hover:bg-orange-600",
                 footerActionLink: "text-orange-600 hover:text-orange-700",
+                // Enhanced error styling for better visibility
+                formFieldErrorText: "text-red-600 font-medium",
+                alert: "bg-amber-50 border-amber-200 text-amber-800",
+                alertText: "text-amber-800",
+                // Style the "forgot password" and other links
+                formFieldAction: "text-orange-600 hover:text-orange-700",
+                // Make form fields more visible
+                formFieldInput: "border-slate-300 focus:border-orange-500 focus:ring-orange-500",
+                // Better styling for the divider
+                dividerLine: "bg-slate-200",
+                dividerText: "text-slate-500",
+                // Footer link styling
+                footerActionText: "text-slate-600",
               },
             }}
             fallbackRedirectUrl={redirectUrl}
             signUpUrl={`/sign-up${selectedPlan ? `?plan=${selectedPlan}` : ''}`}
           />
           
-          <div className="mt-6 text-center">
-            <p className="text-sm text-slate-600">
-              Don&apos;t have an account?{" "}
-              <Link 
-                href={`/sign-up${selectedPlan ? `?plan=${selectedPlan}&redirect_url=${encodeURIComponent(redirectUrl)}` : ''}`}
-                className="text-orange-600 hover:text-orange-700 font-semibold"
-              >
-                Sign up for free
-              </Link>
-            </p>
+          {/* Help section for users having trouble */}
+          <div className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+            <div className="flex items-start gap-3">
+              <HelpCircle className="w-5 h-5 text-slate-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-sm font-medium text-slate-700 mb-1">Having trouble signing in?</h4>
+                <ul className="text-sm text-slate-600 space-y-1">
+                  <li>• If you see &quot;Couldn&apos;t find your account&quot;, you may need to <Link href={`/sign-up${selectedPlan ? `?plan=${selectedPlan}&redirect_url=${encodeURIComponent(redirectUrl)}` : ''}`} className="text-orange-600 hover:text-orange-700 font-medium">create an account</Link> first</li>
+                  <li>• Try signing in with Google if you used it before</li>
+                  <li>• Check that your email is spelled correctly</li>
+                </ul>
+              </div>
+            </div>
           </div>
           
-          <div className="mt-8 text-center text-xs text-slate-500">
+          <div className="mt-6 text-center text-xs text-slate-500">
             By signing in, you agree to our{" "}
             <Link href="/terms" className="underline hover:text-slate-700">Terms of Service</Link>
             {" "}and{" "}
