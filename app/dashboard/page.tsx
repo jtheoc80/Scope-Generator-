@@ -667,10 +667,10 @@ export default function Dashboard() {
                   href="/m/create" 
                   className="inline-flex items-center justify-center h-9 md:h-10 px-3 md:px-4 py-2 rounded-md border border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100 font-medium text-xs md:text-sm transition-colors gap-2" 
                   data-testid="button-photo-capture"
-                  title="Take photos to generate a proposal"
+                  title="Start ScopeScan™"
                 >
                   <Camera className="w-4 h-4" />
-                  <span className="hidden sm:inline">📷 Photo Capture</span>
+                  <span className="hidden sm:inline">📷 ScopeScan™</span>
                   <span className="sm:hidden">📷</span>
                 </Link>
                 <Link href="/app" className="inline-flex items-center justify-center h-9 md:h-10 px-3 md:px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 font-medium text-xs md:text-sm transition-colors gap-2" data-testid="button-new-proposal">
@@ -760,7 +760,7 @@ export default function Dashboard() {
                       data-testid="button-photo-capture-empty"
                     >
                       <Camera className="w-4 h-4" />
-                      📷 Photo Capture
+                      📷 ScopeScan™
                     </Link>
                     <span className="text-slate-400 text-xs">or</span>
                     <Link href="/app" className="inline-flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-md font-medium text-sm">
@@ -769,7 +769,7 @@ export default function Dashboard() {
                     </Link>
                   </div>
                   <p className="text-slate-400 text-xs mt-4">
-                    📸 Use Photo Capture to snap job site photos and generate proposals instantly
+                    📸 Use ScopeScan™ to snap a few photos and generate a scope + estimate instantly
                   </p>
                 </div>
               ) : isViewSwitching ? (

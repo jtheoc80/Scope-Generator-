@@ -6,7 +6,7 @@ import { isClerkConfigured } from "@/lib/authUtils";
 
 export const metadata: Metadata = {
   title: "ScopeGen Mobile",
-  description: "Capture photos and generate proposals on the go",
+  description: "Capture photos and generate scopes + estimates on the go",
 };
 
 export const viewport: Viewport = {
