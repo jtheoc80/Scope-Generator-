@@ -244,7 +244,7 @@ const getAreaOptionsForTrade = (tradeId: string, t: any): { value: string; label
       // Handyman can work anywhere
       return toOptions([...interiorRoomValues, ...exteriorAreaValues]);
     case "windows-doors":
-      return toOptions([...interiorRoomValues.filter(r => !["whole-house", "closet", "laundry-room"].includes(r)), ...exteriorAreaValues.filter(r => ["front-yard", "backyard", "patio", "garage"].includes(r))]);
+      return toOptions([...interiorRoomValues.filter(r => !["whole-house", "closet", "laundry-room"].includes(r)), ...exteriorAreaValues.filter(r => ["patio", "garage"].includes(r))]);
     case "fencing":
       // Fencing is exterior only
       return toOptions(exteriorAreaValues.filter(r => ["front-yard", "backyard", "side-yard"].includes(r)));
