@@ -40,7 +40,7 @@ export default async function MobileWebLayout({
       {/* Mobile header */}
       <header className="sticky top-0 z-50 bg-white border-b border-slate-200 px-4 py-3 safe-area-inset-top">
         <div className="flex items-center justify-between">
-          <Link href="/m" className="text-lg font-semibold text-slate-900">
+          <Link href="/" className="text-lg font-semibold text-slate-900 hover:text-orange-600 transition-colors">
             ScopeGen
           </Link>
           <div className="flex items-center gap-2">
