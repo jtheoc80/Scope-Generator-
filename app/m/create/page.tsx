@@ -52,6 +52,7 @@ import {
   X,
   Settings2,
   RefreshCw,
+  type LucideIcon,
 } from "lucide-react";
 import { mobileApiFetch, newIdempotencyKey, MobileJob } from "../lib/api";
 import {
@@ -78,12 +79,7 @@ import {
 } from "../lib/job-memory";
 import { cn } from "@/lib/utils";
 
-type LucideIconComponent = (props: {
-  className?: string;
-  "aria-hidden"?: boolean;
-}) => JSX.Element;
-
-const JOB_TYPE_ICONS: Record<string, LucideIconComponent> = {
+const JOB_TYPE_ICONS: Record<string, LucideIcon> = {
   "bathroom-remodel": Bath,
   "kitchen-remodel": ChefHat,
   roofing: Home,
