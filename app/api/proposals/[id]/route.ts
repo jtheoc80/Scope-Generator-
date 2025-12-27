@@ -98,16 +98,42 @@ export async function DELETE(
     const { id } = await params;
     const proposalId = parseInt(id);
     
+    // First, fetch the proposal to check ownership and status
+    const proposal = await storage.getProposal(proposalId);
+    
+    if (!proposal) {
+      return NextResponse.json(
+        { message: 'Proposal not found' },
+        { status: 404 }
+      );
+    }
+    
+    // Verify ownership
+    if (proposal.userId !== userId) {
+      return NextResponse.json(
+        { message: 'Access denied' },
+        { status: 403 }
+      );
+    }
+    
+    // Only allow deletion of draft proposals
+    if (proposal.status !== 'draft') {
+      return NextResponse.json(
+        { message: 'Only draft proposals can be deleted' },
+        { status: 403 }
+      );
+    }
+    
     const deleted = await storage.deleteProposal(proposalId, userId);
     
     if (!deleted) {
       return NextResponse.json(
-        { message: 'Proposal not found or access denied' },
-        { status: 404 }
+        { message: 'Failed to delete proposal' },
+        { status: 500 }
       );
     }
 
-    return NextResponse.json({ message: 'Proposal deleted successfully' });
+    return NextResponse.json({ success: true, message: 'Draft deleted successfully' });
   } catch (error) {
     console.error('Error deleting proposal:', error);
     return NextResponse.json(
