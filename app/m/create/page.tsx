@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -437,6 +437,19 @@ function AddressSelector({
   const addresses = search ? searchAddresses(search) : getRecentAddresses(5);
   const lastAddress = getRecentAddresses(1)[0];
 
+  // Handle changing the address - pre-populate search with current address for editing
+  const handleChangeAddress = useCallback(() => {
+    if (value) {
+      setSearch(value.formatted);
+    }
+    onChange(null);
+    // Focus the input after a brief delay to allow render
+    setTimeout(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }, 100);
+  }, [value, onChange]);
+
   const handleUseLocation = async () => {
     if (!navigator.geolocation) {
       alert("Geolocation is not supported by your browser");
@@ -521,8 +534,8 @@ function AddressSelector({
               </p>
               <button
                 type="button"
-                className="mt-1 text-xs text-primary underline-offset-4 hover:underline"
-                onClick={() => onChange(null)}
+                className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 underline underline-offset-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
+                onClick={handleChangeAddress}
                 disabled={disabled}
               >
                 Change address
