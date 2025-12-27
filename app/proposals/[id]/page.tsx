@@ -5,6 +5,17 @@ import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import ProposalPreview from "@/components/proposal-preview";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { 
   Download, 
   Loader2, 
@@ -12,6 +23,8 @@ import {
   ArrowLeft,
   Home,
   Edit,
+  Mail,
+  Copy,
 } from "lucide-react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
@@ -47,6 +60,13 @@ export default function ProposalViewPage() {
   const proposalId = params?.id as string;
   const previewRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isEmailOpen, setIsEmailOpen] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [emailRecipient, setEmailRecipient] = useState("");
+  const [emailRecipientName, setEmailRecipientName] = useState("");
+  const [emailMessage, setEmailMessage] = useState("");
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [emailSuccess, setEmailSuccess] = useState<{ messageId?: string; publicUrl?: string } | null>(null);
 
   const { data: proposal, isLoading, error } = useQuery<Proposal>({
     queryKey: ["/api/proposals", proposalId],
@@ -88,6 +108,54 @@ export default function ProposalViewPage() {
       console.error("Error generating PDF:", err);
     } finally {
       setIsDownloading(false);
+    }
+  };
+
+  const openEmailDialog = () => {
+    setEmailError(null);
+    setEmailSuccess(null);
+    setEmailRecipient("");
+    setEmailRecipientName(proposal?.clientName ?? "");
+    setEmailMessage("");
+    setIsEmailOpen(true);
+  };
+
+  const handleSendEmail = async () => {
+    if (!proposalId) return;
+    setIsSendingEmail(true);
+    setEmailError(null);
+    setEmailSuccess(null);
+    try {
+      const res = await fetch(`/api/proposals/${proposalId}/email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipientEmail: emailRecipient.trim(),
+          recipientName: emailRecipientName.trim() || undefined,
+          message: emailMessage.trim() || undefined,
+        }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(json?.message || "Failed to send email");
+      }
+
+      setEmailSuccess({ messageId: json?.messageId, publicUrl: json?.publicUrl });
+    } catch (e) {
+      setEmailError(e instanceof Error ? e.message : "Failed to send email");
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    const url = emailSuccess?.publicUrl;
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      // Ignore clipboard failures (permissions / non-secure context)
     }
   };
 
@@ -186,6 +254,13 @@ export default function ProposalViewPage() {
               Edit in App
             </Button>
             <Button
+              variant="outline"
+              onClick={openEmailDialog}
+            >
+              <Mail className="w-4 h-4 mr-2" />
+              Send Email
+            </Button>
+            <Button
               onClick={handleDownloadPDF}
               disabled={isDownloading}
             >
@@ -212,6 +287,104 @@ export default function ProposalViewPage() {
           data={proposalData}
         />
       </div>
+
+      <Dialog open={isEmailOpen} onOpenChange={setIsEmailOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send proposal via email</DialogTitle>
+            <DialogDescription>
+              We’ll email a share link your client can view and accept.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="recipientEmail">Recipient email</Label>
+              <Input
+                id="recipientEmail"
+                type="email"
+                value={emailRecipient}
+                onChange={(e) => setEmailRecipient(e.target.value)}
+                placeholder="client@example.com"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="recipientName">Recipient name (optional)</Label>
+              <Input
+                id="recipientName"
+                value={emailRecipientName}
+                onChange={(e) => setEmailRecipientName(e.target.value)}
+                placeholder={proposal.clientName}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="message">Message (optional)</Label>
+              <Textarea
+                id="message"
+                value={emailMessage}
+                onChange={(e) => setEmailMessage(e.target.value)}
+                placeholder="Hi! Here’s the proposal. Let me know if you have any questions."
+                className="min-h-[110px]"
+              />
+            </div>
+
+            {emailError ? (
+              <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                {emailError}
+              </div>
+            ) : null}
+
+            {emailSuccess ? (
+              <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 space-y-2">
+                <div>Email sent successfully.</div>
+                {emailSuccess.publicUrl ? (
+                  <div className="flex items-center gap-2">
+                    <a
+                      className="text-emerald-900 underline break-all"
+                      href={emailSuccess.publicUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      View share link
+                    </a>
+                    <Button type="button" variant="outline" size="sm" onClick={handleCopyLink}>
+                      <Copy className="w-4 h-4 mr-2" />
+                      Copy link
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsEmailOpen(false)}
+              disabled={isSendingEmail}
+            >
+              Close
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSendEmail}
+              disabled={isSendingEmail || !emailRecipient.trim()}
+            >
+              {isSendingEmail ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                "Send"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Footer */}
       <div className="text-center py-8 text-slate-500 text-sm">
