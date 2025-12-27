@@ -452,7 +452,7 @@ function AddressSelector({
 
   const handleUseLocation = async () => {
     if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser");
+      alert("Geolocation is not supported by your browser. Please enter the address manually.");
       return;
     }
 
@@ -462,7 +462,7 @@ function AddressSelector({
         (resolve, reject) => {
           navigator.geolocation.getCurrentPosition(resolve, reject, {
             enableHighAccuracy: true,
-            timeout: 10000,
+            timeout: 15000, // Increased timeout for slower devices
           });
         }
       );
@@ -494,7 +494,33 @@ function AddressSelector({
       onRefresh?.();
     } catch (err) {
       console.error("Geolocation error:", err);
-      alert("Unable to get your location. Please enter the address manually.");
+      
+      // Provide specific error messages based on the error type
+      const geoError = err as GeolocationPositionError;
+      let errorMessage: string;
+      
+      switch (geoError.code) {
+        case 1: // PERMISSION_DENIED
+          errorMessage = "Location access was denied. To use this feature:\n\n" +
+            "1. Check that Location Services are turned ON in your device settings\n" +
+            "2. Allow this website to access your location when prompted\n\n" +
+            "You can also enter the address manually below.";
+          break;
+        case 2: // POSITION_UNAVAILABLE
+          errorMessage = "Unable to determine your location. This can happen if:\n\n" +
+            "• Location Services are turned OFF on your device\n" +
+            "• You're indoors or have weak GPS signal\n" +
+            "• Your device doesn't have GPS capability\n\n" +
+            "Please enter the address manually.";
+          break;
+        case 3: // TIMEOUT
+          errorMessage = "Location request timed out. Please try again or enter the address manually.";
+          break;
+        default:
+          errorMessage = "Unable to get your location. Please enter the address manually.";
+      }
+      
+      alert(errorMessage);
     } finally {
       setIsLocating(false);
       setSaving(false);
