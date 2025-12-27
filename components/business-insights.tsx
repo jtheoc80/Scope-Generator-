@@ -3,9 +3,12 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
-  TrendingUp, 
-  TrendingDown, 
   DollarSign, 
   Eye, 
   FileCheck, 
@@ -92,23 +95,131 @@ export function BusinessInsights() {
 
   const formatPercent = (value: number) => `${value}%`;
 
-  const TrendIndicator = ({ value, suffix = '%' }: { value: number; suffix?: string }) => {
-    if (value === 0) return <span className="text-slate-400 text-xs">No change</span>;
+  function DeltaBadge({ value, suffix = "%" }: { value: number; suffix?: string }) {
+    if (value === 0) {
+      return (
+        <Badge variant="outline" className="text-muted-foreground">
+          0{suffix}
+        </Badge>
+      );
+    }
     const isPositive = value > 0;
     return (
-      <span className={`flex items-center gap-0.5 text-xs ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-        {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-        {isPositive ? '+' : ''}{value}{suffix}
-      </span>
+      <Badge
+        variant="outline"
+        className={isPositive ? "text-emerald-700 border-emerald-200 bg-emerald-50/40" : "text-red-700 border-red-200 bg-red-50/40"}
+      >
+        {isPositive ? "↑" : "↓"} {Math.abs(value)}
+        {suffix}
+      </Badge>
     );
-  };
+  }
+
+  function InsightStatCard({
+    title,
+    value,
+    helper,
+    icon: Icon,
+    delta,
+    deltaSuffix,
+  }: {
+    title: string;
+    value: string;
+    helper?: string;
+    icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+    delta?: number;
+    deltaSuffix?: string;
+  }) {
+    return (
+      <Card className="rounded-lg border-border shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">{title}</p>
+              <p className="text-2xl font-semibold tracking-tight text-foreground">{value}</p>
+              {helper ? <p className="text-xs text-muted-foreground">{helper}</p> : null}
+            </div>
+            <div className="flex items-center gap-2">
+              {typeof delta === "number" ? (
+                <DeltaBadge value={delta} suffix={deltaSuffix} />
+              ) : null}
+              <Icon className="h-5 w-5 text-muted-foreground/70" aria-hidden />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  function PipelineSegmentBar({ breakdown }: { breakdown: Record<string, number> }) {
+    const items = [
+      { key: "draft", label: "Draft", value: breakdown.draft || 0, className: "bg-muted" },
+      { key: "sent", label: "Sent", value: breakdown.sent || 0, className: "bg-primary/20" },
+      { key: "viewed", label: "Viewed", value: breakdown.viewed || 0, className: "bg-primary/15" },
+      { key: "accepted", label: "Accepted", value: breakdown.accepted || 0, className: "bg-emerald-500/20" },
+      { key: "won", label: "Won", value: breakdown.won || 0, className: "bg-emerald-500/30" },
+      { key: "lost", label: "Lost", value: breakdown.lost || 0, className: "bg-red-500/15" },
+    ];
+
+    const total = items.reduce((sum, i) => sum + i.value, 0);
+
+    return (
+      <div className="space-y-3">
+        <div className="flex h-3 overflow-hidden rounded-full border bg-background">
+          {items.map((s) => {
+            const pct = total > 0 ? (s.value / total) * 100 : 0;
+            return (
+              <div
+                key={s.key}
+                className={s.className}
+                style={{ width: `${pct}%` }}
+                aria-label={`${s.label}: ${s.value}`}
+                title={`${s.label}: ${s.value}`}
+              />
+            );
+          })}
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {items.map((s) => (
+            <div key={s.key} className="flex items-center justify-between rounded-md border bg-card px-3 py-2">
+              <div className="flex items-center gap-2">
+                <span className={`h-2 w-2 rounded-full ${s.className}`} aria-hidden />
+                <span className="text-xs text-muted-foreground">{s.label}</span>
+              </div>
+              <span className="text-xs font-semibold text-foreground">{s.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
-      <Card className="border-slate-200 shadow-sm">
-        <CardContent className="p-6 flex items-center justify-center">
-          <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
-          <span className="ml-2 text-slate-500">Loading insights...</span>
+      <Card className="rounded-lg border-border shadow-sm">
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-muted-foreground" aria-hidden />
+            <CardTitle className="text-base">Business Insights</CardTitle>
+          </div>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-8 w-8 rounded-md" />
+            <Skeleton className="h-8 w-8 rounded-md" />
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i} className="rounded-lg border-border shadow-sm">
+                <CardContent className="p-4 space-y-2">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-8 w-28" />
+                  <Skeleton className="h-3 w-32" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <Skeleton className="h-24 w-full rounded-lg" />
         </CardContent>
       </Card>
     );
@@ -116,11 +227,17 @@ export function BusinessInsights() {
 
   if (error) {
     return (
-      <Card className="border-slate-200 shadow-sm">
-        <CardContent className="p-6 text-center">
-          <p className="text-red-500 mb-2">{error}</p>
+      <Card className="rounded-lg border-border shadow-sm">
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-muted-foreground" aria-hidden />
+            <CardTitle className="text-base">Business Insights</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-destructive">{error}</p>
           <Button variant="outline" size="sm" onClick={fetchInsights}>
-            <RefreshCw className="w-4 h-4 mr-2" />
+            <RefreshCw className="w-4 h-4" aria-hidden />
             Retry
           </Button>
         </CardContent>
@@ -133,161 +250,174 @@ export function BusinessInsights() {
   const avgWonValue = Math.round((insights.avgWonValueLow + insights.avgWonValueHigh) / 2);
 
   return (
-    <Card className="border-slate-200 shadow-sm overflow-hidden">
-      <CardHeader className="bg-gradient-to-r from-slate-50 to-slate-100 p-4 cursor-pointer" onClick={() => setExpanded(!expanded)}>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-blue-600" />
-            Business Insights
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); fetchInsights(); }}>
-              <RefreshCw className="w-4 h-4" />
-            </Button>
-            {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </div>
-        </div>
-      </CardHeader>
-      
-      {expanded && (
-        <CardContent className="p-4 space-y-4">
-          {/* Key Metrics Row */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {/* Win Rate */}
-            <div className="bg-green-50 rounded-lg p-3">
-              <div className="flex items-center gap-2 text-green-700 text-sm font-medium mb-1">
-                <FileCheck className="w-4 h-4" />
-                Win Rate
-              </div>
-              <div className="text-2xl font-bold text-green-800">
-                {formatPercent(insights.winRate)}
-              </div>
-              <TrendIndicator value={insights.trends.winRateChange} suffix=" pts" />
+    <TooltipProvider>
+      <Card className="rounded-lg border-border shadow-sm">
+        <Collapsible open={expanded} onOpenChange={setExpanded}>
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-muted-foreground" aria-hidden />
+              <CardTitle className="text-base">Business Insights</CardTitle>
             </div>
-
-            {/* Avg Won Value */}
-            <div className="bg-blue-50 rounded-lg p-3">
-              <div className="flex items-center gap-2 text-blue-700 text-sm font-medium mb-1">
-                <DollarSign className="w-4 h-4" />
-                Avg Won Value
-              </div>
-              <div className="text-2xl font-bold text-blue-800">
-                {formatCurrency(avgWonValue)}
-              </div>
-              <span className="text-xs text-blue-600">per accepted proposal</span>
+            <div className="flex items-center gap-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      fetchInsights();
+                    }}
+                    aria-label="Refresh insights"
+                  >
+                    <RefreshCw className="h-4 w-4" aria-hidden />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Refresh</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <CollapsibleTrigger asChild>
+                    <Button type="button" variant="ghost" size="icon" aria-label={expanded ? "Collapse insights" : "Expand insights"}>
+                      {expanded ? <ChevronUp className="h-4 w-4" aria-hidden /> : <ChevronDown className="h-4 w-4" aria-hidden />}
+                    </Button>
+                  </CollapsibleTrigger>
+                </TooltipTrigger>
+                <TooltipContent>{expanded ? "Collapse" : "Expand"}</TooltipContent>
+              </Tooltip>
             </div>
+          </CardHeader>
 
-            {/* Total Won Value (30 days) */}
-            <div className="bg-amber-50 rounded-lg p-3">
-              <div className="flex items-center gap-2 text-amber-700 text-sm font-medium mb-1">
-                <TrendingUp className="w-4 h-4" />
-                Won (30 days)
+          <CollapsibleContent>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <InsightStatCard
+                  title="Win Rate"
+                  value={formatPercent(insights.winRate)}
+                  helper="of proposals won"
+                  icon={FileCheck}
+                  delta={insights.trends.winRateChange}
+                  deltaSuffix=" pts"
+                />
+                <InsightStatCard
+                  title="Avg Won Value"
+                  value={formatCurrency(avgWonValue)}
+                  helper="per accepted proposal"
+                  icon={DollarSign}
+                />
+                <InsightStatCard
+                  title="Won (30 days)"
+                  value={formatCurrency(insights.recentWonValue)}
+                  helper="total revenue won"
+                  icon={DollarSign}
+                  delta={insights.trends.valueChange}
+                />
+                <InsightStatCard
+                  title="View → Accept"
+                  value={formatPercent(insights.viewToAcceptRate)}
+                  helper={`${insights.avgViewsPerProposal} views/proposal`}
+                  icon={Eye}
+                />
               </div>
-              <div className="text-2xl font-bold text-amber-800">
-                {formatCurrency(insights.recentWonValue)}
-              </div>
-              <TrendIndicator value={insights.trends.valueChange} />
-            </div>
 
-            {/* View to Accept Rate */}
-            <div className="bg-purple-50 rounded-lg p-3">
-              <div className="flex items-center gap-2 text-purple-700 text-sm font-medium mb-1">
-                <Eye className="w-4 h-4" />
-                View → Accept
-              </div>
-              <div className="text-2xl font-bold text-purple-800">
-                {formatPercent(insights.viewToAcceptRate)}
-              </div>
-              <span className="text-xs text-purple-600">{insights.avgViewsPerProposal} views/proposal</span>
-            </div>
-          </div>
-
-          {/* Status Pipeline */}
-          <div className="bg-slate-50 rounded-lg p-3">
-            <h4 className="text-sm font-medium text-slate-700 mb-3">Pipeline Overview</h4>
-            <div className="flex gap-2">
-              {[
-                { label: 'Draft', value: insights.statusBreakdown.draft || 0, color: 'bg-slate-300' },
-                { label: 'Sent', value: insights.statusBreakdown.sent || 0, color: 'bg-blue-400' },
-                { label: 'Viewed', value: insights.statusBreakdown.viewed || 0, color: 'bg-purple-400' },
-                { label: 'Accepted', value: insights.statusBreakdown.accepted || 0, color: 'bg-green-400' },
-                { label: 'Won', value: insights.statusBreakdown.won || 0, color: 'bg-green-600' },
-                { label: 'Lost', value: insights.statusBreakdown.lost || 0, color: 'bg-red-400' },
-              ].map((status) => (
-                <div key={status.label} className="flex-1 text-center">
-                  <div className={`${status.color} h-8 rounded flex items-center justify-center text-white font-bold text-sm`}>
-                    {status.value}
-                  </div>
-                  <div className="text-xs text-slate-500 mt-1">{status.label}</div>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-foreground">Pipeline Overview</h3>
+                  <p className="text-xs text-muted-foreground">
+                    {insights.totalProposals} total proposals
+                  </p>
                 </div>
-              ))}
-            </div>
-          </div>
+                <PipelineSegmentBar breakdown={insights.statusBreakdown} />
+              </div>
 
-          {/* Time Metrics */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-slate-50 rounded-lg p-3">
-              <div className="flex items-center gap-2 text-slate-600 text-sm mb-1">
-                <Clock className="w-4 h-4" />
-                Avg Time to First View
-              </div>
-              <div className="text-lg font-semibold">
-                {insights.avgTimeToView !== null 
-                  ? insights.avgTimeToView < 24 
-                    ? `${insights.avgTimeToView} hours` 
-                    : `${Math.round(insights.avgTimeToView / 24)} days`
-                  : 'No data yet'}
-              </div>
-            </div>
-            <div className="bg-slate-50 rounded-lg p-3">
-              <div className="flex items-center gap-2 text-slate-600 text-sm mb-1">
-                <Clock className="w-4 h-4" />
-                Avg Time to Accept
-              </div>
-              <div className="text-lg font-semibold">
-                {insights.avgTimeToAccept !== null 
-                  ? insights.avgTimeToAccept < 24 
-                    ? `${insights.avgTimeToAccept} hours` 
-                    : `${Math.round(insights.avgTimeToAccept / 24)} days`
-                  : 'No data yet'}
-              </div>
-            </div>
-          </div>
+              <Separator />
 
-          {/* Trade Performance */}
-          {Object.keys(insights.tradeBreakdown).length > 0 && (
-            <div className="bg-slate-50 rounded-lg p-3">
-              <h4 className="text-sm font-medium text-slate-700 mb-3">Performance by Trade</h4>
-              <div className="space-y-2">
-                {Object.entries(insights.tradeBreakdown)
-                  .sort((a, b) => b[1].count - a[1].count)
-                  .slice(0, 5)
-                  .map(([tradeId, data]) => (
-                    <div key={tradeId} className="flex items-center justify-between text-sm">
-                      <span className="text-slate-600 capitalize">{tradeId.replace(/-/g, ' ')}</span>
-                      <div className="flex items-center gap-4">
-                        <span className="text-slate-500">{data.count} proposals</span>
-                        <span className="text-slate-500">
-                          {formatCurrency(Math.round((data.avgPriceLow + data.avgPriceHigh) / 2))} avg
-                        </span>
-                        <span className={`font-medium ${data.winRate >= 50 ? 'text-green-600' : 'text-amber-600'}`}>
-                          {Math.round(data.winRate)}% win
-                        </span>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Card className="rounded-lg border-border shadow-sm">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground">Avg time to first view</p>
+                        <p className="text-sm font-semibold text-foreground">
+                          {insights.avgTimeToView !== null
+                            ? insights.avgTimeToView < 24
+                              ? `${insights.avgTimeToView} hours`
+                              : `${Math.round(insights.avgTimeToView / 24)} days`
+                            : "No data yet"}
+                        </p>
                       </div>
+                      <Clock className="h-5 w-5 text-muted-foreground/70" aria-hidden />
                     </div>
-                  ))}
-              </div>
-            </div>
-          )}
+                  </CardContent>
+                </Card>
 
-          {/* Summary Stats */}
-          <div className="text-center text-sm text-slate-500 pt-2 border-t">
-            <span className="font-medium">{insights.totalProposals}</span> total proposals · 
-            <span className="font-medium"> {formatCurrency(Math.round((insights.totalValueLow + insights.totalValueHigh) / 2))}</span> total value · 
-            <span className="font-medium"> {insights.recentProposals}</span> created in last 30 days
-          </div>
-        </CardContent>
-      )}
-    </Card>
+                <Card className="rounded-lg border-border shadow-sm">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground">Avg time to accept</p>
+                        <p className="text-sm font-semibold text-foreground">
+                          {insights.avgTimeToAccept !== null
+                            ? insights.avgTimeToAccept < 24
+                              ? `${insights.avgTimeToAccept} hours`
+                              : `${Math.round(insights.avgTimeToAccept / 24)} days`
+                            : "No data yet"}
+                        </p>
+                      </div>
+                      <Clock className="h-5 w-5 text-muted-foreground/70" aria-hidden />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {Object.keys(insights.tradeBreakdown).length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-medium text-foreground">Performance by trade</h3>
+                    <p className="text-xs text-muted-foreground">Top 5 by volume</p>
+                  </div>
+                  <div className="rounded-lg border bg-card">
+                    <div className="divide-y">
+                      {Object.entries(insights.tradeBreakdown)
+                        .sort((a, b) => b[1].count - a[1].count)
+                        .slice(0, 5)
+                        .map(([tradeId, data]) => (
+                          <div key={tradeId} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="text-sm font-medium text-foreground capitalize">
+                              {tradeId.replace(/-/g, ' ')}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                              <span>{data.count} proposals</span>
+                              <span>{formatCurrency(Math.round((data.avgPriceLow + data.avgPriceHigh) / 2))} avg</span>
+                              <Badge
+                                variant="outline"
+                                className={data.winRate >= 50 ? "border-emerald-200 bg-emerald-50/40 text-emerald-700" : "border-amber-200 bg-amber-50/40 text-amber-700"}
+                              >
+                                {Math.round(data.winRate)}% win
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <Separator />
+
+              <p className="text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">{insights.totalProposals}</span> total proposals ·{" "}
+                <span className="font-medium text-foreground">
+                  {formatCurrency(Math.round((insights.totalValueLow + insights.totalValueHigh) / 2))}
+                </span>{" "}
+                total value ·{" "}
+                <span className="font-medium text-foreground">{insights.recentProposals}</span> created in last 30 days
+              </p>
+            </CardContent>
+          </CollapsibleContent>
+        </Collapsible>
+      </Card>
+    </TooltipProvider>
   );
 }

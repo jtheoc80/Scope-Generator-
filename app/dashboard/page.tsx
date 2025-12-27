@@ -6,9 +6,11 @@ import { Download, Edit, Pen } from "lucide-react";
 import Layout from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
-  LayoutDashboard, 
-  FileText, 
   Plus, 
   Search, 
   MoreVertical, 
@@ -28,7 +30,8 @@ import {
   Eye,
   ChevronRight,
   ChevronLeft,
-  Camera
+  Camera,
+  Layers
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -71,12 +74,13 @@ interface Proposal {
 
 function StatusBadge({ status, t }: { status: string; t: TranslationKeys }) {
   const styles: Record<string, string> = {
-    sent: "bg-blue-100 text-blue-700 border-blue-200",
-    draft: "bg-slate-100 text-slate-700 border-slate-200",
-    won: "bg-green-100 text-green-700 border-green-200",
-    lost: "bg-red-100 text-red-700 border-red-200",
-    accepted: "bg-green-100 text-green-700 border-green-200",
-    viewed: "bg-purple-100 text-purple-700 border-purple-200",
+    sent: "border-primary/20 bg-primary/5 text-primary",
+    draft: "border-border bg-muted/40 text-muted-foreground",
+    won: "border-emerald-200 bg-emerald-50/40 text-emerald-700",
+    lost: "border-red-200 bg-red-50/40 text-red-700",
+    accepted: "border-emerald-200 bg-emerald-50/40 text-emerald-700",
+    declined: "border-red-200 bg-red-50/40 text-red-700",
+    viewed: "border-primary/15 bg-primary/5 text-primary",
   };
   
   const labels: Record<string, string> = {
@@ -93,9 +97,104 @@ function StatusBadge({ status, t }: { status: string; t: TranslationKeys }) {
   const label = labels[status.toLowerCase()] || status;
 
   return (
-    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${style}`}>
+    <Badge variant="outline" className={style}>
       {label}
-    </span>
+    </Badge>
+  );
+}
+
+function KpiCard({
+  title,
+  value,
+  helper,
+  icon: Icon,
+  loading,
+}: {
+  title: string;
+  value: string;
+  helper: string;
+  icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+  loading?: boolean;
+}) {
+  return (
+    <Card className="rounded-lg border-border shadow-sm">
+      <CardContent className="relative p-4">
+        <Icon className="absolute right-4 top-4 h-5 w-5 text-muted-foreground/60" aria-hidden />
+        {loading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-8 w-20" />
+            <Skeleton className="h-3 w-32" />
+          </div>
+        ) : (
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-muted-foreground">{title}</p>
+            <p className="text-2xl font-semibold tracking-tight text-foreground">{value}</p>
+            <p className="text-xs text-muted-foreground">{helper}</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function DashboardHeaderActions({ t }: { t: TranslationKeys }) {
+  return (
+    <>
+      <div className="hidden sm:flex items-center gap-2">
+        <Button variant="outline" className="gap-2" type="button">
+          <Layers className="h-4 w-4" aria-hidden />
+          {t.dashboard.manageTemplates}
+        </Button>
+        <Button asChild variant="outline" className="gap-2">
+          <Link href="/m/create" data-testid="button-photo-capture" title="Start ScopeScan™">
+            <Camera className="h-4 w-4" aria-hidden />
+            ScopeScan™
+          </Link>
+        </Button>
+        <Button asChild className="gap-2" data-testid="button-new-proposal">
+          <Link href="/app">
+            <Plus className="h-4 w-4" aria-hidden />
+            {t.dashboard.newProposal}
+          </Link>
+        </Button>
+      </div>
+
+      <div className="sm:hidden flex items-center gap-2">
+        <Button asChild size="sm" className="gap-2" data-testid="button-new-proposal">
+          <Link href="/app">
+            <Plus className="h-4 w-4" aria-hidden />
+            {t.dashboard.newProposal}
+          </Link>
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon" aria-label="More actions">
+              <MoreVertical className="h-4 w-4" aria-hidden />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>{t.dashboard.actions}</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/m/create" data-testid="button-photo-capture">
+                <Camera className="h-4 w-4 mr-2" aria-hidden />
+                ScopeScan™
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={(e) => {
+                // Preserve existing behavior (no action attached today)
+                e.preventDefault();
+              }}
+            >
+              <Layers className="h-4 w-4 mr-2" aria-hidden />
+              {t.dashboard.manageTemplates}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </>
   );
 }
 
@@ -113,12 +212,12 @@ function PipelineView({
   onViewProposal: (proposal: Proposal) => void;
 }) {
   const stages = [
-    { key: 'draft', label: t.dashboard.draft, color: 'bg-slate-500' },
-    { key: 'sent', label: t.dashboard.sent, color: 'bg-blue-500' },
-    { key: 'viewed', label: t.dashboard.viewed, color: 'bg-purple-500' },
-    { key: 'accepted', label: t.dashboard.accepted, color: 'bg-emerald-500' },
-    { key: 'won', label: t.dashboard.won, color: 'bg-green-600' },
-    { key: 'lost', label: t.dashboard.lost, color: 'bg-red-500' },
+    { key: 'draft', label: t.dashboard.draft, accent: 'border-t-muted' },
+    { key: 'sent', label: t.dashboard.sent, accent: 'border-t-primary/30' },
+    { key: 'viewed', label: t.dashboard.viewed, accent: 'border-t-primary/20' },
+    { key: 'accepted', label: t.dashboard.accepted, accent: 'border-t-emerald-500/30' },
+    { key: 'won', label: t.dashboard.won, accent: 'border-t-emerald-500/40' },
+    { key: 'lost', label: t.dashboard.lost, accent: 'border-t-red-500/25' },
   ];
 
   const getProposalsForStage = (stageKey: string) => {
@@ -144,46 +243,47 @@ function PipelineView({
   };
 
   return (
-    <div className="overflow-x-auto pb-4">
-      <div className="flex gap-4 min-w-max p-4">
+    <TooltipProvider>
+      <div className="overflow-x-auto pb-4">
+        <div className="flex gap-4 min-w-max p-4">
         {stages.map((stage) => {
           const stageProposals = getProposalsForStage(stage.key);
           return (
             <div 
               key={stage.key} 
-              className="flex flex-col w-64 bg-slate-50 rounded-lg"
+              className={`flex flex-col w-72 rounded-lg border bg-card shadow-sm ${stage.accent} border-t-2`}
               data-testid={`pipeline-column-${stage.key}`}
             >
-              <div className={`px-3 py-2 rounded-t-lg ${stage.color}`}>
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-white text-sm">{stage.label}</span>
-                  <span className="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full font-medium">
+              <div className="px-3 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-semibold text-foreground">{stage.label}</span>
+                  <Badge variant="outline" className="text-muted-foreground">
                     {stageProposals.length}
-                  </span>
+                  </Badge>
                 </div>
               </div>
               
-              <div className="flex-1 p-2 space-y-2 min-h-[200px] max-h-[500px] overflow-y-auto">
+              <div className="flex-1 p-2 space-y-2 min-h-[200px] max-h-[520px] overflow-y-auto">
                 {stageProposals.length === 0 ? (
-                  <div className="text-center py-8 text-slate-400 text-sm">
+                  <div className="text-center py-8 text-muted-foreground text-sm">
                     {t.dashboard.noProposals}
                   </div>
                 ) : (
                   stageProposals.map((proposal) => (
                     <div
                       key={proposal.id}
-                      className="bg-white rounded-lg p-3 shadow-sm border border-slate-200 hover:shadow-md transition-shadow cursor-pointer"
+                      className="rounded-lg border bg-card p-3 transition-colors hover:bg-accent/40 cursor-pointer"
                       data-testid={`pipeline-card-${proposal.id}`}
                       onClick={() => onViewProposal(proposal)}
                     >
-                      <div className="font-semibold text-slate-900 text-sm truncate mb-1">
+                      <div className="font-semibold text-foreground text-sm truncate mb-1">
                         {proposal.clientName}
                       </div>
-                      <div className="text-xs text-slate-500 truncate mb-2">
+                      <div className="text-xs text-muted-foreground truncate mb-2">
                         {proposal.jobTypeName}
                       </div>
                       <div className="flex items-center justify-between mb-2">
-                        <span className="font-bold text-slate-800 text-sm">
+                        <span className="font-semibold text-foreground text-sm">
                           {new Intl.NumberFormat(language === 'es' ? 'es-ES' : 'en-US', { 
                             style: 'currency', 
                             currency: 'USD', 
@@ -191,31 +291,38 @@ function PipelineView({
                           }).format(Math.round((proposal.priceLow + proposal.priceHigh) / 2))}
                         </span>
                         {proposal.viewCount != null && proposal.viewCount > 0 && (
-                          <span 
-                            className="flex items-center gap-1 bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full"
+                          <Badge
+                            variant="outline"
+                            className="gap-1 text-xs text-muted-foreground"
                             data-testid={`view-count-badge-${proposal.id}`}
                           >
                             <Eye className="w-3 h-3" />
                             {proposal.viewCount} {t.dashboard.views}
-                          </span>
+                          </Badge>
                         )}
                       </div>
                       
-                      <div className="flex items-center justify-between gap-1 pt-2 border-t border-slate-100">
+                      <div className="flex items-center justify-between gap-1 pt-2 border-t border-border">
                         {getPrevStatus(proposal.status) && stage.key !== 'lost' ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-slate-400 hover:text-slate-600"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const prev = getPrevStatus(proposal.status);
-                              if (prev) onStatusChange(proposal.id, prev);
-                            }}
-                            data-testid={`move-prev-${proposal.id}`}
-                          >
-                            <ChevronLeft className="w-4 h-4" />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const prev = getPrevStatus(proposal.status);
+                                  if (prev) onStatusChange(proposal.id, prev);
+                                }}
+                                aria-label="Move to previous stage"
+                                data-testid={`move-prev-${proposal.id}`}
+                              >
+                                <ChevronLeft className="w-4 h-4" aria-hidden />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Previous</TooltipContent>
+                          </Tooltip>
                         ) : (
                           <div className="w-7" />
                         )}
@@ -224,45 +331,63 @@ function PipelineView({
                           <div className="flex gap-1">
                             {stage.key === 'accepted' ? (
                               <>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 px-2 text-green-600 hover:bg-green-50"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onStatusChange(proposal.id, 'won');
-                                  }}
-                                  data-testid={`move-won-${proposal.id}`}
-                                >
-                                  <Trophy className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 px-2 text-red-600 hover:bg-red-50"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onStatusChange(proposal.id, 'lost');
-                                  }}
-                                  data-testid={`move-lost-${proposal.id}`}
-                                >
-                                  <ThumbsDown className="w-4 h-4" />
-                                </Button>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-emerald-700"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onStatusChange(proposal.id, 'won');
+                                      }}
+                                      aria-label="Mark as won"
+                                      data-testid={`move-won-${proposal.id}`}
+                                    >
+                                      <Trophy className="w-4 h-4" aria-hidden />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Won</TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-red-700"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onStatusChange(proposal.id, 'lost');
+                                      }}
+                                      aria-label="Mark as lost"
+                                      data-testid={`move-lost-${proposal.id}`}
+                                    >
+                                      <ThumbsDown className="w-4 h-4" aria-hidden />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Lost</TooltipContent>
+                                </Tooltip>
                               </>
                             ) : (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 px-2 text-slate-400 hover:text-slate-600"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const next = getNextStatus(proposal.status);
-                                  if (next) onStatusChange(proposal.id, next);
-                                }}
-                                data-testid={`move-next-${proposal.id}`}
-                              >
-                                <ChevronRight className="w-4 h-4" />
-                              </Button>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-muted-foreground"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const next = getNextStatus(proposal.status);
+                                      if (next) onStatusChange(proposal.id, next);
+                                    }}
+                                    aria-label="Move to next stage"
+                                    data-testid={`move-next-${proposal.id}`}
+                                  >
+                                    <ChevronRight className="w-4 h-4" aria-hidden />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Next</TooltipContent>
+                              </Tooltip>
                             )}
                           </div>
                         )}
@@ -278,8 +403,9 @@ function PipelineView({
             </div>
           );
         })}
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }
 
@@ -309,7 +435,7 @@ function MobileProposalMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-400 hover:text-slate-600">
+        <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" aria-label="Open proposal actions">
           <MoreVertical className="w-5 h-5" />
         </Button>
       </DropdownMenuTrigger>
@@ -530,16 +656,12 @@ export default function Dashboard() {
         ? `${t.dashboard.expires} ${new Date(user.creditsExpireAt).toLocaleDateString()}` 
         : t.dashboard.availableToUse,
       icon: Coins,
-      color: "text-purple-500",
-      bgColor: "bg-purple-50",
     },
     {
       title: t.dashboard.totalProposals,
       value: proposals.length.toString(),
       change: t.dashboard.allTime,
-      icon: FileText,
-      color: "text-blue-500",
-      bgColor: "bg-blue-50",
+      icon: Layers,
     },
     {
       title: t.dashboard.revenueWon,
@@ -550,16 +672,12 @@ export default function Dashboard() {
       ),
       change: t.dashboard.fromWonProposals,
       icon: DollarSign,
-      color: "text-green-500",
-      bgColor: "bg-green-50",
     },
     {
       title: t.dashboard.pending,
       value: proposals.filter(p => p.status === 'sent' || p.status === 'draft').length.toString(),
       change: t.dashboard.awaitingResponse,
       icon: Users,
-      color: "text-orange-500",
-      bgColor: "bg-orange-50",
     },
   ];
 
@@ -578,9 +696,50 @@ export default function Dashboard() {
   if (authLoading || loading) {
     return (
       <Layout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
+        <TooltipProvider>
+          <div className="min-h-screen bg-background pb-12">
+            <div className="border-b bg-background">
+              <div className="container mx-auto max-w-6xl px-4 py-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-2">
+                    <Skeleton className="h-7 w-40" />
+                    <Skeleton className="h-4 w-56" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-9 w-32 hidden sm:block" />
+                    <Skeleton className="h-9 w-28 hidden sm:block" />
+                    <Skeleton className="h-9 w-32" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="container mx-auto max-w-6xl px-4 py-6 space-y-6">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <KpiCard
+                    key={i}
+                    title=""
+                    value=""
+                    helper=""
+                    icon={Coins}
+                    loading
+                  />
+                ))}
+              </div>
+              <Card className="rounded-lg border-border shadow-sm">
+                <CardHeader className="flex flex-row items-center justify-between gap-3">
+                  <Skeleton className="h-5 w-40" />
+                  <Skeleton className="h-9 w-56" />
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TooltipProvider>
       </Layout>
     );
   }
@@ -626,155 +785,130 @@ export default function Dashboard() {
 
   return (
     <Layout>
-      <div className="bg-slate-50 min-h-screen pb-12">
+      <TooltipProvider>
+      <div className="bg-background min-h-screen pb-12">
         {successMessage && (
-          <div className={`py-3 px-4 text-center text-sm font-medium ${
-            isSuccess 
-              ? 'bg-green-100 text-green-800' 
-              : 'bg-yellow-100 text-yellow-800'
-          }`}>
-            <div className="flex items-center justify-center gap-2">
-              {isSuccess ? (
-                <CheckCircle className="w-4 h-4" />
-              ) : (
-                <XCircle className="w-4 h-4" />
-              )}
-              {successMessage}
+          <div className={isSuccess ? "border-b bg-emerald-50/40 text-emerald-800" : "border-b bg-amber-50/40 text-amber-800"}>
+            <div className="container mx-auto max-w-6xl px-4 py-3">
+              <div className="flex items-center justify-center gap-2 text-sm font-medium">
+                {isSuccess ? (
+                  <CheckCircle className="w-4 h-4" aria-hidden />
+                ) : (
+                  <XCircle className="w-4 h-4" aria-hidden />
+                )}
+                {successMessage}
+              </div>
             </div>
           </div>
         )}
 
-        <div className="bg-white border-b border-slate-200">
-          <div className="container mx-auto px-4 py-4 md:py-8">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
-              <div>
-                <h1 className="text-xl md:text-2xl font-heading font-bold text-slate-900">{t.dashboard.dashboardTitle}</h1>
-                <p className="text-slate-500 text-xs md:text-sm">
-                  {t.dashboard.welcomeBack}, {user.firstName || t.dashboard.contractor}
+        <div className="border-b bg-background">
+          <div className="container mx-auto max-w-6xl px-4 py-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="space-y-1">
+                <h1 className="text-2xl text-foreground">{t.dashboard.dashboardTitle}</h1>
+                <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                  <span>
+                    {t.dashboard.welcomeBack}, {user.firstName || t.dashboard.contractor}
+                  </span>
                   {user.isPro && (
-                    <span className="ml-2 bg-secondary text-secondary-foreground text-xs px-2 py-0.5 rounded font-bold">
+                    <Badge variant="secondary" className="h-5 px-2 text-[10px] font-semibold">
                       PRO
-                    </span>
+                    </Badge>
                   )}
-                </p>
+                </div>
               </div>
-              <div className="flex items-center gap-2 md:gap-3">
-                <Button variant="outline" className="gap-2 h-9 md:h-10 text-xs md:text-sm px-3 md:px-4 hidden md:flex">
-                  <LayoutDashboard className="w-4 h-4" />
-                  {t.dashboard.manageTemplates}
-                </Button>
-                <Link 
-                  href="/m/create" 
-                  className="inline-flex items-center justify-center h-9 md:h-10 px-3 md:px-4 py-2 rounded-md border border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100 font-medium text-xs md:text-sm transition-colors gap-2" 
-                  data-testid="button-photo-capture"
-                  title="Start ScopeScan™"
-                >
-                  <Camera className="w-4 h-4" />
-                  <span className="hidden sm:inline">📷 ScopeScan™</span>
-                  <span className="sm:hidden">📷</span>
-                </Link>
-                <Link href="/app" className="inline-flex items-center justify-center h-9 md:h-10 px-3 md:px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 font-medium text-xs md:text-sm transition-colors gap-2" data-testid="button-new-proposal">
-                  <Plus className="w-4 h-4" />
-                  <span className="hidden sm:inline">{t.dashboard.newProposal}</span>
-                  <span className="sm:hidden">New</span>
-                </Link>
+              <div className="flex items-center justify-between gap-2 sm:justify-end">
+                <DashboardHeaderActions t={t} />
               </div>
             </div>
           </div>
         </div>
 
-        <div className="container mx-auto px-4 py-6 md:py-8 space-y-6 md:space-y-8">
+        <div className="container mx-auto max-w-6xl px-4 py-6 space-y-6">
           {/* Stats Grid - 2 columns on mobile, 4 on desktop */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {stats.map((stat, i) => (
-              <Card key={i} className="border-none shadow-sm hover:shadow-md transition-shadow">
-                <CardContent className="p-3 md:p-6 flex items-center justify-between">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs md:text-sm font-medium text-slate-500 mb-0.5 md:mb-1 truncate">{stat.title}</p>
-                    <div className="text-lg md:text-2xl font-heading font-bold text-slate-900 truncate">{stat.value}</div>
-                    <p className="text-[10px] md:text-xs text-green-600 mt-0.5 md:mt-1 font-medium truncate">{stat.change}</p>
-                  </div>
-                  <div className={`h-8 w-8 md:h-12 md:w-12 rounded-full ${stat.bgColor} flex items-center justify-center flex-shrink-0 ml-2`}>
-                    <stat.icon className={`w-4 h-4 md:w-6 md:h-6 ${stat.color}`} />
-                  </div>
-                </CardContent>
-              </Card>
+              <KpiCard
+                key={i}
+                title={stat.title}
+                value={stat.value}
+                helper={stat.change}
+                icon={stat.icon}
+              />
             ))}
           </div>
 
           {/* Business Insights Section */}
           <BusinessInsights />
 
-          <Card className="border-none shadow-sm">
-            <CardHeader className="px-4 md:px-6 py-4 md:py-5 border-b border-slate-100 flex flex-row items-center justify-between bg-white rounded-t-lg gap-2">
-              <CardTitle className="text-base md:text-lg font-bold text-slate-800">{t.dashboard.recentProposals}</CardTitle>
-              <div className="flex items-center gap-2 md:gap-3">
-                <div className="hidden md:flex items-center bg-slate-100 rounded-lg p-1">
+          <Card className="rounded-lg border-border shadow-sm">
+            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <CardTitle className="text-base">{t.dashboard.recentProposals}</CardTitle>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+                <div className="hidden md:flex items-center rounded-md border bg-background p-1">
                   <Button
                     variant={viewMode === 'list' ? 'default' : 'ghost'}
                     size="sm"
-                    className={`h-7 px-3 gap-1.5 text-xs ${viewMode === 'list' ? '' : 'hover:bg-slate-200'}`}
+                    className="h-8 gap-1.5 text-xs"
                     onClick={() => handleViewModeChange('list')}
                     disabled={isViewSwitching}
                     data-testid="toggle-list-view"
                   >
                     {isViewSwitching && viewMode !== 'list' ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden />
                     ) : (
-                      <List className="w-3.5 h-3.5" />
+                      <List className="w-3.5 h-3.5" aria-hidden />
                     )}
                     {t.dashboard.listView}
                   </Button>
                   <Button
                     variant={viewMode === 'pipeline' ? 'default' : 'ghost'}
                     size="sm"
-                    className={`h-7 px-3 gap-1.5 text-xs ${viewMode === 'pipeline' ? '' : 'hover:bg-slate-200'}`}
+                    className="h-8 gap-1.5 text-xs"
                     onClick={() => handleViewModeChange('pipeline')}
                     disabled={isViewSwitching}
                     data-testid="toggle-pipeline-view"
                   >
                     {isViewSwitching && viewMode !== 'pipeline' ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden />
                     ) : (
-                      <Columns className="w-3.5 h-3.5" />
+                      <Columns className="w-3.5 h-3.5" aria-hidden />
                     )}
                     {t.dashboard.pipelineView}
                   </Button>
                 </div>
                 <div className="relative w-full max-w-[200px] md:max-w-[256px]">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
-                  <Input placeholder={t.dashboard.searchPlaceholder} className="pl-9 h-9 text-sm bg-slate-50 border-slate-200" />
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                  <Input placeholder={t.dashboard.searchPlaceholder} className="pl-9" />
                 </div>
               </div>
             </CardHeader>
             <CardContent className="p-0">
               {proposals.length === 0 ? (
                 <div className="text-center py-8 md:py-12 px-4">
-                  <FileText className="w-10 h-10 md:w-12 md:h-12 mx-auto text-slate-300 mb-3 md:mb-4" />
-                  <h3 className="font-bold text-slate-700 mb-2 text-sm md:text-base">{t.dashboard.noProposals}</h3>
-                  <p className="text-slate-500 text-xs md:text-sm mb-4">{t.dashboard.noProposalsDesc}</p>
+                  <Camera className="w-10 h-10 md:w-12 md:h-12 mx-auto text-muted-foreground/40 mb-3 md:mb-4" aria-hidden />
+                  <h3 className="font-semibold text-foreground mb-2 text-sm md:text-base">{t.dashboard.noProposals}</h3>
+                  <p className="text-muted-foreground text-xs md:text-sm mb-4">{t.dashboard.noProposalsDesc}</p>
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                    <Link 
-                      href="/m/create" 
-                      className="inline-flex items-center gap-2 bg-orange-500 text-white px-4 py-2 rounded-md font-medium text-sm hover:bg-orange-600 transition-colors"
-                      data-testid="button-photo-capture-empty"
-                    >
-                      <Camera className="w-4 h-4" />
-                      📷 ScopeScan™
-                    </Link>
-                    <span className="text-slate-400 text-xs">or</span>
-                    <Link href="/app" className="inline-flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-md font-medium text-sm">
-                      <Plus className="w-4 h-4" />
-                      {t.dashboard.createProposal}
-                    </Link>
+                    <Button asChild variant="outline" className="gap-2" data-testid="button-photo-capture-empty">
+                      <Link href="/m/create">
+                        <Camera className="h-4 w-4" aria-hidden />
+                        ScopeScan™
+                      </Link>
+                    </Button>
+                    <Separator className="hidden sm:block w-6" />
+                    <Button asChild className="gap-2">
+                      <Link href="/app">
+                        <Plus className="h-4 w-4" aria-hidden />
+                        {t.dashboard.createProposal}
+                      </Link>
+                    </Button>
                   </div>
-                  <p className="text-slate-400 text-xs mt-4">
-                    📸 Use ScopeScan™ to snap a few photos and generate a scope + estimate instantly
-                  </p>
                 </div>
               ) : isViewSwitching ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                 </div>
               ) : viewMode === 'pipeline' ? (
                 <PipelineView 
@@ -787,28 +921,33 @@ export default function Dashboard() {
               ) : (
                 <>
                   {/* Mobile Card View */}
-                  <div className="md:hidden divide-y divide-slate-100">
+                  <div className="md:hidden divide-y divide-border">
                     {proposals.map((proposal) => (
-                      <div key={proposal.id} data-testid={`card-proposal-mobile-${proposal.id}`} className="p-4 bg-white hover:bg-slate-50/50 transition-colors">
+                      <div key={proposal.id} data-testid={`card-proposal-mobile-${proposal.id}`} className="p-4 bg-background hover:bg-accent/30 transition-colors">
                         <div className="flex items-start justify-between gap-3 mb-3">
                           <div className="min-w-0 flex-1">
-                            <div className="font-bold text-slate-900 truncate">{proposal.clientName}</div>
-                            <div className="text-xs text-slate-500 truncate">{proposal.address}</div>
+                            <div className="font-semibold text-foreground truncate">{proposal.clientName}</div>
+                            <div className="text-xs text-muted-foreground truncate">{proposal.address}</div>
                           </div>
                           <div className="flex items-center gap-1 flex-shrink-0">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-9 w-9 text-slate-400 hover:text-blue-600"
-                              onClick={() => setEmailModalData({ 
-                                id: proposal.id, 
-                                clientName: proposal.clientName 
-                              })}
-                              title={t.dashboard.quickSend}
-                              data-testid={`button-quick-send-mobile-${proposal.id}`}
-                            >
-                              <Mail className="w-5 h-5" />
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-9 w-9 text-muted-foreground"
+                                  onClick={() => setEmailModalData({ 
+                                    id: proposal.id, 
+                                    clientName: proposal.clientName 
+                                  })}
+                                  aria-label={t.dashboard.quickSend}
+                                  data-testid={`button-quick-send-mobile-${proposal.id}`}
+                                >
+                                  <Mail className="w-5 h-5" aria-hidden />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>{t.dashboard.quickSend}</TooltipContent>
+                            </Tooltip>
                             <MobileProposalMenu 
                               proposal={proposal}
                               t={t}
@@ -831,16 +970,16 @@ export default function Dashboard() {
                           </div>
                         </div>
                         <div className="flex items-center justify-between gap-2 text-xs">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full font-medium bg-blue-50 text-blue-700 border border-blue-100 truncate max-w-[120px]">
+                          <Badge variant="outline" className="truncate max-w-[150px] text-muted-foreground">
                             {proposal.jobTypeName}
-                          </span>
-                          <span className="font-bold text-slate-700">
+                          </Badge>
+                          <span className="font-semibold text-foreground">
                             {new Intl.NumberFormat(language === 'es' ? 'es-ES' : 'en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Math.round((proposal.priceLow + proposal.priceHigh) / 2))}
                           </span>
                         </div>
                         <div className="flex items-center justify-between gap-2 mt-2">
-                          <div className="flex items-center gap-1 text-xs text-slate-500">
-                            <Calendar className="w-3 h-3" /> {formatDate(proposal.createdAt)}
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Calendar className="w-3 h-3" aria-hidden /> {formatDate(proposal.createdAt)}
                           </div>
                           <StatusBadge status={proposal.status} t={t} />
                         </div>
@@ -851,7 +990,7 @@ export default function Dashboard() {
                   {/* Desktop Table View */}
                   <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-sm text-left">
-                      <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-100">
+                      <thead className="text-xs text-muted-foreground uppercase bg-muted/30 border-b border-border">
                         <tr>
                           <th className="px-6 py-3 font-semibold">{t.dashboard.clientProject}</th>
                           <th className="px-6 py-3 font-semibold">{t.dashboard.jobType}</th>
@@ -861,24 +1000,24 @@ export default function Dashboard() {
                           <th className="px-6 py-3 font-semibold text-right">{t.dashboard.actions}</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100">
+                      <tbody className="divide-y divide-border">
                         {proposals.map((proposal) => (
-                          <tr key={proposal.id} data-testid={`row-proposal-${proposal.id}`} className="bg-white hover:bg-slate-50/50 transition-colors group">
+                          <tr key={proposal.id} data-testid={`row-proposal-${proposal.id}`} className="bg-background hover:bg-accent/30 transition-colors group">
                             <td className="px-6 py-4">
-                              <div className="font-bold text-slate-900">{proposal.clientName}</div>
-                              <div className="text-xs text-slate-500">{proposal.address}</div>
+                              <div className="font-semibold text-foreground">{proposal.clientName}</div>
+                              <div className="text-xs text-muted-foreground">{proposal.address}</div>
                             </td>
                             <td className="px-6 py-4">
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                              <Badge variant="outline" className="text-muted-foreground">
                                 {proposal.jobTypeName}
-                              </span>
+                              </Badge>
                             </td>
-                            <td className="px-6 py-4 font-medium text-slate-700">
+                            <td className="px-6 py-4 font-medium text-foreground">
                               {new Intl.NumberFormat(language === 'es' ? 'es-ES' : 'en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Math.round((proposal.priceLow + proposal.priceHigh) / 2))}
                             </td>
-                            <td className="px-6 py-4 text-slate-500">
+                            <td className="px-6 py-4 text-muted-foreground">
                               <div className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3" /> {formatDate(proposal.createdAt)}
+                                <Calendar className="w-3 h-3" aria-hidden /> {formatDate(proposal.createdAt)}
                               </div>
                             </td>
                             <td className="px-6 py-4">
@@ -886,23 +1025,28 @@ export default function Dashboard() {
                             </td>
                             <td className="px-6 py-4 text-right">
                               <div className="flex items-center justify-end gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-slate-400 hover:text-blue-600"
-                                  onClick={() => setEmailModalData({ 
-                                    id: proposal.id, 
-                                    clientName: proposal.clientName 
-                                  })}
-                                  title={t.dashboard.quickSend}
-                                  data-testid={`button-quick-send-${proposal.id}`}
-                                >
-                                  <Mail className="w-4 h-4" />
-                                </Button>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-muted-foreground"
+                                      onClick={() => setEmailModalData({ 
+                                        id: proposal.id, 
+                                        clientName: proposal.clientName 
+                                      })}
+                                      aria-label={t.dashboard.quickSend}
+                                      data-testid={`button-quick-send-${proposal.id}`}
+                                    >
+                                      <Mail className="w-4 h-4" aria-hidden />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>{t.dashboard.quickSend}</TooltipContent>
+                                </Tooltip>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600">
-                                  <MoreVertical className="w-4 h-4" />
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" aria-label="Open actions menu">
+                                  <MoreVertical className="w-4 h-4" aria-hidden />
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
@@ -941,6 +1085,7 @@ export default function Dashboard() {
                                   })}
                                   data-testid={`button-email-proposal-${proposal.id}`}
                                 >
+                                  <Mail className="w-4 h-4 mr-2" />
                                   {t.dashboard.sendViaEmail}
                                 </DropdownMenuItem>
                                 {user?.userStripeEnabled && (
@@ -1012,6 +1157,7 @@ export default function Dashboard() {
           
         </div>
       </div>
+      </TooltipProvider>
 
       {emailModalData && (
         <EmailProposalModal

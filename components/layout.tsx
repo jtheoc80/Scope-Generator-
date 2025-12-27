@@ -94,7 +94,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 data-testid="nav-photo-capture"
               >
                 <Camera className="w-4 h-4" />
-                <span>📷</span>
+                <span className="sr-only">ScopeScan™</span>
               </Link>
             )}
             {location === "/" && (
@@ -128,7 +128,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               >
                 <Camera className="w-5 h-5" />
                 <div>
-                  <span className="block">📷 ScopeScan™</span>
+                  <span className="block">ScopeScan™</span>
                   <span className="text-xs text-orange-600 font-normal">Snap a few photos → we generate a scope + estimate</span>
                 </div>
               </Link>
