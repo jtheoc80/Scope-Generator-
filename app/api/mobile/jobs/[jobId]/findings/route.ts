@@ -10,10 +10,8 @@ import {
   type Finding,
   type Unknown,
   type ClarifyingQuestion,
-  type ScopeTier,
   type FindingsSummary,
   PAINTING_CLARIFYING_QUESTIONS,
-  PAINTING_SCOPE_TIERS,
   detectPaintingJob,
   requiresScopeConfirmation,
   generateScopeTiers,
@@ -127,9 +125,7 @@ export async function GET(
     // Generate clarifying questions
     const clarifyingQuestions = generateClarifyingQuestions(
       findings,
-      isPaintingJob,
-      aggregatedClarificationReasons,
-      scopeCheck.reason
+      isPaintingJob
     );
 
     // Generate scope tiers
@@ -409,9 +405,7 @@ function getSeverityFromEstimate(estimate?: string): Finding["severity"] {
  */
 function generateClarifyingQuestions(
   findings: Finding[],
-  isPaintingJob: boolean,
-  clarificationReasons: string[],
-  scopeReason?: string
+  isPaintingJob: boolean
 ): ClarifyingQuestion[] {
   const questions: ClarifyingQuestion[] = [];
 
