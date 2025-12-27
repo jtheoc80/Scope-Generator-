@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Accordion,
   AccordionContent,
@@ -28,13 +29,24 @@ import {
 import {
   ArrowLeft,
   ArrowRight,
-  User,
-  MapPin,
-  Loader2,
-  Check,
-  Plus,
+  Bath,
+  BriefcaseBusiness,
+  ChefHat,
+  CheckCircle2,
   Clock,
+  Home,
+  Loader2,
+  MapPin,
   Navigation,
+  Paintbrush,
+  Plus,
+  Snowflake,
+  User,
+  Wrench,
+  Zap,
+  BrickWall,
+  Square,
+  Check,
   History,
   ChevronDown,
   X,
@@ -43,13 +55,11 @@ import {
 } from "lucide-react";
 import { mobileApiFetch, newIdempotencyKey, MobileJob } from "../lib/api";
 import {
-  getCustomers,
   getRecentCustomers,
   searchCustomers,
   saveCustomer,
   updateCustomerUsage,
   getCustomerById,
-  getAddresses,
   getRecentAddresses,
   searchAddresses,
   saveAddress,
@@ -63,14 +73,36 @@ import {
   JOB_TYPES,
   PRIMARY_JOB_TYPES,
   getJobTypeLabel,
-  getJobTypeIcon,
   SavedCustomer,
   SavedAddress,
 } from "../lib/job-memory";
 import { cn } from "@/lib/utils";
 
+type LucideIconComponent = (props: {
+  className?: string;
+  "aria-hidden"?: boolean;
+}) => JSX.Element;
+
+const JOB_TYPE_ICONS: Record<string, LucideIconComponent> = {
+  "bathroom-remodel": Bath,
+  "kitchen-remodel": ChefHat,
+  roofing: Home,
+  hvac: Snowflake,
+  plumbing: Wrench,
+  flooring: Square,
+  painting: Paintbrush,
+  electrical: Zap,
+  windows: Square,
+  siding: BrickWall,
+};
+
+function JobTypeIcon({ id }: { id: string }) {
+  const Icon = JOB_TYPE_ICONS[id] ?? BriefcaseBusiness;
+  return <Icon className="h-4 w-4 text-muted-foreground" aria-hidden />;
+}
+
 // Progress step indicator
-function ProgressPill({ currentStep }: { currentStep: number }) {
+function WizardStepper({ currentStep }: { currentStep: number }) {
   const steps = [
     { num: 1, label: "Setup" },
     { num: 2, label: "ScopeScan" },
@@ -79,62 +111,95 @@ function ProgressPill({ currentStep }: { currentStep: number }) {
   ];
 
   return (
-    <div className="flex items-center justify-center gap-1 text-xs">
-      {steps.map((step, idx) => (
-        <div key={step.num} className="flex items-center">
-          <div
-            className={cn(
-              "flex items-center gap-1 px-2 py-1 rounded-full transition-colors",
-              step.num === currentStep
-                ? "bg-orange-500 text-white font-medium"
-                : step.num < currentStep
-                ? "bg-green-100 text-green-700"
-                : "bg-slate-100 text-slate-500"
-            )}
-          >
-            <span>{step.num}</span>
-            <span className="hidden sm:inline">{step.label}</span>
-          </div>
-          {idx < steps.length - 1 && (
-            <div className="w-2 h-px bg-slate-300 mx-1" />
-          )}
-        </div>
-      ))}
-    </div>
+    <nav aria-label="ScopeScan steps" className="w-full">
+      <ol className="flex items-center justify-center gap-2">
+        {steps.map((step, idx) => {
+          const isComplete = step.num < currentStep;
+          const isActive = step.num === currentStep;
+          return (
+            <li key={step.num} className="flex items-center">
+              <div className="flex items-center gap-2">
+                <div
+                  className={cn(
+                    "relative grid h-7 w-7 place-items-center rounded-full border text-xs font-medium transition-colors",
+                    isComplete && "border-primary bg-primary text-primary-foreground",
+                    isActive && "border-primary bg-background",
+                    !isComplete && !isActive && "border-border bg-background text-muted-foreground"
+                  )}
+                  aria-current={isActive ? "step" : undefined}
+                >
+                  {isComplete ? (
+                    <Check className="h-4 w-4" aria-hidden />
+                  ) : isActive ? (
+                    <>
+                      <span className="sr-only">{step.num}</span>
+                      <span className="h-2.5 w-2.5 rounded-full bg-primary" aria-hidden />
+                    </>
+                  ) : (
+                    <span className="text-muted-foreground">{step.num}</span>
+                  )}
+                </div>
+                <span
+                  className={cn(
+                    "text-xs text-muted-foreground",
+                    isActive && "font-semibold text-foreground"
+                  )}
+                >
+                  {step.label}
+                </span>
+              </div>
+              {idx < steps.length - 1 && (
+                <div className="mx-2 h-px w-6 bg-border" aria-hidden />
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
   );
 }
 
-// Job type chip component
-function JobTypeChip({
+function JobTypeCardButton({
   id,
   label,
-  icon,
   selected,
   onClick,
-  isRecent,
+  badge,
 }: {
   id: string;
   label: string;
-  icon: string;
   selected: boolean;
   onClick: () => void;
-  isRecent?: boolean;
+  badge?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        "flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium transition-all border",
+        "relative flex w-full items-center gap-3 rounded-lg border bg-card px-3 py-3 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
         selected
-          ? "bg-orange-500 text-white border-orange-500 shadow-sm"
-          : "bg-white text-slate-700 border-slate-200 hover:border-orange-300 hover:bg-orange-50",
-        isRecent && !selected && "border-dashed"
+          ? "border-primary/40 bg-primary/5"
+          : "border-border hover:bg-accent"
       )}
+      aria-pressed={selected}
     >
-      <span>{icon}</span>
-      <span>{label}</span>
-      {selected && <Check className="w-3.5 h-3.5 ml-0.5" />}
+      <JobTypeIcon id={id} />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="truncate font-medium text-foreground">{label}</span>
+          {badge && (
+            <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+              {badge}
+            </Badge>
+          )}
+        </div>
+      </div>
+      {selected && (
+        <span className="grid h-5 w-5 place-items-center rounded-full bg-primary text-primary-foreground">
+          <Check className="h-3 w-3" aria-hidden />
+        </span>
+      )}
     </button>
   );
 }
@@ -186,15 +251,15 @@ function CustomerSelector({
 
   if (value) {
     return (
-      <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+      <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2.5">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-            <User className="w-4 h-4 text-green-600" />
+          <div className="grid h-9 w-9 place-items-center rounded-md border bg-background">
+            <User className="h-4 w-4 text-muted-foreground" />
           </div>
           <div>
-            <p className="font-medium text-slate-900">{value.name}</p>
+            <p className="text-sm font-medium text-foreground">{value.name}</p>
             {value.phone && (
-              <p className="text-xs text-slate-500">{value.phone}</p>
+              <p className="text-xs text-muted-foreground">{value.phone}</p>
             )}
           </div>
         </div>
@@ -204,7 +269,7 @@ function CustomerSelector({
           size="sm"
           onClick={() => onChange(null)}
           disabled={disabled}
-          className="text-slate-400 hover:text-slate-600"
+          className="text-muted-foreground"
         >
           <X className="w-4 h-4" />
         </Button>
@@ -221,7 +286,8 @@ function CustomerSelector({
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
-          className="w-full justify-between h-12 text-left font-normal"
+          className="w-full justify-between text-left font-normal"
+          id="customer-combobox"
         >
           <span className="text-muted-foreground">
             Search customers or add new…
@@ -318,8 +384,8 @@ function CustomerSelector({
                     }}
                     className="flex items-center gap-3 py-2"
                   >
-                    <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center">
-                      <User className="w-4 h-4 text-slate-600" />
+                    <div className="grid h-8 w-8 place-items-center rounded-md border bg-background">
+                      <User className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <div className="flex-1">
                       <p className="font-medium">{customer.name}</p>
@@ -437,19 +503,19 @@ function AddressSelector({
 
   if (value) {
     return (
-      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+      <div className="rounded-lg border border-border bg-card px-3 py-2.5">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mt-0.5">
-              <MapPin className="w-4 h-4 text-green-600" />
+            <div className="mt-0.5 grid h-9 w-9 place-items-center rounded-md border bg-background">
+              <MapPin className="h-4 w-4 text-muted-foreground" />
             </div>
             <div>
-              <p className="font-medium text-slate-900 text-sm">
+              <p className="text-sm font-medium text-foreground">
                 {value.formatted}
               </p>
               <button
                 type="button"
-                className="text-xs text-green-600 hover:text-green-700 mt-1"
+                className="mt-1 text-xs text-primary underline-offset-4 hover:underline"
                 onClick={() => onChange(null)}
                 disabled={disabled}
               >
@@ -457,7 +523,7 @@ function AddressSelector({
               </button>
             </div>
           </div>
-          <Check className="w-4 h-4 text-green-600 mt-1" />
+          <CheckCircle2 className="mt-1 h-4 w-4 text-primary" aria-hidden />
         </div>
       </div>
     );
@@ -467,29 +533,26 @@ function AddressSelector({
     <div className="space-y-2">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button
-            type="button"
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            disabled={disabled}
-            className="w-full justify-between h-12 text-left font-normal"
-          >
-            <span className="text-muted-foreground">
-              Start typing an address…
-            </span>
-            <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
+          <div className="relative">
+            <Input
+              ref={inputRef}
+              id="address-combobox"
+              role="combobox"
+              aria-expanded={open}
+              aria-controls="address-command-list"
+              placeholder="Start typing an address…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onFocus={() => setOpen(true)}
+              disabled={disabled}
+              className="pr-10"
+            />
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" aria-hidden />
+          </div>
         </PopoverTrigger>
         <PopoverContent className="w-[calc(100vw-2rem)] max-w-md p-0" align="start">
           <Command>
-            <CommandInput
-              ref={inputRef}
-              placeholder="Start typing an address…"
-              value={search}
-              onValueChange={setSearch}
-            />
-            <CommandList>
+            <CommandList id="address-command-list">
               {addresses.length === 0 && search && (
                 <div className="p-3">
                   <Button
@@ -540,7 +603,7 @@ function AddressSelector({
           type="button"
           variant="outline"
           size="sm"
-          className="flex-1 text-xs h-9"
+          className="flex-1"
           onClick={handleUseLocation}
           disabled={disabled || isLocating || saving}
         >
@@ -556,7 +619,7 @@ function AddressSelector({
             type="button"
             variant="outline"
             size="sm"
-            className="flex-1 text-xs h-9"
+            className="flex-1"
             onClick={async () => {
               await updateAddressUsage(lastAddress.id);
               onChange(lastAddress);
@@ -675,20 +738,20 @@ export default function CreateJobPage() {
   if (!initialized) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div className="p-4 space-y-5 pb-8">
+    <div className="px-4 pt-4 pb-safe space-y-6">
       {/* Back button */}
       <div className="flex items-center justify-between">
         <Button
           variant="ghost"
           size="sm"
           onClick={() => router.back()}
-          className="gap-2 -ml-2"
+          className="gap-2 -ml-2 text-muted-foreground"
           disabled={busy}
         >
           <ArrowLeft className="w-4 h-4" />
@@ -703,61 +766,53 @@ export default function CreateJobPage() {
       </div>
 
       {/* Progress indicator */}
-      <ProgressPill currentStep={1} />
+      <WizardStepper currentStep={1} />
 
       {/* Header */}
       <div className="text-center space-y-1">
-        <h1 className="text-2xl font-bold text-slate-900">Start ScopeScan™</h1>
-        <p className="text-sm text-slate-500">
+        <h1 className="text-2xl text-foreground">Start ScopeScan™</h1>
+        <p className="text-sm text-muted-foreground">
           We&apos;ll remember customers + addresses for next time
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm text-destructive">
             {error}
           </div>
         )}
 
         {/* Section 1: Job Type */}
-        <Card className="border-slate-200 shadow-sm">
-          <CardContent className="p-4 space-y-3">
-            <Label className="text-sm font-medium text-slate-700">
-              Job Type
-            </Label>
+        <Card className="rounded-lg border-border shadow-sm">
+          <CardContent className="p-4 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <Label className="text-sm font-medium text-foreground">
+                Job Type
+              </Label>
+              {uniqueRecentTypes.length > 0 && (
+                <Badge variant="outline" className="h-6 px-2 text-xs text-muted-foreground">
+                  Recent available
+                </Badge>
+              )}
+            </div>
 
-            {/* Recent job types (if different from primary) */}
-            {uniqueRecentTypes.length > 0 && (
-              <div className="space-y-1.5">
-                <p className="text-xs text-slate-500 flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  Recent
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {uniqueRecentTypes.map((id) => (
-                    <JobTypeChip
-                      key={id}
-                      id={id}
-                      label={getJobTypeLabel(id)}
-                      icon={getJobTypeIcon(id)}
-                      selected={jobType === id}
-                      onClick={() => setJobType(id)}
-                      isRecent
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Primary job type chips */}
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {uniqueRecentTypes.map((id) => (
+                <JobTypeCardButton
+                  key={id}
+                  id={id}
+                  label={getJobTypeLabel(id)}
+                  selected={jobType === id}
+                  onClick={() => setJobType(id)}
+                  badge="Recent"
+                />
+              ))}
               {PRIMARY_JOB_TYPES.map((type) => (
-                <JobTypeChip
+                <JobTypeCardButton
                   key={type.id}
                   id={type.id}
                   label={type.label}
-                  icon={type.icon}
                   selected={jobType === type.id}
                   onClick={() => setJobType(type.id)}
                 />
@@ -771,7 +826,7 @@ export default function CreateJobPage() {
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="text-xs text-slate-500"
+                  className="text-xs text-muted-foreground"
                 >
                   More job types…
                 </Button>
@@ -788,11 +843,13 @@ export default function CreateJobPage() {
                       size="sm"
                       className={cn(
                         "w-full justify-start",
-                        jobType === type.id && "bg-orange-50 text-orange-700"
+                        jobType === type.id && "bg-accent text-foreground"
                       )}
                       onClick={() => setJobType(type.id)}
                     >
-                      <span className="mr-2">{type.icon}</span>
+                      <span className="mr-2">
+                        <JobTypeIcon id={type.id} />
+                      </span>
                       {type.label}
                       {jobType === type.id && (
                         <Check className="w-3 h-3 ml-auto" />
@@ -806,10 +863,10 @@ export default function CreateJobPage() {
         </Card>
 
         {/* Section 2: Customer */}
-        <Card className="border-slate-200 shadow-sm">
+        <Card className="rounded-lg border-border shadow-sm">
           <CardContent className="p-4 space-y-3">
-            <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-              <User className="w-4 h-4 text-slate-400" />
+            <Label htmlFor="customer-combobox" className="text-sm font-medium text-foreground flex items-center gap-2">
+              <User className="w-4 h-4 text-muted-foreground" aria-hidden />
               Customer
             </Label>
             <CustomerSelector
@@ -822,10 +879,10 @@ export default function CreateJobPage() {
         </Card>
 
         {/* Section 3: Address */}
-        <Card className="border-slate-200 shadow-sm">
+        <Card className="rounded-lg border-border shadow-sm">
           <CardContent className="p-4 space-y-3">
-            <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-slate-400" />
+            <Label htmlFor="address-combobox" className="text-sm font-medium text-foreground flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-muted-foreground" aria-hidden />
               Job Address
             </Label>
             <AddressSelector
@@ -840,10 +897,10 @@ export default function CreateJobPage() {
 
         {/* Advanced Section (collapsed) */}
         <Accordion type="single" collapsible className="w-full">
-          <AccordionItem value="advanced" className="border rounded-lg border-slate-200">
-            <AccordionTrigger className="px-4 py-3 text-sm text-slate-500 hover:no-underline">
+          <AccordionItem value="advanced" className="border rounded-lg border-border bg-card shadow-sm">
+            <AccordionTrigger className="px-4 py-3 text-sm text-muted-foreground hover:no-underline">
               <span className="flex items-center gap-2">
-                <Settings2 className="w-4 h-4" />
+                <Settings2 className="w-4 h-4" aria-hidden />
                 Advanced (optional)
               </span>
             </AccordionTrigger>
@@ -851,7 +908,7 @@ export default function CreateJobPage() {
               <div className="space-y-2">
                 <Label
                   htmlFor="templateCode"
-                  className="text-sm text-slate-600"
+                  className="text-sm text-muted-foreground"
                 >
                   Template Code
                 </Label>
@@ -861,7 +918,6 @@ export default function CreateJobPage() {
                   value={templateCode}
                   onChange={(e) => setTemplateCode(e.target.value)}
                   disabled={busy}
-                  className="h-10"
                 />
                 <p className="text-xs text-slate-400">
                   Leave blank to use the selected job type
@@ -870,7 +926,7 @@ export default function CreateJobPage() {
               <div className="space-y-2">
                 <Label
                   htmlFor="internalNotes"
-                  className="text-sm text-slate-600"
+                  className="text-sm text-muted-foreground"
                 >
                   Internal Notes
                 </Label>
@@ -880,7 +936,6 @@ export default function CreateJobPage() {
                   value={internalNotes}
                   onChange={(e) => setInternalNotes(e.target.value)}
                   disabled={busy}
-                  className="h-10"
                 />
               </div>
             </AccordionContent>
@@ -891,7 +946,7 @@ export default function CreateJobPage() {
         <div className="space-y-2 pt-2">
           <Button
             type="submit"
-            className="w-full h-14 text-base gap-2 bg-orange-500 hover:bg-orange-600 shadow-md"
+            className="w-full min-h-12 text-base gap-2"
             disabled={busy}
           >
             {busy ? (
