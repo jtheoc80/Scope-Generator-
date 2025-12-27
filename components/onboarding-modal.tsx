@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 
@@ -46,6 +47,7 @@ export function OnboardingModal({ open, userName }: OnboardingModalProps) {
   const [formData, setFormData] = useState({
     phone: "",
     companyName: "",
+    companyAddress: "",
     businessSize: "",
     referralSource: "",
     primaryTrade: "",
@@ -72,7 +74,7 @@ export function OnboardingModal({ open, userName }: OnboardingModalProps) {
     onboardingMutation.mutate(formData);
   };
 
-  const isFormValid = formData.companyName && formData.primaryTrade;
+  const isFormValid = formData.companyName && formData.companyAddress && formData.primaryTrade;
 
   return (
     <Dialog open={open}>
@@ -98,6 +100,20 @@ export function OnboardingModal({ open, userName }: OnboardingModalProps) {
                 onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
                 required
               />
+            </div>
+
+            <div className="col-span-2">
+              <Label htmlFor="companyAddress">Company Address *</Label>
+              <Textarea
+                id="companyAddress"
+                data-testid="input-company-address"
+                placeholder="123 Main St&#10;City, State 12345"
+                value={formData.companyAddress}
+                onChange={(e) => setFormData({ ...formData, companyAddress: e.target.value })}
+                rows={2}
+                required
+              />
+              <p className="text-xs text-slate-500 mt-1">This will appear on your proposals</p>
             </div>
 
             <div>
