@@ -214,7 +214,7 @@ const getAreaOptionsForTrade = (tradeId: string, t: any): { value: string; label
     case "handyman":
       return toOptions([...bathroomAreaValues, ...kitchenAreaValues, ...interiorRoomValues.filter(r => r !== "whole-house"), "whole-house"]);
     case "windows-doors":
-      return toOptions([...interiorRoomValues.filter(r => !["whole-house", "closet"].includes(r)), ...exteriorAreaValues.filter(r => ["front-yard", "backyard", "patio", "garage"].includes(r))]);
+      return toOptions([...interiorRoomValues.filter(r => !["whole-house", "closet"].includes(r)), ...exteriorAreaValues.filter(r => ["patio", "garage"].includes(r))]);
     default:
       return toOptions([...interiorRoomValues, ...exteriorAreaValues]);
   }
