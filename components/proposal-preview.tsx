@@ -124,11 +124,21 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
               />
             )}
             <div>
-              <div className="text-xl font-bold text-slate-900">
-                {companyInfo?.companyName || "Your Company Name"}
-              </div>
+              {companyInfo?.companyName ? (
+                <div className="text-xl font-bold text-slate-900">
+                  {companyInfo.companyName}
+                </div>
+              ) : (
+                <div className="text-xl font-bold text-red-500 italic">
+                  [Company Name Required]
+                </div>
+              )}
               <div className="text-slate-500 text-xs mt-1 whitespace-pre-line">
-                {companyInfo?.companyAddress || "123 Contractor Way\nCityville, ST 12345"}
+                {companyInfo?.companyAddress ? (
+                  companyInfo.companyAddress
+                ) : (
+                  <span className="text-red-500 italic">[Company Address Required]</span>
+                )}
                 {companyInfo?.companyPhone && (
                   <>
                     <br />
@@ -139,12 +149,6 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
                   <>
                     <br />
                     <span className="text-slate-600">Lic# {companyInfo.licenseNumber}</span>
-                  </>
-                )}
-                {!companyInfo?.companyAddress && !companyInfo?.companyPhone && (
-                  <>
-                    <br />
-                    (555) 123-4567
                   </>
                 )}
               </div>

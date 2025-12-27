@@ -31,6 +31,17 @@ export async function POST(
       return jsonError(requestId, 404, "NOT_FOUND", "Job not found");
     }
 
+    // Check if user has contractor information set up
+    const user = await storage.getUser(authResult.userId);
+    if (!user?.companyName || !user?.companyAddress) {
+      return jsonError(
+        requestId, 
+        400, 
+        "MISSING_CONTRACTOR_INFO", 
+        "Please complete your company profile before creating proposals. Company name and address are required."
+      );
+    }
+
     const draft = await storage.getLatestMobileJobDraft(id, authResult.userId);
     if (!draft || draft.status !== "ready" || !draft.payload) {
       return jsonError(requestId, 400, "FAILED_PRECONDITION", "No ready draft found");

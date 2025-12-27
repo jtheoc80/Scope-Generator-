@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, ChevronRight, Wand2, Download, FileText, Sparkles, Plus, Trash2, GripVertical, Save, Camera, Mail } from "lucide-react";
+import { Loader2, ChevronRight, Wand2, Download, FileText, Sparkles, Plus, Trash2, GripVertical, Save, Camera, Mail, AlertTriangle } from "lucide-react";
 import JobAddressField from "@/components/job-address-field";
 import EmailProposalModal from "@/components/email-proposal-modal";
 import ProposalPreview from "@/components/proposal-preview";
@@ -26,6 +26,8 @@ import jsPDF from "jspdf";
 import { apiRequest } from "@/lib/queryClient";
 import { getRegionalMultiplier } from "@/lib/regional-pricing";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // Service item interface for multi-trade support
 interface ServiceItem {
@@ -279,6 +281,9 @@ export default function Generator() {
   const availableTemplates = userSelectedTrades.length > 0
     ? templates.filter(t => userSelectedTrades.includes(t.id))
     : templates;
+
+  // Check if user is missing required contractor info
+  const isMissingContractorInfo = user && (!user.companyName || !user.companyAddress);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -1163,6 +1168,20 @@ export default function Generator() {
             <div className="lg:col-span-4 space-y-6">
               <Card className="border-t-4 border-t-primary shadow-md">
                 <CardContent className="p-6">
+                  {/* Warning banner for missing contractor info */}
+                  {isMissingContractorInfo && (
+                    <Alert variant="destructive" className="mb-6">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertTitle>Complete Your Company Profile</AlertTitle>
+                      <AlertDescription>
+                        You must add your company name and address before creating proposals.{' '}
+                        <Link href="/settings" className="font-semibold underline hover:no-underline">
+                          Go to Settings →
+                        </Link>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
                   <div className="mb-6">
                     <h2 className="text-xl font-heading font-bold flex items-center gap-2">
                       <Wand2 className="w-5 h-5 text-secondary" />
@@ -1295,7 +1314,7 @@ export default function Generator() {
                       <Button 
                         type="submit" 
                         className="w-full bg-primary hover:bg-primary/90 text-white font-bold h-12 text-lg"
-                        disabled={isGenerating || !hasValidServices}
+                        disabled={isGenerating || !hasValidServices || isMissingContractorInfo}
                         data-testid="button-generate-proposal"
                       >
                         {isGenerating ? (

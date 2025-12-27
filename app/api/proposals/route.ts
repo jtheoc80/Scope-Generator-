@@ -48,6 +48,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if user has contractor information set up
+    const user = await storage.getUser(userId);
+    if (!user) {
+      return NextResponse.json(
+        { message: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    // Require contractor name and address before creating proposals
+    if (!user.companyName || !user.companyAddress) {
+      return NextResponse.json(
+        { 
+          message: 'Please complete your company profile before creating proposals. Company name and address are required.',
+          code: 'MISSING_CONTRACTOR_INFO'
+        },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
     
     const validationResult = insertProposalSchema.safeParse({
