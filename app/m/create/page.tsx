@@ -112,7 +112,7 @@ function WizardStepper({ currentStep }: { currentStep: number }) {
 
   return (
     <nav aria-label="ScopeScan steps" className="w-full">
-      <ol className="flex items-center justify-center gap-2">
+      <ol className="flex flex-wrap justify-center gap-2 sm:gap-4">
         {steps.map((step, idx) => {
           const isComplete = step.num < currentStep;
           const isActive = step.num === currentStep;
@@ -141,7 +141,7 @@ function WizardStepper({ currentStep }: { currentStep: number }) {
                 </div>
                 <span
                   className={cn(
-                    "text-xs text-muted-foreground",
+                    "hidden sm:inline text-xs text-muted-foreground",
                     isActive && "font-semibold text-foreground"
                   )}
                 >
@@ -149,7 +149,7 @@ function WizardStepper({ currentStep }: { currentStep: number }) {
                 </span>
               </div>
               {idx < steps.length - 1 && (
-                <div className="mx-2 h-px w-6 bg-border" aria-hidden />
+                <div className="hidden sm:block mx-2 h-px w-6 bg-border" aria-hidden />
               )}
             </li>
           );
@@ -177,7 +177,7 @@ function JobTypeCardButton({
       type="button"
       onClick={onClick}
       className={cn(
-        "relative flex w-full items-center gap-3 rounded-lg border bg-card px-3 py-3 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+        "relative flex w-full min-h-11 items-center gap-3 rounded-lg border bg-background px-3 py-3 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
         selected
           ? "border-primary/40 bg-primary/5"
           : "border-border hover:bg-accent"
@@ -286,7 +286,7 @@ function CustomerSelector({
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
-          className="w-full justify-between text-left font-normal"
+          className="w-full justify-between text-left font-normal min-h-11"
           id="customer-combobox"
         >
           <span className="text-muted-foreground">
@@ -295,7 +295,7 @@ function CustomerSelector({
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[calc(100vw-2rem)] max-w-md p-0" align="start">
+      <PopoverContent className="w-[--radix-popover-trigger-width] max-w-md p-0" align="start">
         {showNewForm ? (
           <div className="p-4 space-y-3">
             <div className="flex items-center justify-between">
@@ -530,107 +530,110 @@ function AddressSelector({
   }
 
   return (
-    <div className="space-y-2">
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <div className="relative">
-            <Input
-              ref={inputRef}
-              id="address-combobox"
-              role="combobox"
-              aria-expanded={open}
-              aria-controls="address-command-list"
-              placeholder="Start typing an address…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onFocus={() => setOpen(true)}
-              disabled={disabled}
-              className="pr-10"
-            />
-            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" aria-hidden />
-          </div>
-        </PopoverTrigger>
-        <PopoverContent className="w-[calc(100vw-2rem)] max-w-md p-0" align="start">
-          <Command>
-            <CommandList id="address-command-list">
-              {addresses.length === 0 && search && (
-                <div className="p-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={handleManualAddress}
-                    disabled={saving}
-                  >
-                    {saving ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Plus className="w-4 h-4 mr-2" />
-                    )}
-                    Use &quot;{search}&quot;
-                  </Button>
-                </div>
-              )}
-              {addresses.length > 0 && (
-                <CommandGroup heading="Recent Addresses">
-                  {addresses.map((address) => (
-                    <CommandItem
-                      key={address.id}
-                      value={address.formatted}
-                      onSelect={async () => {
-                        await updateAddressUsage(address.id);
-                        onChange(address);
-                        setOpen(false);
-                      }}
-                      className="flex items-center gap-3 py-2"
-                    >
-                      <MapPin className="w-4 h-4 text-slate-400" />
-                      <span className="flex-1 text-sm">{address.formatted}</span>
-                      <History className="w-3 h-3 text-slate-400" />
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+    <div className="space-y-3">
+      <div className="flex flex-col gap-3 md:flex-row md:items-end">
+        <div className="md:flex-1">
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <div className="relative">
+                <Input
+                  ref={inputRef}
+                  id="address-combobox"
+                  role="combobox"
+                  aria-expanded={open}
+                  aria-controls="address-command-list"
+                  placeholder="Start typing an address…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onFocus={() => setOpen(true)}
+                  disabled={disabled}
+                  className="pr-10 h-11"
+                />
+                <ChevronDown
+                  className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50"
+                  aria-hidden
+                />
+              </div>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--radix-popover-trigger-width] max-w-md p-0" align="start">
+              <Command>
+                <CommandList id="address-command-list">
+                  {addresses.length === 0 && search && (
+                    <div className="p-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full min-h-11"
+                        onClick={handleManualAddress}
+                        disabled={saving}
+                      >
+                        {saving ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Plus className="w-4 h-4 mr-2" />
+                        )}
+                        Use &quot;{search}&quot;
+                      </Button>
+                    </div>
+                  )}
+                  {addresses.length > 0 && (
+                    <CommandGroup heading="Recent Addresses">
+                      {addresses.map((address) => (
+                        <CommandItem
+                          key={address.id}
+                          value={address.formatted}
+                          onSelect={async () => {
+                            await updateAddressUsage(address.id);
+                            onChange(address);
+                            setOpen(false);
+                          }}
+                          className="flex items-center gap-3 py-2"
+                        >
+                          <MapPin className="w-4 h-4 text-slate-400" />
+                          <span className="flex-1 text-sm">{address.formatted}</span>
+                          <History className="w-3 h-3 text-slate-400" />
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  )}
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
 
-      {/* Quick actions */}
-      <div className="flex gap-2">
         <Button
           type="button"
           variant="outline"
-          size="sm"
-          className="flex-1"
+          className="w-full md:w-auto min-h-11"
           onClick={handleUseLocation}
           disabled={disabled || isLocating || saving}
         >
           {isLocating ? (
-            <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
           ) : (
-            <Navigation className="w-3 h-3 mr-1.5" />
+            <Navigation className="w-4 h-4 mr-2" />
           )}
           Use current location
         </Button>
-        {lastAddress && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="flex-1"
-            onClick={async () => {
-              await updateAddressUsage(lastAddress.id);
-              onChange(lastAddress);
-            }}
-            disabled={disabled}
-          >
-            <History className="w-3 h-3 mr-1.5" />
-            Use last address
-          </Button>
-        )}
       </div>
+
+      {lastAddress && (
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full min-h-11 justify-start"
+          onClick={async () => {
+            await updateAddressUsage(lastAddress.id);
+            onChange(lastAddress);
+          }}
+          disabled={disabled}
+        >
+          <History className="w-4 h-4 mr-2" />
+          Use last address
+        </Button>
+      )}
     </div>
   );
 }
@@ -744,7 +747,7 @@ export default function CreateJobPage() {
   }
 
   return (
-    <div className="px-4 pt-4 pb-safe space-y-6">
+    <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 py-6 sm:py-10 pb-safe space-y-6">
       {/* Back button */}
       <div className="flex items-center justify-between">
         <Button
@@ -769,7 +772,7 @@ export default function CreateJobPage() {
       <WizardStepper currentStep={1} />
 
       {/* Header */}
-      <div className="text-center space-y-1">
+      <div className="space-y-1 text-center sm:text-left">
         <h1 className="text-2xl text-foreground">Start ScopeScan™</h1>
         <p className="text-sm text-muted-foreground">
           We&apos;ll remember customers + addresses for next time
@@ -784,8 +787,8 @@ export default function CreateJobPage() {
         )}
 
         {/* Section 1: Job Type */}
-        <Card className="rounded-lg border-border shadow-sm">
-          <CardContent className="p-4 space-y-4">
+        <Card className="rounded-lg border bg-background shadow-sm">
+          <CardContent className="p-4 sm:p-6 space-y-6">
             <div className="flex items-center justify-between gap-3">
               <Label className="text-sm font-medium text-foreground">
                 Job Type
@@ -797,7 +800,7 @@ export default function CreateJobPage() {
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {uniqueRecentTypes.map((id) => (
                 <JobTypeCardButton
                   key={id}
@@ -863,8 +866,8 @@ export default function CreateJobPage() {
         </Card>
 
         {/* Section 2: Customer */}
-        <Card className="rounded-lg border-border shadow-sm">
-          <CardContent className="p-4 space-y-3">
+        <Card className="rounded-lg border bg-background shadow-sm">
+          <CardContent className="p-4 sm:p-6 space-y-6">
             <Label htmlFor="customer-combobox" className="text-sm font-medium text-foreground flex items-center gap-2">
               <User className="w-4 h-4 text-muted-foreground" aria-hidden />
               Customer
@@ -879,8 +882,8 @@ export default function CreateJobPage() {
         </Card>
 
         {/* Section 3: Address */}
-        <Card className="rounded-lg border-border shadow-sm">
-          <CardContent className="p-4 space-y-3">
+        <Card className="rounded-lg border bg-background shadow-sm">
+          <CardContent className="p-4 sm:p-6 space-y-6">
             <Label htmlFor="address-combobox" className="text-sm font-medium text-foreground flex items-center gap-2">
               <MapPin className="w-4 h-4 text-muted-foreground" aria-hidden />
               Job Address
@@ -897,14 +900,14 @@ export default function CreateJobPage() {
 
         {/* Advanced Section (collapsed) */}
         <Accordion type="single" collapsible className="w-full">
-          <AccordionItem value="advanced" className="border rounded-lg border-border bg-card shadow-sm">
-            <AccordionTrigger className="px-4 py-3 text-sm text-muted-foreground hover:no-underline">
+          <AccordionItem value="advanced" className="rounded-lg border bg-background shadow-sm">
+            <AccordionTrigger className="px-4 sm:px-6 py-4 text-sm text-muted-foreground hover:no-underline">
               <span className="flex items-center gap-2">
                 <Settings2 className="w-4 h-4" aria-hidden />
                 Advanced (optional)
               </span>
             </AccordionTrigger>
-            <AccordionContent className="px-4 pb-4 space-y-4">
+            <AccordionContent className="px-4 sm:px-6 pb-6 space-y-6">
               <div className="space-y-2">
                 <Label
                   htmlFor="templateCode"
@@ -918,6 +921,7 @@ export default function CreateJobPage() {
                   value={templateCode}
                   onChange={(e) => setTemplateCode(e.target.value)}
                   disabled={busy}
+                  className="h-11"
                 />
                 <p className="text-xs text-slate-400">
                   Leave blank to use the selected job type
@@ -936,6 +940,7 @@ export default function CreateJobPage() {
                   value={internalNotes}
                   onChange={(e) => setInternalNotes(e.target.value)}
                   disabled={busy}
+                  className="h-11"
                 />
               </div>
             </AccordionContent>
@@ -946,7 +951,7 @@ export default function CreateJobPage() {
         <div className="space-y-2 pt-2">
           <Button
             type="submit"
-            className="w-full min-h-12 text-base gap-2"
+            className="w-full min-h-12 sm:min-h-11 text-base gap-2"
             disabled={busy}
           >
             {busy ? (
