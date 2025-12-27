@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireMobileAuth } from "@/src/lib/mobile/auth";
 import { db } from "@/server/db";
 import { savedCustomers } from "@shared/schema";
-import { eq, desc, ilike, or, sql } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { z } from "zod";
 
 // Schema for creating/updating a customer

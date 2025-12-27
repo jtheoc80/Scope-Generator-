@@ -5,7 +5,7 @@
  * Key principle: Default to minimum reasonable scope unless user confirms larger scope.
  */
 
-import { type Finding, type ScopeSelection, type ScopeTier } from "./types";
+import { type Finding, type ScopeSelection } from "./types";
 
 // Painting-specific pricing per square foot
 export const PAINTING_PRICE_PER_SQFT = {
@@ -164,8 +164,6 @@ function applyGenericGuardrails(
     warnings.push("No scope tier selected - using recommended scope");
   }
   
-  // Count high-severity findings
-  const highSeverityCount = findings.filter(f => f.severity === "high").length;
   const totalFindings = findings.length;
   
   // Warn if many findings but minimum tier selected
@@ -188,8 +186,7 @@ function applyGenericGuardrails(
  */
 export function validateScopeVsFindings(
   findings: Finding[],
-  scopeSelection: ScopeSelection,
-  tier: ScopeTier
+  scopeSelection: ScopeSelection
 ): { valid: boolean; warnings: string[] } {
   const warnings: string[] = [];
   

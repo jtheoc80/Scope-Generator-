@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireMobileAuth } from "@/src/lib/mobile/auth";
 import { db } from "@/server/db";
 import { jobSetupPreferences, savedCustomers, savedAddresses } from "@shared/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 // Schema for updating job setup preferences
