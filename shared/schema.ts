@@ -998,3 +998,125 @@ export interface EnhancedProposalAnalytics {
     winRateChange: number; // percentage points
   };
 }
+
+// ==========================================
+// Customer & Address Memory (for Job Setup)
+// ==========================================
+
+/**
+ * Saved customers - remembers customer info for quick job creation
+ */
+export const savedCustomers = pgTable("saved_customers", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  phone: varchar("phone", { length: 50 }),
+  email: varchar("email", { length: 255 }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  lastUsedAt: timestamp("last_used_at").defaultNow(),
+}, (table) => ({
+  userIdx: index("idx_saved_customers_user").on(table.userId),
+  userLastUsedIdx: index("idx_saved_customers_user_last_used").on(table.userId, table.lastUsedAt),
+}));
+
+/**
+ * Saved addresses - remembers addresses for quick job creation
+ * Can be linked to a customer or standalone
+ */
+export const savedAddresses = pgTable("saved_addresses", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  customerId: integer("customer_id").references(() => savedCustomers.id, { onDelete: "set null" }),
+  formatted: text("formatted").notNull(), // Full formatted address
+  street: varchar("street", { length: 255 }),
+  city: varchar("city", { length: 100 }),
+  state: varchar("state", { length: 50 }),
+  zip: varchar("zip", { length: 20 }),
+  placeId: varchar("place_id", { length: 255 }), // Google Places ID for deduplication
+  lat: varchar("lat", { length: 20 }),
+  lng: varchar("lng", { length: 20 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  lastUsedAt: timestamp("last_used_at").defaultNow(),
+}, (table) => ({
+  userIdx: index("idx_saved_addresses_user").on(table.userId),
+  userLastUsedIdx: index("idx_saved_addresses_user_last_used").on(table.userId, table.lastUsedAt),
+  customerIdx: index("idx_saved_addresses_customer").on(table.customerId),
+  placeIdIdx: index("idx_saved_addresses_place_id").on(table.userId, table.placeId),
+}));
+
+/**
+ * Job setup preferences - remembers last used settings
+ */
+export const jobSetupPreferences = pgTable("job_setup_preferences", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }).unique(),
+  lastJobType: varchar("last_job_type", { length: 50 }),
+  lastCustomerId: integer("last_customer_id").references(() => savedCustomers.id, { onDelete: "set null" }),
+  lastAddressId: integer("last_address_id").references(() => savedAddresses.id, { onDelete: "set null" }),
+  recentJobTypes: text("recent_job_types").array().default([]), // Last 10 job types
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userIdx: index("idx_job_setup_prefs_user").on(table.userId),
+}));
+
+// Relations
+export const savedCustomersRelations = relations(savedCustomers, ({ one, many }) => ({
+  user: one(users, {
+    fields: [savedCustomers.userId],
+    references: [users.id],
+  }),
+  addresses: many(savedAddresses),
+}));
+
+export const savedAddressesRelations = relations(savedAddresses, ({ one }) => ({
+  user: one(users, {
+    fields: [savedAddresses.userId],
+    references: [users.id],
+  }),
+  customer: one(savedCustomers, {
+    fields: [savedAddresses.customerId],
+    references: [savedCustomers.id],
+  }),
+}));
+
+export const jobSetupPreferencesRelations = relations(jobSetupPreferences, ({ one }) => ({
+  user: one(users, {
+    fields: [jobSetupPreferences.userId],
+    references: [users.id],
+  }),
+  lastCustomer: one(savedCustomers, {
+    fields: [jobSetupPreferences.lastCustomerId],
+    references: [savedCustomers.id],
+  }),
+  lastAddress: one(savedAddresses, {
+    fields: [jobSetupPreferences.lastAddressId],
+    references: [savedAddresses.id],
+  }),
+}));
+
+// Types
+export type SavedCustomer = typeof savedCustomers.$inferSelect;
+export type InsertSavedCustomer = typeof savedCustomers.$inferInsert;
+export type SavedAddress = typeof savedAddresses.$inferSelect;
+export type InsertSavedAddress = typeof savedAddresses.$inferInsert;
+export type JobSetupPreference = typeof jobSetupPreferences.$inferSelect;
+export type InsertJobSetupPreference = typeof jobSetupPreferences.$inferInsert;
+
+// Zod schemas
+export const insertSavedCustomerSchema = createInsertSchema(savedCustomers).omit({
+  id: true,
+  createdAt: true,
+  lastUsedAt: true,
+});
+
+export const insertSavedAddressSchema = createInsertSchema(savedAddresses).omit({
+  id: true,
+  createdAt: true,
+  lastUsedAt: true,
+});
+
+export const insertJobSetupPreferenceSchema = createInsertSchema(jobSetupPreferences).omit({
+  id: true,
+  updatedAt: true,
+});
