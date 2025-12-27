@@ -81,7 +81,7 @@ import { cn } from "@/lib/utils";
 type LucideIconComponent = (props: {
   className?: string;
   "aria-hidden"?: boolean;
-}) => JSX.Element;
+}) => React.ReactElement;
 
 const JOB_TYPE_ICONS: Record<string, LucideIconComponent> = {
   "bathroom-remodel": Bath,

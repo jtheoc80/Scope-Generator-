@@ -10,6 +10,16 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { 
   Plus, 
   Search, 
@@ -31,7 +41,8 @@ import {
   ChevronRight,
   ChevronLeft,
   Camera,
-  Layers
+  Layers,
+  Trash2
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -419,7 +430,8 @@ function MobileProposalMenu({
   onCountersign,
   onPayment,
   onStatusChange,
-  showPaymentLink
+  showPaymentLink,
+  onDelete,
 }: { 
   proposal: Proposal;
   t: TranslationKeys;
@@ -431,6 +443,7 @@ function MobileProposalMenu({
   onPayment: () => void;
   onStatusChange: (status: string) => void;
   showPaymentLink: boolean;
+  onDelete: () => void;
 }) {
   return (
     <DropdownMenu>
@@ -483,6 +496,11 @@ function MobileProposalMenu({
           <ThumbsDown className="w-4 h-4 mr-3" />
           {t.dashboard.markAsLost}
         </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={onDelete} className="py-3 text-red-600" data-testid={`menu-delete-${proposal.id}`}>
+          <Trash2 className="w-4 h-4 mr-3" aria-hidden />
+          {t.dashboard.delete}
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -517,6 +535,8 @@ export default function Dashboard() {
   } | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'pipeline'>('list');
   const [isViewSwitching, setIsViewSwitching] = useState(false);
+  const [deleteModalData, setDeleteModalData] = useState<{ id: number; clientName: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const handleViewModeChange = async (mode: 'list' | 'pipeline') => {
     if (mode === viewMode) return;
@@ -645,6 +665,38 @@ export default function Dashboard() {
       }
     } catch (error) {
       console.error('Error updating proposal status:', error);
+    }
+  };
+
+  const deleteProposal = async (proposalId: number) => {
+    setDeleting(true);
+    try {
+      const response = await fetch(`/api/proposals/${proposalId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      let message: string | undefined;
+      try {
+        const data = await response.json();
+        message = data?.message;
+      } catch {
+        // ignore json parse errors
+      }
+
+      if (!response.ok) {
+        throw new Error(message || "Failed to delete proposal");
+      }
+
+      setProposals((prev) => prev.filter((p) => p.id !== proposalId));
+      setSuccessMessage(t.dashboard.proposalDeleted);
+      setIsSuccess(true);
+    } catch (error) {
+      setSuccessMessage(error instanceof Error ? error.message : "Failed to delete proposal");
+      setIsSuccess(false);
+    } finally {
+      setDeleting(false);
+      setDeleteModalData(null);
     }
   };
   
@@ -966,6 +1018,7 @@ export default function Dashboard() {
                               })}
                               onStatusChange={(status) => updateProposalStatus(proposal.id, status)}
                               showPaymentLink={!!user?.userStripeEnabled}
+                              onDelete={() => setDeleteModalData({ id: proposal.id, clientName: proposal.clientName })}
                             />
                           </div>
                         </div>
@@ -1140,7 +1193,14 @@ export default function Dashboard() {
                                   {t.dashboard.markAsLost}
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-red-600">{t.dashboard.delete}</DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-red-600"
+                                  onSelect={() => setDeleteModalData({ id: proposal.id, clientName: proposal.clientName })}
+                                  data-testid={`menu-delete-${proposal.id}`}
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" aria-hidden />
+                                  {t.dashboard.delete}
+                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                             </div>
@@ -1158,6 +1218,34 @@ export default function Dashboard() {
         </div>
       </div>
       </TooltipProvider>
+
+      <AlertDialog open={!!deleteModalData} onOpenChange={(open) => !open && setDeleteModalData(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this proposal?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete{" "}
+              <span className="font-medium text-foreground">
+                {deleteModalData?.clientName || "this proposal"}
+              </span>
+              . This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!deleteModalData) return;
+                void deleteProposal(deleteModalData.id);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleting}
+            >
+              {deleting ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {emailModalData && (
         <EmailProposalModal

@@ -16,7 +16,6 @@ import {
   BarChart3,
   ChevronDown,
   ChevronUp,
-  Loader2,
   RefreshCw,
 } from "lucide-react";
 
