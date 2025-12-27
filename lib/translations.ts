@@ -202,6 +202,7 @@ export const translations = {
       countersignProposal: "Countersign Proposal",
       proposalCountersigned: "Proposal countersigned! Client has been notified.",
       paymentLinkCreatedSuccess: "Payment link created!",
+      proposalDeleted: "Proposal deleted successfully!",
     },
     payment: {
       requestPayment: "Request Payment",
@@ -772,6 +773,7 @@ export const translations = {
       countersignProposal: "Contrafirmar Propuesta",
       proposalCountersigned: "¡Propuesta contrafirmada! El cliente ha sido notificado.",
       paymentLinkCreatedSuccess: "¡Enlace de pago creado!",
+      proposalDeleted: "¡Propuesta eliminada exitosamente!",
     },
     payment: {
       requestPayment: "Solicitar Pago",
