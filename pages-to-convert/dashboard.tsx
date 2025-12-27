@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { Download, Edit, Pen } from "lucide-react";
+import { Download, Edit, Pen, Trash2 } from "lucide-react";
 import Layout from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import PaywallModal from "@/components/paywall-modal";
 import EmailProposalModal from "@/components/email-proposal-modal";
 import EditPriceModal from "@/components/edit-price-modal";
@@ -333,6 +343,7 @@ function MobileProposalMenu({
   onCountersign,
   onPayment,
   onStatusChange,
+  onDelete,
   showPaymentLink
 }: { 
   proposal: Proposal;
@@ -344,6 +355,7 @@ function MobileProposalMenu({
   onCountersign: () => void;
   onPayment: () => void;
   onStatusChange: (status: string) => void;
+  onDelete: () => void;
   showPaymentLink: boolean;
 }) {
   return (
@@ -397,6 +409,19 @@ function MobileProposalMenu({
           <ThumbsDown className="w-4 h-4 mr-3" />
           {t.dashboard.markAsLost}
         </DropdownMenuItem>
+        {proposal.status.toLowerCase() === 'draft' && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              onClick={onDelete} 
+              className="py-3 text-red-600"
+              data-testid={`button-delete-draft-mobile-${proposal.id}`}
+            >
+              <Trash2 className="w-4 h-4 mr-3" />
+              {t.dashboard.deleteDraft}
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -429,6 +454,10 @@ export default function Dashboard() {
     priceHigh: number;
     paymentLinkUrl?: string | null;
     depositPercentage?: number | null;
+  } | null>(null);
+  const [deleteConfirmData, setDeleteConfirmData] = useState<{
+    id: number;
+    clientName: string;
   } | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'pipeline'>('list');
 
@@ -513,6 +542,25 @@ export default function Dashboard() {
       }
     } catch (error) {
       console.error('Error updating proposal status:', error);
+    }
+  };
+
+  const deleteProposal = async (proposalId: number) => {
+    try {
+      const response = await fetch(`/api/proposals/${proposalId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        setProposals(prev => prev.filter(p => p.id !== proposalId));
+        setSuccessMessage(t.dashboard.draftDeleted);
+        setIsSuccess(true);
+      }
+    } catch (error) {
+      console.error('Error deleting proposal:', error);
+    } finally {
+      setDeleteConfirmData(null);
     }
   };
   
@@ -754,6 +802,7 @@ export default function Dashboard() {
                                 depositPercentage: proposal.depositPercentage
                               })}
                               onStatusChange={(status) => updateProposalStatus(proposal.id, status)}
+                              onDelete={() => setDeleteConfirmData({ id: proposal.id, clientName: proposal.clientName })}
                               showPaymentLink={!!user?.userStripeEnabled}
                             />
                           </div>
@@ -932,8 +981,19 @@ export default function Dashboard() {
                                   <ThumbsDown className="w-4 h-4 mr-2" />
                                   {t.dashboard.markAsLost}
                                 </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-red-600">{t.dashboard.delete}</DropdownMenuItem>
+                                {proposal.status.toLowerCase() === 'draft' && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem 
+                                      onClick={() => setDeleteConfirmData({ id: proposal.id, clientName: proposal.clientName })}
+                                      data-testid={`button-delete-draft-${proposal.id}`}
+                                      className="text-red-600"
+                                    >
+                                      <Trash2 className="w-4 h-4 mr-2" />
+                                      {t.dashboard.deleteDraft}
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                             </div>
@@ -1044,6 +1104,26 @@ export default function Dashboard() {
           }}
         />
       )}
+
+      <AlertDialog open={!!deleteConfirmData} onOpenChange={(open) => !open && setDeleteConfirmData(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t.dashboard.deleteDraft}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t.dashboard.deleteDraftConfirm}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => deleteConfirmData && deleteProposal(deleteConfirmData.id)}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {t.common.delete}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 }
