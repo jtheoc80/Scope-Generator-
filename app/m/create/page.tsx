@@ -53,6 +53,7 @@ import {
   Settings2,
   RefreshCw,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { mobileApiFetch, newIdempotencyKey, MobileJob } from "../lib/api";
 import {
   getRecentCustomers,
@@ -78,12 +79,7 @@ import {
 } from "../lib/job-memory";
 import { cn } from "@/lib/utils";
 
-type LucideIconComponent = (props: {
-  className?: string;
-  "aria-hidden"?: boolean;
-}) => React.ReactElement;
-
-const JOB_TYPE_ICONS: Record<string, LucideIconComponent> = {
+const JOB_TYPE_ICONS: Record<string, LucideIcon> = {
   "bathroom-remodel": Bath,
   "kitchen-remodel": ChefHat,
   roofing: Home,
@@ -98,7 +94,7 @@ const JOB_TYPE_ICONS: Record<string, LucideIconComponent> = {
 
 function JobTypeIcon({ id }: { id: string }) {
   const Icon = JOB_TYPE_ICONS[id] ?? BriefcaseBusiness;
-  return <Icon className="h-4 w-4 text-muted-foreground" aria-hidden />;
+  return <Icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />;
 }
 
 // Progress step indicator
