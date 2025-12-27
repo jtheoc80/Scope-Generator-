@@ -132,7 +132,8 @@ export async function analyzeWithGptVision(params: {
           type: "object",
           additionalProperties: false,
           properties: { name: { type: "string" }, notes: { type: "string" } },
-          required: ["name"],
+          // OpenAI structured outputs requires `required` to include EVERY key in `properties`
+          required: ["name", "notes"],
         },
       },
       materials: { type: "array", items: { type: "string" } },
@@ -154,7 +155,8 @@ export async function analyzeWithGptVision(params: {
             label: { type: "string" },
             description: { type: "string" },
           },
-          required: ["id", "label"],
+          // OpenAI structured outputs requires `required` to include EVERY key in `properties`
+          required: ["id", "label", "description"],
         },
       },
       detectedTrade: { type: "string" },
@@ -162,7 +164,8 @@ export async function analyzeWithGptVision(params: {
       estimatedSeverity: { type: "string" }, // "spot", "partial", "full"
     },
     required: [
-      "schemaVersion", "confidence", "labels", "objects", "materials", 
+      // OpenAI structured outputs requires `required` to include EVERY key in `properties`
+      "schemaVersion", "confidence", "kindGuess", "labels", "objects", "materials",
       "damage", "issues", "measurements", "needsMorePhotos",
       "needsClarification", "scopeAmbiguous", "clarificationReasons",
       "suggestedScopeOptions", "detectedTrade", "isPaintingRelated", "estimatedSeverity"
