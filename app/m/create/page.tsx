@@ -292,7 +292,7 @@ function CustomerSelector({
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[calc(100vw-2rem)] max-w-md p-0" align="start">
+      <PopoverContent className="w-[calc(100vw-2rem)] sm:w-[400px] max-w-md p-0" align="start">
         {showNewForm ? (
           <div className="p-4 space-y-3">
             <div className="flex items-center justify-between">
@@ -569,7 +569,7 @@ function AddressSelector({
             <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" aria-hidden />
           </div>
         </PopoverTrigger>
-        <PopoverContent className="w-[calc(100vw-2rem)] max-w-md p-0" align="start">
+        <PopoverContent className="w-[calc(100vw-2rem)] sm:w-[400px] max-w-md p-0" align="start">
           <Command>
             <CommandList id="address-command-list">
               {addresses.length === 0 && search && (
@@ -617,7 +617,7 @@ function AddressSelector({
       </Popover>
 
       {/* Quick actions */}
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row">
         <Button
           type="button"
           variant="outline"
@@ -763,228 +763,235 @@ export default function CreateJobPage() {
   }
 
   return (
-    <div className="px-4 pt-4 pb-safe space-y-6">
-      {/* Back button */}
-      <div className="flex items-center justify-between">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => router.back()}
-          className="gap-2 -ml-2 text-muted-foreground"
-          disabled={busy}
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </Button>
-        {syncing && (
-          <div className="flex items-center gap-1 text-xs text-slate-400">
-            <RefreshCw className="w-3 h-3 animate-spin" />
-            Syncing…
-          </div>
-        )}
-      </div>
-
-      {/* Progress indicator */}
-      <WizardStepper currentStep={1} />
-
-      {/* Header */}
-      <div className="text-center space-y-1">
-        <h1 className="text-2xl text-foreground">Start ScopeScan™</h1>
-        <p className="text-sm text-muted-foreground">
-          We&apos;ll remember customers + addresses for next time
-        </p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {error && (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm text-destructive">
-            {error}
-          </div>
-        )}
-
-        {/* Section 1: Job Type */}
-        <Card className="rounded-lg border-border shadow-sm">
-          <CardContent className="p-4 space-y-4">
-            <div className="flex items-center justify-between gap-3">
-              <Label className="text-sm font-medium text-foreground">
-                Job Type
-              </Label>
-              {uniqueRecentTypes.length > 0 && (
-                <Badge variant="outline" className="h-6 px-2 text-xs text-muted-foreground">
-                  Recent available
-                </Badge>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {uniqueRecentTypes.map((id) => (
-                <JobTypeCardButton
-                  key={id}
-                  id={id}
-                  label={getJobTypeLabel(id)}
-                  selected={jobType === id}
-                  onClick={() => setJobType(id)}
-                  badge="Recent"
-                />
-              ))}
-              {PRIMARY_JOB_TYPES.map((type) => (
-                <JobTypeCardButton
-                  key={type.id}
-                  id={type.id}
-                  label={type.label}
-                  selected={jobType === type.id}
-                  onClick={() => setJobType(type.id)}
-                />
-              ))}
-            </div>
-
-            {/* More options */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs text-muted-foreground"
-                >
-                  More job types…
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-64 p-2" align="start">
-                <div className="space-y-1">
-                  {JOB_TYPES.filter(
-                    (t) => !PRIMARY_JOB_TYPES.some((p) => p.id === t.id)
-                  ).map((type) => (
-                    <Button
-                      key={type.id}
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className={cn(
-                        "w-full justify-start",
-                        jobType === type.id && "bg-accent text-foreground"
-                      )}
-                      onClick={() => setJobType(type.id)}
-                    >
-                      <span className="mr-2">
-                        <JobTypeIcon id={type.id} />
-                      </span>
-                      {type.label}
-                      {jobType === type.id && (
-                        <Check className="w-3 h-3 ml-auto" />
-                      )}
-                    </Button>
-                  ))}
-                </div>
-              </PopoverContent>
-            </Popover>
-          </CardContent>
-        </Card>
-
-        {/* Section 2: Customer */}
-        <Card className="rounded-lg border-border shadow-sm">
-          <CardContent className="p-4 space-y-3">
-            <Label htmlFor="customer-combobox" className="text-sm font-medium text-foreground flex items-center gap-2">
-              <User className="w-4 h-4 text-muted-foreground" aria-hidden />
-              Customer
-            </Label>
-            <CustomerSelector
-              value={selectedCustomer}
-              onChange={setSelectedCustomer}
-              disabled={busy}
-              onRefresh={handleRefresh}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Section 3: Address */}
-        <Card className="rounded-lg border-border shadow-sm">
-          <CardContent className="p-4 space-y-3">
-            <Label htmlFor="address-combobox" className="text-sm font-medium text-foreground flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-muted-foreground" aria-hidden />
-              Job Address
-            </Label>
-            <AddressSelector
-              value={selectedAddress}
-              customerId={selectedCustomer?.id}
-              onChange={setSelectedAddress}
-              disabled={busy}
-              onRefresh={handleRefresh}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Advanced Section (collapsed) */}
-        <Accordion type="single" collapsible className="w-full">
-          <AccordionItem value="advanced" className="border rounded-lg border-border bg-card shadow-sm">
-            <AccordionTrigger className="px-4 py-3 text-sm text-muted-foreground hover:no-underline">
-              <span className="flex items-center gap-2">
-                <Settings2 className="w-4 h-4" aria-hidden />
-                Advanced (optional)
-              </span>
-            </AccordionTrigger>
-            <AccordionContent className="px-4 pb-4 space-y-4">
-              <div className="space-y-2">
-                <Label
-                  htmlFor="templateCode"
-                  className="text-sm text-muted-foreground"
-                >
-                  Template Code
-                </Label>
-                <Input
-                  id="templateCode"
-                  placeholder="Only if you were given a code"
-                  value={templateCode}
-                  onChange={(e) => setTemplateCode(e.target.value)}
-                  disabled={busy}
-                />
-                <p className="text-xs text-slate-400">
-                  Leave blank to use the selected job type
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label
-                  htmlFor="internalNotes"
-                  className="text-sm text-muted-foreground"
-                >
-                  Internal Notes
-                </Label>
-                <Input
-                  id="internalNotes"
-                  placeholder="Notes for your reference only"
-                  value={internalNotes}
-                  onChange={(e) => setInternalNotes(e.target.value)}
-                  disabled={busy}
-                />
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-
-        {/* CTA */}
-        <div className="space-y-2 pt-2">
+    <div className="px-4 pt-4 pb-safe lg:px-8 lg:pt-8">
+      <div className="mx-auto max-w-4xl space-y-6">
+        {/* Back button */}
+        <div className="flex items-center justify-between">
           <Button
-            type="submit"
-            className="w-full min-h-12 text-base gap-2"
+            variant="ghost"
+            size="sm"
+            onClick={() => router.back()}
+            className="gap-2 -ml-2 text-muted-foreground"
             disabled={busy}
           >
-            {busy ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Starting…
-              </>
-            ) : (
-              <>
-                Start ScopeScan
-                <ArrowRight className="w-5 h-5" />
-              </>
-            )}
+            <ArrowLeft className="w-4 h-4" />
+            Back
           </Button>
-          <p className="text-center text-xs text-slate-500">
-            Next: capture photos of the job site
+          {syncing && (
+            <div className="flex items-center gap-1 text-xs text-slate-400">
+              <RefreshCw className="w-3 h-3 animate-spin" />
+              Syncing…
+            </div>
+          )}
+        </div>
+
+        {/* Progress indicator */}
+        <WizardStepper currentStep={1} />
+
+        {/* Header */}
+        <div className="text-center space-y-1">
+          <h1 className="text-2xl text-foreground">Start ScopeScan™</h1>
+          <p className="text-sm text-muted-foreground">
+            We&apos;ll remember customers + addresses for next time
           </p>
         </div>
-      </form>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {error && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm text-destructive">
+              {error}
+            </div>
+          )}
+
+          {/* Section 1: Job Type */}
+          <Card className="rounded-lg border-border shadow-sm">
+            <CardContent className="p-4 lg:p-6 space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <Label className="text-sm font-medium text-foreground">
+                  Job Type
+                </Label>
+                {uniqueRecentTypes.length > 0 && (
+                  <Badge variant="outline" className="h-6 px-2 text-xs text-muted-foreground">
+                    Recent available
+                  </Badge>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                {uniqueRecentTypes.map((id) => (
+                  <JobTypeCardButton
+                    key={id}
+                    id={id}
+                    label={getJobTypeLabel(id)}
+                    selected={jobType === id}
+                    onClick={() => setJobType(id)}
+                    badge="Recent"
+                  />
+                ))}
+                {PRIMARY_JOB_TYPES.map((type) => (
+                  <JobTypeCardButton
+                    key={type.id}
+                    id={type.id}
+                    label={type.label}
+                    selected={jobType === type.id}
+                    onClick={() => setJobType(type.id)}
+                  />
+                ))}
+              </div>
+
+              {/* More options */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-muted-foreground"
+                  >
+                    More job types…
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-2" align="start">
+                  <div className="space-y-1">
+                    {JOB_TYPES.filter(
+                      (t) => !PRIMARY_JOB_TYPES.some((p) => p.id === t.id)
+                    ).map((type) => (
+                      <Button
+                        key={type.id}
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          "w-full justify-start",
+                          jobType === type.id && "bg-accent text-foreground"
+                        )}
+                        onClick={() => setJobType(type.id)}
+                      >
+                        <span className="mr-2">
+                          <JobTypeIcon id={type.id} />
+                        </span>
+                        {type.label}
+                        {jobType === type.id && (
+                          <Check className="w-3 h-3 ml-auto" />
+                        )}
+                      </Button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </CardContent>
+          </Card>
+
+          {/* Section 2 & 3: Customer + Address - Side by side on desktop */}
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            {/* Customer */}
+            <Card className="rounded-lg border-border shadow-sm">
+              <CardContent className="p-4 lg:p-6 space-y-3">
+                <Label htmlFor="customer-combobox" className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <User className="w-4 h-4 text-muted-foreground" aria-hidden />
+                  Customer
+                </Label>
+                <CustomerSelector
+                  value={selectedCustomer}
+                  onChange={setSelectedCustomer}
+                  disabled={busy}
+                  onRefresh={handleRefresh}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Address */}
+            <Card className="rounded-lg border-border shadow-sm">
+              <CardContent className="p-4 lg:p-6 space-y-3">
+                <Label htmlFor="address-combobox" className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-muted-foreground" aria-hidden />
+                  Job Address
+                </Label>
+                <AddressSelector
+                  value={selectedAddress}
+                  customerId={selectedCustomer?.id}
+                  onChange={setSelectedAddress}
+                  disabled={busy}
+                  onRefresh={handleRefresh}
+                />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Advanced Section (collapsed) */}
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="advanced" className="border rounded-lg border-border bg-card shadow-sm">
+              <AccordionTrigger className="px-4 py-3 lg:px-6 text-sm text-muted-foreground hover:no-underline">
+                <span className="flex items-center gap-2">
+                  <Settings2 className="w-4 h-4" aria-hidden />
+                  Advanced (optional)
+                </span>
+              </AccordionTrigger>
+              <AccordionContent className="px-4 pb-4 lg:px-6 lg:pb-6 space-y-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="templateCode"
+                      className="text-sm text-muted-foreground"
+                    >
+                      Template Code
+                    </Label>
+                    <Input
+                      id="templateCode"
+                      placeholder="Only if you were given a code"
+                      value={templateCode}
+                      onChange={(e) => setTemplateCode(e.target.value)}
+                      disabled={busy}
+                    />
+                    <p className="text-xs text-slate-400">
+                      Leave blank to use the selected job type
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="internalNotes"
+                      className="text-sm text-muted-foreground"
+                    >
+                      Internal Notes
+                    </Label>
+                    <Input
+                      id="internalNotes"
+                      placeholder="Notes for your reference only"
+                      value={internalNotes}
+                      onChange={(e) => setInternalNotes(e.target.value)}
+                      disabled={busy}
+                    />
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+
+          {/* CTA */}
+          <div className="space-y-2 pt-2 max-w-md mx-auto md:max-w-lg">
+            <Button
+              type="submit"
+              className="w-full min-h-12 text-base gap-2"
+              disabled={busy}
+            >
+              {busy ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Starting…
+                </>
+              ) : (
+                <>
+                  Start ScopeScan
+                  <ArrowRight className="w-5 h-5" />
+                </>
+              )}
+            </Button>
+            <p className="text-center text-xs text-slate-500">
+              Next: capture photos of the job site
+            </p>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
