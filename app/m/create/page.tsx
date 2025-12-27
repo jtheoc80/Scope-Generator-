@@ -55,6 +55,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { mobileApiFetch, newIdempotencyKey, MobileJob } from "../lib/api";
+import { reverseGeocode } from "@/lib/services/geocodingService";
 import {
   getRecentCustomers,
   searchCustomers,
@@ -453,18 +454,27 @@ function AddressSelector({
         }
       );
 
-      // For now, create a simple address from coordinates
-      // In production, you'd use Google Places reverse geocoding
-      const formatted = `${position.coords.latitude.toFixed(
-        6
-      )}, ${position.coords.longitude.toFixed(6)}`;
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+
+      // Use reverse geocoding to get a human-readable address
+      const geocodeResult = await reverseGeocode(lat, lng);
+      
+      let formatted: string;
+      if (geocodeResult.success && geocodeResult.data) {
+        formatted = geocodeResult.data.formattedAddress;
+      } else {
+        // Fall back to coordinates if reverse geocoding fails
+        console.warn("Reverse geocoding failed, using coordinates:", geocodeResult.error);
+        formatted = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+      }
 
       setSaving(true);
       const address = await saveAddress({
         formatted,
         customerId,
-        lat: position.coords.latitude.toString(),
-        lng: position.coords.longitude.toString(),
+        lat: lat.toString(),
+        lng: lng.toString(),
       });
       onChange(address);
       setOpen(false);
