@@ -1120,3 +1120,50 @@ export const insertJobSetupPreferenceSchema = createInsertSchema(jobSetupPrefere
   id: true,
   updatedAt: true,
 });
+
+// ==========================================
+// Phone Upload Sessions (QR Code Upload)
+// ==========================================
+
+/**
+ * Photo upload sessions for QR code "Upload from Phone" feature.
+ * Allows desktop users to create a temporary session that enables
+ * uploading photos from a phone without requiring phone authentication.
+ * 
+ * Security:
+ * - Token is never stored raw; only SHA-256 hash is stored
+ * - Sessions expire after 20 minutes (configurable)
+ * - Each session is tied to a specific job and user
+ */
+export const photoUploadSessions = pgTable("photo_upload_sessions", {
+  id: varchar("id", { length: 36 }).primaryKey(), // UUID
+  jobId: integer("job_id").notNull().references(() => mobileJobs.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull(), // SHA-256 hash of the raw token
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  jobIdx: index("idx_photo_upload_sessions_job").on(table.jobId),
+  userIdx: index("idx_photo_upload_sessions_user").on(table.userId),
+  expiresIdx: index("idx_photo_upload_sessions_expires").on(table.expiresAt),
+}));
+
+export const photoUploadSessionsRelations = relations(photoUploadSessions, ({ one }) => ({
+  job: one(mobileJobs, {
+    fields: [photoUploadSessions.jobId],
+    references: [mobileJobs.id],
+  }),
+  user: one(users, {
+    fields: [photoUploadSessions.userId],
+    references: [users.id],
+  }),
+}));
+
+// Types
+export type PhotoUploadSession = typeof photoUploadSessions.$inferSelect;
+export type InsertPhotoUploadSession = typeof photoUploadSessions.$inferInsert;
+
+// Zod schema
+export const insertPhotoUploadSessionSchema = createInsertSchema(photoUploadSessions).omit({
+  createdAt: true,
+});

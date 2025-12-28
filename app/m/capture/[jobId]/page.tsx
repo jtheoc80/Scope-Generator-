@@ -13,7 +13,9 @@ import {
   Sparkles,
   CheckCircle,
   AlertCircle,
+  Smartphone,
 } from "lucide-react";
+import { PhoneUploadDialog } from "@/components/phone-upload-dialog";
 import { mobileApiFetch, newIdempotencyKey, PresignResponse } from "../../lib/api";
 
 type UploadedPhoto = {
@@ -82,6 +84,7 @@ export default function CapturePhotosPage() {
 
   const [photos, setPhotos] = useState<UploadedPhoto[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [phoneUploadOpen, setPhoneUploadOpen] = useState(false);
   
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -280,7 +283,7 @@ export default function CapturePhotosPage() {
       )}
 
       {/* Photo capture buttons */}
-      <div className="grid grid-cols-2 gap-3 lg:gap-4">
+      <div className="grid grid-cols-3 gap-3 lg:gap-4">
         <Button
           variant="outline"
           className="h-20 lg:h-24 flex-col gap-2"
@@ -297,7 +300,26 @@ export default function CapturePhotosPage() {
           <ImagePlus className="w-6 h-6 lg:w-8 lg:h-8" />
           <span className="text-sm lg:text-base">From Gallery</span>
         </Button>
+        <Button
+          variant="outline"
+          className="h-20 lg:h-24 flex-col gap-2"
+          onClick={() => setPhoneUploadOpen(true)}
+        >
+          <Smartphone className="w-6 h-6 lg:w-8 lg:h-8" />
+          <span className="text-sm lg:text-base">Upload from Phone</span>
+        </Button>
       </div>
+
+      {/* Phone Upload Dialog */}
+      <PhoneUploadDialog
+        open={phoneUploadOpen}
+        onOpenChange={setPhoneUploadOpen}
+        jobId={parseInt(jobId)}
+        onPhotosUploaded={() => {
+          // Optionally trigger a refresh of photos here
+          // For now, we rely on manual refresh or realtime updates
+        }}
+      />
 
       {/* Photo count summary */}
       {photos.length > 0 && (
