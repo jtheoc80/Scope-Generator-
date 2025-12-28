@@ -982,7 +982,7 @@ export default function Dashboard() {
                                   </DropdownMenuTrigger>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>More actions</p>
+                                  <p>{t.dashboard.actions}</p>
                                 </TooltipContent>
                               </Tooltip>
                               <DropdownMenuContent align="end">
