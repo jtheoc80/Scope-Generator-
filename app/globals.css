@@ -83,29 +83,54 @@
 }
 
 /* Google Places Autocomplete Dropdown Styles */
-/* Ensure the pac-container (autocomplete dropdown) appears above all UI elements */
+/* The pac-container is appended to <body> by Google Maps API */
+/* Ensure it appears above all UI elements (modals, popovers, etc.) */
 .pac-container {
-  z-index: 10000 !important;
-  position: absolute !important;
+  z-index: 99999 !important;
   background-color: hsl(0 0% 100%) !important;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  border: 1px solid hsl(215 20% 85%);
-  margin-top: 4px;
-  font-family: var(--font-sans), "Inter", sans-serif;
-  box-sizing: border-box;
-  max-width: calc(100vw - 2rem) !important; /* prevent horizontal overflow on mobile */
-  overflow-x: hidden;
-  /* Ensure visibility */
-  display: block;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.15), 0 8px 10px -6px rgb(0 0 0 / 0.1) !important;
+  border: 1px solid hsl(215 20% 85%) !important;
+  margin-top: 4px !important;
+  font-family: var(--font-sans), "Inter", sans-serif !important;
+  box-sizing: border-box !important;
+  max-width: calc(100vw - 2rem) !important;
+  overflow-x: hidden !important;
+  /* Ensure visibility - Google sometimes hides this with inline styles */
   visibility: visible !important;
   opacity: 1 !important;
+  pointer-events: auto !important;
 }
 
-/* Hide the pac-container only when it should be hidden (no results) */
-.pac-container:empty,
-.pac-container[style*="display: none"] {
+/* When pac-container has results, ensure it's shown */
+.pac-container.pac-logo {
+  display: block !important;
+}
+
+/* Only hide pac-container when explicitly empty */
+.pac-container:empty {
   display: none !important;
+}
+
+/* Dark mode support for pac-container */
+.dark .pac-container {
+  background-color: hsl(222 47% 11%) !important;
+  border-color: hsl(217 33% 17%) !important;
+}
+
+.dark .pac-item {
+  background-color: hsl(222 47% 11%) !important;
+  color: hsl(210 40% 98%) !important;
+  border-color: hsl(217 33% 17%) !important;
+}
+
+.dark .pac-item:hover,
+.dark .pac-item-selected {
+  background-color: hsl(217 33% 17%) !important;
+}
+
+.dark .pac-item-query {
+  color: hsl(210 40% 98%) !important;
 }
 
 .pac-item {

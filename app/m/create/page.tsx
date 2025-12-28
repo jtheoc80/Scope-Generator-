@@ -462,6 +462,9 @@ function JobAddressSelector({
   const hasSelectedRef = useRef(false);
   // Session token for Places API - created on focus, reset after selection
   const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
+  // Track input value for use in place_changed callback (avoids stale closure)
+  const inputValueRef = useRef(inputValue);
+  inputValueRef.current = inputValue;
   
   // Load Google Maps API
   const { isLoaded, loadError } = useJsApiLoader({
@@ -646,7 +649,7 @@ function JobAddressSelector({
 
       // Create JobAddress using the helper function
       // This parses address_components into structured fields for validation
-      const newAddress = createJobAddressFromPlace(place, inputValue, "places");
+      const newAddress = createJobAddressFromPlace(place, inputValueRef.current, "places");
       
       if (!newAddress) {
         setValidationError("Could not parse address. Please try a different address.");
@@ -701,7 +704,9 @@ function JobAddressSelector({
       lastInputElementRef.current = null;
       sessionTokenRef.current = null;
     };
-  }, [isLoaded, customerId, onChange, onRefresh, runAddressValidation, value, inputValue, createSessionToken]);
+    // Note: DO NOT include inputValue in deps - it changes on every keystroke
+    // and would cause autocomplete to re-initialize, breaking the dropdown
+  }, [isLoaded, customerId, onChange, onRefresh, runAddressValidation, value, createSessionToken]);
 
   // Handle input blur - validate that user selected from suggestions
   const handleInputBlur = useCallback(() => {
