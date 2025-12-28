@@ -445,6 +445,7 @@ function JobAddressSelector({
   const [inputValue, setInputValue] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isValidating, setIsValidating] = useState(false);
+  const [touched, setTouched] = useState(false);
   // Address correction prompt state
   const [pendingCorrection, setPendingCorrection] = useState<{
     original: JobAddress;
@@ -671,10 +672,12 @@ function JobAddressSelector({
 
   // Handle input blur - validate that user selected from suggestions
   const handleInputBlur = useCallback(() => {
-    if (inputValue.trim() && !hasSelectedRef.current && !value) {
+    setTouched(true);
+    // Only enforce selection when autocomplete is available; otherwise this can feel "stuck"
+    if (isLoaded && inputValue.trim() && !hasSelectedRef.current && !value) {
       setValidationError("Select an address from the suggestions.");
     }
-  }, [inputValue, value]);
+  }, [inputValue, isLoaded, value]);
 
   // Handle input change
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -751,8 +754,19 @@ function JobAddressSelector({
 
   if (loadError) {
     return (
-      <div className="text-sm text-destructive">
-        Address autocomplete failed to load. Please refresh and try again.
+      <div className="space-y-2">
+        <div className="text-sm text-destructive">
+          Address autocomplete failed to load. Please refresh and try again.
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => window.location.reload()}
+          disabled={disabled}
+        >
+          Refresh
+        </Button>
       </div>
     );
   }
@@ -877,17 +891,18 @@ function JobAddressSelector({
           <Input
             ref={inputRef}
             id="job-address-input"
+            name="jobAddress"
             value={inputValue}
             onChange={handleInputChange}
             onBlur={handleInputBlur}
             onKeyDown={handleKeyDown}
             placeholder="Start typing an address…"
-            disabled={disabled || !isLoaded}
+            disabled={disabled}
             className={cn(
               "pr-10",
               validationError && "border-destructive focus-visible:ring-destructive"
             )}
-            autoComplete="off"
+            autoComplete="street-address"
           />
           {!isLoaded && (
             <Loader2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
@@ -898,7 +913,14 @@ function JobAddressSelector({
         )}
         {!validationError && (
           <p className="text-xs text-muted-foreground">
-            Select an address from the suggestions
+            {isLoaded
+              ? "Select an address from the suggestions"
+              : "Loading address autocomplete…"}
+          </p>
+        )}
+        {!validationError && touched && isLoaded && inputValue.trim() && !hasSelectedRef.current && !value && (
+          <p className="text-xs text-muted-foreground">
+            If you don’t see suggestions, keep typing a few more characters.
           </p>
         )}
       </div>
