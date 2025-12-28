@@ -5,6 +5,13 @@
  * 
  * This module provides the single source of truth for job address selection.
  * An address is only considered valid if it has placeId + lat/lng + validated.
+ * 
+ * Flow:
+ * 1. User selects from Places Autocomplete suggestions
+ * 2. Fetch Place Details by place_id to get address_components + geometry
+ * 3. Parse address_components into structured fields
+ * 4. Call Address Validation API with structured fields
+ * 5. Store normalized JobAddress with verdict
  */
 
 // ============ TYPES ============
@@ -12,10 +19,46 @@
 export type JobAddressSource = "places" | "last";
 
 /**
- * Address Validation result from Google Address Validation API
+ * Parsed address components from Google Places
+ */
+export type AddressComponents = {
+  /** Street number + route combined (e.g., "123 Main St") */
+  line1: string;
+  /** Unit/apt/suite number if present */
+  line2?: string;
+  /** City (locality) */
+  city: string;
+  /** State (administrative_area_level_1, short_name) */
+  state: string;
+  /** ZIP code (postal_code) */
+  postalCode: string;
+  /** ZIP+4 suffix if present */
+  postalCodeSuffix?: string;
+};
+
+/**
+ * Address Validation verdict from Google Address Validation API
+ */
+export type AddressVerdict = {
+  /** How precisely the address was validated (PREMISE, SUB_PREMISE, ROUTE, OTHER) */
+  validationGranularity: string;
+  /** How precisely the location was geocoded */
+  geocodeGranularity: string;
+  /** Whether the address is complete */
+  addressComplete: boolean;
+  /** Whether there are components that couldn't be confirmed */
+  hasUnconfirmedComponents: boolean;
+  /** Whether components were replaced/corrected */
+  hasReplacedComponents?: boolean;
+  /** Types of components that were unconfirmed */
+  unconfirmedComponentTypes?: string[];
+};
+
+/**
+ * Address Validation result from Google Address Validation API (legacy + new)
  */
 export type AddressValidation = {
-  /** Validation verdict (CONFIRMED, UNCONFIRMED, etc.) */
+  /** Validation verdict (CONFIRMED, UNCONFIRMED, etc.) - legacy field */
   verdict?: string;
   /** Whether there are unconfirmed address components */
   hasUnconfirmedComponents?: boolean;
@@ -29,6 +72,8 @@ export type AddressValidation = {
   granularity?: string;
   /** Whether the address was inferred vs exact match */
   addressInferred?: boolean;
+  /** New: detailed verdict object */
+  verdictDetails?: AddressVerdict;
 };
 
 /**
@@ -36,18 +81,33 @@ export type AddressValidation = {
  * Never render a "selected address" unless placeId + lat/lng + validated exist.
  */
 export type JobAddress = {
+  /** Google Place ID - primary identifier */
   placeId: string;
+  /** Original input text from user */
+  inputText?: string;
+  /** Formatted address from Google Places Place Details */
+  placesFormattedAddress?: string;
+  /** Validated/standardized formatted address (display this one) */
   formatted: string;
+  /** Latitude from Place Details geometry */
   lat: number;
+  /** Longitude from Place Details geometry */
   lng: number;
+  /** Source of the address */
   source: JobAddressSource;
+  /** Associated customer ID */
   customerId?: string;
   /** Whether the address has been validated through Address Validation API */
   validated: boolean;
   /** Validation details from Address Validation API */
   validation?: AddressValidation;
+  /** Timestamp of last update */
   updatedAt: number;
-  // Additional address components for display
+  /** Parsed address components */
+  components?: AddressComponents;
+  /** Validation warnings to display to user */
+  warnings?: string[];
+  // Legacy fields for backwards compatibility
   street?: string;
   city?: string;
   state?: string;
@@ -162,11 +222,84 @@ export function clearLastAddressForCustomer(customerId: string | number): void {
 // ============ CONVERSION HELPERS ============
 
 /**
- * Create a JobAddress from Google Places Autocomplete result.
+ * Parse address_components from Google Places Place Details into structured fields.
+ * This is the canonical way to extract address parts from a Place Details response.
+ * 
+ * @param addressComponents - Array of address components from Place Details
+ * @returns Parsed AddressComponents or null if required fields are missing
+ */
+export function parseAddressComponents(
+  addressComponents: google.maps.GeocoderAddressComponent[] | undefined
+): AddressComponents | null {
+  if (!addressComponents || addressComponents.length === 0) {
+    return null;
+  }
+  
+  let streetNumber = "";
+  let route = "";
+  let subpremise = "";
+  let city = "";
+  let state = "";
+  let postalCode = "";
+  let postalCodeSuffix = "";
+  
+  for (const component of addressComponents) {
+    const types = component.types;
+    const longName = component.long_name;
+    const shortName = component.short_name;
+    
+    if (types.includes("street_number")) {
+      streetNumber = longName;
+    } else if (types.includes("route")) {
+      route = longName;
+    } else if (types.includes("subpremise")) {
+      // Unit, apt, suite number
+      subpremise = longName;
+    } else if (types.includes("locality")) {
+      city = longName;
+    } else if (types.includes("sublocality_level_1") && !city) {
+      // Fallback for areas like NYC boroughs
+      city = longName;
+    } else if (types.includes("administrative_area_level_1")) {
+      state = shortName; // Use short name for state (e.g., "CA" not "California")
+    } else if (types.includes("postal_code")) {
+      postalCode = longName;
+    } else if (types.includes("postal_code_suffix")) {
+      postalCodeSuffix = longName;
+    }
+  }
+  
+  // Build line1 from street number + route
+  const line1 = streetNumber && route 
+    ? `${streetNumber} ${route}` 
+    : route || streetNumber;
+  
+  // Require at minimum line1, city, state, and postal code
+  if (!line1 || !city || !state || !postalCode) {
+    return null;
+  }
+  
+  return {
+    line1,
+    line2: subpremise || undefined,
+    city,
+    state,
+    postalCode,
+    postalCodeSuffix: postalCodeSuffix || undefined,
+  };
+}
+
+/**
+ * Create a JobAddress from Google Places Place Details result.
  * Note: The address is NOT validated yet - must call validateAddress() after.
+ * 
+ * @param place - Place Details result from Google Places API
+ * @param inputText - Original input text from user
+ * @param source - Source of the address selection
  */
 export function createJobAddressFromPlace(
   place: google.maps.places.PlaceResult,
+  inputText?: string,
   source: JobAddressSource = "places"
 ): JobAddress | null {
   const placeId = place.place_id;
@@ -177,10 +310,14 @@ export function createJobAddressFromPlace(
     return null;
   }
   
-  const lat = geometry.location.lat();
-  const lng = geometry.location.lng();
+  // Get lat/lng - Google Maps API always provides these as functions
+  const latValue = geometry.location.lat();
+  const lngValue = geometry.location.lng();
   
-  // Extract address components
+  // Parse address components into structured fields
+  const components = parseAddressComponents(place.address_components);
+  
+  // Legacy extraction for backwards compatibility
   let street: string | undefined;
   let city: string | undefined;
   let state: string | undefined;
@@ -205,12 +342,16 @@ export function createJobAddressFromPlace(
   
   return {
     placeId,
-    formatted,
-    lat,
-    lng,
+    inputText,
+    placesFormattedAddress: formatted,
+    formatted, // Will be replaced with validated address if different
+    lat: latValue,
+    lng: lngValue,
     source,
+    components: components || undefined,
     validated: false, // Must be validated via Address Validation API
     updatedAt: Date.now(),
+    // Legacy fields
     street,
     city,
     state,
