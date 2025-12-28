@@ -456,6 +456,10 @@ function JobAddressSelector({
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
   // Low quality address state (for inline warning + actions)
   const [isLowQuality, setIsLowQuality] = useState(false);
+  // Manual entry mode - fallback when Google Places API fails
+  const [useManualEntry, setUseManualEntry] = useState(false);
+  // Track if autocomplete initialized successfully
+  const [autocompleteReady, setAutocompleteReady] = useState(false);
   
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
@@ -495,6 +499,46 @@ function JobAddressSelector({
       return () => clearTimeout(timer);
     }
   }, [autoFocus, isLoaded, value]);
+
+  // Detect Google Places API errors (invalid API key, billing issues, etc.)
+  // Watch for pac-container showing broken/error state
+  useEffect(() => {
+    if (!isLoaded || useManualEntry) return;
+    
+    // Create a MutationObserver to watch for pac-container changes
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === 'childList') {
+          const pacContainer = document.querySelector('.pac-container');
+          if (pacContainer && pacContainer.children.length > 0) {
+            // Check if items have no text (broken state - shows icons only)
+            const items = pacContainer.querySelectorAll('.pac-item');
+            if (items.length > 0) {
+              const allBroken = Array.from(items).every(item => {
+                const text = item.textContent?.trim() || '';
+                // Broken items have very little text or just symbols
+                return text.length < 3 || text === '!' || text.match(/^[!⚠]+$/);
+              });
+              
+              if (allBroken) {
+                console.warn('Google Places API appears to have errors - switching to manual mode');
+                setUseManualEntry(true);
+                observer.disconnect();
+              }
+            }
+          }
+        }
+      }
+    });
+    
+    // Start observing
+    observer.observe(document.body, { 
+      childList: true, 
+      subtree: true 
+    });
+    
+    return () => observer.disconnect();
+  }, [isLoaded, useManualEntry]);
 
   // Validate address through Address Validation API
   // Uses structured fields from Place Details for better accuracy
@@ -628,11 +672,20 @@ function JobAddressSelector({
 
     // Initialize autocomplete with address type restriction (not establishments)
     // Default to US for country restriction
-    autocompleteRef.current = new google.maps.places.Autocomplete(inputRef.current, {
-      types: ["address"], // Only address results, not establishments
-      componentRestrictions: { country: "us" }, // US only
-      fields: ["place_id", "formatted_address", "geometry", "address_components"],
-    });
+    try {
+      autocompleteRef.current = new google.maps.places.Autocomplete(inputRef.current, {
+        types: ["address"], // Only address results, not establishments
+        componentRestrictions: { country: "us" }, // US only
+        fields: ["place_id", "formatted_address", "geometry", "address_components"],
+      });
+      
+      // Mark autocomplete as ready
+      setAutocompleteReady(true);
+    } catch (err) {
+      console.error("Failed to initialize Places Autocomplete:", err);
+      setUseManualEntry(true);
+      return;
+    }
 
     autocompleteRef.current.addListener("place_changed", async () => {
       const place = autocompleteRef.current?.getPlace();
@@ -801,10 +854,62 @@ function JobAddressSelector({
     }
   }, [createSessionToken]);
 
+  // Handle manual address submission (fallback mode)
+  const handleManualSubmit = useCallback(async () => {
+    if (!inputValue.trim()) {
+      setValidationError("Please enter an address.");
+      return;
+    }
+    
+    setIsValidating(true);
+    
+    // Create a basic JobAddress from manual input
+    // This will be validated but won't have place_id/geometry
+    const manualAddress: JobAddress = {
+      placeId: `manual-${Date.now()}`, // Placeholder ID
+      formatted: inputValue.trim(),
+      lat: 0,
+      lng: 0,
+      source: "places", // Will be validated
+      customerId: customerId ? String(customerId) : undefined,
+      validated: false,
+      updatedAt: Date.now(),
+    };
+    
+    // Run validation to get standardized address
+    const validatedAddress = await runAddressValidation(manualAddress);
+    
+    if (validatedAddress) {
+      onChange(validatedAddress);
+    }
+    
+    setIsValidating(false);
+  }, [inputValue, customerId, onChange, runAddressValidation]);
+
+  // Switch to manual entry mode
+  const handleSwitchToManual = useCallback(() => {
+    setUseManualEntry(true);
+    setValidationError(null);
+  }, []);
+
   if (loadError) {
+    // Show option to use manual entry if API failed to load
     return (
-      <div className="text-sm text-destructive">
-        Address autocomplete failed to load. Please refresh and try again.
+      <div className="space-y-3">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 dark:border-amber-800 dark:bg-amber-950">
+          <p className="text-sm text-amber-800 dark:text-amber-200">
+            Address suggestions unavailable. You can enter your address manually.
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleSwitchToManual}
+          className="w-full"
+        >
+          Enter address manually
+        </Button>
       </div>
     );
   }
@@ -953,10 +1058,17 @@ function JobAddressSelector({
     );
   }
 
-  // NOT SELECTED STATE: Show autocomplete input and quick actions
+  // NOT SELECTED STATE: Show autocomplete input (or manual entry) and quick actions
   return (
     <div className="space-y-3">
-      {/* Autocomplete Input */}
+      {/* Manual entry mode indicator */}
+      {useManualEntry && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+          <p>Manual entry mode - suggestions unavailable</p>
+        </div>
+      )}
+      
+      {/* Address Input */}
       <div className="space-y-1">
         <div className="relative">
           <Input
@@ -964,30 +1076,64 @@ function JobAddressSelector({
             id="job-address-input"
             value={inputValue}
             onChange={handleInputChange}
-            onBlur={handleInputBlur}
-            onFocus={handleInputFocus}
-            onKeyDown={handleKeyDown}
-            placeholder="Start typing an address…"
-            disabled={disabled || !isLoaded}
+            onBlur={useManualEntry ? undefined : handleInputBlur}
+            onFocus={useManualEntry ? undefined : handleInputFocus}
+            onKeyDown={useManualEntry ? (e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleManualSubmit();
+              }
+            } : handleKeyDown}
+            placeholder={useManualEntry ? "Enter full address (e.g., 123 Main St, City, ST 12345)" : "Start typing an address…"}
+            disabled={disabled || (!isLoaded && !useManualEntry)}
             className={cn(
               "pr-10 min-h-[44px]", // min-h-[44px] for large tap target on mobile
               validationError && "border-destructive focus-visible:ring-destructive"
             )}
-            autoComplete="off"
+            autoComplete={useManualEntry ? "street-address" : "off"}
           />
-          {!isLoaded && (
+          {!isLoaded && !useManualEntry && (
             <Loader2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
           )}
         </div>
         {validationError && (
           <p className="text-xs text-destructive">{validationError}</p>
         )}
-        {!validationError && (
+        {!validationError && !useManualEntry && (
           <p className="text-xs text-muted-foreground">
             Select an address from the suggestions
           </p>
         )}
+        {!validationError && useManualEntry && (
+          <p className="text-xs text-muted-foreground">
+            Enter a complete address, then click Validate
+          </p>
+        )}
       </div>
+
+      {/* Manual entry submit button */}
+      {useManualEntry && inputValue.trim() && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full"
+          onClick={handleManualSubmit}
+          disabled={disabled || isValidating}
+        >
+          {isValidating ? (
+            <>
+              <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+              Validating…
+            </>
+          ) : (
+            <>
+              <Check className="w-3 h-3 mr-1.5" />
+              Validate Address
+            </>
+          )}
+        </Button>
+      )}
 
       {/* Quick Actions */}
       {lastAddressForCustomer && customerId && (
@@ -1004,6 +1150,17 @@ function JobAddressSelector({
             Last for {customerName || "customer"}
           </Button>
         </div>
+      )}
+      
+      {/* Switch to manual entry link (when autocomplete is available but user wants manual) */}
+      {!useManualEntry && isLoaded && autocompleteReady && (
+        <button
+          type="button"
+          className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
+          onClick={handleSwitchToManual}
+        >
+          Enter address manually instead
+        </button>
       )}
     </div>
   );
