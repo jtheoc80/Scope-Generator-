@@ -164,6 +164,7 @@ export const translations = {
       deleteDraft: "Delete Draft",
       deleteDraftConfirm: "Are you sure you want to delete this draft? This action cannot be undone.",
       draftDeleted: "Draft deleted successfully",
+      draftDeletedDescription: "The proposal draft has been removed from your dashboard.",
       draft: "Draft",
       sent: "Sent",
       won: "Won",
@@ -205,6 +206,7 @@ export const translations = {
       countersignProposal: "Countersign Proposal",
       proposalCountersigned: "Proposal countersigned! Client has been notified.",
       paymentLinkCreatedSuccess: "Payment link created!",
+      onlyDraftsCanBeDeleted: "Only drafts can be deleted",
     },
     payment: {
       requestPayment: "Request Payment",
@@ -270,6 +272,14 @@ export const translations = {
       sharedBranding: "Shared company branding",
       teamManagement: "Team Management",
       teamSeatsTitle: "Team Seats",
+    },
+    proposals: {
+      deleteDraft: {
+        signInRequired: "Please sign in to delete drafts.",
+        onlyDraftsDeletable: "Only drafts can be deleted.",
+        genericError: "Failed to delete draft. Please try again.",
+        networkError: "Network error. Please check your connection and try again.",
+      },
     },
     proposal: {
       scopeOfWork: "Scope of Work",
@@ -910,6 +920,7 @@ export const translations = {
       deleteDraft: "Eliminar Borrador",
       deleteDraftConfirm: "¿Está seguro de que desea eliminar este borrador? Esta acción no se puede deshacer.",
       draftDeleted: "Borrador eliminado con éxito",
+      draftDeletedDescription: "El borrador de propuesta ha sido eliminado de su panel.",
       draft: "Borrador",
       sent: "Enviado",
       won: "Ganado",
@@ -951,6 +962,7 @@ export const translations = {
       countersignProposal: "Contrafirmar Propuesta",
       proposalCountersigned: "¡Propuesta contrafirmada! El cliente ha sido notificado.",
       paymentLinkCreatedSuccess: "¡Enlace de pago creado!",
+      onlyDraftsCanBeDeleted: "Solo se pueden eliminar los borradores",
     },
     payment: {
       requestPayment: "Solicitar Pago",
@@ -1016,6 +1028,14 @@ export const translations = {
       sharedBranding: "Marca de empresa compartida",
       teamManagement: "Gestión de Equipo",
       teamSeatsTitle: "Asientos del Equipo",
+    },
+    proposals: {
+      deleteDraft: {
+        signInRequired: "Por favor inicie sesión para eliminar borradores.",
+        onlyDraftsDeletable: "Solo se pueden eliminar los borradores.",
+        genericError: "Error al eliminar el borrador. Por favor intente de nuevo.",
+        networkError: "Error de red. Por favor verifique su conexión e intente de nuevo.",
+      },
     },
     proposal: {
       scopeOfWork: "Alcance del Trabajo",
