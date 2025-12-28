@@ -255,8 +255,9 @@ export async function openDeleteDialog(page: Page, proposalId: number): Promise<
   if (await desktopDeleteButton.isVisible()) {
     await desktopDeleteButton.click();
   } else {
-    // Try mobile view
+    // Try mobile view - check if it's visible before clicking
     const mobileDeleteButton = page.locator(`[data-testid="menu-delete-${proposalId}"]`);
+    await expect(mobileDeleteButton).toBeVisible({ timeout: 5000 });
     await mobileDeleteButton.click();
   }
   
