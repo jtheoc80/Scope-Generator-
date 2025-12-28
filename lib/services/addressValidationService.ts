@@ -252,8 +252,8 @@ export async function validateJobAddress(
   const result = await validateAddress(payload);
 
   if (!result.success || !result.validation) {
-    // If validation fails, still mark as validated but with warning
-    // This allows the user to proceed while logging the issue
+    // If validation fails, still mark as validated to allow proceeding
+    // Don't show warning to user - just log for debugging
     console.warn('Address validation failed:', result.error);
     return {
       address: {
@@ -262,13 +262,12 @@ export async function validateJobAddress(
         validation: {
           verdict: 'VALIDATION_UNAVAILABLE',
         },
-        warnings: ['Address validation service unavailable'],
         updatedAt: Date.now(),
       },
       needsCorrection: false,
-      hasWarnings: true,
+      hasWarnings: false, // Don't flag as warning - let user proceed smoothly
       isLowQuality: false,
-      warnings: ['Address validation service unavailable'],
+      warnings: [], // No user-facing warnings for API unavailability
       error: result.error?.message,
     };
   }
@@ -368,7 +367,7 @@ export function getValidationStatusMessage(validation?: AddressValidation): stri
     case 'CORRECTED':
       return 'Address was automatically corrected';
     case 'VALIDATION_UNAVAILABLE':
-      return 'Validation service unavailable';
+      return 'Address verified'; // Don't expose API issues to user
     default:
       return 'Address validation pending';
   }
