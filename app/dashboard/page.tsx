@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Download, Edit, Pen } from "lucide-react";
+import { Download, Edit, Pen, Trash2 } from "lucide-react";
 import Layout from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,14 @@ import {
   ChevronLeft,
   Camera
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import DeleteDraftDialog from "@/components/delete-draft-dialog";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -293,6 +301,7 @@ function MobileProposalMenu({
   onCountersign,
   onPayment,
   onStatusChange,
+  onDelete,
   showPaymentLink
 }: { 
   proposal: Proposal;
@@ -304,61 +313,101 @@ function MobileProposalMenu({
   onCountersign: () => void;
   onPayment: () => void;
   onStatusChange: (status: string) => void;
+  onDelete: () => void;
   showPaymentLink: boolean;
 }) {
+  const isDraft = proposal.status.toLowerCase() === 'draft';
+  
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-400 hover:text-slate-600">
-          <MoreVertical className="w-5 h-5" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuLabel className="text-xs">{t.dashboard.actions}</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={onEdit} className="py-3">
-          <Edit className="w-4 h-4 mr-3" />
-          {t.dashboard.editProposal}
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={onView} className="py-3">
-          <Download className="w-4 h-4 mr-3" />
-          {t.dashboard.downloadPdf}
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={onPrice} className="py-3">
-          <DollarSign className="w-4 h-4 mr-3" />
-          {t.dashboard.adjustPrice}
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={onEmail} className="py-3">
-          <Mail className="w-4 h-4 mr-3" />
-          {t.dashboard.sendViaEmail}
-        </DropdownMenuItem>
-        {showPaymentLink && (
-          <DropdownMenuItem onClick={onPayment} className="py-3 text-primary" data-testid={`menu-payment-${proposal.id}`}>
-            <CreditCard className="w-4 h-4 mr-3" />
-            {t.dashboard.requestPayment}
+    <TooltipProvider>
+      <DropdownMenu>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-400 hover:text-slate-600">
+                <MoreVertical className="w-5 h-5" />
+              </Button>
+            </DropdownMenuTrigger>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{t.dashboard.actions}</p>
+          </TooltipContent>
+        </Tooltip>
+        <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuLabel className="text-xs">{t.dashboard.actions}</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={onEdit} className="py-3">
+            <Edit className="w-4 h-4 mr-3" />
+            {t.dashboard.editProposal}
           </DropdownMenuItem>
-        )}
-        {proposal.status === 'accepted' && !proposal.contractorSignature && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onCountersign} className="py-3 text-green-600 font-medium">
-              <Pen className="w-4 h-4 mr-3" />
-              {t.dashboard.countersign}
+          <DropdownMenuItem onClick={onView} className="py-3">
+            <Download className="w-4 h-4 mr-3" />
+            {t.dashboard.downloadPdf}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onPrice} className="py-3">
+            <DollarSign className="w-4 h-4 mr-3" />
+            {t.dashboard.adjustPrice}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onEmail} className="py-3">
+            <Mail className="w-4 h-4 mr-3" />
+            {t.dashboard.sendViaEmail}
+          </DropdownMenuItem>
+          {showPaymentLink && (
+            <DropdownMenuItem onClick={onPayment} className="py-3 text-primary" data-testid={`menu-payment-${proposal.id}`}>
+              <CreditCard className="w-4 h-4 mr-3" />
+              {t.dashboard.requestPayment}
             </DropdownMenuItem>
-          </>
-        )}
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel className="text-xs">{t.dashboard.markStatus}</DropdownMenuLabel>
-        <DropdownMenuItem onClick={() => onStatusChange('won')} className="py-3 text-green-600">
-          <Trophy className="w-4 h-4 mr-3" />
-          {t.dashboard.markAsWon}
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onStatusChange('lost')} className="py-3 text-red-600">
-          <ThumbsDown className="w-4 h-4 mr-3" />
-          {t.dashboard.markAsLost}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          )}
+          {proposal.status === 'accepted' && !proposal.contractorSignature && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={onCountersign} className="py-3 text-green-600 font-medium">
+                <Pen className="w-4 h-4 mr-3" />
+                {t.dashboard.countersign}
+              </DropdownMenuItem>
+            </>
+          )}
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel className="text-xs">{t.dashboard.markStatus}</DropdownMenuLabel>
+          <DropdownMenuItem onClick={() => onStatusChange('won')} className="py-3 text-green-600">
+            <Trophy className="w-4 h-4 mr-3" />
+            {t.dashboard.markAsWon}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onStatusChange('lost')} className="py-3 text-red-600">
+            <ThumbsDown className="w-4 h-4 mr-3" />
+            {t.dashboard.markAsLost}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          {isDraft ? (
+            <DropdownMenuItem 
+              onClick={onDelete} 
+              className="py-3 text-destructive focus:text-destructive focus:bg-destructive/10"
+              data-testid={`menu-delete-${proposal.id}`}
+            >
+              <Trash2 className="w-4 h-4 mr-3" />
+              {t.dashboard.deleteDraft}
+            </DropdownMenuItem>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <DropdownMenuItem 
+                    disabled
+                    className="py-3 text-muted-foreground cursor-not-allowed"
+                  >
+                    <Trash2 className="w-4 h-4 mr-3" />
+                    {t.dashboard.deleteDraft}
+                  </DropdownMenuItem>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="left">
+                <p>{t.dashboard.onlyDraftsCanBeDeleted}</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </TooltipProvider>
   );
 }
 
@@ -389,8 +438,13 @@ export default function Dashboard() {
     paymentLinkUrl?: string | null;
     depositPercentage?: number | null;
   } | null>(null);
+  const [deleteModalData, setDeleteModalData] = useState<{
+    id: number;
+    clientName: string;
+  } | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'pipeline'>('list');
   const [isViewSwitching, setIsViewSwitching] = useState(false);
+  const { toast } = useToast();
 
   const handleViewModeChange = async (mode: 'list' | 'pipeline') => {
     if (mode === viewMode) return;
@@ -520,6 +574,23 @@ export default function Dashboard() {
     } catch (error) {
       console.error('Error updating proposal status:', error);
     }
+  };
+
+  const handleDeleteSuccess = (proposalId: number) => {
+    // Optimistic UI update - remove the proposal from the list
+    setProposals(prev => prev.filter(p => p.id !== proposalId));
+    toast({
+      title: t.dashboard.draftDeleted,
+      description: t.dashboard.draftDeletedDescription,
+    });
+  };
+
+  const handleDeleteError = (message: string) => {
+    toast({
+      title: "Error",
+      description: message,
+      variant: "destructive",
+    });
   };
   
   const stats = [
@@ -826,6 +897,7 @@ export default function Dashboard() {
                                 depositPercentage: proposal.depositPercentage
                               })}
                               onStatusChange={(status) => updateProposalStatus(proposal.id, status)}
+                              onDelete={() => setDeleteModalData({ id: proposal.id, clientName: proposal.clientName })}
                               showPaymentLink={!!user?.userStripeEnabled}
                             />
                           </div>
@@ -899,12 +971,20 @@ export default function Dashboard() {
                                 >
                                   <Mail className="w-4 h-4" />
                                 </Button>
+                            <TooltipProvider>
                             <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600">
-                                  <MoreVertical className="w-4 h-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600">
+                                      <MoreVertical className="w-4 h-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{t.dashboard.actions}</p>
+                                </TooltipContent>
+                              </Tooltip>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>{t.dashboard.actions}</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
@@ -995,9 +1075,36 @@ export default function Dashboard() {
                                   {t.dashboard.markAsLost}
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-red-600">{t.dashboard.delete}</DropdownMenuItem>
+                                {proposal.status.toLowerCase() === 'draft' ? (
+                                  <DropdownMenuItem 
+                                    onClick={() => setDeleteModalData({ id: proposal.id, clientName: proposal.clientName })}
+                                    data-testid={`button-delete-draft-${proposal.id}`}
+                                    className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    {t.dashboard.deleteDraft}
+                                  </DropdownMenuItem>
+                                ) : (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div>
+                                        <DropdownMenuItem 
+                                          disabled
+                                          className="text-muted-foreground cursor-not-allowed"
+                                        >
+                                          <Trash2 className="w-4 h-4 mr-2" />
+                                          {t.dashboard.deleteDraft}
+                                        </DropdownMenuItem>
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="left">
+                                      <p>Only drafts can be deleted</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
+                            </TooltipProvider>
                             </div>
                           </td>
                         </tr>
@@ -1080,6 +1187,17 @@ export default function Dashboard() {
               .then(data => setProposals(Array.isArray(data) ? data : []))
               .catch(console.error);
           }}
+        />
+      )}
+
+      {deleteModalData && (
+        <DeleteDraftDialog
+          isOpen={true}
+          onClose={() => setDeleteModalData(null)}
+          proposalId={deleteModalData.id}
+          clientName={deleteModalData.clientName}
+          onSuccess={() => handleDeleteSuccess(deleteModalData.id)}
+          onError={handleDeleteError}
         />
       )}
     </Layout>
