@@ -63,6 +63,18 @@ export async function GET(request: NextRequest) {
       lastAddress,
     });
   } catch (error) {
+    // Check if table doesn't exist (migration not run)
+    const dbError = error as { code?: string };
+    if (dbError.code === '42P01') {
+      // Table doesn't exist - return empty defaults gracefully
+      console.warn("job_setup_preferences table not found - run migration 0001_add_customer_address_memory.sql");
+      return NextResponse.json({
+        preferences: null,
+        lastCustomer: null,
+        lastAddress: null,
+      });
+    }
+    
     console.error("Error fetching job setup preferences:", error);
     return NextResponse.json(
       { error: "Failed to fetch preferences" },
@@ -134,6 +146,13 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ preferences });
   } catch (error) {
+    // Check if table doesn't exist (migration not run)
+    const dbError = error as { code?: string };
+    if (dbError.code === '42P01') {
+      console.warn("job_setup_preferences table not found - run migration 0001_add_customer_address_memory.sql");
+      return NextResponse.json({ preferences: null });
+    }
+    
     console.error("Error updating job setup preferences:", error);
     return NextResponse.json(
       { error: "Failed to update preferences" },
@@ -201,6 +220,13 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ preferences });
   } catch (error) {
+    // Check if table doesn't exist (migration not run)
+    const dbError = error as { code?: string };
+    if (dbError.code === '42P01') {
+      console.warn("job_setup_preferences table not found - run migration 0001_add_customer_address_memory.sql");
+      return NextResponse.json({ preferences: null });
+    }
+    
     console.error("Error adding recent job type:", error);
     return NextResponse.json(
       { error: "Failed to add recent job type" },

@@ -62,6 +62,13 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ addresses });
   } catch (error) {
+    // Check if table doesn't exist (migration not run)
+    const dbError = error as { code?: string };
+    if (dbError.code === '42P01') {
+      console.warn("saved_addresses table not found - run migration 0001_add_customer_address_memory.sql");
+      return NextResponse.json({ addresses: [] });
+    }
+    
     console.error("Error fetching addresses:", error);
     return NextResponse.json(
       { error: "Failed to fetch addresses" },
@@ -153,6 +160,13 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ address, existed: false }, { status: 201 });
   } catch (error) {
+    // Check if table doesn't exist (migration not run)
+    const dbError = error as { code?: string };
+    if (dbError.code === '42P01') {
+      console.warn("saved_addresses table not found - run migration 0001_add_customer_address_memory.sql");
+      return NextResponse.json({ address: null, existed: false });
+    }
+    
     console.error("Error creating address:", error);
     return NextResponse.json(
       { error: "Failed to create address" },
@@ -197,6 +211,13 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ address });
   } catch (error) {
+    // Check if table doesn't exist (migration not run)
+    const dbError = error as { code?: string };
+    if (dbError.code === '42P01') {
+      console.warn("saved_addresses table not found - run migration 0001_add_customer_address_memory.sql");
+      return NextResponse.json({ address: null });
+    }
+    
     console.error("Error updating address:", error);
     return NextResponse.json(
       { error: "Failed to update address" },
