@@ -4,13 +4,37 @@
  * Job Address Types and Storage
  * 
  * This module provides the single source of truth for job address selection.
- * An address is only considered valid if it has placeId + lat/lng.
+ * An address is only considered valid if it has placeId + lat/lng + validated.
  */
 
 // ============ TYPES ============
 
 export type JobAddressSource = "places" | "geolocation" | "last";
 
+/**
+ * Address Validation result from Google Address Validation API
+ */
+export type AddressValidation = {
+  /** Validation verdict (CONFIRMED, UNCONFIRMED, etc.) */
+  verdict?: string;
+  /** Whether there are unconfirmed address components */
+  hasUnconfirmedComponents?: boolean;
+  /** Whether a subpremise (unit/apt) might be missing */
+  missingSubpremise?: boolean;
+  /** USPS DPV confirmation status (Y, N, S, D, empty) */
+  dpvConfirmation?: string;
+  /** Corrected/standardized formatted address from USPS */
+  correctedFormatted?: string;
+  /** Address granularity from API */
+  granularity?: string;
+  /** Whether the address was inferred vs exact match */
+  addressInferred?: boolean;
+};
+
+/**
+ * JobAddress - Single source of truth for selected job addresses.
+ * Never render a "selected address" unless placeId + lat/lng + validated exist.
+ */
 export type JobAddress = {
   placeId: string;
   formatted: string;
@@ -18,6 +42,10 @@ export type JobAddress = {
   lng: number;
   source: JobAddressSource;
   customerId?: string;
+  /** Whether the address has been validated through Address Validation API */
+  validated: boolean;
+  /** Validation details from Address Validation API */
+  validation?: AddressValidation;
   updatedAt: number;
   // Additional address components for display
   street?: string;
@@ -41,9 +69,10 @@ const LAST_ADDRESS_PREFIX = "lastAddress:";
 // ============ VALIDATION ============
 
 /**
- * Check if a JobAddress is complete and valid
+ * Check if a JobAddress has basic required fields (placeId + lat/lng)
+ * This is the minimum for considering an address "selected"
  */
-export function isValidJobAddress(address: Partial<JobAddress> | null | undefined): address is JobAddress {
+export function hasRequiredAddressFields(address: Partial<JobAddress> | null | undefined): boolean {
   if (!address) return false;
   return (
     typeof address.placeId === "string" &&
@@ -55,6 +84,23 @@ export function isValidJobAddress(address: Partial<JobAddress> | null | undefine
     typeof address.lng === "number" &&
     !isNaN(address.lng)
   );
+}
+
+/**
+ * Check if a JobAddress is complete and validated.
+ * Never "lock in" an address unless we have placeId + geometry + validation verdict.
+ */
+export function isValidJobAddress(address: Partial<JobAddress> | null | undefined): address is JobAddress {
+  if (!hasRequiredAddressFields(address)) return false;
+  // For full validity, address must be validated
+  return address!.validated === true;
+}
+
+/**
+ * Check if a JobAddress is selectable (has placeId + lat/lng) but may need validation
+ */
+export function isSelectableJobAddress(address: Partial<JobAddress> | null | undefined): address is JobAddress {
+  return hasRequiredAddressFields(address);
 }
 
 // ============ CUSTOMER-SCOPED STORAGE ============
@@ -81,10 +127,17 @@ export function getLastAddressForCustomer(customerId: string | number): JobAddre
 }
 
 /**
- * Save the last address for a specific customer
+ * Save the last address for a specific customer.
+ * Only saves validated addresses to ensure quality.
  */
 export function saveLastAddressForCustomer(customerId: string | number, address: JobAddress): void {
   if (typeof window === "undefined") return;
+  
+  // Only save addresses that have been validated
+  if (!address.validated) {
+    console.warn("Attempted to save non-validated address for customer - skipping");
+    return;
+  }
   
   try {
     const key = `${LAST_ADDRESS_PREFIX}${customerId}`;
@@ -116,7 +169,8 @@ export function clearLastAddressForCustomer(customerId: string | number): void {
 // ============ CONVERSION HELPERS ============
 
 /**
- * Create a JobAddress from Google Places Autocomplete result
+ * Create a JobAddress from Google Places Autocomplete result.
+ * Note: The address is NOT validated yet - must call validateAddress() after.
  */
 export function createJobAddressFromPlace(
   place: google.maps.places.PlaceResult,
@@ -162,6 +216,7 @@ export function createJobAddressFromPlace(
     lat,
     lng,
     source,
+    validated: false, // Must be validated via Address Validation API
     updatedAt: Date.now(),
     street,
     city,
@@ -171,7 +226,8 @@ export function createJobAddressFromPlace(
 }
 
 /**
- * Create a JobAddress from a reverse geocoding candidate
+ * Create a JobAddress from a reverse geocoding candidate.
+ * Note: The address is NOT validated yet - must call validateAddress() after.
  */
 export function createJobAddressFromCandidate(
   candidate: GeolocationCandidate,
@@ -183,6 +239,45 @@ export function createJobAddressFromCandidate(
     lat: candidate.lat,
     lng: candidate.lng,
     source,
+    validated: false, // Must be validated via Address Validation API
     updatedAt: Date.now(),
   };
+}
+
+/**
+ * Apply validation result to a JobAddress
+ */
+export function applyValidationToAddress(
+  address: JobAddress,
+  validation: AddressValidation
+): JobAddress {
+  return {
+    ...address,
+    validated: true,
+    validation,
+    updatedAt: Date.now(),
+  };
+}
+
+/**
+ * Check if an address has validation warnings that should be shown to user
+ */
+export function hasValidationWarnings(address: JobAddress): boolean {
+  if (!address.validation) return false;
+  return (
+    address.validation.hasUnconfirmedComponents === true ||
+    address.validation.missingSubpremise === true ||
+    address.validation.addressInferred === true
+  );
+}
+
+/**
+ * Check if address has a corrected version that differs from original
+ */
+export function hasCorrectedAddress(address: JobAddress): boolean {
+  if (!address.validation?.correctedFormatted) return false;
+  // Normalize for comparison (trim, lowercase)
+  const original = address.formatted.trim().toLowerCase();
+  const corrected = address.validation.correctedFormatted.trim().toLowerCase();
+  return original !== corrected;
 }

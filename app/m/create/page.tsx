@@ -64,6 +64,11 @@ import {
 } from "lucide-react";
 import { mobileApiFetch, newIdempotencyKey, MobileJob } from "../lib/api";
 import { reverseGeocode } from "@/lib/services/geocodingService";
+import { 
+  validateJobAddress, 
+  applyCorrectedAddress,
+  getValidationWarnings,
+} from "@/lib/services/addressValidationService";
 import {
   getRecentCustomers,
   searchCustomers,
@@ -423,16 +428,9 @@ function CustomerSelector({
 // Libraries for Google Maps Places Autocomplete
 const GOOGLE_MAPS_LIBRARIES: ("places")[] = ["places"];
 
-// JobAddress type for strict address selection
-type JobAddress = {
-  placeId: string;
-  formatted: string;
-  lat: number;
-  lng: number;
-  source: "places" | "geolocation" | "last";
-  customerId?: number;
-  updatedAt: number;
-};
+// Import JobAddress type and validation utilities from shared module
+import type { JobAddress } from "../lib/job-address";
+import { isSelectableJobAddress } from "../lib/job-address";
 
 // Location candidate from reverse geocoding
 type LocationCandidate = {
@@ -442,24 +440,13 @@ type LocationCandidate = {
   lng: number;
   types: string[];
   locationType: string;
+  partialMatch?: boolean;
 };
 
-// Validate that a JobAddress has all required fields
-function isValidJobAddress(address: Partial<JobAddress> | null): address is JobAddress {
-  if (!address) return false;
-  return (
-    typeof address.placeId === "string" &&
-    address.placeId.length > 0 &&
-    typeof address.formatted === "string" &&
-    address.formatted.length > 0 &&
-    typeof address.lat === "number" &&
-    !isNaN(address.lat) &&
-    typeof address.lng === "number" &&
-    !isNaN(address.lng)
-  );
-}
+// Accuracy threshold in meters - locations less accurate than this should not auto-populate
+const ACCURACY_THRESHOLD_METERS = 40;
 
-// Job Address Selector with strict Places Autocomplete and high-accuracy geolocation
+// Job Address Selector with strict Places Autocomplete, accuracy gating, and Address Validation
 function JobAddressSelector({
   value,
   customerId,
@@ -467,6 +454,7 @@ function JobAddressSelector({
   onChange,
   disabled,
   onRefresh,
+  autoFocus = false,
 }: {
   value: JobAddress | null;
   customerId?: number;
@@ -474,15 +462,24 @@ function JobAddressSelector({
   onChange: (address: JobAddress | null) => void;
   disabled?: boolean;
   onRefresh?: () => void;
+  autoFocus?: boolean;
 }) {
   const [inputValue, setInputValue] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
   const [locationProgress, setLocationProgress] = useState(0);
   const [showCandidates, setShowCandidates] = useState(false);
   const [candidates, setCandidates] = useState<LocationCandidate[]>([]);
   const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null);
   const [locationWarning, setLocationWarning] = useState<string | null>(null);
+  // Address correction prompt state
+  const [pendingCorrection, setPendingCorrection] = useState<{
+    original: JobAddress;
+    corrected: string;
+  } | null>(null);
+  // Validation warnings state
+  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
   
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
@@ -496,10 +493,102 @@ function JobAddressSelector({
     libraries: GOOGLE_MAPS_LIBRARIES,
   });
 
-  // Get last address for this specific customer
+  // Get last address for this specific customer (per-customer scoped)
   const lastAddressForCustomer = customerId 
     ? getLastAddressForCustomer(customerId) 
     : null;
+
+  // Auto-focus input on mount if requested and no address selected
+  useEffect(() => {
+    if (autoFocus && isLoaded && inputRef.current && !value) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [autoFocus, isLoaded, value]);
+
+  // Validate address through Address Validation API
+  const runAddressValidation = useCallback(async (address: JobAddress): Promise<JobAddress | null> => {
+    setIsValidating(true);
+    setValidationWarnings([]);
+    
+    try {
+      const result = await validateJobAddress(address);
+      
+      // Check if we need to offer a correction
+      if (result.needsCorrection && result.address.validation?.correctedFormatted) {
+        setPendingCorrection({
+          original: result.address,
+          corrected: result.address.validation.correctedFormatted,
+        });
+        setIsValidating(false);
+        return null; // Don't set address yet - wait for user decision
+      }
+      
+      // Check for warnings
+      if (result.hasWarnings) {
+        const warnings = getValidationWarnings(result.address.validation);
+        setValidationWarnings(warnings);
+      }
+      
+      setIsValidating(false);
+      return result.address;
+    } catch (err) {
+      console.error("Address validation error:", err);
+      setIsValidating(false);
+      // If validation fails, still return the address as validated
+      // to not block the user, but log the error
+      return { ...address, validated: true, updatedAt: Date.now() };
+    }
+  }, []);
+
+  // Handle accepting the corrected address
+  const handleAcceptCorrection = useCallback(async () => {
+    if (!pendingCorrection) return;
+    
+    const correctedAddress = applyCorrectedAddress(
+      pendingCorrection.original, 
+      pendingCorrection.corrected
+    );
+    
+    setPendingCorrection(null);
+    onChange(correctedAddress);
+    
+    // Save as last address for this customer
+    if (customerId && correctedAddress.validated) {
+      saveLastAddressForCustomer(customerId, {
+        id: -Date.now(),
+        formatted: correctedAddress.formatted,
+        placeId: correctedAddress.placeId,
+        lat: String(correctedAddress.lat),
+        lng: String(correctedAddress.lng),
+        customerId,
+      });
+    }
+  }, [pendingCorrection, customerId, onChange]);
+
+  // Handle keeping the original address
+  const handleKeepOriginal = useCallback(() => {
+    if (!pendingCorrection) return;
+    
+    const originalAddress = pendingCorrection.original;
+    setPendingCorrection(null);
+    onChange(originalAddress);
+    
+    // Save as last address for this customer
+    if (customerId && originalAddress.validated) {
+      saveLastAddressForCustomer(customerId, {
+        id: -Date.now(),
+        formatted: originalAddress.formatted,
+        placeId: originalAddress.placeId,
+        lat: String(originalAddress.lat),
+        lng: String(originalAddress.lng),
+        customerId,
+      });
+    }
+  }, [pendingCorrection, customerId, onChange]);
 
   // Initialize Places Autocomplete
   useEffect(() => {
@@ -511,7 +600,7 @@ function JobAddressSelector({
       fields: ["place_id", "formatted_address", "geometry", "address_components"],
     });
 
-    autocompleteRef.current.addListener("place_changed", () => {
+    autocompleteRef.current.addListener("place_changed", async () => {
       const place = autocompleteRef.current?.getPlace();
       
       if (!place?.place_id || !place?.geometry?.location) {
@@ -522,6 +611,7 @@ function JobAddressSelector({
 
       // Clear validation error and mark as selected
       setValidationError(null);
+      setLocationWarning(null);
       hasSelectedRef.current = true;
 
       const newAddress: JobAddress = {
@@ -530,22 +620,29 @@ function JobAddressSelector({
         lat: place.geometry.location.lat(),
         lng: place.geometry.location.lng(),
         source: "places",
-        customerId,
+        customerId: customerId ? String(customerId) : undefined,
+        validated: false, // Will be validated next
         updatedAt: Date.now(),
       };
 
-      onChange(newAddress);
-
-      // Save as last address for this customer
-      if (customerId) {
-        saveLastAddressForCustomer(customerId, {
-          id: -Date.now(),
-          formatted: newAddress.formatted,
-          placeId: newAddress.placeId,
-          lat: String(newAddress.lat),
-          lng: String(newAddress.lng),
-          customerId,
-        });
+      // Run address validation
+      const validatedAddress = await runAddressValidation(newAddress);
+      
+      // If validation returned an address (no pending correction), set it
+      if (validatedAddress) {
+        onChange(validatedAddress);
+        
+        // Save as last address for this customer
+        if (customerId && validatedAddress.validated) {
+          saveLastAddressForCustomer(customerId, {
+            id: -Date.now(),
+            formatted: validatedAddress.formatted,
+            placeId: validatedAddress.placeId,
+            lat: String(validatedAddress.lat),
+            lng: String(validatedAddress.lng),
+            customerId,
+          });
+        }
       }
     });
 
@@ -555,7 +652,7 @@ function JobAddressSelector({
         autocompleteRef.current = null;
       }
     };
-  }, [isLoaded, customerId, onChange]);
+  }, [isLoaded, customerId, onChange, runAddressValidation]);
 
   // Handle input blur - validate that user selected from suggestions
   const handleInputBlur = useCallback(() => {
@@ -573,6 +670,15 @@ function JobAddressSelector({
     }
   }, [validationError]);
 
+  // Handle Enter key to accept first suggestion
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Enter key handling is managed by Google Places Autocomplete
+    // Just prevent form submission
+    if (e.key === "Enter") {
+      e.preventDefault();
+    }
+  }, []);
+
   // Stop location tracking and cleanup
   const stopLocationTracking = useCallback(() => {
     if (watchIdRef.current !== null) {
@@ -587,7 +693,7 @@ function JobAddressSelector({
     setLocationProgress(0);
   }, []);
 
-  // Use current location with high-accuracy tracking
+  // Use current location with high-accuracy tracking and strict accuracy gating
   const handleUseLocation = useCallback(async () => {
     if (!navigator.geolocation) {
       setValidationError("Geolocation is not supported by your browser.");
@@ -598,11 +704,11 @@ function JobAddressSelector({
     setLocationWarning(null);
     setValidationError(null);
     setLocationProgress(0);
+    setValidationWarnings([]);
 
     let bestPosition: GeolocationCoordinates | null = null;
     const startTime = Date.now();
     const trackingDuration = 8000; // 8 seconds
-    const minAccuracy = 80; // meters
 
     // Update progress
     const progressInterval = setInterval(() => {
@@ -644,34 +750,49 @@ function JobAddressSelector({
         return;
       }
 
-      // Check accuracy
-      if (bestPosition.accuracy > minAccuracy) {
+      // ACCURACY GATING: If accuracy > 40m, do NOT reverse geocode to street number
+      // Instead, show warning and focus input for typing
+      if (bestPosition.accuracy > ACCURACY_THRESHOLD_METERS) {
         setLocationWarning(
-          `Location is approximate (~${Math.round(bestPosition.accuracy)}m). Type address instead for better accuracy.`
+          `Location is approximate (~${Math.round(bestPosition.accuracy)}m). Type address for accuracy.`
         );
+        // Focus the input to encourage typing
+        setTimeout(() => inputRef.current?.focus(), 100);
+        return; // DO NOT proceed with reverse geocoding
       }
 
-      // Reverse geocode the location
+      // Accuracy is good (≤40m) - proceed with reverse geocoding
       try {
         const result = await reverseGeocode(bestPosition.latitude, bestPosition.longitude);
         
         if (!result.success || !result.allResults?.length) {
           setValidationError("No address found for your location. Please enter manually.");
+          setTimeout(() => inputRef.current?.focus(), 100);
           return;
         }
 
-        // Filter results to prefer street_address, premise, subpremise
+        // STRICT FILTERING: Only accept ROOFTOP locations, no partial matches
+        // Filter for street_address, premise, subpremise types
         const preferredTypes = ["street_address", "premise", "subpremise"];
-        const sortedResults = [...result.allResults].sort((a, b) => {
-          const aPreferred = preferredTypes.some(t => a.types?.includes(t));
-          const bPreferred = preferredTypes.some(t => b.types?.includes(t));
-          if (aPreferred && !bPreferred) return -1;
-          if (!aPreferred && bPreferred) return 1;
-          return 0;
+        const filteredResults = result.allResults.filter(r => {
+          // Must have preferred type
+          const hasPreferredType = preferredTypes.some(t => r.types?.includes(t));
+          // Must be ROOFTOP precision (not APPROXIMATE, GEOMETRIC_CENTER, RANGE_INTERPOLATED)
+          const isRooftop = r.locationType === "ROOFTOP";
+          return hasPreferredType && isRooftop;
         });
 
+        // If no high-quality results, fall back to showing warning and focus input
+        if (filteredResults.length === 0) {
+          setLocationWarning(
+            "Could not find a precise address for your location. Please type the address."
+          );
+          setTimeout(() => inputRef.current?.focus(), 100);
+          return;
+        }
+
         // Take top 3 candidates
-        const topCandidates: LocationCandidate[] = sortedResults.slice(0, 3).map(r => ({
+        const topCandidates: LocationCandidate[] = filteredResults.slice(0, 3).map(r => ({
           placeId: r.placeId,
           formatted: r.formattedAddress,
           lat: r.lat,
@@ -685,6 +806,7 @@ function JobAddressSelector({
       } catch (err) {
         console.error("Reverse geocoding error:", err);
         setValidationError("Failed to find address. Please enter manually.");
+        setTimeout(() => inputRef.current?.focus(), 100);
       }
     }, trackingDuration);
   }, [stopLocationTracking]);
@@ -701,26 +823,33 @@ function JobAddressSelector({
       lat: candidate.lat,
       lng: candidate.lng,
       source: "geolocation",
-      customerId,
+      customerId: customerId ? String(customerId) : undefined,
+      validated: false, // Will be validated next
       updatedAt: Date.now(),
     };
 
-    onChange(newAddress);
-
-    // Save as last address for this customer
-    if (customerId) {
-      await saveAddress({
-        formatted: newAddress.formatted,
-        placeId: newAddress.placeId,
-        lat: String(newAddress.lat),
-        lng: String(newAddress.lng),
-        customerId,
-      });
-      onRefresh?.();
+    // Run address validation
+    const validatedAddress = await runAddressValidation(newAddress);
+    
+    // If validation returned an address (no pending correction), set it
+    if (validatedAddress) {
+      onChange(validatedAddress);
+      
+      // Save as last address for this customer
+      if (customerId && validatedAddress.validated) {
+        await saveAddress({
+          formatted: validatedAddress.formatted,
+          placeId: validatedAddress.placeId,
+          lat: String(validatedAddress.lat),
+          lng: String(validatedAddress.lng),
+          customerId,
+        });
+        onRefresh?.();
+      }
     }
-  }, [customerId, onChange, onRefresh]);
+  }, [customerId, onChange, onRefresh, runAddressValidation]);
 
-  // Handle using last address for customer
+  // Handle using last address for customer - must re-validate
   const handleUseLastAddress = useCallback(async () => {
     if (!lastAddressForCustomer || !customerId) return;
 
@@ -730,24 +859,33 @@ function JobAddressSelector({
       lat: parseFloat(lastAddressForCustomer.lat || "0"),
       lng: parseFloat(lastAddressForCustomer.lng || "0"),
       source: "last",
-      customerId,
+      customerId: customerId ? String(customerId) : undefined,
+      validated: false, // Must re-validate
       updatedAt: Date.now(),
     };
 
-    // Only use if valid
-    if (isValidJobAddress(newAddress)) {
-      onChange(newAddress);
-      await updateAddressUsage(lastAddressForCustomer.id);
-    } else {
+    // Check basic validity first
+    if (!isSelectableJobAddress(newAddress)) {
       setValidationError("Last address is incomplete. Please select a new address.");
+      return;
     }
-  }, [lastAddressForCustomer, customerId, onChange]);
+
+    // Re-run address validation (in case formatting standards changed)
+    const validatedAddress = await runAddressValidation(newAddress);
+    
+    if (validatedAddress) {
+      onChange(validatedAddress);
+      await updateAddressUsage(lastAddressForCustomer.id);
+    }
+  }, [lastAddressForCustomer, customerId, onChange, runAddressValidation]);
 
   // Handle clear address
   const handleClear = useCallback(() => {
     onChange(null);
     setInputValue("");
     setValidationError(null);
+    setValidationWarnings([]);
+    setPendingCorrection(null);
     hasSelectedRef.current = false;
     setTimeout(() => inputRef.current?.focus(), 100);
   }, [onChange]);
@@ -757,6 +895,8 @@ function JobAddressSelector({
     onChange(null);
     setInputValue(value?.formatted || "");
     setValidationError(null);
+    setValidationWarnings([]);
+    setPendingCorrection(null);
     hasSelectedRef.current = false;
     setTimeout(() => {
       inputRef.current?.focus();
@@ -779,42 +919,113 @@ function JobAddressSelector({
     );
   }
 
-  // SELECTED STATE: Show the selected address with change/clear actions
-  if (value && isValidJobAddress(value)) {
+  // PENDING CORRECTION STATE: Show correction prompt
+  if (pendingCorrection) {
     return (
-      <div className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2.5">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-start gap-3">
-            <div className="mt-0.5 grid h-9 w-9 place-items-center rounded-md border border-primary/30 bg-background">
-              <MapPin className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">
-                {value.formatted}
-              </p>
-              <div className="mt-1 flex items-center gap-3">
-                <button
-                  type="button"
-                  className="inline-flex items-center text-xs font-medium text-primary hover:text-primary/80 underline underline-offset-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
-                  onClick={handleChange}
-                  disabled={disabled}
-                >
-                  Change address
-                </button>
-                <button
-                  type="button"
-                  className="inline-flex items-center text-xs font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
-                  onClick={handleClear}
-                  disabled={disabled}
-                >
-                  <X className="w-3 h-3 mr-1" />
-                  Clear
-                </button>
+      <div className="space-y-3">
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950">
+          <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
+            Use standardized address?
+          </p>
+          <p className="text-sm text-blue-800 dark:text-blue-200 mb-3">
+            {pendingCorrection.corrected}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleAcceptCorrection}
+              className="flex-1"
+            >
+              <Check className="w-3 h-3 mr-1.5" />
+              Use
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleKeepOriginal}
+              className="flex-1"
+            >
+              Keep original
+            </Button>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Original: {pendingCorrection.original.formatted}
+        </p>
+      </div>
+    );
+  }
+
+  // VALIDATING STATE: Show loading indicator
+  if (isValidating) {
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-3">
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        <span className="text-sm text-muted-foreground">Verifying address…</span>
+      </div>
+    );
+  }
+
+  // SELECTED STATE: Show the selected address with change/clear actions
+  if (value && isSelectableJobAddress(value)) {
+    const showValidatedBadge = value.validated;
+    
+    return (
+      <div className="space-y-2">
+        <div className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2.5">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 grid h-9 w-9 place-items-center rounded-md border border-primary/30 bg-background">
+                <MapPin className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  {value.formatted}
+                </p>
+                <div className="mt-1 flex items-center gap-3">
+                  {showValidatedBadge && (
+                    <span className="inline-flex items-center text-[10px] font-medium text-primary">
+                      <CheckCircle2 className="w-3 h-3 mr-0.5" />
+                      Verified
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    className="inline-flex items-center text-xs font-medium text-primary hover:text-primary/80 underline underline-offset-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
+                    onClick={handleChange}
+                    disabled={disabled}
+                  >
+                    Change
+                  </button>
+                  <button
+                    type="button"
+                    className="inline-flex items-center text-xs font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
+                    onClick={handleClear}
+                    disabled={disabled}
+                  >
+                    <X className="w-3 h-3 mr-1" />
+                    Clear
+                  </button>
+                </div>
               </div>
             </div>
+            <CheckCircle2 className="mt-1 h-5 w-5 text-primary" aria-hidden />
           </div>
-          <CheckCircle2 className="mt-1 h-5 w-5 text-primary" aria-hidden />
         </div>
+        
+        {/* Validation Warnings - compact inline display */}
+        {validationWarnings.length > 0 && (
+          <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+            <Navigation className="mt-0.5 h-3 w-3 shrink-0" />
+            <div>
+              {validationWarnings.map((warning, i) => (
+                <p key={i}>{warning}</p>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -831,6 +1042,7 @@ function JobAddressSelector({
             value={inputValue}
             onChange={handleInputChange}
             onBlur={handleInputBlur}
+            onKeyDown={handleKeyDown}
             placeholder="Start typing an address…"
             disabled={disabled || !isLoaded}
             className={cn(
@@ -853,7 +1065,7 @@ function JobAddressSelector({
         )}
       </div>
 
-      {/* Location Warning */}
+      {/* Location Warning - shows when accuracy is too low */}
       {locationWarning && (
         <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
           <Navigation className="mt-0.5 h-3 w-3 shrink-0" />
@@ -925,19 +1137,33 @@ function LocationCandidatesDialog({
   onSelect: (candidate: LocationCandidate) => void;
   accuracy?: number;
 }) {
-  const hasLowAccuracy = accuracy && accuracy > 80;
+  // Note: This dialog is only shown when accuracy is ≤40m (good accuracy)
+  // Low accuracy locations are handled earlier with a warning and input focus
   const preferredTypes = ["street_address", "premise", "subpremise"];
 
   const isPreciseType = (types: string[]) => 
     types.some(t => preferredTypes.includes(t));
 
-  const getTypeLabel = (types: string[]) => {
-    if (types.includes("street_address")) return "Street address";
-    if (types.includes("premise")) return "Building";
-    if (types.includes("subpremise")) return "Unit/Suite";
-    if (types.includes("route")) return "Street";
-    return "Location";
+  const getTypeLabel = (types: string[], locationType: string) => {
+    const typeLabels: string[] = [];
+    
+    if (types.includes("street_address")) typeLabels.push("Street address");
+    else if (types.includes("premise")) typeLabels.push("Building");
+    else if (types.includes("subpremise")) typeLabels.push("Unit/Suite");
+    else if (types.includes("route")) typeLabels.push("Street");
+    else typeLabels.push("Location");
+    
+    // Show location precision for transparency
+    if (locationType === "ROOFTOP") {
+      typeLabels.push("• High precision");
+    }
+    
+    return typeLabels.join(" ");
   };
+
+  const handleCancel = useCallback(() => {
+    onOpenChange(false);
+  }, [onOpenChange]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -948,23 +1174,18 @@ function LocationCandidatesDialog({
             Confirm Your Location
           </DialogTitle>
           <DialogDescription>
-            Select the address that best matches your job site.
+            {accuracy && (
+              <span className="block mb-1">
+                GPS accuracy: ~{Math.round(accuracy)}m
+              </span>
+            )}
+            Select the address that matches your job site.
           </DialogDescription>
         </DialogHeader>
 
-        {hasLowAccuracy && (
-          <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-            <Navigation className="mt-0.5 h-4 w-4 shrink-0" />
-            <p>
-              Location accuracy is approximate (~{Math.round(accuracy!)}m).
-              Consider typing the address for better precision.
-            </p>
-          </div>
-        )}
-
         {candidates.length === 0 ? (
           <div className="py-6 text-center text-sm text-muted-foreground">
-            No addresses found for this location.
+            No precise addresses found for this location.
             <br />
             Please type the address manually.
           </div>
@@ -972,7 +1193,7 @@ function LocationCandidatesDialog({
           <div className="space-y-2">
             {candidates.map((candidate, index) => {
               const isPrecise = isPreciseType(candidate.types);
-              const typeLabel = getTypeLabel(candidate.types);
+              const typeLabel = getTypeLabel(candidate.types, candidate.locationType);
 
               return (
                 <button
@@ -1014,13 +1235,16 @@ function LocationCandidatesDialog({
           </div>
         )}
 
-        <div className="flex justify-end border-t pt-4">
+        <div className="flex justify-between border-t pt-4">
+          <p className="text-xs text-muted-foreground self-center">
+            Tap to confirm
+          </p>
           <Button
             type="button"
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            onClick={handleCancel}
           >
-            Cancel
+            Cancel & type instead
           </Button>
         </div>
       </DialogContent>
@@ -1101,9 +1325,15 @@ export default function CreateJobPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate address - must have placeId and lat/lng
-    if (!selectedAddress || !isValidJobAddress(selectedAddress)) {
+    // Validate address - must have placeId, lat/lng, AND be validated
+    if (!selectedAddress || !isSelectableJobAddress(selectedAddress)) {
       setError("Please select a valid address from the suggestions.");
+      return;
+    }
+    
+    // Require validation - never "lock in" without validation
+    if (!selectedAddress.validated) {
+      setError("Please wait for address verification to complete.");
       return;
     }
     
@@ -1308,6 +1538,7 @@ export default function CreateJobPage() {
                   onChange={setSelectedAddress}
                   disabled={busy}
                   onRefresh={handleRefresh}
+                  autoFocus={!selectedAddress} // Auto-focus if no address selected
                 />
               </CardContent>
             </Card>
