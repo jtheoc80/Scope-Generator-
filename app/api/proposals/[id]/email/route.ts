@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { storage } from '@/lib/services/storage';
 import { sendProposalEmail } from '@/lib/services/emailService';
+import { db } from '@/server/db';
+import { mobileJobDrafts } from '@shared/schema';
+import { eq } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 
 export async function POST(
   request: NextRequest,
@@ -91,6 +95,28 @@ export async function POST(
     // Update proposal status to 'sent' if currently 'draft'
     if (proposal.status === 'draft') {
       await storage.updateProposal(proposalId, userId, { status: 'sent' });
+    }
+
+    // Similar Job Retrieval (Phase 1): update outcome status for linked mobile job (if any).
+    // A proposal may or may not originate from a mobile job; this is best-effort.
+    try {
+      const draftRows = await db.select().from(mobileJobDrafts).where(eq(mobileJobDrafts.proposalId, proposalId)).limit(1);
+      const jobId = draftRows[0]?.jobId;
+      if (jobId) {
+        await db.execute(
+          sql`
+            INSERT INTO job_outcomes (job_id, status, sent_at, updated_at)
+            VALUES (${jobId}, 'sent', NOW(), NOW())
+            ON CONFLICT (job_id)
+            DO UPDATE SET status = 'sent', sent_at = COALESCE(job_outcomes.sent_at, NOW()), updated_at = NOW()
+          `
+        );
+      }
+    } catch (e) {
+      console.warn("similarity.outcome.sent.failed", {
+        proposalId,
+        error: e instanceof Error ? e.message : String(e),
+      });
     }
 
     return NextResponse.json({ 
