@@ -446,6 +446,9 @@ function JobAddressSelector({
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isValidating, setIsValidating] = useState(false);
   const [touched, setTouched] = useState(false);
+  const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
+  const [isFetchingPredictions, setIsFetchingPredictions] = useState(false);
+  const [activeIndex, setActiveIndex] = useState<number>(-1);
   // Address correction prompt state
   const [pendingCorrection, setPendingCorrection] = useState<{
     original: JobAddress;
@@ -455,8 +458,12 @@ function JobAddressSelector({
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
   
   const inputRef = useRef<HTMLInputElement>(null);
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const hasSelectedRef = useRef(false);
+  const requestIdRef = useRef(0);
+  const autocompleteServiceRef = useRef<google.maps.places.AutocompleteService | null>(null);
+  const placesServiceRef = useRef<google.maps.places.PlacesService | null>(null);
+  const placesServiceContainerRef = useRef<HTMLDivElement | null>(null);
+  const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
   
   // Load Google Maps API
   const { isLoaded, loadError } = useJsApiLoader({
@@ -578,97 +585,155 @@ function JobAddressSelector({
     }
   }, [pendingCorrection, customerId, onChange, onRefresh]);
 
-  // Track the current input element to detect remounts
-  const lastInputElementRef = useRef<HTMLInputElement | null>(null);
-
-  // Initialize Places Autocomplete
-  // Re-runs when the input element changes (e.g., after selecting/clearing an address)
+  // Initialize Places services (manual autocomplete for reliability)
   useEffect(() => {
-    if (!isLoaded || !inputRef.current) return;
-    
-    // Check if the input element changed (happens when switching between selected/not-selected state)
-    const inputElementChanged = lastInputElementRef.current !== inputRef.current;
-    
-    // If autocomplete already exists and input hasn't changed, skip initialization
-    if (autocompleteRef.current && !inputElementChanged) return;
-    
-    // Clean up old autocomplete if input element changed
-    if (autocompleteRef.current && inputElementChanged) {
-      google.maps.event.clearInstanceListeners(autocompleteRef.current);
-      autocompleteRef.current = null;
+    if (!isLoaded) return;
+
+    if (!autocompleteServiceRef.current) {
+      autocompleteServiceRef.current = new google.maps.places.AutocompleteService(); // uses Places library
     }
-    
-    // Track the current input element
-    lastInputElementRef.current = inputRef.current;
 
-    autocompleteRef.current = new google.maps.places.Autocomplete(inputRef.current, {
-      types: ["address"],
-      componentRestrictions: { country: "us" },
-      fields: ["place_id", "formatted_address", "geometry", "address_components"],
-    });
+    // PlacesService needs an HTMLElement; keep it detached.
+    if (!placesServiceContainerRef.current) {
+      placesServiceContainerRef.current = document.createElement("div");
+    }
+    if (!placesServiceRef.current && placesServiceContainerRef.current) {
+      placesServiceRef.current = new google.maps.places.PlacesService(
+        placesServiceContainerRef.current
+      );
+    }
 
-    autocompleteRef.current.addListener("place_changed", async () => {
-      const place = autocompleteRef.current?.getPlace();
-      
-      if (!place?.place_id || !place?.geometry?.location) {
-        // User typed but didn't select from suggestions
+    if (!sessionTokenRef.current) {
+      sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
+    }
+  }, [isLoaded]);
+
+  const clearSuggestions = useCallback(() => {
+    setPredictions([]);
+    setActiveIndex(-1);
+    setIsFetchingPredictions(false);
+  }, []);
+
+  // Debounced predictions fetch
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (!autocompleteServiceRef.current) return;
+
+    if (!inputValue.trim() || hasSelectedRef.current) {
+      clearSuggestions();
+      return;
+    }
+
+    const requestId = ++requestIdRef.current;
+    setIsFetchingPredictions(true);
+
+    const timer = setTimeout(() => {
+      autocompleteServiceRef.current!.getPlacePredictions(
+        {
+          input: inputValue,
+          types: ["address"],
+          componentRestrictions: { country: "us" },
+          sessionToken: sessionTokenRef.current ?? undefined,
+        },
+        (preds, status) => {
+          if (requestId !== requestIdRef.current) return; // stale
+          setIsFetchingPredictions(false);
+
+          if (status !== google.maps.places.PlacesServiceStatus.OK || !preds?.length) {
+            setPredictions([]);
+            setActiveIndex(-1);
+            return;
+          }
+
+          setPredictions(preds);
+          setActiveIndex(-1);
+        }
+      );
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [clearSuggestions, inputValue, isLoaded]);
+
+  const selectPrediction = useCallback(
+    async (prediction: google.maps.places.AutocompletePrediction) => {
+      const placeId = prediction.place_id;
+      if (!placeId) return;
+
+      if (!placesServiceRef.current) {
+        setValidationError("Address autocomplete isn’t ready yet. Please try again.");
+        return;
+      }
+
+      setValidationError(null);
+      hasSelectedRef.current = true;
+      clearSuggestions();
+
+      const details = await new Promise<google.maps.places.PlaceResult | null>((resolve) => {
+        placesServiceRef.current!.getDetails(
+          {
+            placeId,
+            fields: ["place_id", "formatted_address", "geometry", "address_components"],
+            sessionToken: sessionTokenRef.current ?? undefined,
+          },
+          (place, status) => {
+            if (status !== google.maps.places.PlacesServiceStatus.OK || !place) {
+              resolve(null);
+              return;
+            }
+            resolve(place);
+          }
+        );
+      });
+
+      // Start a fresh session token after a selection (recommended by Google)
+      sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
+
+      if (!details?.place_id || !details.geometry?.location) {
+        hasSelectedRef.current = false;
         setValidationError("Select an address from the suggestions.");
         return;
       }
 
-      // Clear validation error and mark as selected
-      setValidationError(null);
-      hasSelectedRef.current = true;
+      const formatted = details.formatted_address || prediction.description || "";
+      setInputValue(formatted);
 
       const newAddress: JobAddress = {
-        placeId: place.place_id,
-        formatted: place.formatted_address || "",
-        lat: place.geometry.location.lat(),
-        lng: place.geometry.location.lng(),
+        placeId: details.place_id,
+        formatted,
+        lat: details.geometry.location.lat(),
+        lng: details.geometry.location.lng(),
         source: "places",
         customerId: customerId ? String(customerId) : undefined,
-        validated: false, // Will be validated next
+        validated: false,
         updatedAt: Date.now(),
       };
-      setInputValue(newAddress.formatted);
 
-      // Run address validation
       const validatedAddress = await runAddressValidation(newAddress);
-      
-      // If validation returned an address (no pending correction), set it
-      if (validatedAddress) {
-        onChange(validatedAddress);
-        
-        // Save as last address for this customer + persist to saved_addresses
-        if (customerId && validatedAddress.validated) {
-          await saveAddress({
-            formatted: validatedAddress.formatted,
-            placeId: validatedAddress.placeId,
-            lat: String(validatedAddress.lat),
-            lng: String(validatedAddress.lng),
-            customerId,
-          });
-          onRefresh?.();
-          saveLastAddressForCustomer(customerId, {
-            id: -Date.now(),
-            formatted: validatedAddress.formatted,
-            placeId: validatedAddress.placeId,
-            lat: String(validatedAddress.lat),
-            lng: String(validatedAddress.lng),
-            customerId,
-          });
-        }
-      }
-    });
+      if (!validatedAddress) return;
 
-    return () => {
-      if (autocompleteRef.current) {
-        google.maps.event.clearInstanceListeners(autocompleteRef.current);
-        autocompleteRef.current = null;
+      onChange(validatedAddress);
+
+      if (customerId && validatedAddress.validated) {
+        await saveAddress({
+          formatted: validatedAddress.formatted,
+          placeId: validatedAddress.placeId,
+          lat: String(validatedAddress.lat),
+          lng: String(validatedAddress.lng),
+          customerId,
+        });
+        onRefresh?.();
+        saveLastAddressForCustomer(customerId, {
+          id: -Date.now(),
+          formatted: validatedAddress.formatted,
+          placeId: validatedAddress.placeId,
+          lat: String(validatedAddress.lat),
+          lng: String(validatedAddress.lng),
+          customerId,
+        });
       }
-      lastInputElementRef.current = null;
-    };
-  }, [isLoaded, customerId, onChange, onRefresh, runAddressValidation, value]);
+    },
+    [clearSuggestions, customerId, onChange, onRefresh, runAddressValidation]
+  );
 
   // Handle input blur - validate that user selected from suggestions
   const handleInputBlur = useCallback(() => {
@@ -677,12 +742,17 @@ function JobAddressSelector({
     if (isLoaded && inputValue.trim() && !hasSelectedRef.current && !value) {
       setValidationError("Select an address from the suggestions.");
     }
-  }, [inputValue, isLoaded, value]);
+    // Allow click/tap on suggestions first
+    setTimeout(() => {
+      clearSuggestions();
+    }, 150);
+  }, [clearSuggestions, inputValue, isLoaded, value]);
 
   // Handle input change
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
     hasSelectedRef.current = false;
+    setTouched(true);
     if (validationError) {
       setValidationError(null);
     }
@@ -690,12 +760,33 @@ function JobAddressSelector({
 
   // Handle Enter key to accept first suggestion
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Enter key handling is managed by Google Places Autocomplete
-    // Just prevent form submission
     if (e.key === "Enter") {
       e.preventDefault();
+      if (activeIndex >= 0 && activeIndex < predictions.length) {
+        void selectPrediction(predictions[activeIndex]!);
+      } else if (predictions.length > 0) {
+        void selectPrediction(predictions[0]!);
+      } else if (isLoaded && inputValue.trim() && !hasSelectedRef.current) {
+        setValidationError("Select an address from the suggestions.");
+      }
+      return;
     }
-  }, []);
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIndex((idx) => Math.min(idx + 1, predictions.length - 1));
+      return;
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIndex((idx) => Math.max(idx - 1, 0));
+      return;
+    }
+    if (e.key === "Escape") {
+      clearSuggestions();
+      return;
+    }
+  }, [activeIndex, clearSuggestions, inputValue, isLoaded, predictions, selectPrediction]);
 
   // Handle using last address for customer - must re-validate
   const handleUseLastAddress = useCallback(async () => {
@@ -735,8 +826,9 @@ function JobAddressSelector({
     setValidationWarnings([]);
     setPendingCorrection(null);
     hasSelectedRef.current = false;
+    clearSuggestions();
     setTimeout(() => inputRef.current?.focus(), 100);
-  }, [onChange]);
+  }, [clearSuggestions, onChange]);
 
   // Handle change address
   const handleChange = useCallback(() => {
@@ -746,11 +838,12 @@ function JobAddressSelector({
     setValidationWarnings([]);
     setPendingCorrection(null);
     hasSelectedRef.current = false;
+    clearSuggestions();
     setTimeout(() => {
       inputRef.current?.focus();
       inputRef.current?.select();
     }, 100);
-  }, [onChange, value]);
+  }, [clearSuggestions, onChange, value]);
 
   if (loadError) {
     return (
@@ -892,6 +985,8 @@ function JobAddressSelector({
             ref={inputRef}
             id="job-address-input"
             name="jobAddress"
+            type="text"
+            inputMode="text"
             value={inputValue}
             onChange={handleInputChange}
             onBlur={handleInputBlur}
@@ -903,11 +998,57 @@ function JobAddressSelector({
               validationError && "border-destructive focus-visible:ring-destructive"
             )}
             autoComplete="street-address"
+            autoCapitalize="off"
+            spellCheck={false}
           />
           {!isLoaded && (
             <Loader2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
           )}
         </div>
+        {isLoaded && (isFetchingPredictions || predictions.length > 0) && (
+          <div className="relative">
+            <div className="absolute left-0 right-0 z-[60] mt-2 overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
+              {isFetchingPredictions && (
+                <div className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Searching…
+                </div>
+              )}
+              {!isFetchingPredictions && predictions.length > 0 && (
+                <div className="max-h-72 overflow-y-auto">
+                  {predictions.map((p, idx) => {
+                    const main = p.structured_formatting?.main_text || p.description;
+                    const secondary = p.structured_formatting?.secondary_text || "";
+                    const isActive = idx === activeIndex;
+                    return (
+                      <button
+                        key={p.place_id || `${p.description}-${idx}`}
+                        type="button"
+                        className={cn(
+                          "w-full px-3 py-3 text-left text-sm leading-snug transition-colors",
+                          "hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          isActive && "bg-accent"
+                        )}
+                        onMouseDown={(e) => {
+                          // Prevent blur before selection
+                          e.preventDefault();
+                        }}
+                        onClick={() => void selectPrediction(p)}
+                      >
+                        <div className="font-medium text-foreground break-words">{main}</div>
+                        {secondary && (
+                          <div className="mt-0.5 text-xs text-muted-foreground break-words">
+                            {secondary}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         {validationError && (
           <p className="text-xs text-destructive">{validationError}</p>
         )}
