@@ -56,8 +56,11 @@ export default async function MobileWebLayout({
                   ✓ Signed In
                 </span>
               )}
-              <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
+              <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full sm:hidden">
                 Mobile Web
+              </span>
+              <span className="hidden sm:inline-flex text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
+                Desktop Web
               </span>
             </div>
           </div>
