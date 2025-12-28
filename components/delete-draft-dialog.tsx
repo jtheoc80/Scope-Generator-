@@ -49,15 +49,15 @@ export default function DeleteDraftDialog({
         onSuccess();
         onClose();
       } else if (response.status === 401) {
-        onError('Please sign in to delete proposals.');
+        onError(t.proposals.deleteDraft.signInRequired);
       } else if (response.status === 403) {
-        onError(data.message || 'Only draft proposals can be deleted.');
+        onError(data.message || t.proposals.deleteDraft.onlyDraftsDeletable);
       } else {
-        onError(data.message || 'Failed to delete draft. Please try again.');
+        onError(data.message || t.proposals.deleteDraft.genericError);
       }
     } catch (error) {
       console.error('Error deleting draft:', error);
-      onError('Network error. Please try again.');
+      onError(t.proposals.deleteDraft.networkError);
     } finally {
       setIsDeleting(false);
     }
