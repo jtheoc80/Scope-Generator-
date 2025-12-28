@@ -9,7 +9,7 @@
 
 // ============ TYPES ============
 
-export type JobAddressSource = "places" | "geolocation" | "last";
+export type JobAddressSource = "places" | "last";
 
 /**
  * Address Validation result from Google Address Validation API
@@ -54,14 +54,7 @@ export type JobAddress = {
   zip?: string;
 };
 
-export type GeolocationCandidate = {
-  placeId: string;
-  formatted: string;
-  lat: number;
-  lng: number;
-  types: string[];
-  locationType: string;
-};
+// NOTE: Geolocation-based address selection has been removed. We rely solely on Google Places.
 
 // Storage key for customer-scoped last addresses
 const LAST_ADDRESS_PREFIX = "lastAddress:";
@@ -222,25 +215,6 @@ export function createJobAddressFromPlace(
     city,
     state,
     zip,
-  };
-}
-
-/**
- * Create a JobAddress from a reverse geocoding candidate.
- * Note: The address is NOT validated yet - must call validateAddress() after.
- */
-export function createJobAddressFromCandidate(
-  candidate: GeolocationCandidate,
-  source: JobAddressSource = "geolocation"
-): JobAddress {
-  return {
-    placeId: candidate.placeId,
-    formatted: candidate.formatted,
-    lat: candidate.lat,
-    lng: candidate.lng,
-    source,
-    validated: false, // Must be validated via Address Validation API
-    updatedAt: Date.now(),
   };
 }
 

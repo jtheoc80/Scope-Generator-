@@ -1,10 +1,8 @@
 'use client';
 
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useJsApiLoader } from '@react-google-maps/api';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { MapPin, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Libraries must be defined outside component to avoid re-renders
@@ -44,6 +42,7 @@ export default function JobAddressField({
   }, [onResolvedLatLng]);
 
   const { isLoaded, loadError } = useJsApiLoader({
+    id: "google-maps-script",
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
     libraries,
   });
@@ -54,7 +53,7 @@ export default function JobAddressField({
 
     autoRef.current = new google.maps.places.Autocomplete(inputRef.current, {
       types: ['address'],
-      fields: ['formatted_address', 'geometry'],
+      fields: ['place_id', 'formatted_address', 'geometry'],
       componentRestrictions: { country: 'us' }, // Restrict to US addresses
     });
 
@@ -83,41 +82,10 @@ export default function JobAddressField({
     };
   }, [isLoaded]);
 
-  const useMyLocation = useCallback(async () => {
-    if (!isLoaded || disabled) return;
-
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-
-        try {
-          const geocoder = new google.maps.Geocoder();
-          const res = await geocoder.geocode({ location: { lat, lng } });
-
-          const formatted = res.results?.[0]?.formatted_address;
-          if (formatted) {
-            onChangeRef.current(formatted);
-          }
-          if (onResolvedLatLngRef.current) {
-            onResolvedLatLngRef.current(lat, lng);
-          }
-        } catch (err) {
-          console.error('Geocoding error:', err);
-        }
-      },
-      (err) => {
-        console.error('Geolocation error:', err);
-        // Optionally: show toast "Allow location to prefill address"
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  }, [isLoaded, disabled]);
-
   if (loadError) {
     return (
       <div className="text-sm text-destructive">
-        Maps failed to load. Please enter address manually.
+        Address autocomplete failed to load. Please refresh and try again.
       </div>
     );
   }
@@ -134,21 +102,6 @@ export default function JobAddressField({
         data-testid={testId}
         className="flex-1"
       />
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        onClick={useMyLocation}
-        disabled={disabled || !isLoaded}
-        title="Use my location"
-        className="shrink-0"
-      >
-        {!isLoaded ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <MapPin className="h-4 w-4" />
-        )}
-      </Button>
     </div>
   );
 }
