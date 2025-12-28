@@ -590,9 +590,28 @@ function JobAddressSelector({
     }
   }, [pendingCorrection, customerId, onChange]);
 
+  // Track the current input element to detect remounts
+  const lastInputElementRef = useRef<HTMLInputElement | null>(null);
+
   // Initialize Places Autocomplete
+  // Re-runs when the input element changes (e.g., after selecting/clearing an address)
   useEffect(() => {
-    if (!isLoaded || !inputRef.current || autocompleteRef.current) return;
+    if (!isLoaded || !inputRef.current) return;
+    
+    // Check if the input element changed (happens when switching between selected/not-selected state)
+    const inputElementChanged = lastInputElementRef.current !== inputRef.current;
+    
+    // If autocomplete already exists and input hasn't changed, skip initialization
+    if (autocompleteRef.current && !inputElementChanged) return;
+    
+    // Clean up old autocomplete if input element changed
+    if (autocompleteRef.current && inputElementChanged) {
+      google.maps.event.clearInstanceListeners(autocompleteRef.current);
+      autocompleteRef.current = null;
+    }
+    
+    // Track the current input element
+    lastInputElementRef.current = inputRef.current;
 
     autocompleteRef.current = new google.maps.places.Autocomplete(inputRef.current, {
       types: ["address"],
@@ -651,8 +670,9 @@ function JobAddressSelector({
         google.maps.event.clearInstanceListeners(autocompleteRef.current);
         autocompleteRef.current = null;
       }
+      lastInputElementRef.current = null;
     };
-  }, [isLoaded, customerId, onChange, runAddressValidation]);
+  }, [isLoaded, customerId, onChange, runAddressValidation, value]);
 
   // Handle input blur - validate that user selected from suggestions
   const handleInputBlur = useCallback(() => {
