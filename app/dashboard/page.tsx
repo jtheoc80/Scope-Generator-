@@ -330,7 +330,7 @@ function MobileProposalMenu({
             </DropdownMenuTrigger>
           </TooltipTrigger>
           <TooltipContent>
-            <p>More actions</p>
+            <p>{t.dashboard.actions}</p>
           </TooltipContent>
         </Tooltip>
         <DropdownMenuContent align="end" className="w-48">
