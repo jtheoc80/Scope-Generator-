@@ -23,6 +23,9 @@ export interface ReverseGeocodeResult {
   components: AddressComponents;
   placeId: string;
   locationType: string;
+  types: string[];
+  lat: number;
+  lng: number;
 }
 
 export interface ReverseGeocodeResponse {
@@ -153,9 +156,64 @@ export function getCityState(components: AddressComponents): string {
   return parts.join(', ');
 }
 
+/**
+ * Preferred result types for reverse geocoding (in order of preference).
+ * street_address, premise, and subpremise are most accurate for job sites.
+ */
+const PREFERRED_TYPES = ['street_address', 'premise', 'subpremise'];
+
+/**
+ * Filter and prioritize reverse geocoding results.
+ * Returns top candidates, preferring street_address, premise, subpremise.
+ * 
+ * @param results - All results from reverse geocoding
+ * @param limit - Maximum number of candidates to return (default 3)
+ * @returns Filtered and sorted results
+ */
+export function filterGeocodeResults(
+  results: ReverseGeocodeResult[],
+  limit: number = 3
+): ReverseGeocodeResult[] {
+  if (!results || results.length === 0) return [];
+  
+  // Sort results by preferred types
+  const sorted = [...results].sort((a, b) => {
+    const aPreferred = PREFERRED_TYPES.some(t => a.types?.includes(t));
+    const bPreferred = PREFERRED_TYPES.some(t => b.types?.includes(t));
+    
+    if (aPreferred && !bPreferred) return -1;
+    if (!aPreferred && bPreferred) return 1;
+    
+    // Secondary sort by location precision
+    const locationPriority: Record<string, number> = {
+      'ROOFTOP': 0,
+      'RANGE_INTERPOLATED': 1,
+      'GEOMETRIC_CENTER': 2,
+      'APPROXIMATE': 3,
+    };
+    
+    const aPriority = locationPriority[a.locationType] ?? 4;
+    const bPriority = locationPriority[b.locationType] ?? 4;
+    
+    return aPriority - bPriority;
+  });
+  
+  return sorted.slice(0, limit);
+}
+
+/**
+ * Check if a result has an acceptable type for job addresses.
+ */
+export function isAcceptableAddressType(result: ReverseGeocodeResult): boolean {
+  if (!result.types) return false;
+  return PREFERRED_TYPES.some(t => result.types.includes(t));
+}
+
 export const geocodingService = {
   reverseGeocode,
   formatAddressFromComponents,
   getStreetAddress,
   getCityState,
+  filterGeocodeResults,
+  isAcceptableAddressType,
 };

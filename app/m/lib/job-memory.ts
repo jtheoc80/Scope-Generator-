@@ -477,6 +477,72 @@ export async function saveJobSetupToAPI(setup: {
   }
 }
 
+// ============ CUSTOMER-SCOPED LAST ADDRESS ============
+
+const CUSTOMER_LAST_ADDRESS_PREFIX = "scopegen-customer-last-address:";
+
+/**
+ * Get the last used address for a specific customer
+ */
+export function getLastAddressForCustomerLocal(customerId: number): SavedAddress | null {
+  if (typeof window === "undefined") return null;
+  
+  try {
+    const key = `${CUSTOMER_LAST_ADDRESS_PREFIX}${customerId}`;
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    return JSON.parse(raw) as SavedAddress;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Save the last used address for a specific customer
+ */
+export function saveLastAddressForCustomerLocal(customerId: number, address: SavedAddress): void {
+  if (typeof window === "undefined") return;
+  
+  try {
+    const key = `${CUSTOMER_LAST_ADDRESS_PREFIX}${customerId}`;
+    localStorage.setItem(key, JSON.stringify({
+      ...address,
+      customerId,
+      lastUsedAt: new Date().toISOString(),
+    }));
+  } catch (e) {
+    console.error("Failed to save last address for customer:", e);
+  }
+}
+
+/**
+ * Clear the last used address for a specific customer
+ */
+export function clearLastAddressForCustomerLocal(customerId: number): void {
+  if (typeof window === "undefined") return;
+  
+  try {
+    const key = `${CUSTOMER_LAST_ADDRESS_PREFIX}${customerId}`;
+    localStorage.removeItem(key);
+  } catch {
+    // Ignore errors
+  }
+}
+
+/**
+ * Wrapper function to get last address for customer
+ */
+export function getLastAddressForCustomer(customerId: number): SavedAddress | null {
+  return getLastAddressForCustomerLocal(customerId);
+}
+
+/**
+ * Wrapper function to save last address for customer
+ */
+export function saveLastAddressForCustomer(customerId: number, address: SavedAddress): void {
+  saveLastAddressForCustomerLocal(customerId, address);
+}
+
 // ============ JOB TYPE DEFINITIONS ============
 
 export const JOB_TYPES = [
