@@ -1074,6 +1074,7 @@ function JobAddressSelector({
           <Input
             ref={inputRef}
             id="job-address-input"
+            name="job-address-autocomplete"
             value={inputValue}
             onChange={handleInputChange}
             onBlur={handleInputBlur}
@@ -1084,7 +1085,13 @@ function JobAddressSelector({
               "pr-10",
               validationError && "border-destructive focus-visible:ring-destructive"
             )}
-            autoComplete="off"
+            autoComplete="new-password"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck="false"
+            data-lpignore="true"
+            data-form-type="other"
+            aria-autocomplete="list"
           />
           {!isLoaded && (
             <Loader2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
