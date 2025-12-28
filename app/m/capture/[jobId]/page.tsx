@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -85,6 +85,8 @@ export default function CapturePhotosPage() {
   const [photos, setPhotos] = useState<UploadedPhoto[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [phoneUploadOpen, setPhoneUploadOpen] = useState(false);
+  const [similarStatus, setSimilarStatus] = useState<"idle" | "loading" | "pending" | "ready">("idle");
+  const [similarCount, setSimilarCount] = useState(0);
   
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -231,6 +233,44 @@ export default function CapturePhotosPage() {
   const uploadingCount = photos.filter((p) => p.status === "uploading").length;
   const errorCount = photos.filter((p) => p.status === "error").length;
 
+  // Fire-and-forget: start polling for similar-job scope suggestions once photos begin uploading.
+  useEffect(() => {
+    let pollTimeout: ReturnType<typeof setTimeout> | null = null;
+    let isMounted = true;
+
+    const poll = async (attempt = 0) => {
+      if (!isMounted) return;
+      try {
+        setSimilarStatus((prev) => (prev === "ready" ? "ready" : "loading"));
+        const res = await mobileApiFetch<{ status: "pending" | "ready"; suggestions: unknown[] }>(
+          `/api/mobile/jobs/${jobId}/scope-suggestions?k=5`,
+          { method: "GET" }
+        );
+        if (!isMounted) return;
+        setSimilarCount(Array.isArray(res.suggestions) ? res.suggestions.length : 0);
+        setSimilarStatus(res.status);
+        if (res.status === "pending" && attempt < 10) {
+          pollTimeout = setTimeout(() => poll(attempt + 1), 2000);
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    if (uploadedCount > 0 || uploadingCount > 0) {
+      setSimilarStatus("loading");
+      poll(0);
+    } else {
+      setSimilarStatus("idle");
+      setSimilarCount(0);
+    }
+
+    return () => {
+      isMounted = false;
+      if (pollTimeout) clearTimeout(pollTimeout);
+    };
+  }, [jobId, uploadedCount, uploadingCount]);
+
   return (
     <div className="p-4 lg:px-8 lg:py-6 pb-24">
       <div className="mx-auto max-w-4xl space-y-4 lg:space-y-6">
@@ -343,6 +383,31 @@ export default function CapturePhotosPage() {
             </span>
           )}
         </div>
+      )}
+
+      {/* Similar-job suggestions status (non-blocking) */}
+      {(uploadedCount > 0 || uploadingCount > 0) && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary" />
+                Similar-job suggestions
+              </span>
+              {similarStatus !== "ready" ? (
+                <span className="text-xs text-slate-500 flex items-center gap-2">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Generating…
+                </span>
+              ) : (
+                <span className="text-xs text-slate-600">{similarCount} ready</span>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-xs text-slate-600">
+            Suggestions show up on the next step so nothing slows down uploads.
+          </CardContent>
+        </Card>
       )}
 
       {/* Photo grid */}

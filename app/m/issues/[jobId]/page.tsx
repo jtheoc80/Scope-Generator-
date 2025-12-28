@@ -27,6 +27,13 @@ import {
   AnalyzeResponse,
 } from "../../lib/api";
 
+type SimilarScopeSuggestion = {
+  itemCode: string;
+  description: string;
+  score: number;
+  fromJobs: Array<{ jobId: number; similarity: number; status?: string | null }>;
+};
+
 const categoryIcons: Record<string, React.ReactNode> = {
   damage: <AlertTriangle className="w-4 h-4 text-red-500" />,
   repair: <Wrench className="w-4 h-4 text-orange-500" />,
@@ -56,6 +63,8 @@ export default function SelectIssuesPage() {
   const [selectedIssues, setSelectedIssues] = useState<Set<string>>(new Set());
   const [customIssue, setCustomIssue] = useState("");
   const [customIssues, setCustomIssues] = useState<DetectedIssue[]>([]);
+  const [similarStatus, setSimilarStatus] = useState<"idle" | "loading" | "pending" | "ready" | "error">("idle");
+  const [similarSuggestions, setSimilarSuggestions] = useState<SimilarScopeSuggestion[]>([]);
   const [suggestedProblem, setSuggestedProblem] = useState<string | undefined>();
   const [needsMorePhotos, setNeedsMorePhotos] = useState<string[]>([]);
   const [photosAnalyzed, setPhotosAnalyzed] = useState(0);
@@ -144,6 +153,42 @@ export default function SelectIssuesPage() {
     };
   }, [fetchAnalysis]);
 
+  // Fetch similarity-based scope suggestions (async, non-blocking)
+  useEffect(() => {
+    let pollTimeout: ReturnType<typeof setTimeout> | null = null;
+    let isMounted = true;
+
+    const fetchSimilar = async (attempt = 0) => {
+      try {
+        if (!isMounted) return;
+        setSimilarStatus((prev) => (prev === "ready" ? "ready" : "loading"));
+        const res = await mobileApiFetch<{ status: "pending" | "ready"; suggestions: SimilarScopeSuggestion[] }>(
+          `/api/mobile/jobs/${jobId}/scope-suggestions?k=5`,
+          { method: "GET" }
+        );
+
+        if (!isMounted) return;
+        setSimilarSuggestions(res.suggestions || []);
+        setSimilarStatus(res.status);
+
+        if (res.status === "pending" && attempt < 12) {
+          pollTimeout = setTimeout(() => fetchSimilar(attempt + 1), 2000);
+        }
+      } catch (e) {
+        if (!isMounted) return;
+        setSimilarStatus("error");
+      }
+    };
+
+    setSimilarStatus("loading");
+    fetchSimilar(0);
+
+    return () => {
+      isMounted = false;
+      if (pollTimeout) clearTimeout(pollTimeout);
+    };
+  }, [jobId]);
+
   const toggleIssue = (issueId: string) => {
     setError(null); // Clear any previous error
     setSelectedIssues(prev => {
@@ -162,6 +207,11 @@ export default function SelectIssuesPage() {
     if (!label) return;
 
     setError(null); // Clear any previous error
+
+    // Avoid duplicates (by label) when adding from suggestions.
+    const normalized = label.toLowerCase();
+    const existing = [...issues, ...customIssues].some((i) => i.label.trim().toLowerCase() === normalized);
+    if (existing) return;
 
     const newIssue: DetectedIssue = {
       id: `custom-${Date.now()}`,
@@ -359,6 +409,73 @@ export default function SelectIssuesPage() {
                 <p className="text-sm text-amber-800 mt-1">{suggestedProblem}</p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Suggested from similar jobs (Phase 1) */}
+      {(similarStatus === "loading" || similarStatus === "pending" || similarSuggestions.length > 0) && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary" />
+                Suggested from similar jobs
+              </span>
+              {similarStatus !== "ready" && (
+                <span className="text-xs text-slate-500 flex items-center gap-2">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Generating…
+                </span>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {similarSuggestions.length === 0 ? (
+              <p className="text-sm text-slate-600">
+                {similarStatus === "error"
+                  ? "Suggestions unavailable right now."
+                  : "No similar-job suggestions yet. (We’ll improve as you complete more jobs.)"}
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {similarSuggestions.slice(0, 6).map((s) => (
+                  <div key={s.itemCode} className="p-3 rounded-lg bg-white border border-slate-200 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-900">{s.description}</p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Based on {s.fromJobs?.length ?? 1} similar job{s.fromJobs?.length === 1 ? "" : "s"}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      className="h-8"
+                      disabled={generatingDraft}
+                      onClick={async () => {
+                        addCustomIssue({ label: s.description, category: "upgrade" });
+                        try {
+                          await mobileApiFetch(`/api/mobile/jobs/${jobId}/scope-edits`, {
+                            method: "POST",
+                            headers: { "Idempotency-Key": newIdempotencyKey() },
+                            body: JSON.stringify({
+                              action: "add",
+                              itemCode: s.itemCode,
+                              before: null,
+                              after: s,
+                            }),
+                          });
+                        } catch {
+                          // Non-blocking: ignore logging failures
+                        }
+                      }}
+                    >
+                      <Plus className="w-4 h-4 mr-1" />
+                      Add
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

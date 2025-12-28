@@ -8,6 +8,8 @@ import { runVisionForPhoto } from "@/src/lib/mobile/vision/runner";
 import { db } from "@/server/db";
 import { mobileJobPhotos } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { upsertPhotoRow } from "@/src/lib/similar-jobs/db";
+import { enqueueEmbeddingJob, ensureSimilarJobEmbeddingWorker } from "@/src/lib/similar-jobs/worker";
 
 // IMPORTANT: Use Node.js runtime for AWS SDK compatibility and Buffer support.
 export const runtime = "nodejs";
@@ -44,6 +46,18 @@ export async function POST(
       publicUrl: parsed.data.url,
       kind: parsed.data.kind,
     });
+
+    // Similar Job Retrieval (Phase 1): store S3 key + enqueue embedding compute (async)
+    // Keep this non-blocking: DB enqueue is quick; embedding runs in background.
+    try {
+      await upsertPhotoRow({ jobId: id, publicUrl: parsed.data.url });
+      await enqueueEmbeddingJob(id);
+      ensureSimilarJobEmbeddingWorker();
+    } catch (e) {
+      // Never fail photo registration due to similarity pipeline.
+      const msg = e instanceof Error ? e.message : String(e);
+      console.warn("similarity.enqueue.failed", { jobId: id, error: msg });
+    }
 
     // Start background worker for other photos
     ensureVisionWorker();

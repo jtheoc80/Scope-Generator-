@@ -5,6 +5,8 @@ import { eq } from "drizzle-orm";
 import { createHash } from "crypto";
 import { createS3Client, isS3Configured } from "@/src/lib/mobile/storage/s3";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { upsertPhotoRow } from "@/src/lib/similar-jobs/db";
+import { enqueueEmbeddingJob, ensureSimilarJobEmbeddingWorker } from "@/src/lib/similar-jobs/worker";
 
 // IMPORTANT: Use Node.js runtime for crypto and AWS SDK operations.
 export const runtime = "nodejs";
@@ -192,6 +194,16 @@ export async function POST(
             kind: "site",
           })
           .returning();
+
+        // Similar Job Retrieval (Phase 1): store S3 key + enqueue embedding compute (async)
+        try {
+          await upsertPhotoRow({ jobId: session.jobId, publicUrl });
+          await enqueueEmbeddingJob(session.jobId);
+          ensureSimilarJobEmbeddingWorker();
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          console.warn("similarity.enqueue.failed", { jobId: session.jobId, error: msg });
+        }
 
         // Update job status
         await db

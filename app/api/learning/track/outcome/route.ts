@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/server/db';
-import { userActionLog, pricingPatterns, scopeItemPatterns, proposals } from '@shared/schema';
+import { userActionLog, pricingPatterns, scopeItemPatterns, proposals, mobileJobDrafts } from '@shared/schema';
 import { eq, and, sql } from 'drizzle-orm';
 
 /**
@@ -112,6 +112,38 @@ export async function POST(request: NextRequest) {
       outcomeType: outcome,
       outcomeValue: finalValue ?? null,
     });
+
+    // Similar Job Retrieval (Phase 1): update outcome status for linked mobile job (if any).
+    try {
+      const [draft] = await db.select().from(mobileJobDrafts).where(eq(mobileJobDrafts.proposalId, proposalId)).limit(1);
+      if (draft?.jobId) {
+        const wonAt = outcome === "won" ? new Date() : null;
+        const lostAt = outcome === "lost" ? new Date() : null;
+        await db.execute(sql`
+          INSERT INTO job_outcomes (job_id, status, final_price, won_at, lost_at, updated_at)
+          VALUES (
+            ${draft.jobId},
+            ${outcome},
+            ${finalValue ?? null},
+            ${wonAt},
+            ${lostAt},
+            NOW()
+          )
+          ON CONFLICT (job_id)
+          DO UPDATE SET
+            status = EXCLUDED.status,
+            final_price = COALESCE(EXCLUDED.final_price, job_outcomes.final_price),
+            won_at = COALESCE(job_outcomes.won_at, EXCLUDED.won_at),
+            lost_at = COALESCE(job_outcomes.lost_at, EXCLUDED.lost_at),
+            updated_at = NOW()
+        `);
+      }
+    } catch (e) {
+      console.warn("similarity.outcome.update.failed", {
+        proposalId,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
