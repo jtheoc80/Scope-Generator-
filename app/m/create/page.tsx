@@ -82,6 +82,7 @@ import {
   SavedCustomer,
 } from "../lib/job-memory";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/hooks/useLanguage";
 
 const JOB_TYPE_ICONS: Record<string, LucideIcon> = {
   "bathroom-remodel": Bath,
@@ -102,12 +103,12 @@ function JobTypeIcon({ id }: { id: string }) {
 }
 
 // Progress step indicator
-function WizardStepper({ currentStep }: { currentStep: number }) {
+function WizardStepper({ currentStep, t }: { currentStep: number; t: ReturnType<typeof useLanguage>['t'] }) {
   const steps = [
-    { num: 1, label: "Setup" },
-    { num: 2, label: "ScopeScan" },
-    { num: 3, label: "Review" },
-    { num: 4, label: "Send" },
+    { num: 1, label: t.mobile.setup },
+    { num: 2, label: t.mobile.scopeScan },
+    { num: 3, label: t.mobile.review },
+    { num: 4, label: t.mobile.send },
   ];
 
   return (
@@ -210,11 +211,13 @@ function CustomerSelector({
   onChange,
   disabled,
   onRefresh,
+  t,
 }: {
   value: SavedCustomer | null;
   onChange: (customer: SavedCustomer | null) => void;
   disabled?: boolean;
   onRefresh?: () => void;
+  t: ReturnType<typeof useLanguage>['t'];
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -290,7 +293,7 @@ function CustomerSelector({
           id="customer-combobox"
         >
           <span className="text-muted-foreground">
-            Search customers or add new…
+            {t.mobile.searchCustomersOrAddNew}
           </span>
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -299,7 +302,7 @@ function CustomerSelector({
         {showNewForm ? (
           <div className="p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="font-medium text-sm">New Customer</h4>
+              <h4 className="font-medium text-sm">{t.mobile.newCustomer}</h4>
               <Button
                 type="button"
                 variant="ghost"
@@ -311,7 +314,7 @@ function CustomerSelector({
               </Button>
             </div>
             <Input
-              placeholder="Customer name *"
+              placeholder={t.mobile.customerNameRequired}
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               autoFocus
@@ -319,14 +322,14 @@ function CustomerSelector({
             />
             <div className="grid grid-cols-2 gap-2">
               <Input
-                placeholder="Phone (optional)"
+                placeholder={t.mobile.phoneOptional}
                 value={newPhone}
                 onChange={(e) => setNewPhone(e.target.value)}
                 type="tel"
                 disabled={saving}
               />
               <Input
-                placeholder="Email (optional)"
+                placeholder={t.mobile.emailOptional}
                 value={newEmail}
                 onChange={(e) => setNewEmail(e.target.value)}
                 type="email"
@@ -344,20 +347,20 @@ function CustomerSelector({
               ) : (
                 <Plus className="w-4 h-4 mr-2" />
               )}
-              Add Customer
+              {t.mobile.addCustomer}
             </Button>
           </div>
         ) : (
           <Command>
             <CommandInput
-              placeholder="Search customers…"
+              placeholder={t.mobile.searchCustomersOrAddNew}
               value={search}
               onValueChange={setSearch}
             />
             <CommandList>
               <CommandEmpty>
                 <div className="py-2 text-center">
-                  <p className="text-sm text-slate-500 mb-2">No customers found</p>
+                  <p className="text-sm text-slate-500 mb-2">{t.mobile.noCustomersFound}</p>
                   <Button
                     type="button"
                     variant="outline"
@@ -372,7 +375,7 @@ function CustomerSelector({
                   </Button>
                 </div>
               </CommandEmpty>
-              <CommandGroup heading="Recent Customers">
+              <CommandGroup heading={t.mobile.recentCustomers}>
                 {customers.map((customer) => (
                   <CommandItem
                     key={customer.id}
@@ -406,7 +409,7 @@ function CustomerSelector({
                   onClick={() => setShowNewForm(true)}
                 >
                   <Plus className="w-4 h-4 mr-2" />
-                  Add new customer
+                  {t.mobile.addNewCustomer}
                 </Button>
               </div>
             </CommandList>
@@ -435,6 +438,7 @@ function JobAddressSelector({
   disabled,
   onRefresh,
   autoFocus = false,
+  t,
 }: {
   value: JobAddress | null;
   customerId?: number;
@@ -443,6 +447,7 @@ function JobAddressSelector({
   disabled?: boolean;
   onRefresh?: () => void;
   autoFocus?: boolean;
+  t: ReturnType<typeof useLanguage>['t'];
 }) {
   const [inputValue, setInputValue] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -962,7 +967,7 @@ function JobAddressSelector({
             onBlur={handleInputBlur}
             onFocus={handleInputFocus}
             onKeyDown={handleKeyDown}
-            placeholder="Start typing an address…"
+            placeholder={t.mobile.startTypingAddress}
             disabled={disabled || !isLoaded}
             className={cn(
               "pr-10 min-h-[44px]", // min-h-[44px] for large tap target on mobile
@@ -979,7 +984,7 @@ function JobAddressSelector({
         )}
         {!validationError && (
           <p className="text-xs text-muted-foreground">
-            Select an address from the suggestions
+            {t.mobile.startTypingAddress.replace('…', '')}
           </p>
         )}
       </div>
@@ -996,7 +1001,7 @@ function JobAddressSelector({
             disabled={disabled}
           >
             <History className="w-3 h-3 mr-1.5" />
-            Last for {customerName || "customer"}
+            {t.mobile.lastForCustomer} {customerName || t.mobile.customer}
           </Button>
         </div>
       )}
@@ -1006,6 +1011,7 @@ function JobAddressSelector({
 
 export default function CreateJobPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [jobType, setJobType] = useState("bathroom-remodel");
   const [selectedCustomer, setSelectedCustomer] = useState<SavedCustomer | null>(null);
   // JobAddress is the single source of truth - never auto-populated
@@ -1157,24 +1163,24 @@ export default function CreateJobPage() {
             disabled={busy}
           >
             <ArrowLeft className="w-4 h-4" />
-            Back
+            {t.mobile.back}
           </Button>
           {syncing && (
             <div className="flex items-center gap-1 text-xs text-slate-400">
               <RefreshCw className="w-3 h-3 animate-spin" />
-              Syncing…
+              {t.mobile.syncing}
             </div>
           )}
         </div>
 
         {/* Progress indicator */}
-        <WizardStepper currentStep={1} />
+        <WizardStepper currentStep={1} t={t} />
 
         {/* Header */}
         <div className="text-center space-y-1">
-          <h1 className="text-2xl text-foreground">Start ScopeScan™</h1>
+          <h1 className="text-2xl text-foreground">{t.mobile.startScopeScanTitle}</h1>
           <p className="text-sm text-muted-foreground">
-            We&apos;ll remember customers + addresses for next time
+            {t.mobile.wellRememberCustomers}
           </p>
         </div>
 
@@ -1190,11 +1196,11 @@ export default function CreateJobPage() {
             <CardContent className="p-4 lg:p-6 space-y-4">
               <div className="flex items-center justify-between gap-3">
                 <Label className="text-sm font-medium text-foreground">
-                  Job Type
+                  {t.mobile.jobType}
                 </Label>
                 {uniqueRecentTypes.length > 0 && (
                   <Badge variant="outline" className="h-6 px-2 text-xs text-muted-foreground">
-                    Recent available
+                    {t.mobile.recentAvailable}
                   </Badge>
                 )}
               </div>
@@ -1207,7 +1213,7 @@ export default function CreateJobPage() {
                     label={getJobTypeLabel(id)}
                     selected={jobType === id}
                     onClick={() => setJobType(id)}
-                    badge="Recent"
+                    badge={t.mobile.recent}
                   />
                 ))}
                 {PRIMARY_JOB_TYPES.map((type) => (
@@ -1230,7 +1236,7 @@ export default function CreateJobPage() {
                     size="sm"
                     className="text-xs text-muted-foreground"
                   >
-                    More job types…
+                    {t.mobile.moreJobTypes}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-64 p-2" align="start">
@@ -1271,13 +1277,14 @@ export default function CreateJobPage() {
               <CardContent className="p-4 lg:p-6 space-y-3">
                 <Label htmlFor="customer-combobox" className="text-sm font-medium text-foreground flex items-center gap-2">
                   <User className="w-4 h-4 text-muted-foreground" aria-hidden />
-                  Customer
+                  {t.mobile.customer}
                 </Label>
                 <CustomerSelector
                   value={selectedCustomer}
                   onChange={handleCustomerChange}
                   disabled={busy}
                   onRefresh={handleRefresh}
+                  t={t}
                 />
               </CardContent>
             </Card>
@@ -1287,7 +1294,7 @@ export default function CreateJobPage() {
               <CardContent className="p-4 lg:p-6 space-y-3">
                 <Label htmlFor="job-address-input" className="text-sm font-medium text-foreground flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-muted-foreground" aria-hidden />
-                  Job Address
+                  {t.mobile.jobAddress}
                 </Label>
                 <JobAddressSelector
                   value={selectedAddress}
@@ -1297,6 +1304,7 @@ export default function CreateJobPage() {
                   disabled={busy}
                   onRefresh={handleRefresh}
                   autoFocus={!selectedAddress} // Auto-focus if no address selected
+                  t={t}
                 />
               </CardContent>
             </Card>
@@ -1308,7 +1316,7 @@ export default function CreateJobPage() {
               <AccordionTrigger className="px-4 py-3 lg:px-6 text-sm text-muted-foreground hover:no-underline">
                 <span className="flex items-center gap-2">
                   <Settings2 className="w-4 h-4" aria-hidden />
-                  Advanced (optional)
+                  {t.mobile.advancedOptional}
                 </span>
               </AccordionTrigger>
               <AccordionContent className="px-4 pb-4 lg:px-6 lg:pb-6 space-y-4">
@@ -1318,17 +1326,17 @@ export default function CreateJobPage() {
                       htmlFor="templateCode"
                       className="text-sm text-muted-foreground"
                     >
-                      Template Code
+                      {t.mobile.templateCode}
                     </Label>
                     <Input
                       id="templateCode"
-                      placeholder="Only if you were given a code"
+                      placeholder={t.mobile.onlyIfGivenCode}
                       value={templateCode}
                       onChange={(e) => setTemplateCode(e.target.value)}
                       disabled={busy}
                     />
                     <p className="text-xs text-slate-400">
-                      Leave blank to use the selected job type
+                      {t.mobile.leaveBlankToUseJobType}
                     </p>
                   </div>
                   <div className="space-y-2">
@@ -1336,11 +1344,11 @@ export default function CreateJobPage() {
                       htmlFor="internalNotes"
                       className="text-sm text-muted-foreground"
                     >
-                      Internal Notes
+                      {t.mobile.internalNotes}
                     </Label>
                     <Input
                       id="internalNotes"
-                      placeholder="Notes for your reference only"
+                      placeholder={t.mobile.notesForYourReferenceOnly}
                       value={internalNotes}
                       onChange={(e) => setInternalNotes(e.target.value)}
                       disabled={busy}
@@ -1361,22 +1369,22 @@ export default function CreateJobPage() {
               {busy ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  Starting…
+                  {t.mobile.starting}
                 </>
               ) : (
                 <>
-                  Start ScopeScan
+                  {t.mobile.startScopeScan}
                   <ArrowRight className="w-5 h-5" />
                 </>
               )}
             </Button>
             {!busy && !canStart && (
               <p className="text-center text-xs text-slate-500">
-                Select an address from the suggestions to continue
+                {t.mobile.startTypingAddress}
               </p>
             )}
             <p className="text-center text-xs text-slate-500">
-              Next: capture photos of the job site
+              {t.mobile.nextCapturePhotos}
             </p>
           </div>
         </form>
