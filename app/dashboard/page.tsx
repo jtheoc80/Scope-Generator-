@@ -581,7 +581,7 @@ export default function Dashboard() {
     setProposals(prev => prev.filter(p => p.id !== proposalId));
     toast({
       title: t.dashboard.draftDeleted,
-      description: "The draft proposal has been permanently removed.",
+      description: t.dashboard.draftDeletedDescription,
     });
   };
 
