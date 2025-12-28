@@ -2,6 +2,7 @@ import { Metadata, Viewport } from "next";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { Camera } from "lucide-react";
 import { isClerkConfigured } from "@/lib/authUtils";
 
 export const metadata: Metadata = {
@@ -41,8 +42,13 @@ export default async function MobileWebLayout({
       <header className="sticky top-0 z-50 bg-white border-b border-slate-200 safe-area-inset-top">
         <div className="mx-auto max-w-4xl px-4 py-3 lg:px-8">
           <div className="flex items-center justify-between">
-            <Link href="/" className="text-lg font-semibold text-slate-900 hover:text-orange-600 transition-colors">
-              ScopeGen
+            <Link href="/m" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center shadow-sm">
+                <Camera className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-lg font-semibold text-slate-900">
+                ScopeScan<span className="text-orange-500">™</span>
+              </span>
             </Link>
             <div className="flex items-center gap-2">
               {userId && (

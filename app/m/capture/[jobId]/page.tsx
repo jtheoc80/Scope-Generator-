@@ -229,46 +229,47 @@ export default function CapturePhotosPage() {
   const errorCount = photos.filter((p) => p.status === "error").length;
 
   return (
-    <div className="p-4 space-y-4 pb-24">
-      {/* Hidden file inputs */}
-      <input
-        ref={cameraInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={(e) => handleFiles(e.target.files)}
-        className="hidden"
-      />
-      <input
-        ref={galleryInputRef}
-        type="file"
-        accept="image/*"
-        multiple
-        onChange={(e) => handleFiles(e.target.files)}
-        className="hidden"
-      />
+    <div className="p-4 lg:px-8 lg:py-6 pb-24">
+      <div className="mx-auto max-w-4xl space-y-4 lg:space-y-6">
+        {/* Hidden file inputs */}
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={(e) => handleFiles(e.target.files)}
+          className="hidden"
+        />
+        <input
+          ref={galleryInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={(e) => handleFiles(e.target.files)}
+          className="hidden"
+        />
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => router.back()}
-          className="gap-2 -ml-2"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </Button>
-        <span className="text-sm text-slate-500">Job #{jobId}</span>
-      </div>
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.back()}
+            className="gap-2 -ml-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </Button>
+          <span className="text-sm text-slate-500">Job #{jobId}</span>
+        </div>
 
-      {/* Title */}
-      <div>
-        <h2 className="text-xl font-semibold text-slate-900">Capture Photos</h2>
-        <p className="text-sm text-slate-600">
-          Take or select photos of the job site for your proposal
-        </p>
-      </div>
+        {/* Title */}
+        <div>
+          <h2 className="text-xl lg:text-2xl font-semibold text-slate-900">Capture Photos</h2>
+          <p className="text-sm text-slate-600">
+            Take or select photos of the job site for your proposal
+          </p>
+        </div>
 
       {/* Error message */}
       {error && (
@@ -279,22 +280,22 @@ export default function CapturePhotosPage() {
       )}
 
       {/* Photo capture buttons */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 lg:gap-4">
         <Button
           variant="outline"
-          className="h-20 flex-col gap-2"
+          className="h-20 lg:h-24 flex-col gap-2"
           onClick={() => cameraInputRef.current?.click()}
         >
-          <Camera className="w-6 h-6" />
-          <span className="text-sm">Take Photo</span>
+          <Camera className="w-6 h-6 lg:w-8 lg:h-8" />
+          <span className="text-sm lg:text-base">Take Photo</span>
         </Button>
         <Button
           variant="outline"
-          className="h-20 flex-col gap-2"
+          className="h-20 lg:h-24 flex-col gap-2"
           onClick={() => galleryInputRef.current?.click()}
         >
-          <ImagePlus className="w-6 h-6" />
-          <span className="text-sm">From Gallery</span>
+          <ImagePlus className="w-6 h-6 lg:w-8 lg:h-8" />
+          <span className="text-sm lg:text-base">From Gallery</span>
         </Button>
       </div>
 
@@ -324,7 +325,7 @@ export default function CapturePhotosPage() {
 
       {/* Photo grid */}
       {photos.length > 0 ? (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-4">
           {photos.map((photo, index) => (
             <Card key={photo.id} className="overflow-hidden">
               <div className="relative aspect-square bg-slate-100">
@@ -386,10 +387,10 @@ export default function CapturePhotosPage() {
         </div>
       ) : (
         <Card className="border-dashed border-2 border-slate-300">
-          <CardContent className="p-8 text-center">
-            <Camera className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-            <p className="text-slate-600 font-medium">No photos yet</p>
-            <p className="text-sm text-slate-500 mt-1">
+          <CardContent className="p-8 lg:p-12 text-center">
+            <Camera className="w-12 h-12 lg:w-16 lg:h-16 text-slate-400 mx-auto mb-3" />
+            <p className="text-slate-600 font-medium lg:text-lg">No photos yet</p>
+            <p className="text-sm lg:text-base text-slate-500 mt-1">
               Use the buttons above to capture or select photos
             </p>
           </CardContent>
@@ -413,20 +414,23 @@ export default function CapturePhotosPage() {
 
       {/* Fixed bottom action button */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-200 safe-area-inset-bottom">
-        <Button
-          className="w-full h-12 text-base gap-2"
-          onClick={handleAnalyzePhotos}
-          disabled={uploadedCount === 0 || uploadingCount > 0}
-        >
-          <Sparkles className="w-5 h-5" />
-          Analyze & Select Issues
-        </Button>
-        {uploadingCount > 0 && (
-          <p className="text-xs text-center text-slate-500 mt-2">
-            Waiting for {uploadingCount} photo{uploadingCount > 1 ? "s" : ""} to upload...
-          </p>
-        )}
+        <div className="mx-auto max-w-4xl lg:px-8">
+          <Button
+            className="w-full h-12 text-base gap-2"
+            onClick={handleAnalyzePhotos}
+            disabled={uploadedCount === 0 || uploadingCount > 0}
+          >
+            <Sparkles className="w-5 h-5" />
+            Analyze & Select Issues
+          </Button>
+          {uploadingCount > 0 && (
+            <p className="text-xs text-center text-slate-500 mt-2">
+              Waiting for {uploadingCount} photo{uploadingCount > 1 ? "s" : ""} to upload...
+            </p>
+          )}
+        </div>
       </div>
+    </div>
     </div>
   );
 }
