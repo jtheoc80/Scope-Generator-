@@ -3,22 +3,42 @@
  * 
  * Client-side service for validating addresses through Google Address Validation API.
  * The actual API call is made server-side to keep the API key secure.
+ * 
+ * Flow:
+ * 1. Receive JobAddress with parsed components from Place Details
+ * 2. Call server endpoint with structured fields (preferred) or formatted address (fallback)
+ * 3. Return standardized address, verdict, and warnings
  */
 
 import type { AddressValidation, JobAddress } from '@/app/m/lib/job-address';
+
+/**
+ * Detailed verdict from API
+ */
+export interface ValidationVerdictDetails {
+  validationGranularity: string;
+  geocodeGranularity: string;
+  addressComplete: boolean;
+  hasUnconfirmedComponents: boolean;
+  hasReplacedComponents: boolean;
+  unconfirmedComponentTypes: string[];
+}
 
 export interface AddressValidationResponse {
   success: boolean;
   validation?: {
     verdict: string;
+    verdictDetails?: ValidationVerdictDetails;
     hasUnconfirmedComponents: boolean;
     missingSubpremise: boolean;
     dpvConfirmation: string;
-    correctedFormatted: string | null;
+    standardizedAddress: string | null;
+    correctedFormatted: string | null; // Legacy alias
     granularity: string;
     addressInferred: boolean;
     isResidential: boolean;
     isComplete: boolean;
+    messages: string[];
   };
   error?: {
     code: string;
@@ -27,32 +47,62 @@ export interface AddressValidationResponse {
 }
 
 /**
+ * Structured address payload for validation
+ */
+export interface StructuredAddressPayload {
+  line1: string;
+  line2?: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  postalCodeSuffix?: string;
+  regionCode?: string;
+}
+
+/**
+ * Full validation request payload
+ */
+export interface ValidationPayload {
+  /** Structured address fields (preferred) */
+  structured?: StructuredAddressPayload;
+  /** Fallback formatted address string */
+  address?: string;
+  /** Place ID for logging */
+  placeId?: string;
+  /** Latitude for logging */
+  lat?: number;
+  /** Longitude for logging */
+  lng?: number;
+}
+
+/**
  * Validate an address using Google Address Validation API.
+ * Prefers structured address fields when available.
  * 
- * @param address - The formatted address string to validate
- * @param placeId - Optional Google Place ID for additional context
- * @param lat - Optional latitude
- * @param lng - Optional longitude
+ * @param payload - Validation payload with structured or formatted address
  * @returns Promise containing validation results
  * 
  * @example
  * ```ts
- * const result = await validateAddress("123 Main St, San Francisco, CA 94102");
- * if (result.success && result.validation) {
- *   if (result.validation.correctedFormatted) {
- *     // Offer to use the standardized address
- *   }
- *   if (result.validation.missingSubpremise) {
- *     // Warn user that unit number might be needed
- *   }
- * }
+ * // With structured fields (preferred)
+ * const result = await validateAddress({
+ *   structured: {
+ *     line1: "123 Main St",
+ *     city: "San Francisco",
+ *     state: "CA",
+ *     postalCode: "94102"
+ *   },
+ *   placeId: "ChIJxxxxxxxxxx"
+ * });
+ * 
+ * // With formatted address (fallback)
+ * const result = await validateAddress({
+ *   address: "123 Main St, San Francisco, CA 94102"
+ * });
  * ```
  */
 export async function validateAddress(
-  address: string,
-  placeId?: string,
-  lat?: number,
-  lng?: number
+  payload: ValidationPayload
 ): Promise<AddressValidationResponse> {
   try {
     const response = await fetch('/api/address/validate', {
@@ -60,12 +110,7 @@ export async function validateAddress(
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        address,
-        placeId,
-        lat,
-        lng,
-      }),
+      body: JSON.stringify(payload),
     });
 
     const data = await response.json();
@@ -94,6 +139,18 @@ export async function validateAddress(
 }
 
 /**
+ * Legacy function signature for backwards compatibility
+ */
+export async function validateAddressLegacy(
+  address: string,
+  placeId?: string,
+  lat?: number,
+  lng?: number
+): Promise<AddressValidationResponse> {
+  return validateAddress({ address, placeId, lat, lng });
+}
+
+/**
  * Convert API validation response to AddressValidation type for storage
  */
 export function toAddressValidation(
@@ -104,15 +161,79 @@ export function toAddressValidation(
     hasUnconfirmedComponents: apiValidation.hasUnconfirmedComponents,
     missingSubpremise: apiValidation.missingSubpremise,
     dpvConfirmation: apiValidation.dpvConfirmation,
-    correctedFormatted: apiValidation.correctedFormatted || undefined,
+    correctedFormatted: apiValidation.standardizedAddress || apiValidation.correctedFormatted || undefined,
     granularity: apiValidation.granularity,
     addressInferred: apiValidation.addressInferred,
+    // Include detailed verdict if available
+    verdictDetails: apiValidation.verdictDetails ? {
+      validationGranularity: apiValidation.verdictDetails.validationGranularity,
+      geocodeGranularity: apiValidation.verdictDetails.geocodeGranularity,
+      addressComplete: apiValidation.verdictDetails.addressComplete,
+      hasUnconfirmedComponents: apiValidation.verdictDetails.hasUnconfirmedComponents,
+      hasReplacedComponents: apiValidation.verdictDetails.hasReplacedComponents,
+      unconfirmedComponentTypes: apiValidation.verdictDetails.unconfirmedComponentTypes,
+    } : undefined,
   };
+}
+
+/**
+ * Build validation payload from JobAddress
+ * Prefers structured components when available
+ */
+function buildValidationPayload(jobAddress: JobAddress): ValidationPayload {
+  const payload: ValidationPayload = {
+    placeId: jobAddress.placeId,
+    lat: jobAddress.lat,
+    lng: jobAddress.lng,
+  };
+  
+  // Prefer structured address fields if available
+  if (jobAddress.components) {
+    payload.structured = {
+      line1: jobAddress.components.line1,
+      line2: jobAddress.components.line2,
+      city: jobAddress.components.city,
+      state: jobAddress.components.state,
+      postalCode: jobAddress.components.postalCode,
+      postalCodeSuffix: jobAddress.components.postalCodeSuffix,
+      regionCode: 'US',
+    };
+  } else {
+    // Fallback to formatted address
+    payload.address = jobAddress.formatted;
+  }
+  
+  return payload;
+}
+
+/**
+ * Check if verdict indicates low quality address that needs attention
+ */
+function isLowQualityVerdict(validation: AddressValidation): boolean {
+  const details = validation.verdictDetails;
+  if (!details) {
+    // Fall back to legacy checks
+    return validation.hasUnconfirmedComponents === true;
+  }
+  
+  // Low quality indicators:
+  // - validationGranularity is OTHER or ROUTE (not PREMISE or SUB_PREMISE)
+  // - hasUnconfirmedComponents is true
+  const granularity = details.validationGranularity;
+  return (
+    granularity === 'OTHER' ||
+    granularity === 'ROUTE' ||
+    details.hasUnconfirmedComponents
+  );
 }
 
 /**
  * Validate a JobAddress and return an updated version with validation data.
  * This is the main function to call after selecting an address.
+ * 
+ * Uses structured address fields (line1/city/state/postal) when available
+ * for better validation accuracy. The placeId + lat/lng are preserved
+ * separately (validation is for standardization, not for determining the place).
  * 
  * @param jobAddress - The JobAddress to validate
  * @returns Promise containing the validated JobAddress or error info
@@ -123,14 +244,12 @@ export async function validateJobAddress(
   address: JobAddress; 
   needsCorrection: boolean;
   hasWarnings: boolean;
+  isLowQuality: boolean;
+  warnings: string[];
   error?: string;
 }> {
-  const result = await validateAddress(
-    jobAddress.formatted,
-    jobAddress.placeId,
-    jobAddress.lat,
-    jobAddress.lng
-  );
+  const payload = buildValidationPayload(jobAddress);
+  const result = await validateAddress(payload);
 
   if (!result.success || !result.validation) {
     // If validation fails, still mark as validated but with warning
@@ -143,44 +262,65 @@ export async function validateJobAddress(
         validation: {
           verdict: 'VALIDATION_UNAVAILABLE',
         },
+        warnings: ['Address validation service unavailable'],
         updatedAt: Date.now(),
       },
       needsCorrection: false,
-      hasWarnings: false,
+      hasWarnings: true,
+      isLowQuality: false,
+      warnings: ['Address validation service unavailable'],
       error: result.error?.message,
     };
   }
 
   const validation = toAddressValidation(result.validation);
+  const apiMessages = result.validation.messages || [];
+  
+  // Get the standardized address
+  const standardizedAddress = result.validation.standardizedAddress || 
+                               result.validation.correctedFormatted;
   
   // Check if we have a corrected address that differs
   const needsCorrection = !!(
-    validation.correctedFormatted &&
-    validation.correctedFormatted.toLowerCase().trim() !== 
+    standardizedAddress &&
+    standardizedAddress.toLowerCase().trim() !== 
     jobAddress.formatted.toLowerCase().trim()
   );
 
-  // Check for warnings
-  const hasWarnings = !!(
-    validation.hasUnconfirmedComponents ||
-    validation.missingSubpremise ||
-    validation.addressInferred
-  );
+  // Check for warnings from API
+  const hasWarnings = apiMessages.length > 0 ||
+    validation.hasUnconfirmedComponents === true ||
+    validation.missingSubpremise === true ||
+    validation.addressInferred === true;
+
+  // Check for low quality verdict
+  const isLowQuality = isLowQualityVerdict(validation);
+
+  // Build final warnings list
+  const warnings = apiMessages.length > 0 ? apiMessages : getValidationWarnings(validation);
+
+  // Determine which formatted address to display
+  // If we have a standardized address from validation, use it
+  const displayFormatted = standardizedAddress || jobAddress.formatted;
 
   return {
     address: {
       ...jobAddress,
+      formatted: displayFormatted,
       validated: true,
       validation,
+      warnings: warnings.length > 0 ? warnings : undefined,
       updatedAt: Date.now(),
     },
     needsCorrection,
     hasWarnings,
+    isLowQuality,
+    warnings,
   };
 }
 
 /**
- * Apply a corrected address from validation
+ * Apply a corrected/standardized address from validation
  */
 export function applyCorrectedAddress(
   jobAddress: JobAddress,
@@ -194,8 +334,22 @@ export function applyCorrectedAddress(
       ...jobAddress.validation,
       correctedFormatted: undefined, // Clear since it's now applied
     } : undefined,
+    // Clear warnings since user accepted the correction
+    warnings: undefined,
     updatedAt: Date.now(),
   };
+}
+
+/**
+ * Result type from validateJobAddress
+ */
+export interface ValidateJobAddressResult {
+  address: JobAddress;
+  needsCorrection: boolean;
+  hasWarnings: boolean;
+  isLowQuality: boolean;
+  warnings: string[];
+  error?: string;
 }
 
 /**
@@ -260,6 +414,7 @@ export function getValidationWarnings(validation?: AddressValidation): string[] 
 
 export const addressValidationService = {
   validateAddress,
+  validateAddressLegacy,
   validateJobAddress,
   applyCorrectedAddress,
   getValidationStatusMessage,

@@ -28,6 +28,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  AlertTriangle,
   ArrowLeft,
   ArrowRight,
   Bath,
@@ -38,7 +39,6 @@ import {
   Home,
   Loader2,
   MapPin,
-  Navigation,
   Paintbrush,
   Plus,
   Snowflake,
@@ -59,7 +59,7 @@ import { mobileApiFetch, newIdempotencyKey, MobileJob } from "../lib/api";
 import { 
   validateJobAddress, 
   applyCorrectedAddress,
-  getValidationWarnings,
+  type ValidateJobAddressResult,
 } from "@/lib/services/addressValidationService";
 import {
   getRecentCustomers,
@@ -422,9 +422,11 @@ const GOOGLE_MAPS_LIBRARIES: ("places")[] = ["places"];
 
 // Import JobAddress type and validation utilities from shared module
 import type { JobAddress } from "../lib/job-address";
-import { isSelectableJobAddress } from "../lib/job-address";
+import { isSelectableJobAddress, createJobAddressFromPlace } from "../lib/job-address";
 
 // Job Address Selector with strict Places Autocomplete, accuracy gating, and Address Validation
+// Uses session tokens for Places API billing optimization
+// Flow: Autocomplete -> Place Details (by place_id) -> Address Validation -> Display
 function JobAddressSelector({
   value,
   customerId,
@@ -452,10 +454,14 @@ function JobAddressSelector({
   } | null>(null);
   // Validation warnings state
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
+  // Low quality address state (for inline warning + actions)
+  const [isLowQuality, setIsLowQuality] = useState(false);
   
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const hasSelectedRef = useRef(false);
+  // Session token for Places API - created on focus, reset after selection
+  const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
   
   // Load Google Maps API
   const { isLoaded, loadError } = useJsApiLoader({
@@ -469,6 +475,13 @@ function JobAddressSelector({
     ? getLastAddressForCustomer(customerId) 
     : null;
 
+  // Create a new session token (call on focus or after selection)
+  const createSessionToken = useCallback(() => {
+    if (isLoaded && google?.maps?.places?.AutocompleteSessionToken) {
+      sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
+    }
+  }, [isLoaded]);
+
   // Auto-focus input on mount if requested and no address selected
   useEffect(() => {
     if (autoFocus && isLoaded && inputRef.current && !value) {
@@ -481,12 +494,14 @@ function JobAddressSelector({
   }, [autoFocus, isLoaded, value]);
 
   // Validate address through Address Validation API
+  // Uses structured fields from Place Details for better accuracy
   const runAddressValidation = useCallback(async (address: JobAddress): Promise<JobAddress | null> => {
     setIsValidating(true);
     setValidationWarnings([]);
+    setIsLowQuality(false);
     
     try {
-      const result = await validateJobAddress(address);
+      const result: ValidateJobAddressResult = await validateJobAddress(address);
       
       // Check if we need to offer a correction
       if (result.needsCorrection && result.address.validation?.correctedFormatted) {
@@ -498,10 +513,14 @@ function JobAddressSelector({
         return null; // Don't set address yet - wait for user decision
       }
       
+      // Check for low quality verdict (validationGranularity OTHER/ROUTE or unconfirmed components)
+      if (result.isLowQuality) {
+        setIsLowQuality(true);
+      }
+      
       // Check for warnings
-      if (result.hasWarnings) {
-        const warnings = getValidationWarnings(result.address.validation);
-        setValidationWarnings(warnings);
+      if (result.hasWarnings || result.warnings.length > 0) {
+        setValidationWarnings(result.warnings);
       }
       
       setIsValidating(false);
@@ -580,7 +599,8 @@ function JobAddressSelector({
   // Track the current input element to detect remounts
   const lastInputElementRef = useRef<HTMLInputElement | null>(null);
 
-  // Initialize Places Autocomplete
+  // Initialize Places Autocomplete with session token support
+  // Session tokens: created on focus, used for autocomplete + single Place Details call, then reset
   // Re-runs when the input element changes (e.g., after selecting/clearing an address)
   useEffect(() => {
     if (!isLoaded || !inputRef.current) return;
@@ -599,10 +619,15 @@ function JobAddressSelector({
     
     // Track the current input element
     lastInputElementRef.current = inputRef.current;
+    
+    // Create initial session token
+    createSessionToken();
 
+    // Initialize autocomplete with address type restriction (not establishments)
+    // Default to US for country restriction
     autocompleteRef.current = new google.maps.places.Autocomplete(inputRef.current, {
-      types: ["address"],
-      componentRestrictions: { country: "us" },
+      types: ["address"], // Only address results, not establishments
+      componentRestrictions: { country: "us" }, // US only
       fields: ["place_id", "formatted_address", "geometry", "address_components"],
     });
 
@@ -619,19 +644,27 @@ function JobAddressSelector({
       setValidationError(null);
       hasSelectedRef.current = true;
 
-      const newAddress: JobAddress = {
-        placeId: place.place_id,
-        formatted: place.formatted_address || "",
-        lat: place.geometry.location.lat(),
-        lng: place.geometry.location.lng(),
-        source: "places",
-        customerId: customerId ? String(customerId) : undefined,
-        validated: false, // Will be validated next
-        updatedAt: Date.now(),
-      };
+      // Create JobAddress using the helper function
+      // This parses address_components into structured fields for validation
+      const newAddress = createJobAddressFromPlace(place, inputValue, "places");
+      
+      if (!newAddress) {
+        setValidationError("Could not parse address. Please try a different address.");
+        return;
+      }
+      
+      // Add customer ID if available
+      if (customerId) {
+        newAddress.customerId = String(customerId);
+      }
+      
       setInputValue(newAddress.formatted);
+      
+      // Reset session token after selection (Place Details call was made)
+      sessionTokenRef.current = null;
 
-      // Run address validation
+      // Run address validation with structured fields
+      // This uses line1/city/state/postal from address_components for better accuracy
       const validatedAddress = await runAddressValidation(newAddress);
       
       // If validation returned an address (no pending correction), set it
@@ -666,8 +699,9 @@ function JobAddressSelector({
         autocompleteRef.current = null;
       }
       lastInputElementRef.current = null;
+      sessionTokenRef.current = null;
     };
-  }, [isLoaded, customerId, onChange, onRefresh, runAddressValidation, value]);
+  }, [isLoaded, customerId, onChange, onRefresh, runAddressValidation, value, inputValue, createSessionToken]);
 
   // Handle input blur - validate that user selected from suggestions
   const handleInputBlur = useCallback(() => {
@@ -730,24 +764,37 @@ function JobAddressSelector({
     setInputValue("");
     setValidationError(null);
     setValidationWarnings([]);
+    setIsLowQuality(false);
     setPendingCorrection(null);
     hasSelectedRef.current = false;
+    // Create new session token for next search
+    createSessionToken();
     setTimeout(() => inputRef.current?.focus(), 100);
-  }, [onChange]);
+  }, [onChange, createSessionToken]);
 
-  // Handle change address
+  // Handle change address (edit mode)
   const handleChange = useCallback(() => {
     onChange(null);
     setInputValue(value?.formatted || "");
     setValidationError(null);
     setValidationWarnings([]);
+    setIsLowQuality(false);
     setPendingCorrection(null);
     hasSelectedRef.current = false;
+    // Create new session token for next search
+    createSessionToken();
     setTimeout(() => {
       inputRef.current?.focus();
       inputRef.current?.select();
     }, 100);
-  }, [onChange, value]);
+  }, [onChange, value, createSessionToken]);
+
+  // Handle input focus - create session token if none exists
+  const handleInputFocus = useCallback(() => {
+    if (!sessionTokenRef.current) {
+      createSessionToken();
+    }
+  }, [createSessionToken]);
 
   if (loadError) {
     return (
@@ -773,24 +820,24 @@ function JobAddressSelector({
               type="button"
               size="sm"
               onClick={handleAcceptCorrection}
-              className="flex-1"
+              className="flex-1 min-h-[44px]"
             >
               <Check className="w-3 h-3 mr-1.5" />
-              Use
+              Use corrected
             </Button>
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={handleKeepOriginal}
-              className="flex-1"
+              className="flex-1 min-h-[44px]"
             >
               Keep original
             </Button>
           </div>
         </div>
         <p className="text-xs text-muted-foreground">
-          Original: {pendingCorrection.original.formatted}
+          Original: {pendingCorrection.original.placesFormattedAddress || pendingCorrection.original.formatted}
         </p>
       </div>
     );
@@ -808,25 +855,44 @@ function JobAddressSelector({
 
   // SELECTED STATE: Show the selected address with change/clear actions
   if (value && isSelectableJobAddress(value)) {
-    const showValidatedBadge = value.validated;
+    const showValidatedBadge = value.validated && !isLowQuality;
+    const showWarningBadge = isLowQuality;
     
     return (
       <div className="space-y-2">
-        <div className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2.5">
+        <div className={cn(
+          "rounded-lg border px-3 py-2.5",
+          isLowQuality 
+            ? "border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/50"
+            : "border-primary/30 bg-primary/5"
+        )}>
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-start gap-3">
-              <div className="mt-0.5 grid h-9 w-9 place-items-center rounded-md border border-primary/30 bg-background">
-                <MapPin className="h-4 w-4 text-primary" />
+              <div className={cn(
+                "mt-0.5 grid h-9 w-9 place-items-center rounded-md border bg-background",
+                isLowQuality ? "border-amber-300 dark:border-amber-700" : "border-primary/30"
+              )}>
+                {isLowQuality ? (
+                  <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                ) : (
+                  <MapPin className="h-4 w-4 text-primary" />
+                )}
               </div>
               <div>
                 <p className="text-sm font-medium text-foreground">
                   {value.formatted}
                 </p>
-                <div className="mt-1 flex items-center gap-3">
+                <div className="mt-1 flex flex-wrap items-center gap-2 sm:gap-3">
                   {showValidatedBadge && (
                     <span className="inline-flex items-center text-[10px] font-medium text-primary">
                       <CheckCircle2 className="w-3 h-3 mr-0.5" />
                       Verified
+                    </span>
+                  )}
+                  {showWarningBadge && (
+                    <span className="inline-flex items-center text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                      <AlertTriangle className="w-3 h-3 mr-0.5" />
+                      Needs review
                     </span>
                   )}
                   <button
@@ -835,7 +901,7 @@ function JobAddressSelector({
                     onClick={handleChange}
                     disabled={disabled}
                   >
-                    Change
+                    {isLowQuality ? "Edit address" : "Change"}
                   </button>
                   <button
                     type="button"
@@ -849,18 +915,32 @@ function JobAddressSelector({
                 </div>
               </div>
             </div>
-            <CheckCircle2 className="mt-1 h-5 w-5 text-primary" aria-hidden />
+            {!isLowQuality && (
+              <CheckCircle2 className="mt-1 h-5 w-5 text-primary" aria-hidden />
+            )}
           </div>
         </div>
         
         {/* Validation Warnings - compact inline display */}
         {validationWarnings.length > 0 && (
           <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-            <Navigation className="mt-0.5 h-3 w-3 shrink-0" />
-            <div>
+            <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+            <div className="flex-1">
               {validationWarnings.map((warning, i) => (
                 <p key={i}>{warning}</p>
               ))}
+              {isLowQuality && (
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    className="inline-flex items-center text-xs font-medium text-amber-700 dark:text-amber-300 underline underline-offset-2 hover:text-amber-900 dark:hover:text-amber-100"
+                    onClick={handleChange}
+                    disabled={disabled}
+                  >
+                    Edit address
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -880,11 +960,12 @@ function JobAddressSelector({
             value={inputValue}
             onChange={handleInputChange}
             onBlur={handleInputBlur}
+            onFocus={handleInputFocus}
             onKeyDown={handleKeyDown}
             placeholder="Start typing an address…"
             disabled={disabled || !isLoaded}
             className={cn(
-              "pr-10",
+              "pr-10 min-h-[44px]", // min-h-[44px] for large tap target on mobile
               validationError && "border-destructive focus-visible:ring-destructive"
             )}
             autoComplete="off"
