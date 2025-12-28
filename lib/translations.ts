@@ -299,7 +299,7 @@ export const translations = {
       signaturePlaceholder: "John Smith",
     },
     pricing: {
-      title: "Simple Pricing",
+      title: "Subscription",
       subtitle: "Get started with professional proposals",
       singleProposal: "Single Proposal",
       proposalPack: "Proposal Pack",
@@ -1055,7 +1055,7 @@ export const translations = {
       signaturePlaceholder: "Juan García",
     },
     pricing: {
-      title: "Precios Simples",
+      title: "Suscripción",
       subtitle: "Comience con propuestas profesionales",
       singleProposal: "Propuesta Individual",
       proposalPack: "Paquete de Propuestas",
