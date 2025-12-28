@@ -488,10 +488,24 @@ function JobAddressSelector({
   const trackingTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Load Google Maps API
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
   const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+    googleMapsApiKey: apiKey,
     libraries: GOOGLE_MAPS_LIBRARIES,
   });
+  
+  // Debug: Log API loading status
+  useEffect(() => {
+    if (!apiKey) {
+      console.warn("⚠️ NEXT_PUBLIC_GOOGLE_MAPS_API_KEY is not set - Places Autocomplete will not work");
+    }
+    if (loadError) {
+      console.error("❌ Google Maps failed to load:", loadError);
+    }
+    if (isLoaded) {
+      console.log("✅ Google Maps loaded successfully");
+    }
+  }, [apiKey, isLoaded, loadError]);
 
   // Get last address for this specific customer (per-customer scoped)
   const lastAddressForCustomer = customerId 
@@ -594,13 +608,20 @@ function JobAddressSelector({
   useEffect(() => {
     if (!isLoaded || !inputRef.current || autocompleteRef.current) return;
 
-    autocompleteRef.current = new google.maps.places.Autocomplete(inputRef.current, {
-      types: ["address"],
-      componentRestrictions: { country: "us" },
-      fields: ["place_id", "formatted_address", "geometry", "address_components"],
-    });
+    // Debug: Log autocomplete initialization
+    console.log("🔧 Initializing Places Autocomplete on input:", inputRef.current);
 
-    autocompleteRef.current.addListener("place_changed", async () => {
+    try {
+      autocompleteRef.current = new google.maps.places.Autocomplete(inputRef.current, {
+        types: ["address"],
+        componentRestrictions: { country: "us" },
+        fields: ["place_id", "formatted_address", "geometry", "address_components"],
+      });
+      
+      console.log("✅ Places Autocomplete initialized successfully");
+
+      autocompleteRef.current.addListener("place_changed", async () => {
+        console.log("📍 Place selected from autocomplete");
       const place = autocompleteRef.current?.getPlace();
       
       if (!place?.place_id || !place?.geometry?.location) {
@@ -645,6 +666,10 @@ function JobAddressSelector({
         }
       }
     });
+
+    } catch (err) {
+      console.error("❌ Failed to initialize Places Autocomplete:", err);
+    }
 
     return () => {
       if (autocompleteRef.current) {
@@ -913,8 +938,18 @@ function JobAddressSelector({
 
   if (loadError) {
     return (
-      <div className="text-sm text-destructive">
-        Maps failed to load. Please enter address manually.
+      <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+        <p className="font-medium">Maps failed to load</p>
+        <p className="text-xs mt-1">Please check that the Google Maps API key is configured and the Places API is enabled.</p>
+      </div>
+    );
+  }
+
+  if (!apiKey) {
+    return (
+      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+        <p className="font-medium">Address autocomplete unavailable</p>
+        <p className="text-xs mt-1">Google Maps API key not configured. Please enter address manually or contact support.</p>
       </div>
     );
   }

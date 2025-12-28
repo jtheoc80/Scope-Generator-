@@ -81,3 +81,83 @@
     padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
   }
 }
+
+/* Google Places Autocomplete Dropdown Styles */
+.pac-container {
+  z-index: 10000 !important;
+  background-color: hsl(0 0% 100%);
+  border-radius: 8px;
+  border: 1px solid hsl(215 20% 85%);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  font-family: var(--font-sans), "Inter", sans-serif;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.pac-item {
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  color: hsl(215 25% 20%);
+  border-top: 1px solid hsl(215 20% 90%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pac-item:first-child {
+  border-top: none;
+}
+
+.pac-item:hover,
+.pac-item.pac-item-selected {
+  background-color: hsl(210 20% 96%);
+}
+
+.pac-item-query {
+  font-weight: 500;
+  color: hsl(215 25% 15%);
+}
+
+.pac-matched {
+  font-weight: 600;
+  color: hsl(215 40% 30%);
+}
+
+.pac-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  background-size: contain;
+}
+
+/* Hide the Google logo if desired (optional - may violate ToS) */
+.pac-logo::after {
+  display: none;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .pac-container {
+    background-color: hsl(215 30% 15%);
+    border-color: hsl(215 30% 25%);
+  }
+  
+  .pac-item {
+    color: hsl(210 20% 90%);
+    border-color: hsl(215 30% 25%);
+  }
+  
+  .pac-item:hover,
+  .pac-item.pac-item-selected {
+    background-color: hsl(215 30% 20%);
+  }
+  
+  .pac-item-query {
+    color: hsl(210 20% 95%);
+  }
+  
+  .pac-matched {
+    color: hsl(35 90% 55%);
+  }
+}
