@@ -42,6 +42,9 @@ export interface ReverseGeocodeResult {
   components: AddressComponents;
   placeId: string;
   locationType: string;
+  types: string[];
+  lat: number;
+  lng: number;
 }
 
 /**
@@ -195,6 +198,9 @@ export async function POST(request: NextRequest) {
           components: addressComponents,
           placeId: result.place_id,
           locationType: result.geometry.location_type,
+          types: result.types,
+          lat: result.geometry.location.lat,
+          lng: result.geometry.location.lng,
         };
 
         return NextResponse.json({
@@ -206,6 +212,9 @@ export async function POST(request: NextRequest) {
             components: extractAddressComponents(r.address_components),
             placeId: r.place_id,
             locationType: r.geometry.location_type,
+            types: r.types,
+            lat: r.geometry.location.lat,
+            lng: r.geometry.location.lng,
           })),
         });
 

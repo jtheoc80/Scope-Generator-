@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useJsApiLoader } from "@react-google-maps/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +22,13 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Popover,
   PopoverContent,
@@ -62,11 +70,8 @@ import {
   saveCustomer,
   updateCustomerUsage,
   getCustomerById,
-  getRecentAddresses,
-  searchAddresses,
   saveAddress,
   updateAddressUsage,
-  getAddressById,
   getRecentJobTypes,
   addRecentJobType,
   getLastJobSetup,
@@ -75,8 +80,9 @@ import {
   JOB_TYPES,
   PRIMARY_JOB_TYPES,
   getJobTypeLabel,
+  getLastAddressForCustomer,
+  saveLastAddressForCustomer,
   SavedCustomer,
-  SavedAddress,
 } from "../lib/job-memory";
 import { cn } from "@/lib/utils";
 
@@ -414,209 +420,448 @@ function CustomerSelector({
   );
 }
 
-// Address selector with search
-function AddressSelector({
+// Libraries for Google Maps Places Autocomplete
+const GOOGLE_MAPS_LIBRARIES: ("places")[] = ["places"];
+
+// JobAddress type for strict address selection
+type JobAddress = {
+  placeId: string;
+  formatted: string;
+  lat: number;
+  lng: number;
+  source: "places" | "geolocation" | "last";
+  customerId?: number;
+  updatedAt: number;
+};
+
+// Location candidate from reverse geocoding
+type LocationCandidate = {
+  placeId: string;
+  formatted: string;
+  lat: number;
+  lng: number;
+  types: string[];
+  locationType: string;
+};
+
+// Validate that a JobAddress has all required fields
+function isValidJobAddress(address: Partial<JobAddress> | null): address is JobAddress {
+  if (!address) return false;
+  return (
+    typeof address.placeId === "string" &&
+    address.placeId.length > 0 &&
+    typeof address.formatted === "string" &&
+    address.formatted.length > 0 &&
+    typeof address.lat === "number" &&
+    !isNaN(address.lat) &&
+    typeof address.lng === "number" &&
+    !isNaN(address.lng)
+  );
+}
+
+// Job Address Selector with strict Places Autocomplete and high-accuracy geolocation
+function JobAddressSelector({
   value,
   customerId,
+  customerName,
   onChange,
   disabled,
   onRefresh,
 }: {
-  value: SavedAddress | null;
+  value: JobAddress | null;
   customerId?: number;
-  onChange: (address: SavedAddress | null) => void;
+  customerName?: string;
+  onChange: (address: JobAddress | null) => void;
   disabled?: boolean;
   onRefresh?: () => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
+  const [inputValue, setInputValue] = useState("");
+  const [validationError, setValidationError] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [locationProgress, setLocationProgress] = useState(0);
+  const [showCandidates, setShowCandidates] = useState(false);
+  const [candidates, setCandidates] = useState<LocationCandidate[]>([]);
+  const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null);
+  const [locationWarning, setLocationWarning] = useState<string | null>(null);
+  
   const inputRef = useRef<HTMLInputElement>(null);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const hasSelectedRef = useRef(false);
+  const watchIdRef = useRef<number | null>(null);
+  const trackingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Load Google Maps API
+  const { isLoaded, loadError } = useJsApiLoader({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+    libraries: GOOGLE_MAPS_LIBRARIES,
+  });
 
-  const addresses = search ? searchAddresses(search) : getRecentAddresses(5);
-  const lastAddress = getRecentAddresses(1)[0];
+  // Get last address for this specific customer
+  const lastAddressForCustomer = customerId 
+    ? getLastAddressForCustomer(customerId) 
+    : null;
 
-  // Handle changing the address - pre-populate search with current address for editing
-  const handleChangeAddress = useCallback(() => {
-    if (value) {
-      setSearch(value.formatted);
+  // Initialize Places Autocomplete
+  useEffect(() => {
+    if (!isLoaded || !inputRef.current || autocompleteRef.current) return;
+
+    autocompleteRef.current = new google.maps.places.Autocomplete(inputRef.current, {
+      types: ["address"],
+      componentRestrictions: { country: "us" },
+      fields: ["place_id", "formatted_address", "geometry", "address_components"],
+    });
+
+    autocompleteRef.current.addListener("place_changed", () => {
+      const place = autocompleteRef.current?.getPlace();
+      
+      if (!place?.place_id || !place?.geometry?.location) {
+        // User typed but didn't select from suggestions
+        setValidationError("Select an address from the list.");
+        return;
+      }
+
+      // Clear validation error and mark as selected
+      setValidationError(null);
+      hasSelectedRef.current = true;
+
+      const newAddress: JobAddress = {
+        placeId: place.place_id,
+        formatted: place.formatted_address || "",
+        lat: place.geometry.location.lat(),
+        lng: place.geometry.location.lng(),
+        source: "places",
+        customerId,
+        updatedAt: Date.now(),
+      };
+
+      onChange(newAddress);
+
+      // Save as last address for this customer
+      if (customerId) {
+        saveLastAddressForCustomer(customerId, {
+          id: -Date.now(),
+          formatted: newAddress.formatted,
+          placeId: newAddress.placeId,
+          lat: String(newAddress.lat),
+          lng: String(newAddress.lng),
+          customerId,
+        });
+      }
+    });
+
+    return () => {
+      if (autocompleteRef.current) {
+        google.maps.event.clearInstanceListeners(autocompleteRef.current);
+        autocompleteRef.current = null;
+      }
+    };
+  }, [isLoaded, customerId, onChange]);
+
+  // Handle input blur - validate that user selected from suggestions
+  const handleInputBlur = useCallback(() => {
+    if (inputValue.trim() && !hasSelectedRef.current && !value) {
+      setValidationError("Select an address from the list.");
     }
-    onChange(null);
-    // Focus the input after a brief delay to allow render
-    setTimeout(() => {
-      inputRef.current?.focus();
-      inputRef.current?.select();
-    }, 100);
-  }, [value, onChange]);
+  }, [inputValue, value]);
 
-  const handleUseLocation = async () => {
+  // Handle input change
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(e.target.value);
+    hasSelectedRef.current = false;
+    if (validationError) {
+      setValidationError(null);
+    }
+  }, [validationError]);
+
+  // Stop location tracking and cleanup
+  const stopLocationTracking = useCallback(() => {
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+    if (trackingTimerRef.current) {
+      clearTimeout(trackingTimerRef.current);
+      trackingTimerRef.current = null;
+    }
+    setIsLocating(false);
+    setLocationProgress(0);
+  }, []);
+
+  // Use current location with high-accuracy tracking
+  const handleUseLocation = useCallback(async () => {
     if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser");
+      setValidationError("Geolocation is not supported by your browser.");
       return;
     }
 
     setIsLocating(true);
-    try {
-      const position = await new Promise<GeolocationPosition>(
-        (resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: true,
-            timeout: 10000,
-          });
+    setLocationWarning(null);
+    setValidationError(null);
+    setLocationProgress(0);
+
+    let bestPosition: GeolocationCoordinates | null = null;
+    const startTime = Date.now();
+    const trackingDuration = 8000; // 8 seconds
+    const minAccuracy = 80; // meters
+
+    // Update progress
+    const progressInterval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      setLocationProgress(Math.min(100, (elapsed / trackingDuration) * 100));
+    }, 100);
+
+    // Start watching position
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (position) => {
+        // Keep the most accurate position
+        if (!bestPosition || position.coords.accuracy < bestPosition.accuracy) {
+          bestPosition = position.coords;
+          setLocationAccuracy(position.coords.accuracy);
         }
-      );
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        if (error.code === error.PERMISSION_DENIED) {
+          setValidationError("Location permission denied. Please enable location access.");
+          stopLocationTracking();
+          clearInterval(progressInterval);
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 8000,
+      }
+    );
 
-      const lat = position.coords.latitude;
-      const lng = position.coords.longitude;
+    // Stop after tracking duration and process results
+    trackingTimerRef.current = setTimeout(async () => {
+      clearInterval(progressInterval);
+      stopLocationTracking();
 
-      // Use reverse geocoding to get a human-readable address
-      const geocodeResult = await reverseGeocode(lat, lng);
-      
-      let formatted: string;
-      if (geocodeResult.success && geocodeResult.data) {
-        formatted = geocodeResult.data.formattedAddress;
-      } else {
-        // Fall back to coordinates if reverse geocoding fails
-        console.warn("Reverse geocoding failed, using coordinates:", geocodeResult.error);
-        formatted = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+      if (!bestPosition) {
+        setValidationError("Unable to get your location. Please enter address manually.");
+        return;
       }
 
-      setSaving(true);
-      const address = await saveAddress({
-        formatted,
-        customerId,
-        lat: lat.toString(),
-        lng: lng.toString(),
-      });
-      onChange(address);
-      setOpen(false);
-      onRefresh?.();
-    } catch (err) {
-      console.error("Geolocation error:", err);
-      alert("Unable to get your location. Please enter the address manually.");
-    } finally {
-      setIsLocating(false);
-      setSaving(false);
-    }
-  };
+      // Check accuracy
+      if (bestPosition.accuracy > minAccuracy) {
+        setLocationWarning(
+          `Location is approximate (~${Math.round(bestPosition.accuracy)}m). Type address instead for better accuracy.`
+        );
+      }
 
-  const handleManualAddress = async () => {
-    if (!search.trim()) return;
-    setSaving(true);
-    try {
-      const address = await saveAddress({
-        formatted: search.trim(),
+      // Reverse geocode the location
+      try {
+        const result = await reverseGeocode(bestPosition.latitude, bestPosition.longitude);
+        
+        if (!result.success || !result.allResults?.length) {
+          setValidationError("No address found for your location. Please enter manually.");
+          return;
+        }
+
+        // Filter results to prefer street_address, premise, subpremise
+        const preferredTypes = ["street_address", "premise", "subpremise"];
+        const sortedResults = [...result.allResults].sort((a, b) => {
+          const aPreferred = preferredTypes.some(t => a.types?.includes(t));
+          const bPreferred = preferredTypes.some(t => b.types?.includes(t));
+          if (aPreferred && !bPreferred) return -1;
+          if (!aPreferred && bPreferred) return 1;
+          return 0;
+        });
+
+        // Take top 3 candidates
+        const topCandidates: LocationCandidate[] = sortedResults.slice(0, 3).map(r => ({
+          placeId: r.placeId,
+          formatted: r.formattedAddress,
+          lat: r.lat,
+          lng: r.lng,
+          types: r.types || [],
+          locationType: r.locationType,
+        }));
+
+        setCandidates(topCandidates);
+        setShowCandidates(true);
+      } catch (err) {
+        console.error("Reverse geocoding error:", err);
+        setValidationError("Failed to find address. Please enter manually.");
+      }
+    }, trackingDuration);
+  }, [stopLocationTracking]);
+
+  // Handle candidate selection from dialog
+  const handleSelectCandidate = useCallback(async (candidate: LocationCandidate) => {
+    setShowCandidates(false);
+    setCandidates([]);
+    setLocationWarning(null);
+
+    const newAddress: JobAddress = {
+      placeId: candidate.placeId,
+      formatted: candidate.formatted,
+      lat: candidate.lat,
+      lng: candidate.lng,
+      source: "geolocation",
+      customerId,
+      updatedAt: Date.now(),
+    };
+
+    onChange(newAddress);
+
+    // Save as last address for this customer
+    if (customerId) {
+      await saveAddress({
+        formatted: newAddress.formatted,
+        placeId: newAddress.placeId,
+        lat: String(newAddress.lat),
+        lng: String(newAddress.lng),
         customerId,
       });
-      onChange(address);
-      setOpen(false);
-      setSearch("");
       onRefresh?.();
-    } catch (e) {
-      console.error("Failed to save address:", e);
-    } finally {
-      setSaving(false);
     }
-  };
+  }, [customerId, onChange, onRefresh]);
 
-  if (value) {
+  // Handle using last address for customer
+  const handleUseLastAddress = useCallback(async () => {
+    if (!lastAddressForCustomer || !customerId) return;
+
+    const newAddress: JobAddress = {
+      placeId: lastAddressForCustomer.placeId || "",
+      formatted: lastAddressForCustomer.formatted,
+      lat: parseFloat(lastAddressForCustomer.lat || "0"),
+      lng: parseFloat(lastAddressForCustomer.lng || "0"),
+      source: "last",
+      customerId,
+      updatedAt: Date.now(),
+    };
+
+    // Only use if valid
+    if (isValidJobAddress(newAddress)) {
+      onChange(newAddress);
+      await updateAddressUsage(lastAddressForCustomer.id);
+    } else {
+      setValidationError("Last address is incomplete. Please select a new address.");
+    }
+  }, [lastAddressForCustomer, customerId, onChange]);
+
+  // Handle clear address
+  const handleClear = useCallback(() => {
+    onChange(null);
+    setInputValue("");
+    setValidationError(null);
+    hasSelectedRef.current = false;
+    setTimeout(() => inputRef.current?.focus(), 100);
+  }, [onChange]);
+
+  // Handle change address
+  const handleChange = useCallback(() => {
+    onChange(null);
+    setInputValue(value?.formatted || "");
+    setValidationError(null);
+    hasSelectedRef.current = false;
+    setTimeout(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }, 100);
+  }, [onChange, value]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopLocationTracking();
+    };
+  }, [stopLocationTracking]);
+
+  if (loadError) {
     return (
-      <div className="rounded-lg border border-border bg-card px-3 py-2.5">
+      <div className="text-sm text-destructive">
+        Maps failed to load. Please enter address manually.
+      </div>
+    );
+  }
+
+  // SELECTED STATE: Show the selected address with change/clear actions
+  if (value && isValidJobAddress(value)) {
+    return (
+      <div className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2.5">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-start gap-3">
-            <div className="mt-0.5 grid h-9 w-9 place-items-center rounded-md border bg-background">
-              <MapPin className="h-4 w-4 text-muted-foreground" />
+            <div className="mt-0.5 grid h-9 w-9 place-items-center rounded-md border border-primary/30 bg-background">
+              <MapPin className="h-4 w-4 text-primary" />
             </div>
             <div>
               <p className="text-sm font-medium text-foreground">
                 {value.formatted}
               </p>
-              <button
-                type="button"
-                className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 underline underline-offset-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
-                onClick={handleChangeAddress}
-                disabled={disabled}
-              >
-                Change address
-              </button>
+              <div className="mt-1 flex items-center gap-3">
+                <button
+                  type="button"
+                  className="inline-flex items-center text-xs font-medium text-primary hover:text-primary/80 underline underline-offset-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
+                  onClick={handleChange}
+                  disabled={disabled}
+                >
+                  Change address
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex items-center text-xs font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
+                  onClick={handleClear}
+                  disabled={disabled}
+                >
+                  <X className="w-3 h-3 mr-1" />
+                  Clear
+                </button>
+              </div>
             </div>
           </div>
-          <CheckCircle2 className="mt-1 h-4 w-4 text-primary" aria-hidden />
+          <CheckCircle2 className="mt-1 h-5 w-5 text-primary" aria-hidden />
         </div>
       </div>
     );
   }
 
+  // NOT SELECTED STATE: Show autocomplete input and quick actions
   return (
-    <div className="space-y-2">
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <div className="relative">
-            <Input
-              ref={inputRef}
-              id="address-combobox"
-              role="combobox"
-              aria-expanded={open}
-              aria-controls="address-command-list"
-              placeholder="Start typing an address…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onFocus={() => setOpen(true)}
-              disabled={disabled}
-              className="pr-10"
-            />
-            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" aria-hidden />
-          </div>
-        </PopoverTrigger>
-        <PopoverContent className="w-[calc(100vw-2rem)] sm:w-[400px] max-w-md p-0" align="start">
-          <Command>
-            <CommandList id="address-command-list">
-              {addresses.length === 0 && search && (
-                <div className="p-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={handleManualAddress}
-                    disabled={saving}
-                  >
-                    {saving ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Plus className="w-4 h-4 mr-2" />
-                    )}
-                    Use &quot;{search}&quot;
-                  </Button>
-                </div>
-              )}
-              {addresses.length > 0 && (
-                <CommandGroup heading="Recent Addresses">
-                  {addresses.map((address) => (
-                    <CommandItem
-                      key={address.id}
-                      value={address.formatted}
-                      onSelect={async () => {
-                        await updateAddressUsage(address.id);
-                        onChange(address);
-                        setOpen(false);
-                      }}
-                      className="flex items-center gap-3 py-2"
-                    >
-                      <MapPin className="w-4 h-4 text-slate-400" />
-                      <span className="flex-1 text-sm">{address.formatted}</span>
-                      <History className="w-3 h-3 text-slate-400" />
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+    <div className="space-y-3">
+      {/* Autocomplete Input */}
+      <div className="space-y-1">
+        <div className="relative">
+          <Input
+            ref={inputRef}
+            id="job-address-input"
+            value={inputValue}
+            onChange={handleInputChange}
+            onBlur={handleInputBlur}
+            placeholder="Start typing an address…"
+            disabled={disabled || !isLoaded}
+            className={cn(
+              "pr-10",
+              validationError && "border-destructive focus-visible:ring-destructive"
+            )}
+            autoComplete="off"
+          />
+          {!isLoaded && (
+            <Loader2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+          )}
+        </div>
+        {validationError && (
+          <p className="text-xs text-destructive">{validationError}</p>
+        )}
+        {!validationError && (
+          <p className="text-xs text-muted-foreground">
+            Select an address from the suggestions
+          </p>
+        )}
+      </div>
 
-      {/* Quick actions */}
+      {/* Location Warning */}
+      {locationWarning && (
+        <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+          <Navigation className="mt-0.5 h-3 w-3 shrink-0" />
+          <p>{locationWarning}</p>
+        </div>
+      )}
+
+      {/* Quick Actions */}
       <div className="flex flex-col gap-2 sm:flex-row">
         <Button
           type="button"
@@ -624,33 +869,162 @@ function AddressSelector({
           size="sm"
           className="flex-1"
           onClick={handleUseLocation}
-          disabled={disabled || isLocating || saving}
+          disabled={disabled || isLocating || !isLoaded}
         >
           {isLocating ? (
-            <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+            <>
+              <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+              Locating… {Math.round(locationProgress)}%
+            </>
           ) : (
-            <Navigation className="w-3 h-3 mr-1.5" />
+            <>
+              <Navigation className="w-3 h-3 mr-1.5" />
+              Use current location
+            </>
           )}
-          Use current location
         </Button>
-        {lastAddress && (
+        
+        {lastAddressForCustomer && customerId && (
           <Button
             type="button"
             variant="outline"
             size="sm"
             className="flex-1"
-            onClick={async () => {
-              await updateAddressUsage(lastAddress.id);
-              onChange(lastAddress);
-            }}
+            onClick={handleUseLastAddress}
             disabled={disabled}
           >
             <History className="w-3 h-3 mr-1.5" />
-            Use last address
+            Last for {customerName || "customer"}
           </Button>
         )}
       </div>
+
+      {/* Location Candidates Dialog */}
+      <LocationCandidatesDialog
+        open={showCandidates}
+        onOpenChange={setShowCandidates}
+        candidates={candidates}
+        onSelect={handleSelectCandidate}
+        accuracy={locationAccuracy || undefined}
+      />
     </div>
+  );
+}
+
+// Location Candidates Dialog Component
+function LocationCandidatesDialog({
+  open,
+  onOpenChange,
+  candidates,
+  onSelect,
+  accuracy,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  candidates: LocationCandidate[];
+  onSelect: (candidate: LocationCandidate) => void;
+  accuracy?: number;
+}) {
+  const hasLowAccuracy = accuracy && accuracy > 80;
+  const preferredTypes = ["street_address", "premise", "subpremise"];
+
+  const isPreciseType = (types: string[]) => 
+    types.some(t => preferredTypes.includes(t));
+
+  const getTypeLabel = (types: string[]) => {
+    if (types.includes("street_address")) return "Street address";
+    if (types.includes("premise")) return "Building";
+    if (types.includes("subpremise")) return "Unit/Suite";
+    if (types.includes("route")) return "Street";
+    return "Location";
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <MapPin className="h-5 w-5 text-primary" />
+            Confirm Your Location
+          </DialogTitle>
+          <DialogDescription>
+            Select the address that best matches your job site.
+          </DialogDescription>
+        </DialogHeader>
+
+        {hasLowAccuracy && (
+          <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+            <Navigation className="mt-0.5 h-4 w-4 shrink-0" />
+            <p>
+              Location accuracy is approximate (~{Math.round(accuracy!)}m).
+              Consider typing the address for better precision.
+            </p>
+          </div>
+        )}
+
+        {candidates.length === 0 ? (
+          <div className="py-6 text-center text-sm text-muted-foreground">
+            No addresses found for this location.
+            <br />
+            Please type the address manually.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {candidates.map((candidate, index) => {
+              const isPrecise = isPreciseType(candidate.types);
+              const typeLabel = getTypeLabel(candidate.types);
+
+              return (
+                <button
+                  key={candidate.placeId || index}
+                  type="button"
+                  onClick={() => onSelect(candidate)}
+                  className={cn(
+                    "flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors",
+                    "hover:border-primary/40 hover:bg-primary/5",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  )}
+                >
+                  <div className={cn(
+                    "mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-md border",
+                    isPrecise ? "border-primary/30 bg-primary/10" : "bg-background"
+                  )}>
+                    {isPrecise ? (
+                      <CheckCircle2 className="h-4 w-4 text-primary" />
+                    ) : (
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium leading-tight text-foreground">
+                      {candidate.formatted}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {typeLabel}
+                      {isPrecise && (
+                        <span className="ml-2 inline-flex items-center rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                          Recommended
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="flex justify-end border-t pt-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
+            Cancel
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -658,7 +1032,8 @@ export default function CreateJobPage() {
   const router = useRouter();
   const [jobType, setJobType] = useState("bathroom-remodel");
   const [selectedCustomer, setSelectedCustomer] = useState<SavedCustomer | null>(null);
-  const [selectedAddress, setSelectedAddress] = useState<SavedAddress | null>(null);
+  // JobAddress is the single source of truth - never auto-populated
+  const [selectedAddress, setSelectedAddress] = useState<JobAddress | null>(null);
   const [templateCode, setTemplateCode] = useState("");
   const [internalNotes, setInternalNotes] = useState("");
   const [busy, setBusy] = useState(false);
@@ -669,6 +1044,7 @@ export default function CreateJobPage() {
   const [, forceUpdate] = useState(0);
 
   // Load saved state on mount and sync with backend
+  // IMPORTANT: Do NOT auto-populate address - user must explicitly select
   useEffect(() => {
     const initializeData = async () => {
       // First, load from localStorage for instant display
@@ -677,15 +1053,14 @@ export default function CreateJobPage() {
       setRecentJobTypes(recent);
 
       if (lastSetup) {
+        // Only restore job type and customer, NOT address
         setJobType(lastSetup.jobType);
         if (lastSetup.customerId) {
           const customer = getCustomerById(lastSetup.customerId);
           if (customer) setSelectedCustomer(customer);
         }
-        if (lastSetup.addressId) {
-          const address = getAddressById(lastSetup.addressId);
-          if (address) setSelectedAddress(address);
-        }
+        // DO NOT restore address - must be explicitly selected by user
+        // This was the root cause of the 1/10 accuracy issue
       } else if (recent.length > 0) {
         setJobType(recent[0]);
       }
@@ -710,6 +1085,14 @@ export default function CreateJobPage() {
     initializeData();
   }, []);
 
+  // Clear address when customer changes (unless explicitly re-selected)
+  const handleCustomerChange = useCallback((customer: SavedCustomer | null) => {
+    setSelectedCustomer(customer);
+    // Clear the current address when customer changes
+    // User must explicitly click "Use last address for <customer>" if they want to reuse
+    setSelectedAddress(null);
+  }, []);
+
   const handleRefresh = () => {
     forceUpdate((n) => n + 1);
     setRecentJobTypes(getRecentJobTypes(3));
@@ -717,6 +1100,13 @@ export default function CreateJobPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate address - must have placeId and lat/lng
+    if (!selectedAddress || !isValidJobAddress(selectedAddress)) {
+      setError("Please select a valid address from the suggestions.");
+      return;
+    }
+    
     setBusy(true);
     setError(null);
 
@@ -725,7 +1115,7 @@ export default function CreateJobPage() {
     saveLastJobSetup({
       jobType,
       customerId: selectedCustomer?.id,
-      addressId: selectedAddress?.id,
+      // Don't save addressId - user should explicitly select each time
     });
 
     try {
@@ -736,7 +1126,11 @@ export default function CreateJobPage() {
         body: JSON.stringify({
           jobType: /^\d+$/.test(finalJobType) ? Number(finalJobType) : finalJobType,
           customer: selectedCustomer?.name || "Customer",
-          address: selectedAddress?.formatted || "Address TBD",
+          address: selectedAddress.formatted,
+          // Include lat/lng and placeId for accurate job location
+          lat: selectedAddress.lat,
+          lng: selectedAddress.lng,
+          placeId: selectedAddress.placeId,
           notes: internalNotes.trim() || undefined,
         }),
       });
@@ -893,23 +1287,24 @@ export default function CreateJobPage() {
                 </Label>
                 <CustomerSelector
                   value={selectedCustomer}
-                  onChange={setSelectedCustomer}
+                  onChange={handleCustomerChange}
                   disabled={busy}
                   onRefresh={handleRefresh}
                 />
               </CardContent>
             </Card>
 
-            {/* Address */}
+            {/* Address - Uses strict JobAddress with Places Autocomplete */}
             <Card className="rounded-lg border-border shadow-sm">
               <CardContent className="p-4 lg:p-6 space-y-3">
-                <Label htmlFor="address-combobox" className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Label htmlFor="job-address-input" className="text-sm font-medium text-foreground flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-muted-foreground" aria-hidden />
                   Job Address
                 </Label>
-                <AddressSelector
+                <JobAddressSelector
                   value={selectedAddress}
                   customerId={selectedCustomer?.id}
+                  customerName={selectedCustomer?.name}
                   onChange={setSelectedAddress}
                   disabled={busy}
                   onRefresh={handleRefresh}
