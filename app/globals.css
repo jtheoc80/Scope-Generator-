@@ -93,6 +93,9 @@
   border: 1px solid hsl(215 20% 85%);
   margin-top: 4px;
   font-family: var(--font-sans), "Inter", sans-serif;
+  box-sizing: border-box;
+  max-width: calc(100vw - 2rem) !important; /* prevent horizontal overflow on mobile */
+  overflow-x: hidden;
   /* Ensure visibility */
   display: block;
   visibility: visible !important;
@@ -113,6 +116,8 @@
   line-height: 1.4;
   color: hsl(215 25% 20%);
   background-color: hsl(0 0% 100%);
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .pac-item:first-child {
