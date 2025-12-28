@@ -164,6 +164,8 @@ export const translations = {
       deleteDraft: "Delete Draft",
       deleteDraftConfirm: "Are you sure you want to delete this draft? This action cannot be undone.",
       draftDeleted: "Draft deleted successfully",
+      draftDeletedDescription: "The draft proposal has been permanently removed.",
+      onlyDraftsCanBeDeleted: "Only drafts can be deleted",
       draft: "Draft",
       sent: "Sent",
       won: "Won",
@@ -287,6 +289,20 @@ export const translations = {
       failedToAccept: "Failed to accept proposal",
       proposalNotFound: "Proposal not found",
       signaturePlaceholder: "John Smith",
+      deleteDraft: {
+        signInRequired: "Please sign in to delete proposals.",
+        onlyDraftsDeletable: "Only draft proposals can be deleted.",
+        genericError: "Failed to delete draft. Please try again.",
+        networkError: "Network error. Please try again.",
+      },
+    },
+    proposals: {
+      deleteDraft: {
+        signInRequired: "Please sign in to delete proposals.",
+        onlyDraftsDeletable: "Only draft proposals can be deleted.",
+        genericError: "Failed to delete draft. Please try again.",
+        networkError: "Network error. Please try again.",
+      },
     },
     pricing: {
       title: "Simple Pricing",
@@ -910,6 +926,8 @@ export const translations = {
       deleteDraft: "Eliminar Borrador",
       deleteDraftConfirm: "¿Está seguro de que desea eliminar este borrador? Esta acción no se puede deshacer.",
       draftDeleted: "Borrador eliminado con éxito",
+      draftDeletedDescription: "El borrador de propuesta ha sido eliminado permanentemente.",
+      onlyDraftsCanBeDeleted: "Solo los borradores pueden ser eliminados",
       draft: "Borrador",
       sent: "Enviado",
       won: "Ganado",
@@ -1033,6 +1051,20 @@ export const translations = {
       failedToAccept: "Error al aceptar la propuesta",
       proposalNotFound: "Propuesta no encontrada",
       signaturePlaceholder: "Juan García",
+      deleteDraft: {
+        signInRequired: "Por favor inicie sesión para eliminar propuestas.",
+        onlyDraftsDeletable: "Solo los borradores pueden ser eliminados.",
+        genericError: "Error al eliminar el borrador. Por favor intente de nuevo.",
+        networkError: "Error de red. Por favor intente de nuevo.",
+      },
+    },
+    proposals: {
+      deleteDraft: {
+        signInRequired: "Por favor inicie sesión para eliminar propuestas.",
+        onlyDraftsDeletable: "Solo los borradores pueden ser eliminados.",
+        genericError: "Error al eliminar el borrador. Por favor intente de nuevo.",
+        networkError: "Error de red. Por favor intente de nuevo.",
+      },
     },
     pricing: {
       title: "Precios Simples",
