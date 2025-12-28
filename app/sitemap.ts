@@ -7,6 +7,7 @@ import {
   getChangeFrequency,
   shouldIndex 
 } from '@/lib/seo';
+import { getTradeKeys, cityKeys, tradeSupportsCities } from '@/lib/trade-data';
 
 /**
  * Sitemap Generation
@@ -35,6 +36,29 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }));
 
+  // Trade-specific landing pages
+  const tradePages: MetadataRoute.Sitemap = getTradeKeys().map((tradeSlug) => ({
+    url: `${baseUrl}/for/${tradeSlug}`,
+    lastModified: currentDate,
+    changeFrequency: 'monthly' as const,
+    priority: 0.8,
+  }));
+
+  // City-specific trade landing pages
+  const cityTradePages: MetadataRoute.Sitemap = [];
+  for (const tradeSlug of getTradeKeys()) {
+    if (tradeSupportsCities(tradeSlug)) {
+      for (const citySlug of cityKeys) {
+        cityTradePages.push({
+          url: `${baseUrl}/for/${tradeSlug}/${citySlug}`,
+          lastModified: currentDate,
+          changeFrequency: 'monthly' as const,
+          priority: 0.7,
+        });
+      }
+    }
+  }
+
   // Combine and deduplicate (prefer configured pages)
   const allPaths = new Set<string>();
   const result: MetadataRoute.Sitemap = [];
@@ -47,6 +71,22 @@ export default function sitemap(): MetadataRoute.Sitemap {
   
   // Add blog posts (avoid duplicates)
   for (const page of blogPostPages) {
+    if (!allPaths.has(page.url)) {
+      allPaths.add(page.url);
+      result.push(page);
+    }
+  }
+
+  // Add trade pages
+  for (const page of tradePages) {
+    if (!allPaths.has(page.url)) {
+      allPaths.add(page.url);
+      result.push(page);
+    }
+  }
+
+  // Add city-specific trade pages
+  for (const page of cityTradePages) {
     if (!allPaths.has(page.url)) {
       allPaths.add(page.url);
       result.push(page);
