@@ -28,6 +28,7 @@ The QA Agent validates these flows that **must never break**:
 4. **Add Photos** - Photo upload and management
 5. **Email PDF** - Sending proposals via email
 6. **Checkout** - Stripe payment flow
+7. **Delete Draft** - Draft proposal deletion with confirmation
 
 ## Project Structure
 
@@ -54,7 +55,8 @@ tests/
 │   ├── smoke.proposal-create.spec.ts
 │   ├── smoke.proposal-photos.spec.ts
 │   ├── smoke.email-pdf.spec.ts
-│   └── smoke.checkout.spec.ts
+│   ├── smoke.checkout.spec.ts
+│   └── smoke.delete-draft.spec.ts
 └── fixtures/
     └── images/         # Test fixture images
 ```

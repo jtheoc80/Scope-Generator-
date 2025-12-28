@@ -241,3 +241,94 @@ export async function viewPublicProposal(page: Page, token: string): Promise<boo
   const proposalContent = page.locator('.proposal-preview, [data-testid="proposal-content"]');
   return await proposalContent.isVisible();
 }
+
+/**
+ * Open delete draft dialog from dashboard.
+ */
+export async function openDeleteDialog(page: Page, proposalId: number): Promise<void> {
+  await page.goto('/dashboard');
+  await page.waitForLoadState('networkidle');
+  
+  // Try desktop view first
+  const desktopDeleteButton = page.locator(`[data-testid="button-delete-draft-${proposalId}"]`);
+  
+  if (await desktopDeleteButton.isVisible()) {
+    await desktopDeleteButton.click();
+  } else {
+    // Try mobile view - check if it's visible before clicking
+    const mobileDeleteButton = page.locator(`[data-testid="menu-delete-${proposalId}"]`);
+    await expect(mobileDeleteButton).toBeVisible({ timeout: 5000 });
+    await mobileDeleteButton.click();
+  }
+  
+  // Wait for dialog to appear
+  await expect(page.locator('text=Delete draft?')).toBeVisible({ timeout: 5000 });
+}
+
+/**
+ * Delete a draft proposal through the UI.
+ * Returns true if deletion was successful, false otherwise.
+ */
+export async function deleteDraftProposal(page: Page, proposalId: number): Promise<boolean> {
+  await openDeleteDialog(page, proposalId);
+  
+  // Click the delete button in the dialog
+  const deleteButton = page.locator('button:has-text("Delete")').last();
+  await deleteButton.click();
+  
+  // Wait for success toast or UI update
+  await page.waitForTimeout(2000);
+  
+  // Verify the proposal is no longer in the list
+  const proposalRow = page.locator(`[data-testid="row-proposal-${proposalId}"], [data-testid="card-proposal-mobile-${proposalId}"]`);
+  return !(await proposalRow.isVisible());
+}
+
+/**
+ * Check if delete button is visible for a proposal.
+ */
+export async function isDeleteButtonVisible(page: Page, proposalId: number): Promise<boolean> {
+  await page.goto('/dashboard');
+  await page.waitForLoadState('networkidle');
+  
+  // Check desktop view
+  const desktopDeleteButton = page.locator(`[data-testid="button-delete-draft-${proposalId}"]`);
+  if (await desktopDeleteButton.isVisible()) {
+    return true;
+  }
+  
+  // Check mobile menu
+  const mobileMenuButton = page.locator(`[data-testid="menu-delete-${proposalId}"]`);
+  return await mobileMenuButton.isVisible();
+}
+
+/**
+ * Check if delete button is disabled for a proposal.
+ */
+export async function isDeleteButtonDisabled(page: Page, proposalId: number): Promise<boolean> {
+  await page.goto('/dashboard');
+  await page.waitForLoadState('networkidle');
+  
+  // Try to find the dropdown menu trigger for the proposal
+  const menuTrigger = page.locator(`[data-testid="row-proposal-${proposalId}"] button[data-testid*="menu"], [data-testid="card-proposal-mobile-${proposalId}"] button`).last();
+  
+  if (await menuTrigger.isVisible()) {
+    await menuTrigger.click();
+    await page.waitForTimeout(500);
+    
+    // Check if delete menu item is disabled
+    const deleteMenuItem = page.locator('[data-testid*="menu-delete"]').or(page.locator('text="Delete draft"')).first();
+    
+    if (await deleteMenuItem.isVisible()) {
+      const isDisabled = await deleteMenuItem.getAttribute('data-disabled');
+      const ariaDisabled = await deleteMenuItem.getAttribute('aria-disabled');
+      
+      // Close the menu
+      await page.keyboard.press('Escape');
+      
+      return isDisabled === 'true' || ariaDisabled === 'true';
+    }
+  }
+  
+  return false;
+}
