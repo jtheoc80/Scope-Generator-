@@ -401,7 +401,7 @@ function MobileProposalMenu({
                 </div>
               </TooltipTrigger>
               <TooltipContent side="left">
-                <p>Only drafts can be deleted</p>
+                <p>{t.dashboard.onlyDraftsCanBeDeleted}</p>
               </TooltipContent>
             </Tooltip>
           )}
