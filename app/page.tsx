@@ -533,6 +533,50 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Trade-Specific Landing Pages Section */}
+      <section className="py-16 sm:py-20 bg-white border-t border-slate-100">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl sm:text-3xl font-heading font-bold text-slate-900 mb-4">
+              Proposal Templates for Every Trade
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              ScopeGen offers specialized proposal templates for 17+ contractor trades. Find the perfect templates for your business.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 max-w-5xl mx-auto">
+            {[
+              { slug: "bathroom-remodeling", name: "Bathroom", icon: Bath },
+              { slug: "kitchen-remodeling", name: "Kitchen", icon: ChefHat },
+              { slug: "roofing", name: "Roofing", icon: HomeIcon },
+              { slug: "hvac", name: "HVAC", icon: Thermometer },
+              { slug: "plumbing", name: "Plumbing", icon: Wrench },
+              { slug: "electrical", name: "Electrical", icon: Plug },
+              { slug: "painting", name: "Painting", icon: Paintbrush },
+              { slug: "landscaping", name: "Landscaping", icon: TreePine },
+              { slug: "flooring", name: "Flooring", icon: FileCheck },
+              { slug: "concrete", name: "Concrete", icon: FileCheck },
+              { slug: "deck-building", name: "Decks", icon: FileCheck },
+              { slug: "fence-installation", name: "Fencing", icon: FileCheck },
+            ].map((trade) => (
+              <Link
+                key={trade.slug}
+                href={`/for/${trade.slug}`}
+                className="flex flex-col items-center gap-2 p-4 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 hover:border-primary/30 transition-all group"
+              >
+                <trade.icon className="w-8 h-8 text-slate-400 group-hover:text-primary transition-colors" />
+                <span className="text-sm font-medium text-slate-700 group-hover:text-primary transition-colors">{trade.name}</span>
+              </Link>
+            ))}
+          </div>
+          <div className="text-center mt-8">
+            <p className="text-sm text-muted-foreground">
+              Plus: Siding, Drywall, Windows, Tile, Cabinets, and more...
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* How ScopeGen Works - Enhanced */}
       <section id="how-it-works" className="py-20 sm:py-28 bg-slate-900" data-testid="section-how-it-works">
         <div className="max-w-[95vw] xl:max-w-[90vw] 2xl:max-w-[85vw] mx-auto px-4 sm:px-8">

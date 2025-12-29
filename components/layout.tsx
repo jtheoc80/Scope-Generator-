@@ -232,7 +232,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </main>
 
       <footer className="bg-slate-900 text-slate-400 py-12 border-t border-slate-800">
-        <div className="container mx-auto px-4 grid grid-cols-2 md:grid-cols-5 gap-8">
+        <div className="container mx-auto px-4 grid grid-cols-2 md:grid-cols-6 gap-8">
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-2 mb-4">
               <Hammer className="w-5 h-5 text-secondary" />
@@ -248,6 +248,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <ul className="space-y-2 text-sm">
               <li><Link href="/#pricing" className="hover:text-white">{t.pricing.title}</Link></li>
               <li><Link href="/app" className="hover:text-white">{t.nav.generator}</Link></li>
+            </ul>
+          </div>
+
+          <div className="col-span-2 md:col-span-1">
+            <h4 className="text-white font-bold mb-4">By Trade</h4>
+            <ul className="space-y-2 text-sm">
+              <li><Link href="/for/bathroom-remodeling" className="hover:text-white">Bathroom Remodeling</Link></li>
+              <li><Link href="/for/kitchen-remodeling" className="hover:text-white">Kitchen Remodeling</Link></li>
+              <li><Link href="/for/roofing" className="hover:text-white">Roofing</Link></li>
+              <li><Link href="/for/hvac" className="hover:text-white">HVAC</Link></li>
+              <li><Link href="/for/plumbing" className="hover:text-white">Plumbing</Link></li>
+              <li><Link href="/for/electrical" className="hover:text-white">Electrical</Link></li>
             </ul>
           </div>
 
