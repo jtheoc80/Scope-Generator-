@@ -5,6 +5,7 @@ import {
 } from "@clerk/nextjs";
 import { isClerkConfigured } from "@/lib/authUtils";
 import { VercelAnalytics } from "@/components/VercelAnalytics";
+import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import { Providers } from "@/components/providers";
 import { OrganizationJsonLd } from "@/components/JsonLd";
 import "./globals.css";
@@ -90,6 +91,7 @@ export default function RootLayout({
           {children}
         </Providers>
         <VercelAnalytics />
+        <GoogleAnalytics />
       </body>
     </html>
   );
