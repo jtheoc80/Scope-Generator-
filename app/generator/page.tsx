@@ -298,7 +298,6 @@ function TradeParamHandler({
   return null;
 }
 
-export default function Generator() {
 function GeneratorContent() {
   const [step, setStep] = useState<1 | 2>(1);
   const [services, setServices] = useState<ServiceItem[]>([
@@ -1784,9 +1783,8 @@ function GeneratorContent() {
                      </div>
                   </div>
                 )}
+
               </div>
-                 </div>
-               )}
 
               {/* Mobile Preview Drawer */}
               <ProposalPreviewPane
