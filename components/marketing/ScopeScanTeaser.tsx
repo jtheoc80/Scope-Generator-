@@ -170,8 +170,8 @@ export function ScopeScanTeaser() {
                     <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-100 shadow-sm">
                       <div className="relative aspect-[4/3]">
                         <SafeImage
-                          src="/images/scopescan/hero.jpg"
-                          alt="Contractor discussing an estimate with a homeowner on-site"
+                          src="/images/scopescan/hero/hero-exterior.jpg"
+                          alt="Roof repair crew working on a house exterior"
                           sizes="(max-width: 1024px) 100vw, 560px"
                           priority
                         />
@@ -184,19 +184,19 @@ export function ScopeScanTeaser() {
 
                     <div className="grid grid-cols-3 gap-3 sm:gap-4">
                       <PhotoTile
-                        src="/images/scopescan/bathroom.jpg"
-                        alt="Bathroom remodel photo"
+                        src="/images/scopescan/hero/tile-bathroom.jpg"
+                        alt="Dated bathroom vanity before remodel"
                         label="Bathroom Remodel"
                       />
                       <PhotoTile
-                        src="/images/scopescan/kitchen.jpg"
-                        alt="Kitchen renovation photo"
+                        src="/images/scopescan/hero/tile-kitchen.jpg"
+                        alt="Kitchen during demolition phase"
                         label="Kitchen Reno"
                       />
                       <PhotoTile
-                        src="/images/scopescan/roof.jpg"
-                        alt="Roof replacement photo"
-                        label="Roof Replacement"
+                        src="/images/scopescan/hero/tile-exterior.jpg"
+                        alt="House exterior siding damage needing repair"
+                        label="Exterior Repair"
                       />
                     </div>
                   </div>
