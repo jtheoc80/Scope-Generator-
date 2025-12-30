@@ -2,19 +2,29 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Layout from "@/components/layout";
-import { getTradeDefinition, tradeDefinitions, type TradeKey } from "@/lib/trades/tradeDefinitions";
+import {
+  getTradeDefinition,
+  tradeDefinitions,
+  type TradeKey,
+} from "@/lib/trades/tradeDefinitions";
 import { ArrowRight, CheckCircle2, PlusCircle } from "lucide-react";
 
 interface PageProps {
   params: Promise<{ trade: string }>;
 }
 
-export async function generateStaticParams(): Promise<Array<{ trade: TradeKey }>> {
-  return (Object.keys(tradeDefinitions) as TradeKey[]).map((trade) => ({ trade }));
+export async function generateStaticParams(): Promise<
+  Array<{ trade: TradeKey }>
+> {
+  return (Object.keys(tradeDefinitions) as TradeKey[]).map((trade) => ({
+    trade,
+  }));
 }
 
 // Generate metadata for SEO
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { trade: tradeParam } = await params;
   const def = getTradeDefinition(tradeParam);
 
@@ -97,6 +107,7 @@ export default async function TradePage({ params }: PageProps) {
       </section>
 
       {/* What's included */}
+      <section id="included" className="py-14 bg-background">
       <section id="included" className="py-14 bg-card">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
@@ -104,12 +115,16 @@ export default async function TradePage({ params }: PageProps) {
               What&apos;s included for {def.name.toLowerCase()}
             </h2>
             <p className="text-muted-foreground mb-8">
-              Trade-specific defaults help you start in the right place — and keep your scope consistent.
+              Trade-specific defaults help you start in the right place — and
+              keep your scope consistent.
             </p>
 
             <div className="grid md:grid-cols-2 gap-4">
               {def.whatsIncluded.map((item) => (
-                <div key={item} className="bg-accent rounded-lg p-5 border border-border flex gap-3">
+                <div
+                  key={item}
+                  className="bg-accent rounded-lg p-5 border border-border flex gap-3"
+                >
                   <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
                   <div className="text-card-foreground">{item}</div>
                 </div>
@@ -127,12 +142,16 @@ export default async function TradePage({ params }: PageProps) {
               Common add-ons
             </h2>
             <p className="text-muted-foreground mb-8">
-              Add-ons are fast to include and keep your estimate aligned with the actual scope.
+              Add-ons are fast to include and keep your estimate aligned with
+              the actual scope.
             </p>
 
             <div className="grid md:grid-cols-2 gap-4">
               {def.addOns.map((item) => (
-                <div key={item} className="bg-card rounded-lg p-5 border border-border flex gap-3">
+                <div
+                  key={item}
+                  className="bg-card rounded-lg p-5 border border-border flex gap-3"
+                >
                   <PlusCircle className="w-5 h-5 text-secondary mt-0.5 flex-shrink-0" />
                   <div className="text-card-foreground">{item}</div>
                 </div>
@@ -149,7 +168,8 @@ export default async function TradePage({ params }: PageProps) {
             Ready to generate a {def.name.toLowerCase()} proposal?
           </h2>
           <p className="text-primary-foreground/70 mb-8 max-w-lg mx-auto">
-            We&apos;ll open the generator with {def.name.toLowerCase()} preselected so you can start immediately.
+            We&apos;ll open the generator with {def.name.toLowerCase()}{" "}
+            preselected so you can start immediately.
           </p>
           <Link
             href={`/generator?trade=${def.key}`}
@@ -164,4 +184,3 @@ export default async function TradePage({ params }: PageProps) {
     </Layout>
   );
 }
-
