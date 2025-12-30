@@ -23,18 +23,6 @@ const metadataDescription =
 export const metadata: Metadata = {
   title: "ScopeScan | Close More Deals With Same-Visit Quotes",
   description: metadataDescription,
-  keywords: [
-    "same-visit quoting",
-    "instant contractor quotes",
-    "close more deals",
-    "job site quoting",
-    "scope of work generator",
-    "photo to proposal",
-    "construction proposal software",
-    "remodeling proposal generator",
-    "roofing quote software",
-    "bathroom remodel proposal",
-  ],
   alternates: {
     canonical: "/scopescan",
   },
