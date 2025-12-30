@@ -1,333 +1,189 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
-import { Camera, ImagePlus, Loader2, AlertCircle, ArrowRight, CheckCircle2, X } from "lucide-react";
+import Image from "next/image";
+import { 
+  Camera, 
+  Sparkles, 
+  Clock, 
+  Target, 
+  FileCheck, 
+  ArrowRight,
+  CheckCircle2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useLanguage } from "@/hooks/useLanguage";
-
-type PhotoState = {
-  id: string;
-  file: File;
-  previewUrl: string;
-  status: "pending" | "ready" | "error";
-  error?: string;
-};
 
 /**
- * ScopeScan module for the homepage
- * Provides camera and gallery upload functionality that works on mobile
- * Redirects to /m/create with photos after successful capture
+ * Marketing-focused ScopeScan section for the homepage.
+ * Highlights the value proposition and links to the actual ScopeScan tool.
  */
 export function HomepageScopeScan() {
-  const { t } = useLanguage();
-  const [photos, setPhotos] = useState<PhotoState[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  
-  // Refs for file inputs
-  const cameraInputRef = useRef<HTMLInputElement>(null);
-  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const benefits = [
+    {
+      icon: Sparkles,
+      title: "AI-Powered Analysis",
+      description: "Photos are automatically analyzed to identify scope items, materials, and labor needs.",
+    },
+    {
+      icon: Clock,
+      title: "Save 2+ Hours Per Estimate",
+      description: "Skip manual measurements. Get accurate line items in minutes, not hours.",
+    },
+    {
+      icon: Target,
+      title: "Never Miss a Detail",
+      description: "Our AI catches what you might overlook—from trim work to fixtures.",
+    },
+  ];
 
-  // Clean up preview URLs on unmount
-  useEffect(() => {
-    return () => {
-      photos.forEach((photo) => {
-        if (photo.previewUrl.startsWith("blob:")) {
-          URL.revokeObjectURL(photo.previewUrl);
-        }
-      });
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const howItWorks = [
+    { step: "1", title: "Snap Photos", description: "Take 6-10 photos of the job site" },
+    { step: "2", title: "AI Analyzes", description: "Vision AI extracts scope items" },
+    { step: "3", title: "Review & Send", description: "Edit pricing, then send proposal" },
+  ];
 
-  const generateId = () => `photo-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-
-  const handleFiles = useCallback((files: FileList | null) => {
-    if (!files || files.length === 0) return;
-
-    setError(null);
-    const newPhotos: PhotoState[] = [];
-
-    for (const file of Array.from(files)) {
-      if (!file.type.startsWith("image/")) continue;
-
-      const photo: PhotoState = {
-        id: generateId(),
-        file,
-        previewUrl: URL.createObjectURL(file),
-        status: "ready",
-      };
-
-      newPhotos.push(photo);
-    }
-
-    if (newPhotos.length > 0) {
-      setPhotos((prev) => [...prev, ...newPhotos]);
-    }
-  }, []);
-
-  const handleCameraClick = () => {
-    setError(null);
-    cameraInputRef.current?.click();
-  };
-
-  const handleGalleryClick = () => {
-    setError(null);
-    galleryInputRef.current?.click();
-  };
-
-  const removePhoto = (id: string) => {
-    setPhotos((prev) => {
-      const photo = prev.find((p) => p.id === id);
-      if (photo?.previewUrl.startsWith("blob:")) {
-        URL.revokeObjectURL(photo.previewUrl);
-      }
-      return prev.filter((p) => p.id !== id);
-    });
-  };
-
-  const handleStartScopeScan = () => {
-    if (photos.length === 0) {
-      setError("Please add at least one photo to continue");
-      return;
-    }
-
-    setIsProcessing(true);
-    // Store photos in sessionStorage for the /m/create page to pick up
-    try {
-      // We'll store the file names and a flag indicating photos are ready
-      sessionStorage.setItem("scopescan_photos_count", String(photos.length));
-      sessionStorage.setItem("scopescan_redirect", "true");
-      // Redirect to create page
-      window.location.href = "/m/create";
-    } catch {
-      setError("Failed to process photos. Please try again.");
-      setIsProcessing(false);
-    }
-  };
-
-  const photoCount = photos.length;
-  const hasPhotos = photoCount > 0;
+  const exampleProjects = [
+    { 
+      src: "/scopescan-example-1.svg", 
+      alt: "Bathroom remodel project analyzed by ScopeScan",
+      label: "Bathroom Remodel" 
+    },
+    { 
+      src: "/scopescan-example-2.svg", 
+      alt: "Kitchen renovation project analyzed by ScopeScan",
+      label: "Kitchen Renovation" 
+    },
+    { 
+      src: "/scopescan-example-3.svg", 
+      alt: "Roof replacement project analyzed by ScopeScan",
+      label: "Roof Replacement" 
+    },
+  ];
 
   return (
     <section 
-      className="py-12 sm:py-16 bg-gradient-to-br from-orange-50 to-amber-50 border-y border-orange-100" 
+      className="py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-orange-50 to-amber-50 border-y border-orange-100" 
       data-testid="section-scope-scan"
     >
       <div className="container mx-auto px-4">
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           {/* Header */}
-          <div className="text-center mb-6 sm:mb-8">
+          <div className="text-center mb-8 sm:mb-12">
             <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-orange-500 rounded-2xl shadow-lg mb-4">
               <Camera className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
             </div>
             <h2 
-              className="text-2xl sm:text-3xl font-heading font-bold text-slate-900 mb-2"
+              className="text-2xl sm:text-3xl lg:text-4xl font-heading font-bold text-slate-900 mb-3"
               data-testid="scope-scan-heading"
             >
-              {t.mobile.scopeScan}
+              Turn Job Site Photos Into Detailed Proposals
             </h2>
-            <p className="text-slate-600 text-sm sm:text-base">
-              {t.mobile.snapFewPhotos}
+            <p 
+              className="text-slate-600 text-base sm:text-lg max-w-2xl mx-auto"
+              data-testid="scope-scan-subheadline"
+            >
+              ScopeScan uses AI to analyze your photos and generate accurate scope items, 
+              material lists, and pricing—all in minutes.
             </p>
           </div>
 
-          {/* Photo Capture Card */}
-          <Card className="border-orange-200 shadow-md">
-            <CardHeader className="pb-3 sm:pb-4">
-              <CardTitle className="text-base sm:text-lg text-orange-900 flex items-center gap-2">
-                <Camera className="w-5 h-5 text-orange-600" />
-                Quick Photo Capture
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Hidden file inputs */}
-              <input
-                ref={cameraInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={(e) => {
-                  handleFiles(e.target.files);
-                  // Reset input so same file can be selected again
-                  e.target.value = "";
-                }}
-                className="hidden"
-                data-testid="input-camera"
-                aria-label="Take photo with camera"
-              />
-              <input
-                ref={galleryInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={(e) => {
-                  handleFiles(e.target.files);
-                  // Reset input so same file can be selected again
-                  e.target.value = "";
-                }}
-                className="hidden"
-                data-testid="input-gallery"
-                aria-label="Upload photo from gallery"
-              />
-
-              {/* Error message */}
-              {error && (
-                <div 
-                  className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-start gap-2"
-                  data-testid="scope-scan-error"
-                  role="alert"
-                >
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>{error}</span>
+          {/* Benefits Grid */}
+          <div className="grid sm:grid-cols-3 gap-6 mb-10 sm:mb-14">
+            {benefits.map((benefit, index) => (
+              <div 
+                key={index}
+                className="bg-white rounded-xl p-5 sm:p-6 shadow-sm border border-orange-100"
+                data-testid={`benefit-${index + 1}`}
+              >
+                <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mb-4">
+                  <benefit.icon className="w-5 h-5 text-orange-600" />
                 </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  variant="outline"
-                  className="h-20 sm:h-24 flex-col gap-2 border-2 border-orange-200 hover:border-orange-300 hover:bg-orange-50 text-slate-700"
-                  onClick={handleCameraClick}
-                  disabled={isProcessing}
-                  data-testid="button-take-photo"
-                >
-                  <Camera className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600" />
-                  <span className="text-sm sm:text-base font-medium">Take Photo</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-20 sm:h-24 flex-col gap-2 border-2 border-orange-200 hover:border-orange-300 hover:bg-orange-50 text-slate-700"
-                  onClick={handleGalleryClick}
-                  disabled={isProcessing}
-                  data-testid="button-upload-photo"
-                >
-                  <ImagePlus className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600" />
-                  <span className="text-sm sm:text-base font-medium">Upload Photo</span>
-                </Button>
-              </div>
-
-              {/* Photo Preview Grid */}
-              {hasPhotos && (
-                <div className="space-y-3" data-testid="photo-preview-area">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-slate-700">
-                      {photoCount} photo{photoCount !== 1 ? "s" : ""} selected
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setPhotos([])}
-                      className="text-xs text-slate-500 hover:text-slate-700 underline"
-                    >
-                      Clear all
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                    {photos.slice(0, 8).map((photo, index) => (
-                      <div key={photo.id} className="relative aspect-square rounded-lg overflow-hidden bg-slate-100">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={photo.previewUrl}
-                          alt={`Photo ${index + 1}`}
-                          className="absolute inset-0 w-full h-full object-cover"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removePhoto(photo.id)}
-                          className="absolute top-1 right-1 w-5 h-5 bg-black/60 hover:bg-black/80 rounded-full flex items-center justify-center text-white"
-                          aria-label={`Remove photo ${index + 1}`}
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                        <div className="absolute bottom-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
-                          #{index + 1}
-                        </div>
-                      </div>
-                    ))}
-                    {photos.length > 8 && (
-                      <div className="aspect-square rounded-lg bg-slate-200 flex items-center justify-center">
-                        <span className="text-slate-600 font-medium">+{photos.length - 8}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Empty State */}
-              {!hasPhotos && (
-                <div 
-                  className="text-center py-4 text-slate-500 text-sm"
-                  data-testid="scope-scan-empty-state"
-                >
-                  <p>Tap a button above to add photos</p>
-                  <p className="text-xs mt-1 text-slate-400">
-                    Best results: 6–10 photos (wide shots + closeups)
-                  </p>
-                </div>
-              )}
-
-              {/* Continue Button */}
-              {hasPhotos ? (
-                <Button
-                  className="w-full h-12 text-base gap-2 bg-orange-500 hover:bg-orange-600"
-                  onClick={handleStartScopeScan}
-                  disabled={isProcessing}
-                  data-testid="button-continue-scope-scan"
-                >
-                  {isProcessing ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      Continue to ScopeScan
-                      <ArrowRight className="w-5 h-5" />
-                    </>
-                  )}
-                </Button>
-              ) : (
-                <Link href="/m/create" className="block">
-                  <Button
-                    variant="outline"
-                    className="w-full h-11 gap-2 border-orange-300 text-orange-700 hover:bg-orange-50"
-                    data-testid="button-start-scope-scan-link"
-                  >
-                    Or start ScopeScan without photos
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
-                </Link>
-              )}
-
-              {/* Tips */}
-              <div className="pt-2 border-t border-orange-100">
-                <p className="text-xs text-orange-700 flex items-start gap-2">
-                  <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                  <span>
-                    Photos are analyzed by AI to generate accurate scope items and estimates
-                  </span>
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* How it works mini-steps */}
-          <div className="mt-6 grid grid-cols-4 gap-2 text-center">
-            {[
-              { step: "1", label: "Add Photos" },
-              { step: "2", label: "AI Analysis" },
-              { step: "3", label: "Review Scope" },
-              { step: "4", label: "Send Proposal" },
-            ].map((item) => (
-              <div key={item.step} className="flex flex-col items-center gap-1">
-                <div className="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-sm font-bold">
-                  {item.step}
-                </div>
-                <span className="text-xs text-slate-600">{item.label}</span>
+                <h3 className="font-bold text-slate-900 mb-2">{benefit.title}</h3>
+                <p className="text-sm text-slate-600 leading-relaxed">{benefit.description}</p>
               </div>
             ))}
+          </div>
+
+          {/* Example Projects Gallery */}
+          <div className="mb-10 sm:mb-14">
+            <h3 className="text-lg sm:text-xl font-bold text-slate-900 text-center mb-6">
+              Real Projects Analyzed by ScopeScan
+            </h3>
+            <div 
+              className="grid grid-cols-1 sm:grid-cols-3 gap-4"
+              data-testid="example-projects-grid"
+            >
+              {exampleProjects.map((project, index) => (
+                <div 
+                  key={index}
+                  className="relative rounded-xl overflow-hidden bg-white shadow-sm border border-orange-100 group"
+                >
+                  <div className="aspect-[4/3] relative">
+                    <Image
+                      src={project.src}
+                      alt={project.alt}
+                      fill
+                      className="object-cover transition-transform group-hover:scale-105"
+                    />
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
+                    <span className="text-white text-sm font-medium flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-green-400" />
+                      {project.label}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* How It Works */}
+          <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-orange-100 mb-10 sm:mb-14">
+            <h3 className="text-lg sm:text-xl font-bold text-slate-900 text-center mb-6">
+              How ScopeScan Works
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
+              {howItWorks.map((item, index) => (
+                <div key={index} className="flex flex-col items-center text-center">
+                  <div className="w-12 h-12 rounded-full bg-orange-500 text-white flex items-center justify-center text-xl font-bold mb-3">
+                    {item.step}
+                  </div>
+                  <h4 className="font-bold text-slate-900 mb-1">{item.title}</h4>
+                  <p className="text-sm text-slate-600">{item.description}</p>
+                  {index < howItWorks.length - 1 && (
+                    <ArrowRight className="hidden sm:block absolute right-0 top-1/2 -translate-y-1/2 w-5 h-5 text-orange-300" />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* CTA Section */}
+          <div className="text-center space-y-4">
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Link href="/m/create" data-testid="cta-try-scopescan">
+                <Button 
+                  size="lg"
+                  className="w-full sm:w-auto h-12 sm:h-14 px-8 text-base sm:text-lg bg-orange-500 hover:bg-orange-600 shadow-lg hover:shadow-xl transition-all"
+                >
+                  <Camera className="w-5 h-5 mr-2" />
+                  Try ScopeScan Free
+                </Button>
+              </Link>
+              <Link href="#demo" data-testid="cta-see-sample">
+                <Button 
+                  variant="outline"
+                  size="lg"
+                  className="w-full sm:w-auto h-12 sm:h-14 px-8 text-base sm:text-lg border-orange-300 text-orange-700 hover:bg-orange-50"
+                >
+                  <FileCheck className="w-5 h-5 mr-2" />
+                  See Sample Proposal
+                </Button>
+              </Link>
+            </div>
+            <p className="text-sm text-slate-500">
+              No credit card required • First proposal free
+            </p>
           </div>
         </div>
       </div>
