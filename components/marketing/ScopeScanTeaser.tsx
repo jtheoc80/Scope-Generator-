@@ -9,10 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-const blurSvg = (w: number, h: number) =>
-  `data:image/svg+xml;base64,${Buffer.from(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><rect width="100%" height="100%" fill="#e5e7eb"/></svg>`
-  ).toString("base64")}`;
+// Tiny neutral blur placeholder (safe for server + client).
+const BLUR_DATA_URL =
+  "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSIzMiI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2U1ZTdlYiIvPjwvc3ZnPg==";
 
 function SafeImage({
   src,
@@ -50,7 +49,7 @@ function SafeImage({
       priority={priority}
       quality={90}
       placeholder="blur"
-      blurDataURL={blurSvg(48, 32)}
+      blurDataURL={BLUR_DATA_URL}
       className={cn("object-cover", className)}
       onError={() => setErrored(true)}
     />
@@ -98,7 +97,7 @@ export function ScopeScanTeaser() {
   return (
     <section
       aria-labelledby="scopescan-heading"
-      className="border-y border-slate-200 bg-slate-50 py-14 sm:py-18"
+      className="border-y border-slate-200 bg-white py-16 sm:py-20"
       data-testid="section-scopescan-teaser"
     >
       <div className="container mx-auto px-4">
@@ -106,8 +105,8 @@ export function ScopeScanTeaser() {
           <div className="grid items-start gap-10 lg:grid-cols-2 lg:gap-14">
             {/* Copy */}
             <div className="order-1">
-              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm">
-                <Camera className="h-3.5 w-3.5 text-slate-500" />
+              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700">
+                <Camera className="h-3.5 w-3.5 text-orange-500" />
                 ScopeScan
               </div>
 
@@ -149,12 +148,21 @@ export function ScopeScanTeaser() {
               </p>
 
               <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Button asChild size="lg" className="w-full sm:w-auto">
+                <Button
+                  asChild
+                  size="lg"
+                  className="w-full bg-orange-500 text-white hover:bg-orange-600 sm:w-auto"
+                >
                   <Link href="/scopescan" data-testid="scopescan-cta-primary">
                     Try ScopeScan
                   </Link>
                 </Button>
-                <Button asChild size="lg" variant="outline" className="w-full sm:w-auto">
+                <Button
+                  asChild
+                  size="lg"
+                  variant="outline"
+                  className="w-full border-slate-300 text-slate-900 hover:bg-slate-50 sm:w-auto"
+                >
                   <Link href="/scopescan#examples" data-testid="scopescan-cta-secondary">
                     See Examples
                   </Link>
