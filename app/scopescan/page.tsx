@@ -270,7 +270,7 @@ export default function ScopeScanPage() {
                   className="h-14 px-10 text-lg bg-orange-500 hover:bg-orange-600 shadow-sm focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2"
                 >
                   <Camera className="w-5 h-5 mr-2" />
-                  Close More Deals
+                  Get Started with ScopeScan
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
               </Link>
