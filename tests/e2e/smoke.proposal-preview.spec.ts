@@ -20,7 +20,10 @@ test.describe('Proposal Preview Live Updates', () => {
 
   test('should show empty state when no services are added', async ({ page }) => {
     // Initially, the preview should show empty state
-    const emptyState = page.locator('text=Ready to Start, text=readyToStart').first();
+    const emptyState = page
+      .locator('text=Ready to Start')
+      .or(page.locator('text=readyToStart'))
+      .first();
     await expect(emptyState).toBeVisible({ timeout: 10000 });
     
     // Preview container should not have proposal content
