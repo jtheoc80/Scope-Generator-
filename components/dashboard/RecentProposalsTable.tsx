@@ -25,8 +25,8 @@ export interface ProposalRow {
   clientName: string;
   address: string;
   jobTypeName: string;
-  priceLow: number;
-  priceHigh: number;
+  priceLow: number | null;
+  priceHigh: number | null;
   status: string;
   createdAt: string;
   publicToken?: string | null;
