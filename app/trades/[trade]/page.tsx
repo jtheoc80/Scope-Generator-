@@ -58,6 +58,7 @@ export default async function TradePage({ params }: PageProps) {
 
       {/* What's included */}
       <section id="included" className="py-14 bg-background">
+      <section id="included" className="py-14 bg-card">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <h2 className="text-2xl sm:text-3xl font-heading font-bold text-foreground mb-4">
@@ -71,7 +72,7 @@ export default async function TradePage({ params }: PageProps) {
               {def.whatsIncluded.map((item) => (
                 <div key={item} className="bg-accent rounded-lg p-5 border border-border flex gap-3">
                   <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <div className="text-foreground">{item}</div>
+                  <div className="text-card-foreground">{item}</div>
                 </div>
               ))}
             </div>
@@ -94,7 +95,7 @@ export default async function TradePage({ params }: PageProps) {
               {def.addOns.map((item) => (
                 <div key={item} className="bg-card rounded-lg p-5 border border-border flex gap-3">
                   <PlusCircle className="w-5 h-5 text-secondary mt-0.5 flex-shrink-0" />
-                  <div className="text-foreground">{item}</div>
+                  <div className="text-card-foreground">{item}</div>
                 </div>
               ))}
             </div>
@@ -113,7 +114,7 @@ export default async function TradePage({ params }: PageProps) {
           </p>
           <Link
             href={`/generator?trade=${def.key}`}
-            className="inline-flex items-center justify-center bg-secondary text-secondary-foreground font-bold text-lg px-10 py-4 rounded-md hover:bg-white hover:text-primary transition-colors shadow-lg"
+            className="inline-flex items-center justify-center bg-secondary text-secondary-foreground font-bold text-lg px-10 py-4 rounded-md hover:bg-card hover:text-primary transition-colors shadow-lg"
             data-testid="trade-cta-footer"
           >
             {def.cta.label}
