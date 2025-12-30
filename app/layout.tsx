@@ -5,10 +5,12 @@ import {
 } from "@clerk/nextjs";
 import { isClerkConfigured } from "@/lib/authUtils";
 import { VercelAnalytics } from "@/components/VercelAnalytics";
-import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import { Providers } from "@/components/providers";
 import { OrganizationJsonLd } from "@/components/JsonLd";
 import "./globals.css";
+
+// Google Analytics Measurement ID - must be available at build time
+const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -84,7 +86,26 @@ export default function RootLayout({
   const content = (
     <html lang="en">
       <head>
-        <GoogleAnalytics />
+        {/* Google Analytics - rendered inline in head for immediate detection */}
+        {GA_MEASUREMENT_ID && (
+          <>
+            <script
+              async
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+            />
+            <script
+              id="gtag-init"
+              dangerouslySetInnerHTML={{
+                __html: `
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag(){dataLayer.push(arguments);}
+                  gtag('js', new Date());
+                  gtag('config', '${GA_MEASUREMENT_ID}');
+                `,
+              }}
+            />
+          </>
+        )}
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
