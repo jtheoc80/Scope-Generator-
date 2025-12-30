@@ -40,7 +40,7 @@ test.describe('Homepage ScopeScan Teaser - Mobile', () => {
     }
   });
 
-  test('should display teaser headline and CTA buttons linking to /scopescan', async ({ page }) => {
+  test('should display teaser headline and CTA buttons', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('load');
 
@@ -53,15 +53,15 @@ test.describe('Homepage ScopeScan Teaser - Mobile', () => {
     await expect(headline).toBeVisible();
     await expect(headline).toContainText(/ScopeScan/i);
 
-    // Primary CTA should link to /scopescan
+    // Primary CTA should link to /scopescan/demo (Try Demo)
     const primaryCta = page.locator('[data-testid="teaser-cta-primary"]');
     await expect(primaryCta).toBeVisible();
-    await expect(primaryCta).toHaveAttribute('href', '/scopescan');
+    await expect(primaryCta).toHaveAttribute('href', '/scopescan/demo');
 
-    // Secondary CTA should link to /scopescan#examples
+    // Secondary CTA should link to /scopescan (Learn More)
     const secondaryCta = page.locator('[data-testid="teaser-cta-secondary"]');
     await expect(secondaryCta).toBeVisible();
-    await expect(secondaryCta).toHaveAttribute('href', '/scopescan#examples');
+    await expect(secondaryCta).toHaveAttribute('href', '/scopescan');
   });
 
   test('should display image thumbnails in teaser', async ({ page }) => {
@@ -97,13 +97,19 @@ test.describe('Homepage ScopeScan Teaser - Mobile', () => {
     expect(pageContent).not.toContain('Take Photo');
   });
 
-  test('homepage has link to /scopescan', async ({ page }) => {
+  test('homepage has link to /scopescan or /scopescan/demo', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('load');
 
-    // There should be at least one link to /scopescan on the homepage
+    // There should be links to either /scopescan or /scopescan/demo on the homepage
     const scopescanLink = page.locator('a[href="/scopescan"]');
-    await expect(scopescanLink.first()).toBeVisible({ timeout: 15000 });
+    const scopescanDemoLink = page.locator('a[href="/scopescan/demo"]');
+    
+    // Either link should be visible
+    const hasScopescan = await scopescanLink.first().isVisible().catch(() => false);
+    const hasScopescanDemo = await scopescanDemoLink.first().isVisible().catch(() => false);
+    
+    expect(hasScopescan || hasScopescanDemo).toBe(true);
   });
 });
 
@@ -216,22 +222,36 @@ test.describe('/scopescan Landing Page', () => {
     await expect(examplesGrid).toBeVisible();
   });
 
-  test('clicking "Start ScopeScan" navigates to tool page with Take Photo visible', async ({ page }) => {
+  test('clicking "Try Demo" navigates to demo page (no auth required)', async ({ page }) => {
     await page.goto('/scopescan');
     await page.waitForLoadState('load');
 
-    // Click the primary CTA
+    // Click the primary CTA (Try Demo)
+    const tryDemoButton = page.locator('[data-testid="cta-try-demo"]');
+    await expect(tryDemoButton).toBeVisible({ timeout: 15000 });
+    await tryDemoButton.click();
+
+    // Should navigate to /scopescan/demo
+    await page.waitForURL('**/scopescan/demo', { timeout: 15000 });
+    expect(page.url()).toContain('/scopescan/demo');
+
+    // Demo page should show demo content
+    const demoBanner = page.locator('[data-testid="demo-mode-banner"]');
+    await expect(demoBanner).toBeVisible({ timeout: 15000 });
+  });
+
+  test('"Start ScopeScan" link includes sign-in redirect', async ({ page }) => {
+    await page.goto('/scopescan');
+    await page.waitForLoadState('load');
+
+    // Start ScopeScan button should link to sign-in with redirect
     const startButton = page.locator('[data-testid="cta-start-scopescan"]');
     await expect(startButton).toBeVisible({ timeout: 15000 });
-    await startButton.click();
-
-    // Should navigate to /m/create
-    await page.waitForURL('**/m/create', { timeout: 15000 });
-    expect(page.url()).toContain('/m/create');
-
-    // The tool page should have Start ScopeScan button
-    const scopeScanStartButton = page.getByRole('button', { name: /Start ScopeScan/i });
-    await expect(scopeScanStartButton).toBeVisible({ timeout: 15000 });
+    
+    const href = await startButton.getAttribute('href');
+    expect(href).toContain('sign-in');
+    expect(href).toContain('redirect_url');
+    expect(href).toContain('%2Fm%2Fcreate');
   });
 
   test('page should load without errors', async ({ page }) => {

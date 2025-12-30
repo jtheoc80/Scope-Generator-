@@ -7,9 +7,9 @@ import {
   Sparkles, 
   Clock, 
   Target, 
-  FileCheck, 
   ArrowRight,
   CheckCircle2,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -161,28 +161,30 @@ export function HomepageScopeScan() {
           {/* CTA Section */}
           <div className="text-center space-y-4">
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link href="/m/create" data-testid="cta-try-scopescan">
+              <Link href="/scopescan/demo" data-testid="cta-try-scopescan">
                 <Button 
                   size="lg"
                   className="w-full sm:w-auto h-12 sm:h-14 px-8 text-base sm:text-lg bg-orange-500 hover:bg-orange-600 shadow-lg hover:shadow-xl transition-all"
                 >
-                  <Camera className="w-5 h-5 mr-2" />
-                  Try ScopeScan Free
+                  <Sparkles className="w-5 h-5 mr-2" />
+                  Try Demo
                 </Button>
               </Link>
-              <Link href="#demo" data-testid="cta-see-sample">
+              <Link href="/sign-in?redirect_url=%2Fm%2Fcreate" data-testid="cta-start-scopescan">
                 <Button 
                   variant="outline"
                   size="lg"
                   className="w-full sm:w-auto h-12 sm:h-14 px-8 text-base sm:text-lg border-orange-300 text-orange-700 hover:bg-orange-50"
                 >
-                  <FileCheck className="w-5 h-5 mr-2" />
-                  See Sample Proposal
+                  <Camera className="w-5 h-5 mr-2" />
+                  Start ScopeScan
+                  <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </Link>
             </div>
-            <p className="text-sm text-slate-500">
-              No credit card required • First proposal free
+            <p className="text-sm text-slate-500 flex items-center justify-center gap-2">
+              <Lock className="w-3 h-3" />
+              Sign in required for full tool • Demo available instantly
             </p>
           </div>
         </div>
