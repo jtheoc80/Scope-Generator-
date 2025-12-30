@@ -1597,8 +1597,30 @@ export default function Generator() {
                   <div className="relative animate-in fade-in duration-700">
                      {/* Toolbar */}
                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-heading font-bold text-xl text-slate-700">{t.generator.livePreview}</h3>
+                        <div className="flex items-center gap-3">
+                          <h3 className="font-heading font-bold text-xl text-slate-700">{t.generator.livePreview}</h3>
+                          {/* Autosave status in toolbar */}
+                          {lastSavedRelative && !hasUnsavedChanges && (
+                            <span className="text-xs text-green-600 flex items-center gap-1" data-testid="toolbar-save-status">
+                              <Check className="w-3 h-3" />
+                              Saved {lastSavedRelative}
+                            </span>
+                          )}
+                        </div>
                         <div className="flex gap-2 flex-wrap">
+                          {/* Reset Draft button */}
+                          {step === 2 && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="gap-1 text-slate-500 hover:text-red-600 hover:bg-red-50"
+                              onClick={handleResetDraft}
+                              data-testid="button-reset-draft-toolbar"
+                            >
+                              <RotateCcw className="w-4 h-4" />
+                              Reset
+                            </Button>
+                          )}
                           {step === 2 && user && (
                             <Button 
                               variant="outline" 
