@@ -219,8 +219,8 @@ export function RecentProposalsTable({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-y border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <table className="w-full text-sm" role="table" aria-label="Recent proposals with client information, job details, status, and actions">
+              <thead className="border-y border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500" role="rowgroup">
                 <tr>
                   <th className="px-6 py-3 text-left font-semibold">Proposal</th>
                   <th className="px-6 py-3 text-left font-semibold">Trade</th>
@@ -230,7 +230,7 @@ export function RecentProposalsTable({
                   <th className="px-6 py-3 text-right font-semibold">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100" role="rowgroup">
                 {filtered.map((p) => {
                   const amount = (p.priceLow + p.priceHigh) / 2;
                   const last = p.lastViewedAt || p.createdAt;
