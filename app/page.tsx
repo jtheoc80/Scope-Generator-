@@ -4,6 +4,7 @@ import Layout from "@/components/layout";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, ArrowRight, Clock, DollarSign, FileCheck, Loader2, Bath, ChefHat, Home as HomeIcon, Paintbrush, Plug, Wrench, Thermometer, TreePine, Calculator, Sparkles, Star, Users, TrendingUp, Target, FileText } from "lucide-react";
+import { HomepageScopeScan } from "@/components/homepage-scope-scan";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useQuery } from "@tanstack/react-query";
 
@@ -410,6 +411,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Scope Scan - Mobile-First Photo Capture */}
+      <HomepageScopeScan />
 
       {/* Pain Point Section - After Hero */}
       <section className="py-20 sm:py-28 bg-white" data-testid="section-pain-points">
