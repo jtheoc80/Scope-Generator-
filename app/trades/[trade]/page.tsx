@@ -107,7 +107,6 @@ export default async function TradePage({ params }: PageProps) {
       </section>
 
       {/* What's included */}
-      <section id="included" className="py-14 bg-background">
       <section id="included" className="py-14 bg-card">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
