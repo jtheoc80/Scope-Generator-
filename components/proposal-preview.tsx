@@ -2,7 +2,7 @@
 import { forwardRef, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Clock, Shield, AlertCircle, Layers } from "lucide-react";
+import { Clock, Shield, AlertCircle, Layers, CheckCircle2, FileQuestion, Plus } from "lucide-react";
 import { 
   HeroPhoto, 
   ExistingConditionsGrid, 
@@ -20,11 +20,27 @@ interface CompanyInfo {
   licenseNumber?: string | null;
 }
 
+/**
+ * A section within the scope of work (for grouped display)
+ */
+interface ScopeSection {
+  title: string;
+  items: string[];
+}
+
 interface LineItem {
   serviceId: string;
   tradeName: string;
   jobTypeName: string;
   scope: string[];
+  /** Optional: Grouped scope sections with headings */
+  scopeSections?: ScopeSection[];
+  /** Optional: Items that are explicitly included */
+  included?: string[];
+  /** Optional: Assumptions made for this scope */
+  assumptions?: string[];
+  /** Optional: Add-on items */
+  addons?: string[];
   priceRange: { low: number; high: number };
   estimatedDays: { low: number; high: number };
   warranty?: string;
@@ -37,6 +53,14 @@ interface ProposalPreviewProps {
     address?: string;
     jobTypeName?: string;
     scope?: string[];
+    /** Optional: Grouped scope sections with headings (preferred over scope for display) */
+    scopeSections?: ScopeSection[];
+    /** Optional: Items that are explicitly included */
+    included?: string[];
+    /** Optional: Assumptions made for this scope */
+    assumptions?: string[];
+    /** Optional: Add-on items */
+    addons?: string[];
     priceRange?: { low: number; high: number };
     estimatedDays?: { low: number; high: number };
     warranty?: string;
@@ -322,23 +346,98 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
                 ) : null;
               })()}
 
-              <ul className="list-disc pl-5 space-y-2 marker:text-secondary" data-testid="preview-scope-list">
-                {data.scope && data.scope.length > 0 ? (
-                  data.scope.map((item: string, i: number) => (
-                    <li key={i} data-testid={`preview-scope-item-${i}`}>{item}</li>
-                  ))
-                ) : (
-                  <>
-                    <li>Consultation and site preparation.</li>
-                    <li>Demolition of existing structures as required.</li>
-                    <li>Installation of new materials per manufacturer specifications.</li>
-                    <li>Detailed plumbing rough-in and trim-out specifications.</li>
-                    <li>Electrical fixture installation and safety checks.</li>
-                    <li>Final site cleanup and debris removal.</li>
-                    <li>Walkthrough and final inspection with homeowner.</li>
-                    <li>Warranty documentation handover.</li>
-                  </>
-                )}
+              {/* New: Render grouped sections if scopeSections is present */}
+              {data.scopeSections && data.scopeSections.length > 0 ? (
+                <div className="space-y-6" data-testid="preview-scope-sections">
+                  {data.scopeSections.map((section, sectionIndex) => (
+                    <div key={sectionIndex} className="scope-section">
+                      <h3 
+                        className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-2 border-b border-slate-200 pb-1"
+                        data-testid={`preview-scope-section-heading-${sectionIndex}`}
+                      >
+                        {section.title}
+                      </h3>
+                      <ul className="list-disc pl-5 space-y-1.5 marker:text-secondary" data-testid={`preview-scope-section-items-${sectionIndex}`}>
+                        {section.items.map((item, itemIndex) => (
+                          <li key={itemIndex} data-testid={`preview-scope-item-${sectionIndex}-${itemIndex}`}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                /* Legacy: Render flat scope array */
+                <ul className="list-disc pl-5 space-y-2 marker:text-secondary" data-testid="preview-scope-list">
+                  {data.scope && data.scope.length > 0 ? (
+                    data.scope.map((item: string, i: number) => (
+                      <li key={i} data-testid={`preview-scope-item-${i}`}>{item}</li>
+                    ))
+                  ) : (
+                    <>
+                      <li>Consultation and site preparation.</li>
+                      <li>Demolition of existing structures as required.</li>
+                      <li>Installation of new materials per manufacturer specifications.</li>
+                      <li>Detailed plumbing rough-in and trim-out specifications.</li>
+                      <li>Electrical fixture installation and safety checks.</li>
+                      <li>Final site cleanup and debris removal.</li>
+                      <li>Walkthrough and final inspection with homeowner.</li>
+                      <li>Warranty documentation handover.</li>
+                    </>
+                  )}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Included Section (if present) */}
+        {data.included && data.included.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-lg font-heading font-bold text-white bg-green-700 px-3 py-1 inline-block mb-4">
+              <CheckCircle2 className="w-4 h-4 inline mr-2 -mt-0.5" />
+              Included
+            </h2>
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <ul className="list-disc pl-5 space-y-1.5 text-green-800" data-testid="preview-included-list">
+                {data.included.map((item: string, i: number) => (
+                  <li key={i}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {/* Assumptions Section (if present) */}
+        {data.assumptions && data.assumptions.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-lg font-heading font-bold text-white bg-blue-600 px-3 py-1 inline-block mb-4">
+              <FileQuestion className="w-4 h-4 inline mr-2 -mt-0.5" />
+              Assumptions
+            </h2>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-blue-900 mb-3">This proposal is based on the following assumptions:</p>
+              <ul className="list-disc pl-5 space-y-1.5 text-blue-800" data-testid="preview-assumptions-list">
+                {data.assumptions.map((item: string, i: number) => (
+                  <li key={i}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {/* Add-ons Section (if present) */}
+        {data.addons && data.addons.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-lg font-heading font-bold text-white bg-purple-600 px-3 py-1 inline-block mb-4">
+              <Plus className="w-4 h-4 inline mr-2 -mt-0.5" />
+              Available Add-ons
+            </h2>
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+              <p className="text-sm text-purple-900 mb-3">Optional upgrades available upon request:</p>
+              <ul className="list-disc pl-5 space-y-1.5 text-purple-800" data-testid="preview-addons-list">
+                {data.addons.map((item: string, i: number) => (
+                  <li key={i}>{item}</li>
+                ))}
               </ul>
             </div>
           </div>

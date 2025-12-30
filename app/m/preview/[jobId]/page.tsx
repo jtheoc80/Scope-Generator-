@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   ArrowLeft,
   Check,
@@ -15,8 +17,10 @@ import {
   AlertCircle,
   Star,
   Home,
+  User,
+  MapPin,
 } from "lucide-react";
-import { mobileApiFetch, newIdempotencyKey, SubmitResponse } from "../../lib/api";
+import { mobileApiFetch, newIdempotencyKey, SubmitResponse, MobileJob } from "../../lib/api";
 
 type PackageKey = "GOOD" | "BETTER" | "BEST";
 
@@ -46,6 +50,48 @@ export default function PreviewPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState<SubmitResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  // Draft-first: Client details state
+  const [jobInfo, setJobInfo] = useState<{ clientName?: string; address?: string } | null>(null);
+  const [loadingJobInfo, setLoadingJobInfo] = useState(true);
+  const [editingClientDetails, setEditingClientDetails] = useState(false);
+  const [clientName, setClientName] = useState("");
+  const [address, setAddress] = useState("");
+  const [savingClientDetails, setSavingClientDetails] = useState(false);
+  const [clientDetailsErrors, setClientDetailsErrors] = useState<{ clientName?: string; address?: string }>({});
+
+  // Draft-first: Check if client details are complete
+  const hasCompleteClientDetails = Boolean(
+    jobInfo?.clientName && 
+    jobInfo.clientName !== "Customer" && 
+    jobInfo.clientName.trim().length >= 2 &&
+    jobInfo?.address && 
+    jobInfo.address !== "Address TBD" && 
+    jobInfo.address.trim().length >= 5
+  );
+
+  // Fetch job info to check client details
+  useEffect(() => {
+    const fetchJobInfo = async () => {
+      try {
+        const job = await mobileApiFetch<MobileJob>(`/api/mobile/jobs/${jobId}`, { method: "GET" });
+        setJobInfo({ clientName: job.clientName, address: job.address });
+        setClientName(job.clientName === "Customer" ? "" : job.clientName || "");
+        setAddress(job.address === "Address TBD" ? "" : job.address || "");
+        
+        // Auto-expand client details section if missing
+        if (!job.clientName || job.clientName === "Customer" || !job.address || job.address === "Address TBD") {
+          setEditingClientDetails(true);
+        }
+      } catch {
+        // Job info fetch failed - continue without it
+        console.error("Failed to fetch job info");
+      } finally {
+        setLoadingJobInfo(false);
+      }
+    };
+    fetchJobInfo();
+  }, [jobId]);
 
   useEffect(() => {
     const payloadParam = searchParams.get("payload");
@@ -59,7 +105,55 @@ export default function PreviewPage() {
     }
   }, [searchParams]);
 
+  // Save client details
+  const handleSaveClientDetails = useCallback(async () => {
+    const errors: { clientName?: string; address?: string } = {};
+    
+    if (!clientName || clientName.trim().length < 2) {
+      errors.clientName = "Client name is required (min 2 characters)";
+    }
+    if (!address || address.trim().length < 5) {
+      errors.address = "Job address is required (min 5 characters)";
+    }
+    
+    setClientDetailsErrors(errors);
+    
+    if (Object.keys(errors).length > 0) {
+      return;
+    }
+    
+    setSavingClientDetails(true);
+    try {
+      // Update job with client details via PATCH API (Draft-first flow)
+      await mobileApiFetch(`/api/mobile/jobs/${jobId}`, {
+        method: "PATCH",
+        headers: { "Idempotency-Key": newIdempotencyKey() },
+        body: JSON.stringify({
+          clientName: clientName.trim(),
+          address: address.trim(),
+        }),
+      });
+      
+      // Update local state
+      setJobInfo({ clientName: clientName.trim(), address: address.trim() });
+      setEditingClientDetails(false);
+      setClientDetailsErrors({});
+      setError(null); // Clear any previous error
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save client details");
+    } finally {
+      setSavingClientDetails(false);
+    }
+  }, [clientName, address, jobId]);
+
   const handleSubmit = async () => {
+    // Draft-first: Validate client details before submit
+    if (!hasCompleteClientDetails) {
+      setEditingClientDetails(true);
+      setError("Please add client name and address before submitting");
+      return;
+    }
+    
     setSubmitting(true);
     setError(null);
 
@@ -219,6 +313,136 @@ export default function PreviewPage() {
         </div>
       )}
 
+      {/* Draft-first: Client Details Section */}
+      {!loadingJobInfo && (
+        <Card className={!hasCompleteClientDetails ? "border-amber-300 bg-amber-50" : ""} data-testid="client-details-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Client Details
+                {!hasCompleteClientDetails && (
+                  <span className="text-xs font-normal text-amber-700 bg-amber-100 px-2 py-0.5 rounded" data-testid="badge-required">
+                    Required to send
+                  </span>
+                )}
+              </span>
+              {hasCompleteClientDetails && !editingClientDetails && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setEditingClientDetails(true)}
+                  className="text-primary"
+                >
+                  Edit
+                </Button>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {editingClientDetails ? (
+              <div className="space-y-3" data-testid="client-details-form">
+                <div className="space-y-1.5">
+                  <Label htmlFor="clientName" className="text-sm flex items-center gap-1">
+                    <User className="w-3 h-3" />
+                    Client Name
+                  </Label>
+                  <Input
+                    id="clientName"
+                    placeholder="Enter client name"
+                    value={clientName}
+                    onChange={(e) => {
+                      setClientName(e.target.value);
+                      if (clientDetailsErrors.clientName) {
+                        setClientDetailsErrors(prev => ({ ...prev, clientName: undefined }));
+                      }
+                    }}
+                    disabled={savingClientDetails}
+                    className={clientDetailsErrors.clientName ? "border-red-500" : ""}
+                    data-testid="input-client-name"
+                  />
+                  {clientDetailsErrors.clientName && (
+                    <p className="text-xs text-red-500" data-testid="error-client-name">
+                      {clientDetailsErrors.clientName}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="address" className="text-sm flex items-center gap-1">
+                    <MapPin className="w-3 h-3" />
+                    Job Address
+                  </Label>
+                  <Input
+                    id="address"
+                    placeholder="Enter job address"
+                    value={address}
+                    onChange={(e) => {
+                      setAddress(e.target.value);
+                      if (clientDetailsErrors.address) {
+                        setClientDetailsErrors(prev => ({ ...prev, address: undefined }));
+                      }
+                    }}
+                    disabled={savingClientDetails}
+                    className={clientDetailsErrors.address ? "border-red-500" : ""}
+                    data-testid="input-address"
+                  />
+                  {clientDetailsErrors.address && (
+                    <p className="text-xs text-red-500" data-testid="error-address">
+                      {clientDetailsErrors.address}
+                    </p>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleSaveClientDetails}
+                    disabled={savingClientDetails}
+                    className="flex-1"
+                    data-testid="button-save-client-details"
+                  >
+                    {savingClientDetails ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4 mr-2" />
+                        Save Details
+                      </>
+                    )}
+                  </Button>
+                  {hasCompleteClientDetails && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setEditingClientDetails(false);
+                        setClientName(jobInfo?.clientName || "");
+                        setAddress(jobInfo?.address || "");
+                        setClientDetailsErrors({});
+                      }}
+                      disabled={savingClientDetails}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2" data-testid="client-details-display">
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">{jobInfo?.clientName}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm text-slate-600">{jobInfo?.address}</span>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Package Selection */}
       <Card>
         <CardHeader className="pb-2">
@@ -357,7 +581,8 @@ export default function PreviewPage() {
         <Button
           className="w-full h-12 text-base gap-2"
           onClick={handleSubmit}
-          disabled={submitting}
+          disabled={submitting || loadingJobInfo}
+          data-testid="button-submit-proposal"
         >
           {submitting ? (
             <>
@@ -371,7 +596,13 @@ export default function PreviewPage() {
             </>
           )}
         </Button>
-        {payload.packages?.[selectedPackage]?.total !== undefined && (
+        {/* Draft-first: Show helper text when client details are missing */}
+        {!hasCompleteClientDetails && !loadingJobInfo && (
+          <p className="text-xs text-center text-amber-600 mt-2" data-testid="helper-client-required">
+            ⚠️ Add client name & address above to submit
+          </p>
+        )}
+        {payload.packages?.[selectedPackage]?.total !== undefined && hasCompleteClientDetails && (
           <p className="text-sm text-center text-slate-600 mt-2">
             Total: {formatCurrency(payload.packages[selectedPackage]?.total)}
           </p>

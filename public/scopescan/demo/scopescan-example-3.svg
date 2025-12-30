@@ -1,0 +1,11 @@
+<svg width="400" height="300" viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="300" fill="#DBEAFE"/>
+  <path d="M100 120L200 60L300 120V200H100V120Z" fill="#93C5FD"/>
+  <rect x="160" y="140" width="80" height="60" rx="4" fill="#60A5FA"/>
+  <rect x="120" y="160" width="30" height="40" rx="2" fill="#3B82F6"/>
+  <rect x="250" y="160" width="30" height="40" rx="2" fill="#3B82F6"/>
+  <path d="M80 200H320V240H80V200Z" fill="#2563EB"/>
+  <circle cx="200" cy="90" r="25" fill="#EFF6FF" stroke="#3B82F6" stroke-width="3"/>
+  <path d="M190 90L198 98L210 83" stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="200" y="270" fill="#1E40AF" font-family="system-ui" font-size="14" text-anchor="middle">Roof Replacement</text>
+</svg>

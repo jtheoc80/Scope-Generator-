@@ -25,11 +25,27 @@ interface CompanyInfo {
   licenseNumber?: string | null;
 }
 
+/**
+ * A section within the scope of work (for grouped display)
+ */
+interface ScopeSection {
+  title: string;
+  items: string[];
+}
+
 interface LineItem {
   serviceId: string;
   tradeName: string;
   jobTypeName: string;
   scope: string[];
+  /** Optional: Grouped scope sections with headings */
+  scopeSections?: ScopeSection[];
+  /** Optional: Items that are explicitly included */
+  included?: string[];
+  /** Optional: Assumptions made for this scope */
+  assumptions?: string[];
+  /** Optional: Add-on items */
+  addons?: string[];
   priceRange: { low: number; high: number };
   estimatedDays: { low: number; high: number };
   warranty?: string;
@@ -41,6 +57,14 @@ export interface ProposalPreviewData {
   address?: string;
   jobTypeName?: string;
   scope?: string[];
+  /** Optional: Grouped scope sections with headings (preferred over scope for display) */
+  scopeSections?: ScopeSection[];
+  /** Optional: Items that are explicitly included */
+  included?: string[];
+  /** Optional: Assumptions made for this scope */
+  assumptions?: string[];
+  /** Optional: Add-on items */
+  addons?: string[];
   priceRange?: { low: number; high: number };
   estimatedDays?: { low: number; high: number };
   warranty?: string;

@@ -299,6 +299,7 @@ function TradeParamHandler({
 }
 
 export default function Generator() {
+function GeneratorContent() {
   const [step, setStep] = useState<1 | 2>(1);
   const [services, setServices] = useState<ServiceItem[]>([
     { id: crypto.randomUUID(), tradeId: "", jobTypeId: "", jobSize: 2, homeArea: "", footage: null, options: {} }
@@ -509,6 +510,11 @@ export default function Generator() {
       tradeName: trade?.trade || "",
       jobTypeName: jobType.name,
       scope: enhancedScopes[service.id] || finalScope,
+      // Pass through new section-based scope fields from template
+      scopeSections: jobType.scopeSections,
+      included: jobType.included,
+      assumptions: jobType.assumptions,
+      addons: jobType.addons,
       priceRange: {
         low: Math.round(lowPrice / 100) * 100,
         high: Math.round(highPrice / 100) * 100,
@@ -556,14 +562,24 @@ export default function Generator() {
       order: p.displayOrder,
     }));
 
+    // For single-service proposals, use the service's section data directly
+    // For multi-service, we don't aggregate sections (they're shown per-service)
+    const firstService = lineItems[0];
+    const isSingleService = lineItems.length === 1;
+
     return {
       clientName: watchedValues.clientName,
       address: watchedValues.address,
       lineItems,
-      jobTypeName: lineItems.length === 1 
-        ? lineItems[0]?.jobTypeName 
+      jobTypeName: isSingleService 
+        ? firstService?.jobTypeName 
         : `Multi-Service Proposal (${lineItems.length} services)`,
       scope: allScope,
+      // For single-service proposals, pass through the structured scope data
+      scopeSections: isSingleService ? firstService?.scopeSections : undefined,
+      included: isSingleService ? firstService?.included : undefined,
+      assumptions: isSingleService ? firstService?.assumptions : undefined,
+      addons: isSingleService ? firstService?.addons : undefined,
       priceRange: {
         low: Math.round(totalPriceLow / 100) * 100,
         high: Math.round(totalPriceHigh / 100) * 100,
@@ -1649,7 +1665,9 @@ export default function Generator() {
                         )}
                       </div>
                    </div>
-                   
+                </div>
+              )}
+
               {/* Desktop Preview with Toolbar */}
               <div className="hidden lg:block">
                 {!hasValidServices ? (
@@ -1808,5 +1826,19 @@ export default function Generator() {
         />
       )}
     </Layout>
+  );
+}
+
+export default function Generator() {
+  return (
+    <Suspense fallback={
+      <Layout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      </Layout>
+    }>
+      <GeneratorContent />
+    </Suspense>
   );
 }

@@ -4,6 +4,7 @@ import Layout from "@/components/layout";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, ArrowRight, Clock, DollarSign, FileCheck, Loader2, Bath, ChefHat, Home as HomeIcon, Paintbrush, Plug, Wrench, Thermometer, TreePine, Calculator, Sparkles, Star, Users, TrendingUp, Target, FileText } from "lucide-react";
+import { ScopeScanTeaser } from "@/components/marketing/ScopeScanTeaser";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useQuery } from "@tanstack/react-query";
 
@@ -411,7 +412,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Pain Point Section - After Hero */}
+      {/* Pain Point Section - After Calculator */}
       <section className="py-20 sm:py-28 bg-white" data-testid="section-pain-points">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
@@ -479,6 +480,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* ScopeScan Teaser - After Pain Point Section */}
+      <ScopeScanTeaser />
 
       {/* Testimonial Preview Cards */}
       <section className="bg-slate-50 py-16 sm:py-20 border-t border-slate-100">
