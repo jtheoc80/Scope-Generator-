@@ -1,3 +1,4 @@
+import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Layout from "@/components/layout";
@@ -10,6 +11,55 @@ interface PageProps {
 
 export async function generateStaticParams(): Promise<Array<{ trade: TradeKey }>> {
   return (Object.keys(tradeDefinitions) as TradeKey[]).map((trade) => ({ trade }));
+}
+
+// Generate metadata for SEO
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { trade: tradeParam } = await params;
+  const def = getTradeDefinition(tradeParam);
+
+  if (!def) {
+    return {
+      title: "Trade Not Found",
+    };
+  }
+
+  return {
+    title: def.heroTitle,
+    description: def.heroSubtitle,
+    keywords: [
+      `${def.name.toLowerCase()} proposal software`,
+      `${def.name.toLowerCase()} contractor estimates`,
+      `${def.name.toLowerCase()} proposal template`,
+      "contractor proposal software",
+      "construction proposal generator",
+      "professional contractor proposals",
+    ],
+    openGraph: {
+      title: def.heroTitle,
+      description: def.heroSubtitle,
+      type: "website",
+      url: `https://scopegenerator.com/trades/${def.key}`,
+      siteName: "ScopeGen",
+      images: [
+        {
+          url: "/opengraph.jpg",
+          width: 1200,
+          height: 630,
+          alt: `ScopeGen - ${def.name} Proposal Software`,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: def.heroTitle,
+      description: def.heroSubtitle,
+      images: ["/opengraph.jpg"],
+    },
+    alternates: {
+      canonical: `https://scopegenerator.com/trades/${def.key}`,
+    },
+  };
 }
 
 export default async function TradePage({ params }: PageProps) {
