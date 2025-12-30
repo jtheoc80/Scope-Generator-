@@ -75,6 +75,58 @@ export const templates: Template[] = [
           "Caulk all corners and transitions with mildew-resistant silicone.",
           "Final cleanup and debris removal; protect finished work."
         ],
+        scopeSections: [
+          {
+            title: "Demolition & Removal",
+            items: [
+              "Demolish existing bathtub and surround down to studs.",
+              "Dispose of all debris off-site in accordance with local regulations.",
+              "Inspect framing and plumbing for water damage; report findings to homeowner."
+            ]
+          },
+          {
+            title: "Waterproofing & Substrate",
+            items: [
+              "Install new shower pan/base with proper slope (minimum 1/4\" per foot).",
+              "Install cement board backer on all shower walls per manufacturer specs.",
+              "Apply waterproof membrane to all wet areas meeting TCNA standards."
+            ]
+          },
+          {
+            title: "Plumbing & Fixtures",
+            items: [
+              "Install new shower valve, mixing valve, and trim kit.",
+              "Install shower head, arm, and escutcheon plate."
+            ]
+          },
+          {
+            title: "Tile & Finish Work",
+            items: [
+              "Tile shower walls to ceiling height using thin-set mortar method.",
+              "Grout all tile joints with premium sanded grout; seal grout lines.",
+              "Caulk all corners and transitions with mildew-resistant silicone."
+            ]
+          },
+          {
+            title: "Cleanup & Closeout",
+            items: [
+              "Final cleanup and debris removal; protect finished work."
+            ]
+          }
+        ],
+        assumptions: [
+          "Existing plumbing is in good working condition.",
+          "No structural repairs needed to floor or wall framing.",
+          "Standard ceiling height (8 ft or less).",
+          "Adequate ventilation exists or exhaust fan is already installed."
+        ],
+        addons: [
+          "Recessed tiled niche for storage",
+          "Glass shower door (framed, semi-frameless, or frameless)",
+          "Built-in shower bench",
+          "Linear drain upgrade",
+          "Body spray system"
+        ],
         options: [
           {
             id: "niche",
@@ -146,6 +198,73 @@ export const templates: Template[] = [
           "Install new towel bars, paper holder, and accessories.",
           "Final cleanup, touch-up, and walkthrough with homeowner."
         ],
+        scopeSections: [
+          {
+            title: "Demolition & Inspection",
+            items: [
+              "Complete demolition of vanity, toilet, tub/shower, flooring, and wall finishes.",
+              "Remove existing fixtures and dispose of all debris off-site.",
+              "Inspect and document condition of plumbing, electrical, and framing."
+            ]
+          },
+          {
+            title: "Rough-In & Infrastructure",
+            items: [
+              "Update plumbing rough-in as required by local code.",
+              "Install new electrical circuits for GFI outlets, exhaust fan, and lighting.",
+              "Install moisture-resistant drywall on walls; cement board in wet areas."
+            ]
+          },
+          {
+            title: "Vanity & Countertop",
+            items: [
+              "Install new vanity cabinet (36-48\" standard) with soft-close hardware.",
+              "Install vanity countertop with undermount or vessel sink.",
+              "Install new faucet and pop-up drain assembly."
+            ]
+          },
+          {
+            title: "Plumbing Fixtures",
+            items: [
+              "Install new toilet with wax ring seal and supply line.",
+              "Install new bathtub or shower system per plan specifications."
+            ]
+          },
+          {
+            title: "Tile & Flooring",
+            items: [
+              "Tile floor with selected tile; install transitions at doorways.",
+              "Tile wet areas with waterproof membrane system."
+            ]
+          },
+          {
+            title: "Paint & Finish Work",
+            items: [
+              "Paint walls and ceiling with moisture-resistant paint (2 coats).",
+              "Install new light fixtures, exhaust fan, and GFI outlets.",
+              "Install new towel bars, paper holder, and accessories."
+            ]
+          },
+          {
+            title: "Cleanup & Closeout",
+            items: [
+              "Final cleanup, touch-up, and walkthrough with homeowner."
+            ]
+          }
+        ],
+        assumptions: [
+          "Existing plumbing and electrical are accessible and in serviceable condition.",
+          "No asbestos or lead paint present (testing recommended for older homes).",
+          "Floor structure is sound and level.",
+          "Homeowner to select all fixtures and finishes prior to start."
+        ],
+        addons: [
+          "Heated floor system with programmable thermostat",
+          "Double vanity upgrade (60-72\")",
+          "Freestanding soaking tub",
+          "Premium porcelain or natural stone tile",
+          "Custom tile shower"
+        ],
         options: [
           {
             id: "heated-floor",
@@ -207,6 +326,49 @@ export const templates: Template[] = [
           "Install mirror, towel ring, and toilet paper holder.",
           "Caulk all edges; final cleanup and inspection."
         ],
+        scopeSections: [
+          {
+            title: "Demolition & Prep",
+            items: [
+              "Remove existing vanity, toilet, flooring, and wall finishes.",
+              "Dispose of all demolition debris off-site.",
+              "Repair/patch drywall as needed; install new drywall if required."
+            ]
+          },
+          {
+            title: "Vanity & Plumbing",
+            items: [
+              "Install new vanity cabinet (24-30\" width) with countertop and sink.",
+              "Install new single-hole or widespread faucet.",
+              "Install new toilet with all hardware and accessories."
+            ]
+          },
+          {
+            title: "Flooring & Paint",
+            items: [
+              "Install new luxury vinyl plank or tile flooring.",
+              "Paint walls and ceiling (2 coats premium latex)."
+            ]
+          },
+          {
+            title: "Fixtures & Accessories",
+            items: [
+              "Install new light fixture above vanity.",
+              "Install mirror, towel ring, and toilet paper holder.",
+              "Caulk all edges; final cleanup and inspection."
+            ]
+          }
+        ],
+        assumptions: [
+          "Existing plumbing connections are in good condition.",
+          "No water damage present behind walls or under flooring.",
+          "Standard ceiling height (8 ft or less)."
+        ],
+        addons: [
+          "Pedestal sink (instead of vanity)",
+          "Wallpaper accent wall",
+          "Wainscoting panels"
+        ],
         options: [
           {
             id: "pedestal-sink",
@@ -255,6 +417,59 @@ export const templates: Template[] = [
           "Install accessible light switches and outlets at proper heights.",
           "Final inspection and walkthrough."
         ],
+        scopeSections: [
+          {
+            title: "Demolition & Access",
+            items: [
+              "Remove existing tub/shower, vanity, and toilet.",
+              "Dispose of all demolition debris off-site.",
+              "Widen doorway to 36\" clear opening if required."
+            ]
+          },
+          {
+            title: "Accessible Shower",
+            items: [
+              "Install curbless/roll-in shower with proper slope to drain.",
+              "Install fold-down shower bench rated for 500 lbs.",
+              "Install handheld showerhead on adjustable slide bar.",
+              "Install anti-scald pressure-balancing valve."
+            ]
+          },
+          {
+            title: "Safety Features",
+            items: [
+              "Install non-slip tile flooring throughout bathroom.",
+              "Install ADA-compliant grab bars at shower, toilet, and vanity."
+            ]
+          },
+          {
+            title: "Fixtures & Accessories",
+            items: [
+              "Install comfort-height toilet (17-19\" seat height).",
+              "Install wall-mount or accessible vanity with knee clearance.",
+              "Install lever-handle faucets throughout."
+            ]
+          },
+          {
+            title: "Electrical & Closeout",
+            items: [
+              "Ensure proper lighting levels per ADA guidelines.",
+              "Install accessible light switches and outlets at proper heights.",
+              "Final inspection and walkthrough."
+            ]
+          }
+        ],
+        assumptions: [
+          "Floor structure can support curbless shower installation.",
+          "Adequate clearance exists for 60\" turning radius.",
+          "Existing electrical can accommodate required outlets.",
+          "Water heater capacity is sufficient for anti-scald valve."
+        ],
+        addons: [
+          "Designer grab bar package",
+          "Heated floor system",
+          "Built-in transfer bench"
+        ],
         options: [
           {
             id: "grab-bar-upgrade",
@@ -299,6 +514,44 @@ export const templates: Template[] = [
           "Apply caulk around countertop edges.",
           "Install new mirror above vanity.",
           "Clean up and test all fixtures."
+        ],
+        scopeSections: [
+          {
+            title: "Removal",
+            items: [
+              "Shut off water supply to vanity.",
+              "Disconnect and remove existing vanity, countertop, and faucet.",
+              "Dispose of old vanity off-site."
+            ]
+          },
+          {
+            title: "Installation",
+            items: [
+              "Inspect plumbing connections; replace supply lines.",
+              "Install new vanity cabinet; secure to wall studs.",
+              "Install new countertop with sink cutout.",
+              "Install new undermount or drop-in sink."
+            ]
+          },
+          {
+            title: "Plumbing & Finish",
+            items: [
+              "Install new faucet and drain assembly.",
+              "Connect P-trap and test for leaks.",
+              "Apply caulk around countertop edges.",
+              "Install new mirror above vanity.",
+              "Clean up and test all fixtures."
+            ]
+          }
+        ],
+        assumptions: [
+          "Existing plumbing is in good condition.",
+          "No water damage behind existing vanity.",
+          "Wall surface is sound and requires minimal repair."
+        ],
+        addons: [
+          "Vanity size upgrade (48\" or 60\" double)",
+          "New vanity light fixture"
         ],
         options: [
           {
@@ -359,6 +612,75 @@ export const templates: Template[] = [
           "Connect and install all appliances (per allowance or owner-supplied).",
           "Install garbage disposal, dishwasher, and range hood ductwork.",
           "Final punch list, touch-up, and homeowner walkthrough."
+        ],
+        scopeSections: [
+          {
+            title: "Demolition & Inspection",
+            items: [
+              "Complete demolition of existing cabinets, countertops, flooring, backsplash, and soffits.",
+              "Remove existing appliances and disconnect all utilities.",
+              "Dispose of all demolition debris per local regulations.",
+              "Inspect and document condition of plumbing, electrical, and framing."
+            ]
+          },
+          {
+            title: "Rough-In & Infrastructure",
+            items: [
+              "Update electrical circuits per plan; add outlets as required by code.",
+              "Update plumbing rough-in for sink, dishwasher, and refrigerator.",
+              "Install new drywall/patch walls as needed; texture to match.",
+              "Prime and paint walls and ceiling (2 coats)."
+            ]
+          },
+          {
+            title: "Cabinetry",
+            items: [
+              "Install new base and upper cabinets per layout plan.",
+              "Install crown molding and decorative trim on cabinets."
+            ]
+          },
+          {
+            title: "Countertops & Backsplash",
+            items: [
+              "Template and fabricate new countertops.",
+              "Install countertops with proper support and cutouts.",
+              "Install undermount sink and faucet assembly.",
+              "Install tile backsplash per design specifications."
+            ]
+          },
+          {
+            title: "Flooring",
+            items: [
+              "Install new flooring (hardwood, tile, or LVP) with transitions."
+            ]
+          },
+          {
+            title: "Electrical & Lighting",
+            items: [
+              "Install new lighting fixtures: recessed cans and pendant lights."
+            ]
+          },
+          {
+            title: "Appliances & Final",
+            items: [
+              "Connect and install all appliances (per allowance or owner-supplied).",
+              "Install garbage disposal, dishwasher, and range hood ductwork.",
+              "Final punch list, touch-up, and homeowner walkthrough."
+            ]
+          }
+        ],
+        assumptions: [
+          "Existing plumbing and electrical are accessible and in serviceable condition.",
+          "No load-bearing walls will be removed or modified.",
+          "Homeowner to select all cabinets, countertops, and finishes prior to start.",
+          "Appliances are either included in allowance or owner-supplied."
+        ],
+        addons: [
+          "Semi-custom or custom cabinets",
+          "Crown molding and trim package",
+          "Quartz, granite, or marble countertops",
+          "Under-cabinet LED lighting",
+          "Pot filler faucet"
         ],
         options: [
           {
@@ -463,6 +785,60 @@ export const templates: Template[] = [
           "Reinstall all doors and drawer fronts; adjust alignment.",
           "Caulk countertop edges; seal natural stone if applicable.",
           "Final cleanup and quality inspection."
+        ],
+        scopeSections: [
+          {
+            title: "Protection & Removal",
+            items: [
+              "Protect flooring and existing appliances with drop cloths.",
+              "Remove existing countertops and backsplash; dispose off-site.",
+              "Remove cabinet doors, drawer fronts, and all hardware."
+            ]
+          },
+          {
+            title: "Cabinet Refinishing",
+            items: [
+              "Clean, sand, and prep all cabinet surfaces.",
+              "Apply primer and two coats of cabinet-grade paint or stain.",
+              "Install new soft-close hinges and drawer slides."
+            ]
+          },
+          {
+            title: "Countertops",
+            items: [
+              "Template and fabricate new countertops per specifications.",
+              "Install new countertops with proper support and seaming.",
+              "Caulk countertop edges; seal natural stone if applicable."
+            ]
+          },
+          {
+            title: "Plumbing & Backsplash",
+            items: [
+              "Cut and install new undermount or drop-in sink.",
+              "Reconnect plumbing to sink and garbage disposal.",
+              "Install new faucet assembly.",
+              "Install tile backsplash per design specifications."
+            ]
+          },
+          {
+            title: "Final Assembly",
+            items: [
+              "Install new cabinet hardware (pulls/knobs).",
+              "Reinstall all doors and drawer fronts; adjust alignment.",
+              "Final cleanup and quality inspection."
+            ]
+          }
+        ],
+        assumptions: [
+          "Existing cabinet boxes are structurally sound.",
+          "No plumbing or electrical relocation needed.",
+          "Countertop template can be done on-site.",
+          "Homeowner to select finishes prior to start."
+        ],
+        addons: [
+          "New cabinet doors and drawer fronts",
+          "Crown molding and trim package",
+          "Under-cabinet LED lighting"
         ],
         options: [
           {
@@ -1146,6 +1522,50 @@ export const templates: Template[] = [
           "Return furniture to original positions.",
           "Final touch-up and walkthrough."
         ],
+        scopeSections: [
+          {
+            title: "Preparation",
+            items: [
+              "Move furniture to center of room and cover with drop cloths.",
+              "Mask floors, trim, outlets, and windows with tape and plastic."
+            ]
+          },
+          {
+            title: "Surface Prep",
+            items: [
+              "Patch minor holes, nail pops, and hairline cracks with spackling compound.",
+              "Sand patches smooth and spot prime all repairs.",
+              "Caulk gaps between trim and walls with paintable caulk."
+            ]
+          },
+          {
+            title: "Paint Application",
+            items: [
+              "Apply two coats of premium interior latex paint (walls only).",
+              "Cut-in all edges, corners, and around fixtures."
+            ]
+          },
+          {
+            title: "Cleanup & Final",
+            items: [
+              "Remove all masking materials; clean up paint drips.",
+              "Return furniture to original positions.",
+              "Final touch-up and walkthrough."
+            ]
+          }
+        ],
+        assumptions: [
+          "Walls are in good condition with no major damage.",
+          "Room is accessible and furniture can be moved.",
+          "No wallpaper removal required.",
+          "Homeowner to select paint colors prior to start."
+        ],
+        addons: [
+          "Trim and door painting",
+          "Ceiling painting",
+          "Closet interior painting",
+          "Accent wall"
+        ],
         options: [
           {
             id: "room-area",
@@ -1210,6 +1630,58 @@ export const templates: Template[] = [
           "Touch-up all areas as needed.",
           "Remove all masking and protective materials.",
           "Final cleanup and walkthrough."
+        ],
+        scopeSections: [
+          {
+            title: "Protection & Masking",
+            items: [
+              "Protect all floors with drop cloths and plastic sheeting.",
+              "Move furniture as needed; cover with protective materials.",
+              "Mask all windows, doors, cabinets, and fixtures."
+            ]
+          },
+          {
+            title: "Surface Preparation",
+            items: [
+              "Patch all holes, cracks, and nail pops throughout home.",
+              "Sand patches and apply primer to repairs.",
+              "Caulk all gaps between trim and walls."
+            ]
+          },
+          {
+            title: "Wall Painting",
+            items: [
+              "Apply two coats premium interior latex to all wall surfaces.",
+              "Cut-in all edges and around all fixtures."
+            ]
+          },
+          {
+            title: "Trim & Doors",
+            items: [
+              "Apply semi-gloss paint to all door frames and casings.",
+              "Paint all interior doors (both sides if requested).",
+              "Paint all baseboards throughout home."
+            ]
+          },
+          {
+            title: "Cleanup & Final",
+            items: [
+              "Touch-up all areas as needed.",
+              "Remove all masking and protective materials.",
+              "Final cleanup and walkthrough."
+            ]
+          }
+        ],
+        assumptions: [
+          "Walls and ceilings are in paintable condition.",
+          "Access to all rooms during project duration.",
+          "No extensive drywall repair needed.",
+          "Homeowner to select paint colors prior to start."
+        ],
+        addons: [
+          "Ceiling painting throughout",
+          "Staircase and railing painting",
+          "Kitchen cabinet painting"
         ],
         options: [
           {
@@ -1304,6 +1776,41 @@ export const templates: Template[] = [
           "Restore water supply and test for leaks.",
           "Verify proper valve operation.",
           "Clean up work area."
+        ],
+        scopeSections: [
+          {
+            title: "Preparation",
+            items: [
+              "Shut off water supply to affected area.",
+              "Drain lines to prevent water spillage."
+            ]
+          },
+          {
+            title: "Valve Replacement",
+            items: [
+              "Remove defective valve mechanism.",
+              "Install new quarter-turn ball valve or fixture stop.",
+              "Replace supply lines with braided stainless steel hoses.",
+              "Apply thread sealant to all threaded connections."
+            ]
+          },
+          {
+            title: "Testing & Cleanup",
+            items: [
+              "Restore water supply and test for leaks.",
+              "Verify proper valve operation.",
+              "Clean up work area."
+            ]
+          }
+        ],
+        assumptions: [
+          "Valve is accessible without major demolition.",
+          "Main water shutoff is functional.",
+          "No significant corrosion on supply lines."
+        ],
+        addons: [
+          "Access panel installation",
+          "Whole house plumbing inspection"
         ],
         options: [
           {
@@ -1746,6 +2253,51 @@ export const templates: Template[] = [
           "Provide load calculation documentation.",
           "Arrange for final inspection (permit fee separate)."
         ],
+        scopeSections: [
+          {
+            title: "Preparation & Removal",
+            items: [
+              "Coordinate power shutdown with utility company.",
+              "Disconnect and remove existing electrical panel."
+            ]
+          },
+          {
+            title: "Panel Installation",
+            items: [
+              "Install new 200-amp main breaker panel with copper bus bars.",
+              "Install new main breaker and neutral/ground bus bars.",
+              "Transfer all existing circuits to new arc-fault/GFCI breakers where required.",
+              "Label all circuits clearly per NEC requirements."
+            ]
+          },
+          {
+            title: "Grounding & Bonding",
+            items: [
+              "Install new grounding electrode system (ground rods and/or Ufer ground).",
+              "Install proper bonding to gas, water, and CSST lines."
+            ]
+          },
+          {
+            title: "Testing & Closeout",
+            items: [
+              "Restore power and test all circuits for proper operation.",
+              "Verify proper voltage and amperage at main and branch circuits.",
+              "Provide load calculation documentation.",
+              "Arrange for final inspection (permit fee separate)."
+            ]
+          }
+        ],
+        assumptions: [
+          "Existing wiring is compatible with new panel.",
+          "Service entrance location remains the same.",
+          "Utility company coordination is available within project timeline.",
+          "No additional circuits required beyond existing."
+        ],
+        addons: [
+          "Meter and mast replacement",
+          "Whole-house surge protection",
+          "Generator interlock kit"
+        ],
         options: [
           {
             id: "service-upgrade-type",
@@ -2187,6 +2739,52 @@ export const templates: Template[] = [
           "Clean and inspect all installed flooring.",
           "Provide care and maintenance instructions."
         ],
+        scopeSections: [
+          {
+            title: "Removal & Prep",
+            items: [
+              "Remove existing flooring material (carpet, vinyl, or laminate).",
+              "Dispose of all debris off-site.",
+              "Inspect subfloor for damage, levelness, and moisture.",
+              "Repair minor subfloor issues; level low spots with compound."
+            ]
+          },
+          {
+            title: "Underlayment",
+            items: [
+              "Acclimate LVP planks per manufacturer requirements.",
+              "Install moisture barrier underlayment."
+            ]
+          },
+          {
+            title: "Flooring Installation",
+            items: [
+              "Install LVP flooring using floating click-lock method.",
+              "Stagger planks per manufacturer pattern requirements.",
+              "Undercut door jambs and casings for seamless fit."
+            ]
+          },
+          {
+            title: "Trim & Finish",
+            items: [
+              "Install transition strips at doorways and floor changes.",
+              "Install new baseboards or quarter-round trim.",
+              "Clean and inspect all installed flooring.",
+              "Provide care and maintenance instructions."
+            ]
+          }
+        ],
+        assumptions: [
+          "Subfloor is structurally sound and level.",
+          "Room is cleared of furniture prior to installation.",
+          "Adequate acclimation time (48+ hours) available.",
+          "No moisture issues present in subfloor."
+        ],
+        addons: [
+          "Carpet removal in additional rooms",
+          "Furniture moving service",
+          "Premium sound-reducing underlayment"
+        ],
         options: [
           {
             id: "remove-carpet",
@@ -2341,6 +2939,61 @@ export const templates: Template[] = [
           "Perform magnetic sweep of property for nails.",
           "Final cleanup and debris removal; haul to dump.",
           "Provide warranty documentation."
+        ],
+        scopeSections: [
+          {
+            title: "Setup & Protection",
+            items: [
+              "Set up ground-level debris containment and protection."
+            ]
+          },
+          {
+            title: "Tear-Off & Inspection",
+            items: [
+              "Remove all existing shingles, underlayment, and flashing.",
+              "Inspect roof deck for damage; report findings to homeowner.",
+              "Replace damaged or rotted decking (up to 2 sheets included)."
+            ]
+          },
+          {
+            title: "Underlayment & Flashing",
+            items: [
+              "Install ice and water shield at eaves and valleys.",
+              "Install synthetic underlayment over entire roof surface.",
+              "Install drip edge at eaves and rakes.",
+              "Install step flashing at walls and chimneys.",
+              "Install new pipe boots and vent flashings."
+            ]
+          },
+          {
+            title: "Shingle Installation",
+            items: [
+              "Install starter strip at eaves and rakes.",
+              "Install architectural shingles per manufacturer specs.",
+              "Install ridge vent for continuous attic ventilation.",
+              "Install ridge cap shingles."
+            ]
+          },
+          {
+            title: "Cleanup & Closeout",
+            items: [
+              "Perform magnetic sweep of property for nails.",
+              "Final cleanup and debris removal; haul to dump.",
+              "Provide warranty documentation."
+            ]
+          }
+        ],
+        assumptions: [
+          "Roof deck is structurally sound.",
+          "Clear access around property for equipment and debris.",
+          "No more than 2 layers of existing shingles.",
+          "Weather permits work during scheduled period."
+        ],
+        addons: [
+          "Designer or impact-resistant shingles",
+          "Chimney reflashing",
+          "Skylight reflashing",
+          "Additional decking replacement"
         ],
         options: [
           {
@@ -4085,6 +4738,57 @@ export const templates: Template[] = [
           "Apply mulch to all planting beds (3-inch depth).",
           "Perform final grading and cleanup of all work areas.",
           "Provide plant care guide and irrigation schedule to homeowner."
+        ],
+        scopeSections: [
+          {
+            title: "Design & Planning",
+            items: [
+              "Initial site consultation and design review with homeowner.",
+              "Call 811 for utility location prior to any excavation."
+            ]
+          },
+          {
+            title: "Site Preparation",
+            items: [
+              "Remove existing plants, grass, and debris as specified in plan.",
+              "Grade and level yard for proper drainage away from structure.",
+              "Install landscape fabric in designated areas."
+            ]
+          },
+          {
+            title: "Planting",
+            items: [
+              "Prepare planting beds with soil amendment and compost.",
+              "Install all trees, shrubs, and perennials per landscape plan."
+            ]
+          },
+          {
+            title: "Hardscape & Irrigation",
+            items: [
+              "Install hardscape elements per design specifications.",
+              "Install irrigation system components as specified."
+            ]
+          },
+          {
+            title: "Finishing",
+            items: [
+              "Apply mulch to all planting beds (3-inch depth).",
+              "Perform final grading and cleanup of all work areas.",
+              "Provide plant care guide and irrigation schedule to homeowner."
+            ]
+          }
+        ],
+        assumptions: [
+          "Property has adequate drainage and no major grading issues.",
+          "Access available for equipment and material delivery.",
+          "Utilities have been located prior to excavation.",
+          "Landscape plan approved by homeowner prior to start."
+        ],
+        addons: [
+          "Lawn installation (sod or seed)",
+          "Irrigation system installation",
+          "Landscape lighting package",
+          "Retaining wall construction"
         ],
         options: [
           {

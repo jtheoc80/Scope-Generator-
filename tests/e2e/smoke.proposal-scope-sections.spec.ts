@@ -103,31 +103,43 @@ test.describe('Proposal Scope Sections', () => {
     await expect(addonsList).toBeVisible({ timeout: 5000 });
   });
 
-  test('Legacy template (Bathroom) should render as flat bullet list without errors', async ({ page }) => {
+  test('Legacy template (Kitchen Cabinet Reface) should render as flat bullet list without errors', async ({ page }) => {
     const errors = captureConsoleErrors(page);
     
     // Scope all locators to the desktop preview container
     const previewContainer = page.locator('[data-testid="proposal-preview-container"]');
 
-    // Select Bathroom trade (legacy flat scope format)
+    // Select Kitchen trade 
     const tradeSelect = page.locator('[data-testid="select-trade-0"]');
     await tradeSelect.click();
     
-    // Find bathroom option (case insensitive)
-    const bathroomOption = page.locator('[role="option"]').filter({ hasText: /bathroom/i }).first();
-    if (await bathroomOption.count() === 0) {
-      // Fall back to first available trade
-      await page.locator('[role="option"]').first().click();
-    } else {
-      await bathroomOption.click();
+    // Find kitchen option (case insensitive) - this trade has some legacy job types
+    const kitchenOption = page.locator('[role="option"]').filter({ hasText: /kitchen/i }).first();
+    if (await kitchenOption.count() === 0) {
+      // Skip if Kitchen trade not available
+      test.skip();
+      return;
     }
+    await kitchenOption.click();
     await page.waitForTimeout(500);
 
-    // Select first job type
+    // Select "Cabinet Reface Only" job type (doesn't have scopeSections - legacy format)
     const jobTypeSelect = page.locator('[data-testid="select-jobtype-0"]');
     await expect(jobTypeSelect).toBeVisible({ timeout: 5000 });
     await jobTypeSelect.click();
-    await page.locator('[role="option"]').first().click();
+    
+    const cabinetRefaceOption = page.locator('[role="option"]').filter({ hasText: /Cabinet Reface/i }).first();
+    if (await cabinetRefaceOption.count() === 0) {
+      // Fall back to a later job type (partial kitchen doesn't have sections either)
+      const partialKitchenOption = page.locator('[role="option"]').filter({ hasText: /Partial Kitchen/i }).first();
+      if (await partialKitchenOption.count() === 0) {
+        test.skip(); // No legacy template available
+        return;
+      }
+      await partialKitchenOption.click();
+    } else {
+      await cabinetRefaceOption.click();
+    }
     await page.waitForTimeout(500);
 
     // Verify the preview container is visible
@@ -189,18 +201,24 @@ test.describe('Proposal Scope Sections', () => {
     const scopeSections = previewContainer.locator('[data-testid="preview-scope-sections"]');
     await expect(scopeSections).toBeVisible({ timeout: 5000 });
 
-    // Now switch to Bathroom (legacy format)
+    // Now switch to Kitchen > Cabinet Reface (legacy format without scopeSections)
     await tradeSelect.click();
-    const bathroomOption = page.locator('[role="option"]').filter({ hasText: /bathroom/i }).first();
-    if (await bathroomOption.count() > 0) {
-      await bathroomOption.click();
+    const kitchenOption = page.locator('[role="option"]').filter({ hasText: /kitchen/i }).first();
+    if (await kitchenOption.count() > 0) {
+      await kitchenOption.click();
     } else {
       await page.locator('[role="option"]').first().click();
     }
     await page.waitForTimeout(500);
 
     await jobTypeSelect.click();
-    await page.locator('[role="option"]').first().click();
+    // Select Cabinet Reface Only (legacy format)
+    const cabinetRefaceOption = page.locator('[role="option"]').filter({ hasText: /Cabinet Reface/i }).first();
+    if (await cabinetRefaceOption.count() > 0) {
+      await cabinetRefaceOption.click();
+    } else {
+      await page.locator('[role="option"]').first().click();
+    }
     await page.waitForTimeout(500);
 
     // Verify flat list is now shown instead of sections
