@@ -1,10 +1,11 @@
 'use client';
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import Layout from "@/components/layout";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { templates, JobType, getLocalizedJobType, getLocalizedJobTypes } from "@/lib/proposal-data";
+import { useSearchParams } from "next/navigation";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -281,6 +282,8 @@ export default function Generator() {
   const { t, language } = useLanguage();
   const previewRef = useRef<HTMLDivElement>(null);
   const previewPaneRef = useRef<ProposalPreviewPaneHandle>(null);
+  const searchParams = useSearchParams();
+  const hasAppliedTradeParamRef = useRef(false);
 
   const userSelectedTrades = user?.selectedTrades || [];
   const availableTemplates = userSelectedTrades.length > 0
@@ -312,6 +315,44 @@ export default function Generator() {
     setters: { setServices, setPhotos, setEnhancedScopes, setStep, setSavedProposalId, setFinalizeErrors },
     onReset: () => toast({ title: "Draft cleared", description: "Your draft has been reset." }),
   });
+
+  // Deep-link support: /generator?trade=<tradeId>
+  // Apply only once on initial load (and don't override restored drafts / existing selections).
+  useEffect(() => {
+    if (hasAppliedTradeParamRef.current) return;
+
+    const tradeParam = searchParams.get("trade");
+    if (!tradeParam) return;
+
+    // If a draft was restored, preserve the restored state.
+    if (draftRestored) {
+      hasAppliedTradeParamRef.current = true;
+      return;
+    }
+
+    const allowedTrades = new Set(availableTemplates.map((t) => t.id));
+    if (!allowedTrades.has(tradeParam)) {
+      hasAppliedTradeParamRef.current = true;
+      return;
+    }
+
+    setServices((prev) => {
+      if (prev.length === 0) return prev;
+      if (prev[0]?.tradeId) return prev; // don't override user/previous state
+
+      const first: ServiceItem = {
+        ...prev[0],
+        tradeId: tradeParam,
+        jobTypeId: "",
+        homeArea: "",
+        footage: null,
+        options: {},
+      };
+      return [first, ...prev.slice(1)];
+    });
+
+    hasAppliedTradeParamRef.current = true;
+  }, [availableTemplates, draftRestored, searchParams, setServices]);
 
   const getJobTypeForService = (service: ServiceItem): JobType | null => {
     const trade = availableTemplates.find((t) => t.id === service.tradeId);
