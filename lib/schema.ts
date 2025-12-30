@@ -377,3 +377,86 @@ export const insertJobSetupPreferenceSchema = createInsertSchema(jobSetupPrefere
   id: true,
   updatedAt: true,
 });
+
+// ==========================================
+// EagleView Roof Orders (for Roofing Measurements)
+// ==========================================
+
+/**
+ * EagleView roof measurement orders
+ * Tracks order status from creation through completion
+ * Stores normalized roofing measurements for proposal generation
+ */
+export const eagleviewRoofOrders = pgTable("eagleview_roof_orders", {
+  id: varchar("id").primaryKey(), // UUID
+  jobId: varchar("job_id").notNull(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  address: text("address").notNull(),
+  status: varchar("status", { length: 50 }).notNull().default("created"), // created|queued|processing|completed|failed
+  eagleviewOrderId: varchar("eagleview_order_id", { length: 100 }).unique(),
+  eagleviewReportId: varchar("eagleview_report_id", { length: 100 }),
+  reportUrl: text("report_url"),
+  payloadJson: jsonb("payload_json"),
+  roofingMeasurements: jsonb("roofing_measurements"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const eagleviewRoofOrdersRelations = relations(eagleviewRoofOrders, ({ one }) => ({
+  user: one(users, {
+    fields: [eagleviewRoofOrders.userId],
+    references: [users.id],
+  }),
+}));
+
+// Types
+export type EagleviewRoofOrder = typeof eagleviewRoofOrders.$inferSelect;
+export type InsertEagleviewRoofOrder = typeof eagleviewRoofOrders.$inferInsert;
+
+// Roofing measurements structure (normalized from EagleView report)
+export type RoofingMeasurements = {
+  squares: number;          // Total roof squares (1 square = 100 sq ft)
+  roofAreaSqFt: number;     // Total roof area in square feet
+  pitchBreakdown: Array<{   // Areas by pitch
+    pitch: string;          // e.g., "4/12", "6/12"
+    areaSqFt: number;
+  }>;
+  ridgesFt: number;         // Linear feet of ridges
+  hipsFt: number;           // Linear feet of hips
+  valleysFt: number;        // Linear feet of valleys
+  eavesFt: number;          // Linear feet of eaves
+  rakesFt: number;          // Linear feet of rakes
+  flashingFt?: number;      // Linear feet of flashing
+  dripEdgeFt?: number;      // Linear feet of drip edge
+  stepFlashingFt?: number;  // Linear feet of step flashing
+  facets?: number;          // Number of roof facets
+  stories?: number;         // Number of stories
+  predominantPitch?: string;// Most common pitch
+};
+
+// Zod schemas for validation
+export const insertEagleviewRoofOrderSchema = createInsertSchema(eagleviewRoofOrders).omit({
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const roofingMeasurementsSchema = z.object({
+  squares: z.number(),
+  roofAreaSqFt: z.number(),
+  pitchBreakdown: z.array(z.object({
+    pitch: z.string(),
+    areaSqFt: z.number(),
+  })),
+  ridgesFt: z.number(),
+  hipsFt: z.number(),
+  valleysFt: z.number(),
+  eavesFt: z.number(),
+  rakesFt: z.number(),
+  flashingFt: z.number().optional(),
+  dripEdgeFt: z.number().optional(),
+  stepFlashingFt: z.number().optional(),
+  facets: z.number().optional(),
+  stories: z.number().optional(),
+  predominantPitch: z.string().optional(),
+});

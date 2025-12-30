@@ -21,6 +21,8 @@ import {
   MapPin,
 } from "lucide-react";
 import { mobileApiFetch, newIdempotencyKey, SubmitResponse, MobileJob } from "../../../lib/api";
+import { EagleViewRoofMeasurements } from "@/components/eagleview-roof-measurements";
+import type { RoofingMeasurements } from "@/hooks/useEagleViewOrder";
 
 type PackageKey = "GOOD" | "BETTER" | "BEST";
 
@@ -52,8 +54,17 @@ export default function PreviewPage() {
   const [error, setError] = useState<string | null>(null);
   
   // Draft-first: Client details state
-  const [jobInfo, setJobInfo] = useState<{ clientName?: string; address?: string } | null>(null);
+  const [jobInfo, setJobInfo] = useState<{ 
+    clientName?: string; 
+    address?: string;
+    tradeId?: string;
+    tradeName?: string;
+  } | null>(null);
   const [loadingJobInfo, setLoadingJobInfo] = useState(true);
+  
+  // Roofing measurements from EagleView (stored for proposal generation)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [roofMeasurements, setRoofMeasurements] = useState<RoofingMeasurements | null>(null);
   const [editingClientDetails, setEditingClientDetails] = useState(false);
   const [clientName, setClientName] = useState("");
   const [address, setAddress] = useState("");
@@ -75,7 +86,12 @@ export default function PreviewPage() {
     const fetchJobInfo = async () => {
       try {
         const job = await mobileApiFetch<MobileJob>(`/api/mobile/jobs/${jobId}`, { method: "GET" });
-        setJobInfo({ clientName: job.clientName, address: job.address });
+        setJobInfo({ 
+          clientName: job.clientName, 
+          address: job.address,
+          tradeId: job.tradeId,
+          tradeName: job.tradeName,
+        });
         setClientName(job.clientName === "Customer" ? "" : job.clientName || "");
         setAddress(job.address === "Address TBD" ? "" : job.address || "");
         
@@ -441,6 +457,16 @@ export default function PreviewPage() {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* EagleView Roof Measurements (Roofing Only) */}
+      {!loadingJobInfo && jobInfo?.tradeId === 'roofing' && hasCompleteClientDetails && (
+        <EagleViewRoofMeasurements
+          jobId={jobId}
+          trade={jobInfo.tradeId}
+          address={jobInfo.address || address}
+          onMeasurementsReady={setRoofMeasurements}
+        />
       )}
 
       {/* Package Selection */}
