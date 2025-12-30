@@ -115,11 +115,15 @@ const ProposalPreviewPane = forwardRef<ProposalPreviewPaneHandle, ProposalPrevie
     const previewRef = useRef<HTMLDivElement>(null);
 
     // Expose ref handle for parent components
-    useImperativeHandle(ref, () => ({
-      previewRef,
-      openDrawer: () => setDrawerOpen(true),
-      closeDrawer: () => setDrawerOpen(false),
-    }));
+    useImperativeHandle(
+      ref,
+      () => ({
+        previewRef,
+        openDrawer: () => setDrawerOpen(true),
+        closeDrawer: () => setDrawerOpen(false),
+      }),
+      []
+    );
 
     // Memoize preview data with placeholders for empty fields
     const previewDataWithPlaceholders = useMemo(() => {
