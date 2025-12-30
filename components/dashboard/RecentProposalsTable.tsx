@@ -19,6 +19,7 @@ import {
   CreditCard,
 } from "lucide-react";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
+import type { TranslationKeys } from "@/lib/translations";
 
 export interface ProposalRow {
   id: number;
@@ -71,6 +72,7 @@ export function RecentProposalsTable({
   title = "Recent proposals",
   proposals,
   locale = "en-US",
+  t,
   showPaymentLink,
   onEdit,
   onView,
@@ -85,6 +87,7 @@ export function RecentProposalsTable({
   title?: string;
   proposals: ProposalRow[];
   locale?: string;
+  t: TranslationKeys;
   showPaymentLink: boolean;
   onEdit: (p: ProposalRow) => void;
   onView: (p: ProposalRow) => void;
@@ -123,7 +126,7 @@ export function RecentProposalsTable({
             {title}
           </div>
           <div className="mt-1 text-sm font-semibold text-slate-900">
-            {filtered.length.toLocaleString()} shown
+            {filtered.length.toLocaleString()} {t.dashboard.shown}
           </div>
         </div>
 
@@ -133,6 +136,7 @@ export function RecentProposalsTable({
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              placeholder={t.dashboard.searchProposals}
               placeholder={locale && locale.toLowerCase().startsWith("es") ? "Buscar propuestas…" : "Search proposals…"}
               className="h-9 rounded-xl border-slate-200 bg-slate-50 pl-9"
               aria-label="Search proposals by client name, address, or job type"
@@ -142,22 +146,22 @@ export function RecentProposalsTable({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="h-9 justify-between rounded-xl">
-                Status:{" "}
+                {t.dashboard.statusFilter}{" "}
                 <span className="ml-2 font-semibold text-slate-900">
-                  {status === "all" ? "All" : status[0]!.toUpperCase() + status.slice(1)}
+                  {status === "all" ? t.dashboard.all : status[0]!.toUpperCase() + status.slice(1)}
                 </span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
               {(
                 [
-                  ["all", "All"],
-                  ["draft", "Draft"],
-                  ["sent", "Sent"],
-                  ["viewed", "Viewed"],
-                  ["accepted", "Accepted"],
-                  ["won", "Won"],
-                  ["lost", "Lost"],
+                  ["all", t.dashboard.all],
+                  ["draft", t.dashboard.draft],
+                  ["sent", t.dashboard.sent],
+                  ["viewed", t.dashboard.viewed],
+                  ["accepted", t.dashboard.accepted],
+                  ["won", t.dashboard.won],
+                  ["lost", t.dashboard.lost],
                 ] as Array<[StatusKey, string]>
               ).map(([k, label]) => (
                 <DropdownMenuItem key={k} onClick={() => setStatus(k)}>
@@ -175,9 +179,9 @@ export function RecentProposalsTable({
             <div className="mx-auto max-w-md">
               {hasAny ? (
                 <>
-                  <div className="text-sm font-semibold text-slate-900">No matches</div>
+                  <div className="text-sm font-semibold text-slate-900">{t.dashboard.noMatches}</div>
                   <div className="mt-1 text-sm text-slate-500">
-                    Try adjusting your search or status filter.
+                    {t.dashboard.tryAdjusting}
                   </div>
                   <div className="mt-5 flex flex-col items-center justify-center gap-2 sm:flex-row">
                     <Button
@@ -187,27 +191,27 @@ export function RecentProposalsTable({
                         setStatus("all");
                       }}
                     >
-                      Clear filters
+                      {t.dashboard.clearFilters}
                     </Button>
                     <Button asChild className="gap-2 bg-orange-600 text-white hover:bg-orange-700 border border-orange-600">
                       <Link href="/app">
                         <Plus className="h-4 w-4" />
-                        New proposal
+                        {t.dashboard.newProposal}
                       </Link>
                     </Button>
                   </div>
                 </>
               ) : (
                 <>
-                  <div className="text-sm font-semibold text-slate-900">No proposals yet</div>
+                  <div className="text-sm font-semibold text-slate-900">{t.dashboard.noProposalsYet}</div>
                   <div className="mt-1 text-sm text-slate-500">
-                    Create your first proposal to track pipeline stages, win rate, and revenue.
+                    {t.dashboard.createFirstProposal}
                   </div>
                   <div className="mt-5 flex flex-col items-center justify-center gap-2 sm:flex-row">
                     <Button asChild className="gap-2 bg-orange-600 text-white hover:bg-orange-700 border border-orange-600">
                       <Link href="/app">
                         <Plus className="h-4 w-4" />
-                        Create your first proposal
+                        {t.dashboard.createFirstProposalButton}
                       </Link>
                     </Button>
                     <Button asChild variant="outline" className="gap-2">
@@ -226,12 +230,12 @@ export function RecentProposalsTable({
             <table className="w-full text-sm" role="table" aria-label="Recent proposals with client information, job details, status, and actions">
               <thead className="border-y border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500" role="rowgroup">
                 <tr>
-                  <th className="px-6 py-3 text-left font-semibold">Proposal</th>
-                  <th className="px-6 py-3 text-left font-semibold">Trade</th>
-                  <th className="px-6 py-3 text-left font-semibold">Status</th>
-                  <th className="px-6 py-3 text-left font-semibold">Amount</th>
-                  <th className="px-6 py-3 text-left font-semibold">Last activity</th>
-                  <th className="px-6 py-3 text-right font-semibold">Actions</th>
+                  <th className="px-6 py-3 text-left font-semibold">{t.dashboard.tableHeaderProposal}</th>
+                  <th className="px-6 py-3 text-left font-semibold">{t.dashboard.tableHeaderTrade}</th>
+                  <th className="px-6 py-3 text-left font-semibold">{t.dashboard.tableHeaderStatus}</th>
+                  <th className="px-6 py-3 text-left font-semibold">{t.dashboard.tableHeaderAmount}</th>
+                  <th className="px-6 py-3 text-left font-semibold">{t.dashboard.tableHeaderLastActivity}</th>
+                  <th className="px-6 py-3 text-right font-semibold">{t.dashboard.tableHeaderActions}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100" role="rowgroup">
@@ -240,7 +244,7 @@ export function RecentProposalsTable({
                   const hasValidPrices = isValidPrice(p.priceLow) && isValidPrice(p.priceHigh);
                   const amount = hasValidPrices ? (p.priceLow + p.priceHigh) / 2 : null;
                   const last = p.lastViewedAt || p.createdAt;
-                  const lastLabel = p.lastViewedAt ? "Viewed" : "Created";
+                  const lastLabel = p.lastViewedAt ? t.dashboard.lastActivityViewed : t.dashboard.lastActivityCreated;
                   const isDraft = normalizeStatus(p.status) === "draft";
 
                   return (
@@ -275,38 +279,38 @@ export function RecentProposalsTable({
                           <DropdownMenuContent align="end" className="w-56">
                             <DropdownMenuItem onClick={() => onEdit(p)}>
                               <Edit className="mr-2 h-4 w-4" />
-                              Edit proposal
+                              {t.dashboard.actionEdit}
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => onView(p)}>
                               <Download className="mr-2 h-4 w-4" />
-                              Download PDF
+                              {t.dashboard.actionDownloadPdf}
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => onAdjustPrice(p)}>
-                              Adjust price
+                              {t.dashboard.actionAdjustPrice}
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => onEmail(p)}>
                               <Mail className="mr-2 h-4 w-4" />
-                              Send via email
+                              {t.dashboard.actionSendEmail}
                             </DropdownMenuItem>
                             {showPaymentLink ? (
                               <DropdownMenuItem onClick={() => onPayment(p)} className="text-slate-900">
                                 <CreditCard className="mr-2 h-4 w-4" />
-                                Request payment
+                                {t.dashboard.actionRequestPayment}
                               </DropdownMenuItem>
                             ) : null}
                             {normalizeStatus(p.status) === "accepted" && !p.contractorSignature ? (
                               <DropdownMenuItem onClick={() => onCountersign(p)} className="text-green-700">
                                 <Pen className="mr-2 h-4 w-4" />
-                                Countersign
+                                {t.dashboard.actionCountersign}
                               </DropdownMenuItem>
                             ) : null}
                             <DropdownMenuItem onClick={() => onMarkStatus(p, "won")} className="text-green-700">
                               <Trophy className="mr-2 h-4 w-4" />
-                              Mark as won
+                              {t.dashboard.actionMarkWon}
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => onMarkStatus(p, "lost")} className="text-red-700">
                               <ThumbsDown className="mr-2 h-4 w-4" />
-                              Mark as lost
+                              {t.dashboard.actionMarkLost}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => onDeleteDraft(p)}
@@ -315,7 +319,7 @@ export function RecentProposalsTable({
                                 isDraft ? "text-red-700" : "cursor-not-allowed text-slate-400",
                               )}
                             >
-                              Delete draft
+                              {t.dashboard.actionDeleteDraft}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

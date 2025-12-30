@@ -463,6 +463,7 @@ export default function Dashboard() {
                 title={t.dashboard.recentProposals}
                 proposals={sortedProposals}
                 locale={locale}
+                t={t}
                 showPaymentLink={!!user?.userStripeEnabled}
                 onEdit={(p) => router.push(`/app?edit=${p.id}`)}
                 onView={(p) => {
