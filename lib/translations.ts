@@ -939,8 +939,6 @@ export const translations = {
       manageTemplates: "Administrar Plantillas",
       newProposal: "Nueva Propuesta",
       recentProposals: "Propuestas Recientes",
-      loadingInsights: "Cargando información...",
-      insightsUnavailable: "Información no disponible",
       loadingInsights: "Cargando análisis...",
       insightsUnavailable: "Análisis no disponible",
       retry: "Reintentar",
