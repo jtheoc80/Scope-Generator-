@@ -3,14 +3,21 @@ import { test, expect } from "@playwright/test";
 test.describe("Trade landing deep-links to generator", () => {
   test("bathroom trade CTA preselects generator trade", async ({ page }) => {
     // Verify query-param selection works when no draft exists.
+  test.beforeEach(async ({ page }) => {
+    // Clear localStorage before each test to ensure a restored draft
+    // can't override the query-param selection.
     await page.goto("/generator");
     await page.evaluate(() => {
       const keys = Object.keys(localStorage);
       keys.forEach((key) => {
-        if (key.startsWith("scopegen_proposal_draft")) localStorage.removeItem(key);
+        if (key.startsWith("scopegen_proposal_draft")) {
+          localStorage.removeItem(key);
+        }
       });
     });
+  });
 
+  test("bathroom trade CTA preselects generator trade", async ({ page }) => {
     await page.goto("/trades/bathroom");
     await expect(page.getByTestId("trade-cta")).toBeVisible({ timeout: 10000 });
     await page.getByTestId("trade-cta").click();
@@ -23,14 +30,6 @@ test.describe("Trade landing deep-links to generator", () => {
   });
 
   test("roofing trade CTA preselects generator trade", async ({ page }) => {
-    await page.goto("/generator");
-    await page.evaluate(() => {
-      const keys = Object.keys(localStorage);
-      keys.forEach((key) => {
-        if (key.startsWith("scopegen_proposal_draft")) localStorage.removeItem(key);
-      });
-    });
-
     await page.goto("/trades/roofing");
     await expect(page.getByTestId("trade-cta")).toBeVisible({ timeout: 10000 });
     await page.getByTestId("trade-cta").click();

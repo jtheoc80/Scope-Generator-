@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import Layout from "@/components/layout";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -260,6 +260,44 @@ const getAreaOptionsForTrade = (tradeId: string, t: any): { value: string; label
   }
 };
 
+// Component that handles search params with Suspense boundary support
+function TradeParamHandler({ 
+  onTradeParam, 
+  availableTemplates,
+  draftRestored 
+}: { 
+  onTradeParam: (tradeId: string | null) => void;
+  availableTemplates: typeof templates;
+  draftRestored: boolean;
+}) {
+  const searchParams = useSearchParams();
+  const hasAppliedRef = useRef(false);
+
+  useEffect(() => {
+    if (hasAppliedRef.current) return;
+
+    const tradeParam = searchParams.get("trade");
+    
+    // If a draft was restored, don't apply the trade param
+    if (draftRestored) {
+      hasAppliedRef.current = true;
+      return;
+    }
+
+    // Validate the trade param against available templates
+    if (tradeParam) {
+      const allowedTrades = new Set(availableTemplates.map((t) => t.id));
+      if (allowedTrades.has(tradeParam)) {
+        onTradeParam(tradeParam);
+      }
+    }
+
+    hasAppliedRef.current = true;
+  }, [searchParams, availableTemplates, draftRestored, onTradeParam]);
+
+  return null;
+}
+
 export default function Generator() {
   const [step, setStep] = useState<1 | 2>(1);
   const [services, setServices] = useState<ServiceItem[]>([
@@ -282,8 +320,6 @@ export default function Generator() {
   const { t, language } = useLanguage();
   const previewRef = useRef<HTMLDivElement>(null);
   const previewPaneRef = useRef<ProposalPreviewPaneHandle>(null);
-  const searchParams = useSearchParams();
-  const hasAppliedTradeParamRef = useRef(false);
 
   const userSelectedTrades = user?.selectedTrades || [];
   const availableTemplates = userSelectedTrades.length > 0
@@ -316,33 +352,17 @@ export default function Generator() {
     onReset: () => toast({ title: "Draft cleared", description: "Your draft has been reset." }),
   });
 
-  // Deep-link support: /generator?trade=<tradeId>
-  // Apply only once on initial load (and don't override restored drafts / existing selections).
-  useEffect(() => {
-    if (hasAppliedTradeParamRef.current) return;
-
-    const tradeParam = searchParams.get("trade");
-    if (!tradeParam) return;
-
-    // If a draft was restored, preserve the restored state.
-    if (draftRestored) {
-      hasAppliedTradeParamRef.current = true;
-      return;
-    }
-
-    const allowedTrades = new Set(availableTemplates.map((t) => t.id));
-    if (!allowedTrades.has(tradeParam)) {
-      hasAppliedTradeParamRef.current = true;
-      return;
-    }
-
+  // Callback to handle trade parameter from URL
+  const handleTradeParam = (tradeId: string | null) => {
+    if (!tradeId) return;
+    
     setServices((prev) => {
       if (prev.length === 0) return prev;
       if (prev[0]?.tradeId) return prev; // don't override user/previous state
 
       const first: ServiceItem = {
         ...prev[0],
-        tradeId: tradeParam,
+        tradeId: tradeId,
         jobTypeId: "",
         homeArea: "",
         footage: null,
@@ -350,9 +370,7 @@ export default function Generator() {
       };
       return [first, ...prev.slice(1)];
     });
-
-    hasAppliedTradeParamRef.current = true;
-  }, [availableTemplates, draftRestored, searchParams, setServices]);
+  };
 
   const getJobTypeForService = (service: ServiceItem): JobType | null => {
     const trade = availableTemplates.find((t) => t.id === service.tradeId);
@@ -1267,6 +1285,14 @@ export default function Generator() {
 
   return (
     <Layout>
+      {/* Suspense boundary for search params handling */}
+      <Suspense fallback={null}>
+        <TradeParamHandler
+          onTradeParam={handleTradeParam}
+          availableTemplates={availableTemplates}
+          draftRestored={draftRestored}
+        />
+      </Suspense>
       <div className="bg-slate-50 flex-1">
         <div className="container mx-auto px-4 py-8">
           
@@ -1741,6 +1767,8 @@ export default function Generator() {
                   </div>
                 )}
               </div>
+                 </div>
+               )}
 
               {/* Mobile Preview Drawer */}
               <ProposalPreviewPane
