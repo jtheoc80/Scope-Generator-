@@ -4,8 +4,8 @@ test.describe("Trade landing deep-links to generator", () => {
   test("bathroom trade CTA preselects generator trade", async ({ page }) => {
     // Verify query-param selection works when no draft exists.
   test.beforeEach(async ({ page }) => {
-    // Clear localStorage before each test to ensure a restored draft
-    // can't override the query-param selection.
+    // Clear localStorage before each test so existing drafts don't interfere
+    // with tests that rely on query-param trade selection.
     await page.goto("/generator");
     await page.evaluate(() => {
       const keys = Object.keys(localStorage);
