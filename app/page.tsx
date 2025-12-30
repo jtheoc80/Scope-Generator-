@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, ArrowRight, Clock, DollarSign, FileCheck, Loader2, Bath, ChefHat, Home as HomeIcon, Paintbrush, Plug, Wrench, Thermometer, TreePine, Calculator, Sparkles, Star, Users, TrendingUp, Target, FileText } from "lucide-react";
 import { ScopeScanTeaser } from "@/components/marketing/ScopeScanTeaser";
+import { PlanCompareTable } from "@/components/pricing/PlanCompareTable";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useQuery } from "@tanstack/react-query";
 
@@ -952,71 +953,7 @@ export default function Home() {
 
           {/* Compare Plans Table */}
           <div className="mt-16 lg:mt-20" data-testid="compare-plans-section">
-            <h3 className="text-2xl lg:text-3xl font-heading font-bold text-slate-900 text-center mb-4">{t.home.comparePlans}</h3>
-            <p className="text-muted-foreground text-center mb-10">{t.home.comparePlansSubtitle}</p>
-            
-            <div className="overflow-x-auto">
-              <table className="w-full max-w-4xl mx-auto text-left" data-testid="compare-plans-table">
-                <thead>
-                  <tr className="border-b-2 border-slate-200">
-                    <th className="py-4 px-4 font-semibold text-slate-900">Feature</th>
-                    <th className="py-4 px-4 font-semibold text-slate-900 text-center">{t.home.starterPlan}</th>
-                    <th className="py-4 px-4 font-semibold text-orange-500 text-center">{t.home.proPlan}</th>
-                    <th className="py-4 px-4 font-semibold text-slate-900 text-center">{t.home.crewPlan}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b border-slate-100">
-                    <td className="py-4 px-4 text-slate-700">{t.home.featureProposals}</td>
-                    <td className="py-4 px-4 text-center text-slate-600">{t.home.perProposal}</td>
-                    <td className="py-4 px-4 text-center text-slate-900 font-medium">15/month</td>
-                    <td className="py-4 px-4 text-center text-slate-900 font-medium">50/month</td>
-                  </tr>
-                  <tr className="border-b border-slate-100 bg-orange-50/50" data-testid="compare-row-esignature">
-                    <td className="py-4 px-4 text-slate-700 font-medium">{t.home.featureEsignature}</td>
-                    <td className="py-4 px-4 text-center text-slate-400">{t.home.notIncluded}</td>
-                    <td className="py-4 px-4 text-center text-green-600 font-medium">{t.home.included}</td>
-                    <td className="py-4 px-4 text-center text-green-600 font-medium">{t.home.included}</td>
-                  </tr>
-                  <tr className="border-b border-slate-100">
-                    <td className="py-4 px-4 text-slate-700">{t.home.featureBranding}</td>
-                    <td className="py-4 px-4 text-center text-slate-600">{t.home.scopegenBranding}</td>
-                    <td className="py-4 px-4 text-center text-slate-900 font-medium">{t.home.customLogo}</td>
-                    <td className="py-4 px-4 text-center text-slate-900 font-medium">{t.home.fullCustomBranding}</td>
-                  </tr>
-                  <tr className="border-b border-slate-100">
-                    <td className="py-4 px-4 text-slate-700">{t.home.featureSeats}</td>
-                    <td className="py-4 px-4 text-center text-slate-600">1</td>
-                    <td className="py-4 px-4 text-center text-slate-900 font-medium">1</td>
-                    <td className="py-4 px-4 text-center text-slate-900 font-medium">3</td>
-                  </tr>
-                  <tr className="border-b border-slate-100">
-                    <td className="py-4 px-4 text-slate-700">{t.home.featureSupport}</td>
-                    <td className="py-4 px-4 text-center text-slate-600">{t.home.emailSupport}</td>
-                    <td className="py-4 px-4 text-center text-slate-900 font-medium">{t.home.priorityEmail}</td>
-                    <td className="py-4 px-4 text-center text-slate-900 font-medium">{t.home.priorityPhoneEmail}</td>
-                  </tr>
-                  <tr className="border-b border-slate-100">
-                    <td className="py-4 px-4 text-slate-700">{t.home.featureTemplates}</td>
-                    <td className="py-4 px-4 text-center text-green-600">{t.home.included}</td>
-                    <td className="py-4 px-4 text-center text-green-600">{t.home.included}</td>
-                    <td className="py-4 px-4 text-center text-green-600">{t.home.included}</td>
-                  </tr>
-                  <tr className="border-b border-slate-100">
-                    <td className="py-4 px-4 text-slate-700">{t.home.featurePdfDownload}</td>
-                    <td className="py-4 px-4 text-center text-green-600">{t.home.included}</td>
-                    <td className="py-4 px-4 text-center text-green-600">{t.home.included}</td>
-                    <td className="py-4 px-4 text-center text-green-600">{t.home.included}</td>
-                  </tr>
-                  <tr>
-                    <td className="py-4 px-4 text-slate-700">{t.home.featureMarketPricing}</td>
-                    <td className="py-4 px-4 text-center text-slate-400">{t.home.notIncluded}</td>
-                    <td className="py-4 px-4 text-center text-green-600">{t.home.included}</td>
-                    <td className="py-4 px-4 text-center text-green-600">{t.home.included}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <PlanCompareTable t={t} />
           </div>
 
           <p className="text-center text-muted-foreground text-base lg:text-lg mt-10 lg:mt-14">
