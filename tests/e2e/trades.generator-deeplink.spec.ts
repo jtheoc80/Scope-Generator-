@@ -1,8 +1,6 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Trade landing deep-links to generator", () => {
-  test("bathroom trade CTA preselects generator trade", async ({ page }) => {
-    // Verify query-param selection works when no draft exists.
   test.beforeEach(async ({ page }) => {
     // Clear localStorage before each test so existing drafts don't interfere
     // with tests that rely on query-param trade selection.
