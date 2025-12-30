@@ -941,6 +941,8 @@ export const translations = {
       recentProposals: "Propuestas Recientes",
       loadingInsights: "Cargando información...",
       insightsUnavailable: "Información no disponible",
+      loadingInsights: "Cargando análisis...",
+      insightsUnavailable: "Análisis no disponible",
       retry: "Reintentar",
       searchPlaceholder: "Buscar cliente o dirección...",
       noProposals: "Sin propuestas todavía",
