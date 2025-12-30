@@ -1,6 +1,5 @@
 import { Metadata, Viewport } from "next";
 import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
 import { isClerkConfigured } from "@/lib/authUtils";
 import { MobileLayoutClient } from "./layout-client";
 
@@ -22,17 +21,14 @@ export default async function MobileWebLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Check if user is authenticated when Clerk is configured
+  // Public base layout for all `/m/*` routes.
+  // Auth enforcement is handled in `/m/(authed)/*` so `/m/upload/*` can be used
+  // immediately from a QR code without triggering a sign-in flow.
   let userId: string | null = null;
   
   if (isClerkConfigured()) {
     const authResult = await auth();
     userId = authResult.userId;
-    
-    // Redirect to sign-in if not authenticated
-    if (!userId) {
-      redirect("/sign-in?redirect_url=/m");
-    }
   }
 
   return <MobileLayoutClient isSignedIn={!!userId}>{children}</MobileLayoutClient>;
