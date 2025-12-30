@@ -44,17 +44,17 @@ export function HomepageScopeScan() {
 
   const exampleProjects = [
     { 
-      src: "/scopescan-example-1.svg", 
+      src: "/images/scopescan/projects/bathroom-real.jpg", 
       alt: "Bathroom remodel project analyzed by ScopeScan",
       label: "Bathroom Remodel" 
     },
     { 
-      src: "/scopescan-example-2.svg", 
+      src: "/images/scopescan/projects/kitchen-real.jpg", 
       alt: "Kitchen renovation project analyzed by ScopeScan",
       label: "Kitchen Renovation" 
     },
     { 
-      src: "/scopescan-example-3.svg", 
+      src: "/images/scopescan/projects/roof-real.jpg", 
       alt: "Roof replacement project analyzed by ScopeScan",
       label: "Roof Replacement" 
     },
