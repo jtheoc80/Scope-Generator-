@@ -26,8 +26,8 @@ export interface ProposalRow {
   clientName: string;
   address: string;
   jobTypeName: string;
-  priceLow: number;
-  priceHigh: number;
+  priceLow: number | null;
+  priceHigh: number | null;
   status: string;
   createdAt: string;
   publicToken?: string | null;
@@ -56,6 +56,10 @@ function formatCurrency(value: number, locale: string) {
     currency: "USD",
     maximumFractionDigits: 0,
   }).format(Math.round(value));
+}
+
+function isValidPrice(value: unknown): value is number {
+  return typeof value === "number" && !Number.isNaN(value) && Number.isFinite(value);
 }
 
 function formatShortDate(dateString: string, locale: string) {
@@ -133,6 +137,7 @@ export function RecentProposalsTable({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t.dashboard.searchProposals}
+              placeholder={locale && locale.toLowerCase().startsWith("es") ? "Buscar propuestas…" : "Search proposals…"}
               className="h-9 rounded-xl border-slate-200 bg-slate-50 pl-9"
               aria-label="Search proposals by client name, address, or job type"
             />
@@ -222,8 +227,8 @@ export function RecentProposalsTable({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-y border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <table className="w-full text-sm" role="table" aria-label="Recent proposals with client information, job details, status, and actions">
+              <thead className="border-y border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500" role="rowgroup">
                 <tr>
                   <th className="px-6 py-3 text-left font-semibold">{t.dashboard.tableHeaderProposal}</th>
                   <th className="px-6 py-3 text-left font-semibold">{t.dashboard.tableHeaderTrade}</th>
@@ -233,9 +238,11 @@ export function RecentProposalsTable({
                   <th className="px-6 py-3 text-right font-semibold">{t.dashboard.tableHeaderActions}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100" role="rowgroup">
                 {filtered.map((p) => {
-                  const amount = (p.priceLow + p.priceHigh) / 2;
+                  // Validate price data before calculating average
+                  const hasValidPrices = isValidPrice(p.priceLow) && isValidPrice(p.priceHigh);
+                  const amount = hasValidPrices ? (p.priceLow + p.priceHigh) / 2 : null;
                   const last = p.lastViewedAt || p.createdAt;
                   const lastLabel = p.lastViewedAt ? t.dashboard.lastActivityViewed : t.dashboard.lastActivityCreated;
                   const isDraft = normalizeStatus(p.status) === "draft";
@@ -251,7 +258,7 @@ export function RecentProposalsTable({
                         <StatusBadge status={p.status} />
                       </td>
                       <td className="px-6 py-4 font-semibold text-slate-900">
-                        {formatCurrency(amount, locale)}
+                        {amount !== null ? formatCurrency(amount, locale) : "—"}
                       </td>
                       <td className="px-6 py-4 text-slate-600">
                         <div className="flex items-center gap-2">

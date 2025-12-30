@@ -235,12 +235,38 @@ export default function Dashboard() {
     const days = dateRange === "7d" ? 7 : dateRange === "90d" ? 90 : 30;
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - days);
-    return proposals.filter((p) => new Date(p.createdAt) >= cutoff);
+    return proposals.filter((p) => {
+      const createdAtDate = new Date(p.createdAt);
+      const createdAtTime = createdAtDate.getTime();
+      if (Number.isNaN(createdAtTime)) {
+        console.error("Invalid proposal createdAt date encountered during range filter", {
+          proposalId: p.id,
+          createdAt: p.createdAt,
+        });
+        return false;
+      }
+      return createdAtDate >= cutoff;
+    });
   }, [proposals, dateRange]);
 
   const sortedProposals = useMemo(() => {
+    const getCreatedAtTime = (proposal: Proposal): number => {
+      const date = new Date(proposal.createdAt);
+      const time = date.getTime();
+      if (Number.isNaN(time)) {
+        console.error("Invalid proposal createdAt date encountered during sort", {
+          proposalId: proposal.id,
+          createdAt: proposal.createdAt,
+        });
+        // Place proposals with invalid dates at the beginning of the array
+        // by returning 0; they can then be handled or surfaced in the UI if needed.
+        return 0;
+      }
+      return time;
+    };
+
     return [...proposalsInRange].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      (a, b) => getCreatedAtTime(b) - getCreatedAtTime(a),
     );
   }, [proposalsInRange]);
 
