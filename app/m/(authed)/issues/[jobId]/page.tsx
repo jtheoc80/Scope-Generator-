@@ -25,7 +25,7 @@ import {
   DraftStatus,
   DetectedIssue,
   AnalyzeResponse,
-} from "../../lib/api";
+} from "../../../lib/api";
 
 type SimilarScopeSuggestion = {
   itemCode: string;
@@ -174,7 +174,7 @@ export default function SelectIssuesPage() {
         if (res.status === "pending" && attempt < 12) {
           pollTimeout = setTimeout(() => fetchSimilar(attempt + 1), 2000);
         }
-      } catch (e) {
+      } catch {
         if (!isMounted) return;
         setSimilarStatus("error");
       }
