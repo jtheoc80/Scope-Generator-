@@ -556,7 +556,17 @@ export const JOB_TYPES = [
   { id: "electrical", label: "Electrical", icon: "⚡", category: "systems" },
   { id: "windows", label: "Windows", icon: "🪟", category: "exterior" },
   { id: "siding", label: "Siding", icon: "🧱", category: "exterior" },
+  { id: "fence", label: "Fence", icon: "🚧", category: "exterior" },
+  { id: "driveway", label: "Driveway", icon: "🚗", category: "exterior" },
 ] as const;
+
+// Trades that require map measurement step
+export const MEASUREMENT_TRADES = ["fence", "driveway"] as const;
+export type MeasurementTrade = typeof MEASUREMENT_TRADES[number];
+
+export function isMeasurementTrade(jobType: string): jobType is MeasurementTrade {
+  return MEASUREMENT_TRADES.includes(jobType as MeasurementTrade);
+}
 
 export const PRIMARY_JOB_TYPES = JOB_TYPES.slice(0, 5);
 

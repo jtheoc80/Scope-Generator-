@@ -4,9 +4,7 @@ import React, { useEffect, useRef } from 'react';
 import { useJsApiLoader } from '@react-google-maps/api';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-
-// Libraries must be defined outside component to avoid re-renders
-const libraries: ('places')[] = ['places'];
+import { GOOGLE_MAPS_LIBRARIES, GOOGLE_MAPS_LOADER_ID } from '@/lib/google-maps-config';
 
 type Props = {
   value: string;
@@ -42,9 +40,9 @@ export default function JobAddressField({
   }, [onResolvedLatLng]);
 
   const { isLoaded, loadError } = useJsApiLoader({
-    id: "google-maps-script",
+    id: GOOGLE_MAPS_LOADER_ID,
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
-    libraries,
+    libraries: GOOGLE_MAPS_LIBRARIES,
   });
 
   // Attach Autocomplete once
