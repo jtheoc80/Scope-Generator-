@@ -4,7 +4,7 @@ import Layout from "@/components/layout";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { templates, JobType, JobOption, Template, getLocalizedJobType, getLocalizedJobTypes } from "@/lib/proposal-data";
+import { templates, JobType, getLocalizedJobType, getLocalizedJobTypes } from "@/lib/proposal-data";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,13 +12,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, ChevronRight, Wand2, Download, FileText, Sparkles, Plus, Trash2, GripVertical, Lock, Save } from "lucide-react";
+import { Loader2, ChevronRight, Wand2, Download, FileText, Sparkles, Plus, Trash2, GripVertical, Save, Camera, Mail, RotateCcw, Check } from "lucide-react";
+import JobAddressField from "@/components/job-address-field";
+import EmailProposalModal from "@/components/email-proposal-modal";
 import ProposalPreview from "@/components/proposal-preview";
-import PaywallModal from "@/components/paywall-modal";
+import ProposalPreviewPane, { type ProposalPreviewPaneHandle } from "@/components/proposal-preview-pane";
 import { CostInsights } from "@/components/cost-insights";
+import ProposalPhotoUpload, { type UploadedPhoto } from "@/components/proposal-photo-upload";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useGeneratorDraftPersistence } from "./hooks/useGeneratorDraftPersistence";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { apiRequest } from "@/lib/queryClient";
@@ -58,6 +62,7 @@ const areaMultipliers: Record<string, number> = {
   "home-office": 0.8,
   "closet": 0.4,
   "mudroom": 0.5,
+  "laundry-room": 0.7,
   "basement": 1.5,
   "attic": 1.3,
   "whole-house": 3.5,
@@ -115,10 +120,11 @@ const getFootagePlaceholder = (tradeId: string): string => {
   return "";
 };
 
-// Form Schema
+// Form Schema - clientName and address are optional for drafts
+// They are only required when exporting/sending the proposal
 const formSchema = z.object({
-  clientName: z.string().min(2, "Client name is required"),
-  address: z.string().min(5, "Address is required"),
+  clientName: z.string().optional(),
+  address: z.string().optional(),
 });
 
 // Trade-aware area options with translation keys
@@ -131,6 +137,7 @@ const areaLabelKeys: Record<string, string> = {
   "home-office": "homeOffice",
   "closet": "closet",
   "mudroom": "mudroom",
+  "laundry-room": "laundryRoom",
   "basement": "basement",
   "attic": "attic",
   "whole-house": "wholeHouseInterior",
@@ -169,7 +176,7 @@ const getLocalizedLabel = (value: string, t: any): string => {
 
 const interiorRoomValues = [
   "living-room", "dining-room", "bedroom", "master-bedroom", "hallway", 
-  "home-office", "closet", "mudroom", "basement", "attic", "whole-house"
+  "home-office", "closet", "mudroom", "laundry-room", "basement", "attic", "whole-house"
 ];
 
 const bathroomAreaValues = ["bathroom", "master-bathroom", "half-bath", "guest-bathroom"];
@@ -182,6 +189,32 @@ const exteriorAreaValues = [
 ];
 
 const roofingAreaValues = ["main-roof", "garage-roof", "porch-roof", "addition-roof", "full-roof"];
+
+// Areas where plumbing work typically occurs
+const plumbingAreaValues = [
+  ...bathroomAreaValues,           // All bathroom types
+  ...kitchenAreaValues,            // All kitchen types  
+  "laundry-room",                  // Washer/dryer hookups, utility sink
+  "basement",                      // Water heater, sump pump, main lines
+  "garage",                        // Water heater, utility sink
+  "whole-house",                   // Re-piping, main line work
+];
+
+// Areas where electrical work typically occurs (broader than plumbing)
+const electricalAreaValues = [
+  ...bathroomAreaValues,
+  ...kitchenAreaValues,
+  "laundry-room",
+  "basement",
+  "garage",
+  "attic",                         // Wiring runs, HVAC connections
+  "living-room",
+  "dining-room",
+  "bedroom",
+  "master-bedroom",
+  "home-office",
+  "whole-house",
+];
 
 const getAreaOptionsForTrade = (tradeId: string, t: any): { value: string; label: string }[] => {
   const toOptions = (values: string[]) => values.map(v => ({ value: v, label: getLocalizedLabel(v, t) }));
@@ -202,11 +235,25 @@ const getAreaOptionsForTrade = (tradeId: string, t: any): { value: string; label
     case "landscape":
       return toOptions(exteriorAreaValues);
     case "plumbing":
+      // Plumbing only in areas with water fixtures: bathrooms, kitchens, laundry, basement, garage
+      return toOptions(plumbingAreaValues);
     case "electrical":
+      // Electrical can be in more areas than plumbing, but not exterior
+      return toOptions(electricalAreaValues);
+    case "hvac":
+      // HVAC typically affects whole house or specific rooms
+      return toOptions([...interiorRoomValues, "garage"]);
     case "handyman":
-      return toOptions([...bathroomAreaValues, ...kitchenAreaValues, ...interiorRoomValues.filter(r => r !== "whole-house"), "whole-house"]);
+      // Handyman can work anywhere
+      return toOptions([...interiorRoomValues, ...exteriorAreaValues]);
     case "windows-doors":
-      return toOptions([...interiorRoomValues.filter(r => !["whole-house", "closet"].includes(r)), ...exteriorAreaValues.filter(r => ["front-yard", "backyard", "patio", "garage"].includes(r))]);
+      return toOptions([...interiorRoomValues.filter(r => !["whole-house", "closet", "laundry-room"].includes(r)), ...exteriorAreaValues.filter(r => ["patio", "garage"].includes(r))]);
+    case "fencing":
+      // Fencing is exterior only
+      return toOptions(exteriorAreaValues.filter(r => ["front-yard", "backyard", "side-yard"].includes(r)));
+    case "decks-patios":
+      // Decks/patios are exterior
+      return toOptions(["deck", "patio", "backyard", "front-yard"]);
     default:
       return toOptions([...interiorRoomValues, ...exteriorAreaValues]);
   }
@@ -219,15 +266,21 @@ export default function Generator() {
   ]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [showPaywall, setShowPaywall] = useState(false);
-  const [isUnlocked, setIsUnlocked] = useState(false);
   const [enhancedScopes, setEnhancedScopes] = useState<Record<string, string[]>>({});
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [savedProposalId, setSavedProposalId] = useState<number | null>(null);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [isSavingForEmail, setIsSavingForEmail] = useState(false);
+  const [photos, setPhotos] = useState<UploadedPhoto[]>([]);
+  // Draft-first: Track validation errors for finalize fields (client name + address)
+  // These are only shown when user tries to export/send
+  const [finalizeErrors, setFinalizeErrors] = useState<{ clientName?: string; address?: string }>({});
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const { t, language } = useLanguage();
   const previewRef = useRef<HTMLDivElement>(null);
+  const previewPaneRef = useRef<ProposalPreviewPaneHandle>(null);
 
   const userSelectedTrades = user?.selectedTrades || [];
   const availableTemplates = userSelectedTrades.length > 0
@@ -243,6 +296,22 @@ export default function Generator() {
   });
 
   const watchedValues = form.watch();
+
+  // Draft persistence hook - handles localStorage restore, autosave, and reset
+  const {
+    isAutoSaving,
+    lastSavedRelative,
+    hasUnsavedChanges,
+    draftRestored,
+    handleResetDraft,
+  } = useGeneratorDraftPersistence({
+    userId: user?.id ?? null,
+    isAuthLoading,
+    form,
+    state: { services, photos, enhancedScopes, watchedValues },
+    setters: { setServices, setPhotos, setEnhancedScopes, setStep, setSavedProposalId, setFinalizeErrors },
+    onReset: () => toast({ title: "Draft cleared", description: "Your draft has been reset." }),
+  });
 
   const getJobTypeForService = (service: ServiceItem): JobType | null => {
     const trade = availableTemplates.find((t) => t.id === service.tradeId);
@@ -346,7 +415,8 @@ export default function Generator() {
     
     const userMultiplier = (user?.priceMultiplier || 100) / 100;
     const tradeMultiplier = (user?.tradeMultipliers?.[service.tradeId] ?? 100) / 100;
-    const { multiplier: regionalMultiplier, region } = getRegionalMultiplier(watchedValues.address);
+    // Draft-first: address may be undefined, default to empty string for regional pricing
+    const { multiplier: regionalMultiplier, region } = getRegionalMultiplier(watchedValues.address || '');
     
     const lowPrice = baseLowPrice * userMultiplier * tradeMultiplier * regionalMultiplier;
     const highPrice = baseHighPrice * userMultiplier * tradeMultiplier * regionalMultiplier;
@@ -418,6 +488,15 @@ export default function Generator() {
     // Get first regional info
     const firstRegionalInfo = lineItems.find(item => item?.regionalInfo)?.regionalInfo || null;
 
+    // Transform photos for preview
+    const previewPhotos = photos.map(p => ({
+      id: p.id,
+      url: p.url,
+      category: p.category,
+      caption: p.caption,
+      order: p.displayOrder,
+    }));
+
     return {
       clientName: watchedValues.clientName,
       address: watchedValues.address,
@@ -434,12 +513,44 @@ export default function Generator() {
       warranty: allWarranties.join(" "),
       exclusions: allExclusions,
       regionalInfo: firstRegionalInfo,
+      photos: previewPhotos,
     };
   };
 
   const hasValidServices = services.some(s => s.tradeId && s.jobTypeId);
 
-  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+  // Draft-first: Check if finalize fields (client name + address) are valid
+  // These are required only for export/send actions, not for generating drafts
+  const validateFinalizeFields = (): boolean => {
+    const errors: { clientName?: string; address?: string } = {};
+    
+    if (!watchedValues.clientName || watchedValues.clientName.trim().length < 2) {
+      errors.clientName = "Client name is required to export/send";
+    }
+    if (!watchedValues.address || watchedValues.address.trim().length < 5) {
+      errors.address = "Job address is required to export/send";
+    }
+    
+    setFinalizeErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Check if finalize fields are filled (for UI state)
+  const hasFinalizeFields = Boolean(
+    watchedValues.clientName && 
+    watchedValues.clientName.trim().length >= 2 && 
+    watchedValues.address && 
+    watchedValues.address.trim().length >= 5
+  );
+
+  // Clear finalize errors when fields change
+  const clearFinalizeErrors = () => {
+    if (Object.keys(finalizeErrors).length > 0) {
+      setFinalizeErrors({});
+    }
+  };
+
+  const onSubmit = async () => {
     if (!hasValidServices) {
       toast({
         title: t.common.error,
@@ -457,6 +568,16 @@ export default function Generator() {
 
   const handleDownload = async () => {
     if (!previewRef.current) return;
+    
+    // Draft-first: Validate finalize fields before download
+    if (!validateFinalizeFields()) {
+      toast({
+        title: t.common.error,
+        description: "Please fill in client name and address to download",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setIsDownloading(true);
     try {
@@ -615,16 +736,162 @@ export default function Generator() {
       return;
     }
 
-    if (!watchedValues.clientName || !watchedValues.address) {
+    // Draft-first: Client name and address are optional for drafts
+    // Use placeholder values if not provided
+    const clientName = watchedValues.clientName?.trim() || "Draft Proposal";
+    const address = watchedValues.address?.trim() || "Address pending";
+
+    setIsSavingDraft(true);
+    try {
+      const firstService = validServices[0];
+      const firstServiceData = generateServiceData(firstService);
+      if (!firstServiceData) throw new Error(t.generator.invalidServiceData);
+
+      const isMultiService = validServices.length > 1;
+      
+      // Build line items for multi-service proposals
+      const lineItems = validServices.map(service => {
+        const serviceData = generateServiceData(service);
+        if (!serviceData) return null;
+        
+        const trade = availableTemplates.find(t => t.id === service.tradeId);
+        
+        return {
+          id: service.id,
+          tradeId: service.tradeId,
+          tradeName: trade?.trade || service.tradeId,
+          jobTypeId: service.jobTypeId,
+          jobTypeName: serviceData.jobTypeName,
+          jobSize: service.jobSize,
+          homeArea: service.homeArea,
+          footage: service.footage || undefined,
+          scope: enhancedScopes[service.id] || serviceData.scope,
+          options: service.options,
+          priceLow: serviceData.priceRange.low,
+          priceHigh: serviceData.priceRange.high,
+          estimatedDaysLow: serviceData.estimatedDays.low,
+          estimatedDaysHigh: serviceData.estimatedDays.high,
+          warranty: serviceData.warranty,
+          exclusions: serviceData.exclusions,
+        };
+      }).filter((item): item is NonNullable<typeof item> => item !== null);
+
+      // Calculate totals
+      const totalPriceLow = lineItems.reduce((sum, item) => sum + item.priceLow, 0);
+      const totalPriceHigh = lineItems.reduce((sum, item) => sum + item.priceHigh, 0);
+      const totalDaysLow = lineItems.reduce((sum, item) => sum + (item.estimatedDaysLow || 0), 0);
+      const totalDaysHigh = lineItems.reduce((sum, item) => sum + (item.estimatedDaysHigh || 0), 0);
+
+      // Combine all scopes for the main scope field (backwards compatibility)
+      const allScope = lineItems.flatMap(item => item.scope);
+
+      // Draft-first: Use local clientName/address (may be placeholders for drafts)
+      const proposalData = {
+        clientName,
+        address,
+        // Primary service info (backwards compatibility)
+        tradeId: firstService.tradeId,
+        jobTypeId: firstService.jobTypeId,
+        jobTypeName: isMultiService 
+          ? `Multi-Service (${lineItems.length} services)` 
+          : firstServiceData.jobTypeName,
+        jobSize: firstService.jobSize,
+        scope: allScope,
+        options: firstService.options,
+        // Pricing
+        priceLow: totalPriceLow,
+        priceHigh: totalPriceHigh,
+        // Multi-service fields
+        lineItems: isMultiService ? lineItems : undefined,
+        isMultiService,
+        estimatedDaysLow: totalDaysLow,
+        estimatedDaysHigh: totalDaysHigh,
+        // Status - mark as draft if client info is placeholder
+        status: "draft",
+        isUnlocked: true,
+        // Photo count
+        photoCount: photos.length,
+        // Draft-first: Track if this is a draft without full client info
+        isDraftWithoutClientInfo: clientName === "Draft Proposal" || address === "Address pending",
+      };
+
+      const response = await fetch('/api/proposals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(proposalData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save draft');
+      }
+
+      const savedProposal = await response.json();
+      setSavedProposalId(savedProposal.id);
+
+      // Draft-first: Show appropriate message based on whether client info was provided
+      const isDraftOnly = clientName === "Draft Proposal" || address === "Address pending";
+      toast({ 
+        title: t.common.success, 
+        description: isDraftOnly 
+          ? "Draft saved! Add client name and address to export."
+          : t.generator.draftSaved,
+      });
+    } catch (error) {
+      console.error("Error saving draft:", error);
       toast({ 
         title: t.common.error, 
-        description: t.generator.pleaseFillClientInfo,
+        description: t.generator.failedToSaveDraft,
+        variant: "destructive"
+      });
+    } finally {
+      setIsSavingDraft(false);
+    }
+  };
+
+  const previewData = generateProposalData();
+
+  // Handle email button click - save draft first if needed, then open email modal
+  const handleEmailClick = async () => {
+    if (!user) {
+      toast({ 
+        title: t.common.error, 
+        description: t.toast.loginRequired,
         variant: "destructive"
       });
       return;
     }
 
-    setIsSavingDraft(true);
+    // Draft-first: Validate finalize fields before email
+    if (!validateFinalizeFields()) {
+      toast({
+        title: t.common.error,
+        description: "Please fill in client name and address to send",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // If we already have a saved proposal ID, just open the modal
+    if (savedProposalId) {
+      setEmailModalOpen(true);
+      return;
+    }
+
+    // Otherwise, save the proposal first
+    const validServices = services.filter(s => s.tradeId && s.jobTypeId);
+    if (validServices.length === 0) {
+      toast({ 
+        title: t.common.error, 
+        description: t.generator.pleaseAddServiceFirst,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Draft-first: At this point, we've already validated finalize fields above
+
+    setIsSavingForEmail(true);
     try {
       const firstService = validServices[0];
       const firstServiceData = generateServiceData(firstService);
@@ -690,7 +957,9 @@ export default function Generator() {
         estimatedDaysHigh: totalDaysHigh,
         // Status
         status: "draft",
-        isUnlocked: false,
+        isUnlocked: true,
+        // Photo count
+        photoCount: photos.length,
       };
 
       const response = await fetch('/api/proposals', {
@@ -701,26 +970,25 @@ export default function Generator() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save draft');
+        throw new Error('Failed to save proposal');
       }
 
-      toast({ 
-        title: t.common.success, 
-        description: t.generator.draftSaved,
-      });
+      const savedProposal = await response.json();
+      setSavedProposalId(savedProposal.id);
+      
+      // Now open the email modal
+      setEmailModalOpen(true);
     } catch (error) {
-      console.error("Error saving draft:", error);
+      console.error("Error saving proposal for email:", error);
       toast({ 
         title: t.common.error, 
         description: t.generator.failedToSaveDraft,
         variant: "destructive"
       });
     } finally {
-      setIsSavingDraft(false);
+      setIsSavingForEmail(false);
     }
   };
-
-  const previewData = generateProposalData();
 
   const renderServiceCard = (service: ServiceItem, index: number) => {
     const jobType = getJobTypeForService(service);
@@ -967,18 +1235,76 @@ export default function Generator() {
               <Card className="border-t-4 border-t-primary shadow-md">
                 <CardContent className="p-6">
                   <div className="mb-6">
-                    <h2 className="text-xl font-heading font-bold flex items-center gap-2">
-                      <Wand2 className="w-5 h-5 text-secondary" />
-                      {t.generator.title}
-                    </h2>
-                    <p className="text-sm text-muted-foreground">{t.generator.subtitle}</p>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h2 className="text-xl font-heading font-bold flex items-center gap-2">
+                          <Wand2 className="w-5 h-5 text-secondary" />
+                          {t.generator.title}
+                        </h2>
+                        <p className="text-sm text-muted-foreground">{t.generator.subtitle}</p>
+                      </div>
+                      
+                      {/* Draft saved indicator */}
+                      {(lastSavedRelative || isAutoSaving || hasUnsavedChanges) && (
+                        <div 
+                          className="flex items-center gap-1.5 text-xs text-muted-foreground"
+                          data-testid="draft-save-indicator"
+                        >
+                          {isAutoSaving ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              <span>Saving...</span>
+                            </>
+                          ) : hasUnsavedChanges ? (
+                            <>
+                              <span className="w-2 h-2 bg-amber-400 rounded-full" />
+                              <span>Unsaved</span>
+                            </>
+                          ) : lastSavedRelative ? (
+                            <>
+                              <Check className="w-3 h-3 text-green-600" />
+                              <span className="text-green-700">Saved {lastSavedRelative}</span>
+                            </>
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Draft restored banner */}
+                    {draftRestored && (
+                      <div 
+                        className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between text-sm"
+                        data-testid="draft-restored-banner"
+                      >
+                        <span className="text-blue-700">
+                          ✓ Draft restored from previous session
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+                          onClick={handleResetDraft}
+                          data-testid="button-reset-draft"
+                        >
+                          <RotateCcw className="w-3 h-3 mr-1" />
+                          Reset
+                        </Button>
+                      </div>
+                    )}
                   </div>
 
                   <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                       
-                      {/* Client Info */}
+                      {/* Client Info - Draft-first: These are optional for generating drafts */}
                       <div className="space-y-4">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">
+                            Optional for Draft
+                          </span>
+                          <span>Required to export/send</span>
+                        </div>
                         <FormField
                           control={form.control}
                           name="clientName"
@@ -986,9 +1312,24 @@ export default function Generator() {
                             <FormItem>
                               <FormLabel>{t.generator.clientName}</FormLabel>
                               <FormControl>
-                                <Input placeholder={t.generator.clientNamePlaceholder} {...field} data-testid="input-client-name" />
+                                <Input 
+                                  placeholder={t.generator.clientNamePlaceholder} 
+                                  {...field} 
+                                  data-testid="input-client-name"
+                                  className={cn(finalizeErrors.clientName && "border-red-500 focus-visible:ring-red-500")}
+                                  onChange={(e) => {
+                                    field.onChange(e);
+                                    clearFinalizeErrors();
+                                  }}
+                                />
                               </FormControl>
                               <FormMessage />
+                              {/* Draft-first: Show finalize validation error */}
+                              {finalizeErrors.clientName && (
+                                <p className="text-sm text-red-500 mt-1" data-testid="error-client-name">
+                                  {finalizeErrors.clientName}
+                                </p>
+                              )}
                             </FormItem>
                           )}
                         />
@@ -999,9 +1340,24 @@ export default function Generator() {
                             <FormItem>
                               <FormLabel>{t.generator.jobAddress}</FormLabel>
                               <FormControl>
-                                <Input placeholder={t.generator.jobAddressPlaceholder} {...field} data-testid="input-address" />
+                                <JobAddressField 
+                                  value={field.value || ''}
+                                  onChange={(value) => {
+                                    field.onChange(value);
+                                    clearFinalizeErrors();
+                                  }}
+                                  placeholder={t.generator.jobAddressPlaceholder}
+                                  data-testid="input-address"
+                                  className={cn(finalizeErrors.address && "border-red-500")}
+                                />
                               </FormControl>
                               <FormMessage />
+                              {/* Draft-first: Show finalize validation error */}
+                              {finalizeErrors.address && (
+                                <p className="text-sm text-red-500 mt-1" data-testid="error-address">
+                                  {finalizeErrors.address}
+                                </p>
+                              )}
                             </FormItem>
                           )}
                         />
@@ -1037,6 +1393,32 @@ export default function Generator() {
                           {t.generator.addAnotherService}
                         </Button>
                       </div>
+
+                      {/* Photo Upload Section */}
+                      {hasValidServices && (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <Camera className="w-4 h-4 text-secondary" />
+                            <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">
+                              {t.generator.photos || 'Job Site Photos'}
+                            </h3>
+                            <span className="text-xs text-slate-500 font-normal normal-case">
+                              ({t.generator.photosOptional || 'optional'})
+                            </span>
+                          </div>
+                          <ProposalPhotoUpload
+                            photos={photos}
+                            onPhotosChange={setPhotos}
+                            maxPhotos={10}
+                            disabled={isGenerating}
+                            learningContext={{
+                              tradeId: services[0]?.tradeId,
+                              jobTypeId: services[0]?.jobTypeId,
+                            }}
+                            enableLearning={true}
+                          />
+                        </div>
+                      )}
 
                       {/* Total Price Summary */}
                       {hasValidServices && (
@@ -1088,108 +1470,183 @@ export default function Generator() {
 
             {/* RIGHT COLUMN: Preview */}
             <div className="lg:col-span-8">
-              {!hasValidServices && (
-                <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50 p-8 text-center">
-                   <div className="bg-white p-4 rounded-full shadow-sm mb-4">
-                      <FileText className="w-8 h-8 text-slate-300" />
-                   </div>
-                   <h3 className="text-lg font-medium text-slate-900">{t.generator.readyToStart}</h3>
-                   <p className="max-w-xs mx-auto mt-2">{t.generator.readyToStartDesc}</p>
-                </div>
-              )}
+              {/* Desktop Preview with Toolbar */}
+              <div className="hidden lg:block">
+                {!hasValidServices ? (
+                  <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50 p-8 text-center">
+                     <div className="bg-white p-4 rounded-full shadow-sm mb-4">
+                        <FileText className="w-8 h-8 text-slate-300" />
+                     </div>
+                     <h3 className="text-lg font-medium text-slate-900">{t.generator.readyToStart}</h3>
+                     <p className="max-w-xs mx-auto mt-2">{t.generator.readyToStartDesc}</p>
+                  </div>
+                ) : (
+                  <div className="relative animate-in fade-in duration-700">
+                     {/* Toolbar */}
+                     <div className="flex justify-between items-center mb-4">
+                        <div className="flex items-center gap-3">
+                          <h3 className="font-heading font-bold text-xl text-slate-700">{t.generator.livePreview}</h3>
+                          {/* Autosave status in toolbar */}
+                          {lastSavedRelative && !hasUnsavedChanges && (
+                            <span className="text-xs text-green-600 flex items-center gap-1" data-testid="toolbar-save-status">
+                              <Check className="w-3 h-3" />
+                              Saved {lastSavedRelative}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex gap-2 flex-wrap">
+                          {/* Reset Draft button */}
+                          {step === 2 && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="gap-1 text-slate-500 hover:text-red-600 hover:bg-red-50"
+                              onClick={handleResetDraft}
+                              data-testid="button-reset-draft-toolbar"
+                            >
+                              <RotateCcw className="w-4 h-4" />
+                              Reset
+                            </Button>
+                          )}
+                          {step === 2 && user && (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="gap-2"
+                              onClick={handleEnhanceScope}
+                              disabled={isEnhancing}
+                              data-testid="button-enhance-scope"
+                            >
+                              {isEnhancing ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Sparkles className="w-4 h-4" />
+                              )}
+                              {isEnhancing ? t.generator.enhancing : t.generator.enhanceWithAI}
+                            </Button>
+                          )}
+                          {step === 2 && user && (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="gap-2"
+                              onClick={handleSaveDraft}
+                              disabled={isSavingDraft}
+                              data-testid="button-save-draft"
+                            >
+                              {isSavingDraft ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Save className="w-4 h-4" />
+                              )}
+                              {t.generator.saveDraft}
+                            </Button>
+                          )}
+                          {/* Draft-first: Download requires client info */}
+                          {step === 2 && (
+                            <Button 
+                              variant="outline"
+                              size="sm"
+                              className={cn("gap-2", !hasFinalizeFields && "opacity-75")}
+                              onClick={handleDownload}
+                              disabled={isDownloading}
+                              data-testid="button-download-pdf"
+                              title={!hasFinalizeFields ? "Add client name and address to download" : undefined}
+                            >
+                              {isDownloading ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Download className="w-4 h-4" />
+                              )}
+                              {isDownloading ? t.generator.generatingPDF : t.generator.downloadPDF}
+                            </Button>
+                          )}
+                          {/* Draft-first: Email requires client info */}
+                          {step === 2 && user && (
+                            <Button 
+                              variant="default"
+                              size="sm"
+                              className={cn("gap-2 bg-blue-600 hover:bg-blue-700", !hasFinalizeFields && "opacity-75")}
+                              onClick={handleEmailClick}
+                              disabled={isSavingForEmail}
+                              data-testid="button-email-proposal"
+                              title={!hasFinalizeFields ? "Add client name and address to send" : undefined}
+                            >
+                              {isSavingForEmail ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Mail className="w-4 h-4" />
+                              )}
+                              {isSavingForEmail ? 'Saving...' : (t.generator.emailProposal || 'Email Proposal')}
+                            </Button>
+                          )}
+                        </div>
+                     </div>
 
-              {hasValidServices && (
-                <div className="relative animate-in fade-in duration-700">
-                   {/* Toolbar */}
-                   <div className="flex justify-between items-center mb-4">
-                      <h3 className="font-heading font-bold text-xl text-slate-700">{t.generator.livePreview}</h3>
-                      <div className="flex gap-2">
-                        {step === 2 && user && (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            className="gap-2"
-                            onClick={handleEnhanceScope}
-                            disabled={isEnhancing}
-                            data-testid="button-enhance-scope"
-                          >
-                            {isEnhancing ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Sparkles className="w-4 h-4" />
-                            )}
-                            {isEnhancing ? t.generator.enhancing : t.generator.enhanceWithAI}
-                          </Button>
-                        )}
-                        {step === 2 && user && !isUnlocked && (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            className="gap-2"
-                            onClick={handleSaveDraft}
-                            disabled={isSavingDraft}
-                            data-testid="button-save-draft"
-                          >
-                            {isSavingDraft ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Save className="w-4 h-4" />
-                            )}
-                            {t.generator.saveDraft}
-                          </Button>
-                        )}
-                        {step === 2 && (
-                          <Button 
-                            variant={isUnlocked ? "outline" : "default"}
-                            size="sm"
-                            className={`gap-2 ${!isUnlocked ? "bg-primary hover:bg-primary/90" : ""}`}
-                            onClick={() => {
-                              if (!isUnlocked) {
-                                setShowPaywall(true);
-                              } else {
-                                handleDownload();
-                              }
-                            }}
-                            disabled={isDownloading}
-                            data-testid="button-download-pdf"
-                          >
-                            {isDownloading ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : isUnlocked ? (
-                              <Download className="w-4 h-4" />
-                            ) : (
-                              <Lock className="w-4 h-4" />
-                            )}
-                            {isDownloading ? t.generator.generatingPDF : isUnlocked ? t.generator.downloadPDF : t.generator.downloadPreview}
-                          </Button>
-                        )}
-                      </div>
-                   </div>
+                   {/* Draft-first: Show info banner when client info is missing */}
+                   {step === 2 && !hasFinalizeFields && (
+                     <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800" data-testid="banner-finalize-required">
+                       <strong>Draft Mode:</strong>{" "}
+                       Add client name and job address to download PDF or send email.
+                     </div>
+                   )}
 
-                   {/* The Document */}
-                   <ProposalPreview 
-                      ref={previewRef}
-                      data={previewData} 
-                      blurred={!isUnlocked} 
-                      onUnlock={() => setShowPaywall(true)}
-                      companyInfo={user ? {
-                        companyName: user.companyName,
-                        companyAddress: user.companyAddress,
-                        companyPhone: user.companyPhone,
-                        companyLogo: user.companyLogo,
-                      } : undefined}
-                   />
-                </div>
-              )}
+                     {/* The Document - Desktop */}
+                     <div data-testid="proposal-preview-container">
+                       <ProposalPreview 
+                          ref={previewRef}
+                          data={previewData} 
+                          companyInfo={user ? {
+                            companyName: user.companyName,
+                            companyAddress: user.companyAddress,
+                            companyPhone: user.companyPhone,
+                            companyLogo: user.companyLogo,
+                          } : undefined}
+                          photos={previewData.photos}
+                          showPhotos={photos.length > 0}
+                       />
+                     </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Mobile Preview Drawer */}
+              <ProposalPreviewPane
+                ref={previewPaneRef}
+                data={previewData}
+                companyInfo={user ? {
+                  companyName: user.companyName,
+                  companyAddress: user.companyAddress,
+                  companyPhone: user.companyPhone,
+                  companyLogo: user.companyLogo,
+                } : undefined}
+                photos={previewData.photos}
+                showPhotos={photos.length > 0}
+                hasValidServices={hasValidServices}
+                drawerLabel={t.generator.livePreview || 'Preview'}
+                emptyStateTitle={t.generator.readyToStart}
+                emptyStateDescription={t.generator.readyToStartDesc}
+                className="lg:hidden"
+              />
             </div>
           </div>
         </div>
       </div>
 
-      <PaywallModal 
-        isOpen={showPaywall} 
-        onClose={() => setShowPaywall(false)} 
-      />
+      {savedProposalId && (
+        <EmailProposalModal
+          isOpen={emailModalOpen}
+          onClose={() => setEmailModalOpen(false)}
+          proposalId={savedProposalId}
+          clientName={watchedValues.clientName || ''}
+          onSuccess={() => {
+            toast({
+              title: t.common.success,
+              description: t.generator.proposalSent || 'Proposal sent successfully!',
+            });
+          }}
+        />
+      )}
     </Layout>
   );
 }
