@@ -472,16 +472,18 @@ export default function Dashboard() {
                 <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
                   <CardContent className="flex items-center gap-2 p-6 text-sm text-slate-600">
                     <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
-                    Loading insights…
+                    {t.dashboard.loadingInsights}
                   </CardContent>
                 </Card>
               ) : insightsError ? (
                 <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
                   <CardContent className="space-y-3 p-6">
-                    <div className="text-sm font-semibold text-slate-900">Insights unavailable</div>
+                    <div className="text-sm font-semibold text-slate-900">
+                      {t.dashboard.insightsUnavailable}
+                    </div>
                     <div className="text-sm text-slate-500">{insightsError}</div>
                     <Button variant="outline" onClick={fetchInsights}>
-                      Retry
+                      {t.dashboard.retry}
                     </Button>
                   </CardContent>
                 </Card>
