@@ -53,7 +53,10 @@ test.describe("Trade landing deep-links to generator", () => {
     await page.getByRole("option", { name: /bathroom/i }).click();
 
     // Wait for draft to be saved to localStorage
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => {
+      const keys = Object.keys(localStorage);
+      return keys.some((key) => key.startsWith("scopegen_proposal_draft"));
+    });
 
     // Navigate with a different trade query parameter (roofing)
     await page.goto("/generator?trade=roofing");
