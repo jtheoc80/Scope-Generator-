@@ -98,7 +98,7 @@ export default function CostLookupPage() {
         <div className="container mx-auto px-4 text-center">
           <div className="inline-flex items-center gap-2 bg-secondary/20 text-secondary px-4 py-2 rounded-full text-sm font-medium mb-6">
             <Calculator className="h-4 w-4" />
-            Powered by 1build
+            Real-Time Cost Data
           </div>
           <h1 className="text-4xl md:text-5xl font-display font-bold mb-4">
             Real-Time Cost Lookup
@@ -149,7 +149,7 @@ export default function CostLookupPage() {
                   <AlertCircle className="h-4 w-4" />
                   <AlertTitle>Widget Configuration Issue</AlertTitle>
                   <AlertDescription>
-                    The cost lookup feature requires configuration. Please ensure the 1build API key has the correct domain configured as a referrer.
+                    The cost lookup feature requires configuration. Please ensure the cost data API key has the correct domain configured as a referrer.
                     <br />
                     <span className="text-xs opacity-75 mt-2 block">Technical: {widgetError}</span>
                   </AlertDescription>
