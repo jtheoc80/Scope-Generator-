@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import Layout from "@/components/layout";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, ChevronRight, Wand2, Download, FileText, Sparkles, Plus, Trash2, GripVertical, Save, Camera, Mail } from "lucide-react";
+import { Loader2, ChevronRight, Wand2, Download, FileText, Sparkles, Plus, Trash2, GripVertical, Save, Camera, Mail, RotateCcw, Check } from "lucide-react";
 import JobAddressField from "@/components/job-address-field";
 import EmailProposalModal from "@/components/email-proposal-modal";
 import ProposalPreview from "@/components/proposal-preview";
@@ -21,6 +21,7 @@ import ProposalPhotoUpload, { type UploadedPhoto } from "@/components/proposal-p
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useDraftPersistence, type ProposalDraft, type DraftServiceItem } from "@/hooks/useDraftPersistence";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { apiRequest } from "@/lib/queryClient";
@@ -274,10 +275,27 @@ export default function Generator() {
   // Draft-first: Track validation errors for finalize fields (client name + address)
   // These are only shown when user tries to export/send
   const [finalizeErrors, setFinalizeErrors] = useState<{ clientName?: string; address?: string }>({});
+  // Track if draft was restored from localStorage (to show indicator)
+  const [draftRestored, setDraftRestored] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const { t, language } = useLanguage();
   const previewRef = useRef<HTMLDivElement>(null);
+  
+  // Draft persistence hook
+  const {
+    isSaving: isAutoSaving,
+    lastSavedRelative,
+    hasUnsavedChanges,
+    wasRestored,
+    scheduleSave,
+    resetDraft,
+    loadDraft,
+    markAsSaved,
+  } = useDraftPersistence({
+    userId: user?.id ?? null,
+    enabled: true,
+  });
 
   const userSelectedTrades = user?.selectedTrades || [];
   const availableTemplates = userSelectedTrades.length > 0
@@ -293,6 +311,115 @@ export default function Generator() {
   });
 
   const watchedValues = form.watch();
+
+  // Convert current state to ProposalDraft format for persistence
+  const getCurrentDraft = useCallback((): ProposalDraft => {
+    return {
+      clientName: watchedValues.clientName || '',
+      address: watchedValues.address || '',
+      services: services.map(s => ({
+        id: s.id,
+        tradeId: s.tradeId,
+        jobTypeId: s.jobTypeId,
+        jobSize: s.jobSize,
+        homeArea: s.homeArea,
+        footage: s.footage,
+        options: s.options,
+      })),
+      photos: photos.map(p => ({
+        id: p.id,
+        url: p.url,
+        category: p.category,
+        caption: p.caption,
+        displayOrder: p.displayOrder,
+      })),
+      enhancedScopes,
+    };
+  }, [watchedValues.clientName, watchedValues.address, services, photos, enhancedScopes]);
+
+  // Restore draft from localStorage on mount
+  useEffect(() => {
+    // Wait for auth to settle before restoring
+    if (isAuthLoading) return;
+    
+    const savedDraft = loadDraft();
+    if (savedDraft) {
+      // Restore form values
+      form.setValue('clientName', savedDraft.clientName);
+      form.setValue('address', savedDraft.address);
+      
+      // Restore services
+      if (savedDraft.services.length > 0) {
+        setServices(savedDraft.services.map(s => ({
+          id: s.id,
+          tradeId: s.tradeId,
+          jobTypeId: s.jobTypeId,
+          jobSize: s.jobSize,
+          homeArea: s.homeArea,
+          footage: s.footage,
+          options: s.options,
+        })));
+      }
+      
+      // Restore photos (with type-safe defaults)
+      if (savedDraft.photos.length > 0) {
+        setPhotos(savedDraft.photos.map((p, index) => ({
+          id: p.id,
+          url: p.url,
+          category: (p.category as UploadedPhoto['category']) || 'other',
+          caption: p.caption || '',
+          displayOrder: p.displayOrder ?? index,
+        })));
+      }
+      
+      // Restore enhanced scopes
+      if (Object.keys(savedDraft.enhancedScopes).length > 0) {
+        setEnhancedScopes(savedDraft.enhancedScopes);
+      }
+      
+      setDraftRestored(true);
+      
+      // Mark as saved to prevent immediate re-save
+      markAsSaved(savedDraft);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthLoading]); // Only run once when auth settles
+
+  // Autosave on draft changes (debounced)
+  useEffect(() => {
+    // Skip during initial auth loading
+    if (isAuthLoading) return;
+    
+    const draft = getCurrentDraft();
+    scheduleSave(draft);
+  }, [getCurrentDraft, scheduleSave, isAuthLoading]);
+
+  // Handle reset draft
+  const handleResetDraft = useCallback(() => {
+    // Clear localStorage
+    resetDraft();
+    
+    // Reset form
+    form.reset({ clientName: '', address: '' });
+    
+    // Reset services to initial state
+    setServices([
+      { id: crypto.randomUUID(), tradeId: "", jobTypeId: "", jobSize: 2, homeArea: "", footage: null, options: {} }
+    ]);
+    
+    // Reset other state
+    setPhotos([]);
+    setEnhancedScopes({});
+    setStep(1);
+    setSavedProposalId(null);
+    setDraftRestored(false);
+    setFinalizeErrors({});
+    
+    toast({
+      title: "Draft cleared",
+      description: "Your draft has been reset.",
+    });
+  }, [resetDraft, form, toast]);
 
   const getJobTypeForService = (service: ServiceItem): JobType | null => {
     const trade = availableTemplates.find((t) => t.id === service.tradeId);
@@ -1216,11 +1343,63 @@ export default function Generator() {
               <Card className="border-t-4 border-t-primary shadow-md">
                 <CardContent className="p-6">
                   <div className="mb-6">
-                    <h2 className="text-xl font-heading font-bold flex items-center gap-2">
-                      <Wand2 className="w-5 h-5 text-secondary" />
-                      {t.generator.title}
-                    </h2>
-                    <p className="text-sm text-muted-foreground">{t.generator.subtitle}</p>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h2 className="text-xl font-heading font-bold flex items-center gap-2">
+                          <Wand2 className="w-5 h-5 text-secondary" />
+                          {t.generator.title}
+                        </h2>
+                        <p className="text-sm text-muted-foreground">{t.generator.subtitle}</p>
+                      </div>
+                      
+                      {/* Draft saved indicator */}
+                      {(lastSavedRelative || isAutoSaving || hasUnsavedChanges) && (
+                        <div 
+                          className="flex items-center gap-1.5 text-xs text-muted-foreground"
+                          data-testid="draft-save-indicator"
+                        >
+                          {isAutoSaving ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              <span>Saving...</span>
+                            </>
+                          ) : hasUnsavedChanges ? (
+                            <>
+                              <span className="w-2 h-2 bg-amber-400 rounded-full" />
+                              <span>Unsaved</span>
+                            </>
+                          ) : lastSavedRelative ? (
+                            <>
+                              <Check className="w-3 h-3 text-green-600" />
+                              <span className="text-green-700">Saved {lastSavedRelative}</span>
+                            </>
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Draft restored banner */}
+                    {draftRestored && wasRestored && (
+                      <div 
+                        className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between text-sm"
+                        data-testid="draft-restored-banner"
+                      >
+                        <span className="text-blue-700">
+                          ✓ Draft restored from previous session
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+                          onClick={handleResetDraft}
+                          data-testid="button-reset-draft"
+                        >
+                          <RotateCcw className="w-3 h-3 mr-1" />
+                          Reset
+                        </Button>
+                      </div>
+                    )}
                   </div>
 
                   <Form {...form}>
@@ -1413,8 +1592,30 @@ export default function Generator() {
                 <div className="relative animate-in fade-in duration-700">
                    {/* Toolbar */}
                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="font-heading font-bold text-xl text-slate-700">{t.generator.livePreview}</h3>
+                      <div className="flex items-center gap-3">
+                        <h3 className="font-heading font-bold text-xl text-slate-700">{t.generator.livePreview}</h3>
+                        {/* Autosave status in toolbar */}
+                        {lastSavedRelative && !hasUnsavedChanges && (
+                          <span className="text-xs text-green-600 flex items-center gap-1" data-testid="toolbar-save-status">
+                            <Check className="w-3 h-3" />
+                            Saved {lastSavedRelative}
+                          </span>
+                        )}
+                      </div>
                       <div className="flex gap-2">
+                        {/* Reset Draft button */}
+                        {step === 2 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="gap-1 text-slate-500 hover:text-red-600 hover:bg-red-50"
+                            onClick={handleResetDraft}
+                            data-testid="button-reset-draft-toolbar"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                            Reset
+                          </Button>
+                        )}
                         {step === 2 && user && (
                           <Button 
                             variant="outline" 
