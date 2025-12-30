@@ -50,27 +50,27 @@ export const metadata: Metadata = {
   },
 };
 
-export default function ScopeScanPage() {
-  const softwareApplicationJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    name: "ScopeScan",
-    applicationCategory: "BusinessApplication",
-    operatingSystem: "Web",
-    offers: {
-      "@type": "Offer",
-      price: "0",
-      priceCurrency: "USD",
-      description: "Demo available instantly",
-    },
-    description: metadataDescription,
-    url: "https://scopegenerator.com/scopescan",
-    brand: {
-      "@type": "Brand",
-      name: "ScopeGen",
-    },
-  };
+const softwareApplicationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "ScopeScan",
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "USD",
+    description: "Demo available instantly",
+  },
+  description: metadataDescription,
+  url: "https://scopegenerator.com/scopescan",
+  brand: {
+    "@type": "Brand",
+    name: "ScopeGen",
+  },
+};
 
+export default function ScopeScanPage() {
   const benefits = [
     {
       icon: Sparkles,
