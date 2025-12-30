@@ -61,7 +61,7 @@ export default async function TradePage({ params }: PageProps) {
   return (
     <Layout>
       {/* Hero */}
-      <section className="relative bg-slate-900 text-white overflow-hidden">
+      <section className="relative bg-primary text-primary-foreground overflow-hidden">
         <div className="absolute inset-0 z-0 opacity-10">
           <div className="w-full h-full bg-gradient-to-br from-secondary/30 to-primary/30" />
         </div>
@@ -73,7 +73,7 @@ export default async function TradePage({ params }: PageProps) {
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-heading font-bold leading-tight mb-6">
               {def.heroTitle}
             </h1>
-            <p className="text-lg text-slate-300 max-w-2xl mb-8 leading-relaxed">
+            <p className="text-lg text-primary-foreground/70 max-w-2xl mb-8 leading-relaxed">
               {def.heroSubtitle}
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
@@ -87,7 +87,7 @@ export default async function TradePage({ params }: PageProps) {
               </Link>
               <a
                 href="#included"
-                className="inline-flex items-center justify-center h-14 px-8 rounded-md border border-slate-700 bg-slate-800/50 text-white font-medium hover:bg-slate-800 transition-colors"
+                className="inline-flex items-center justify-center h-14 px-8 rounded-md border border-border bg-primary/50 text-primary-foreground font-medium hover:bg-primary/70 transition-colors"
               >
                 See What&apos;s Included
               </a>
@@ -97,6 +97,7 @@ export default async function TradePage({ params }: PageProps) {
       </section>
 
       {/* What's included */}
+      <section id="included" className="py-14 bg-background">
       <section id="included" className="py-14 bg-card">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
