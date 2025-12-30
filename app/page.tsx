@@ -824,7 +824,7 @@ export default function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 lg:gap-10">
             {/* Starter - Pay per proposal */}
-            <div className="bg-white p-8 sm:p-10 lg:p-12 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+            <div className="bg-white p-8 sm:p-10 lg:p-12 rounded-2xl border border-slate-200 shadow-sm flex flex-col" data-testid="pricing-card-starter">
               <h3 className="text-2xl lg:text-3xl font-bold text-slate-900 mb-3">{t.home.starterPlan}</h3>
               <p className="text-muted-foreground text-base lg:text-lg mb-8">{t.home.starterDesc}</p>
               <div className="text-5xl lg:text-6xl font-heading font-bold text-slate-900 mb-2">{t.home.starterPrice}</div>
@@ -841,6 +841,12 @@ export default function Home() {
                 </li>
                 <li className="flex items-center gap-3 text-base lg:text-lg text-slate-600">
                   <CheckCircle2 className="w-5 h-5 lg:w-6 lg:h-6 text-green-500 flex-shrink-0" /> {t.home.starterFeature4}
+                </li>
+                <li className="flex items-center gap-3 text-base lg:text-lg text-slate-600">
+                  <CheckCircle2 className="w-5 h-5 lg:w-6 lg:h-6 text-green-500 flex-shrink-0" /> {t.home.starterFeature5}
+                </li>
+                <li className="flex items-center gap-3 text-base lg:text-lg text-slate-400">
+                  <span className="w-5 h-5 lg:w-6 lg:h-6 flex items-center justify-center text-slate-300">—</span> {t.home.starterFeature6}
                 </li>
               </ul>
               <button 
@@ -860,15 +866,15 @@ export default function Home() {
             </div>
 
             {/* Pro - Most Popular */}
-            <div className="bg-slate-900 p-8 sm:p-10 lg:p-12 rounded-2xl shadow-xl relative overflow-hidden flex flex-col">
+            <div className="bg-slate-900 p-8 sm:p-10 lg:p-12 rounded-2xl shadow-xl relative overflow-hidden flex flex-col" data-testid="pricing-card-pro">
               <div className="absolute top-5 right-5 lg:top-6 lg:right-6 bg-orange-500 text-sm lg:text-base font-bold px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-white">{t.home.mostPopular}</div>
               <h3 className="text-2xl lg:text-3xl font-bold text-white mb-3">{t.home.proPlan}</h3>
               <p className="text-slate-300 text-base lg:text-lg mb-8">{t.home.proDesc}</p>
               <div className="text-5xl lg:text-6xl font-heading font-bold text-white mb-2">{t.home.proPrice}<span className="text-xl lg:text-2xl font-normal">{t.home.proPriceLabel}</span></div>
-              <p className="text-slate-400 text-base lg:text-lg mb-8">{t.home.proFeature2}</p>
+              <p className="text-slate-400 text-base lg:text-lg mb-8">{t.home.proFeature1}</p>
               <ul className="space-y-4 lg:space-y-5 mb-10 flex-grow">
-                <li className="flex items-center gap-3 text-base lg:text-lg text-white">
-                  <CheckCircle2 className="w-5 h-5 lg:w-6 lg:h-6 text-orange-500 flex-shrink-0" /> {t.home.proFeature1}
+                <li className="flex items-center gap-3 text-base lg:text-lg text-white" data-testid="pro-esignature-feature">
+                  <CheckCircle2 className="w-5 h-5 lg:w-6 lg:h-6 text-orange-500 flex-shrink-0" /> {t.home.proFeature2}
                 </li>
                 <li className="flex items-center gap-3 text-base lg:text-lg text-white">
                   <CheckCircle2 className="w-5 h-5 lg:w-6 lg:h-6 text-orange-500 flex-shrink-0" /> {t.home.proFeature3}
@@ -878,6 +884,9 @@ export default function Home() {
                 </li>
                 <li className="flex items-center gap-3 text-base lg:text-lg text-white">
                   <CheckCircle2 className="w-5 h-5 lg:w-6 lg:h-6 text-orange-500 flex-shrink-0" /> {t.home.proFeature5}
+                </li>
+                <li className="flex items-center gap-3 text-base lg:text-lg text-white">
+                  <CheckCircle2 className="w-5 h-5 lg:w-6 lg:h-6 text-orange-500 flex-shrink-0" /> {t.home.proFeature6}
                 </li>
               </ul>
               <button 
@@ -897,14 +906,14 @@ export default function Home() {
             </div>
 
             {/* Crew - For Teams */}
-            <div className="bg-white p-8 sm:p-10 lg:p-12 rounded-2xl border-2 border-slate-900 shadow-sm relative flex flex-col">
+            <div className="bg-white p-8 sm:p-10 lg:p-12 rounded-2xl border-2 border-slate-900 shadow-sm relative flex flex-col" data-testid="pricing-card-crew">
               <div className="absolute top-5 right-5 lg:top-6 lg:right-6 bg-slate-900 text-white text-sm lg:text-base font-bold px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg">{t.home.forTeams}</div>
               <h3 className="text-2xl lg:text-3xl font-bold text-slate-900 mb-3">{t.home.crewPlan}</h3>
               <p className="text-muted-foreground text-base lg:text-lg mb-8">{t.home.crewDesc}</p>
               <div className="text-5xl lg:text-6xl font-heading font-bold text-slate-900 mb-2">{t.home.crewPrice}<span className="text-xl lg:text-2xl font-normal text-muted-foreground">{t.home.crewPriceLabel}</span></div>
               <p className="text-muted-foreground text-base lg:text-lg mb-8">{t.home.crewFeature1}</p>
               <ul className="space-y-4 lg:space-y-5 mb-10 flex-grow">
-                <li className="flex items-center gap-3 text-base lg:text-lg text-slate-600">
+                <li className="flex items-center gap-3 text-base lg:text-lg text-slate-600" data-testid="crew-esignature-feature">
                   <CheckCircle2 className="w-5 h-5 lg:w-6 lg:h-6 text-green-500 flex-shrink-0" /> {t.home.crewFeature2}
                 </li>
                 <li className="flex items-center gap-3 text-base lg:text-lg text-slate-600">
@@ -915,6 +924,9 @@ export default function Home() {
                 </li>
                 <li className="flex items-center gap-3 text-base lg:text-lg text-slate-600">
                   <CheckCircle2 className="w-5 h-5 lg:w-6 lg:h-6 text-green-500 flex-shrink-0" /> {t.home.crewFeature5}
+                </li>
+                <li className="flex items-center gap-3 text-base lg:text-lg text-slate-600">
+                  <CheckCircle2 className="w-5 h-5 lg:w-6 lg:h-6 text-green-500 flex-shrink-0" /> {t.home.crewFeature6}
                 </li>
               </ul>
               <button 
@@ -931,6 +943,75 @@ export default function Home() {
                   t.home.subscribeCrew
                 )}
               </button>
+            </div>
+          </div>
+
+          {/* Compare Plans Table */}
+          <div className="mt-16 lg:mt-20" data-testid="compare-plans-section">
+            <h3 className="text-2xl lg:text-3xl font-heading font-bold text-slate-900 text-center mb-4">{t.home.comparePlans}</h3>
+            <p className="text-muted-foreground text-center mb-10">{t.home.comparePlansSubtitle}</p>
+            
+            <div className="overflow-x-auto">
+              <table className="w-full max-w-4xl mx-auto text-left" data-testid="compare-plans-table">
+                <thead>
+                  <tr className="border-b-2 border-slate-200">
+                    <th className="py-4 px-4 font-semibold text-slate-900">Feature</th>
+                    <th className="py-4 px-4 font-semibold text-slate-900 text-center">{t.home.starterPlan}</th>
+                    <th className="py-4 px-4 font-semibold text-orange-500 text-center">{t.home.proPlan}</th>
+                    <th className="py-4 px-4 font-semibold text-slate-900 text-center">{t.home.crewPlan}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-slate-100">
+                    <td className="py-4 px-4 text-slate-700">{t.home.featureProposals}</td>
+                    <td className="py-4 px-4 text-center text-slate-600">{t.home.perProposal}</td>
+                    <td className="py-4 px-4 text-center text-slate-900 font-medium">15/month</td>
+                    <td className="py-4 px-4 text-center text-slate-900 font-medium">50/month</td>
+                  </tr>
+                  <tr className="border-b border-slate-100 bg-orange-50/50" data-testid="compare-row-esignature">
+                    <td className="py-4 px-4 text-slate-700 font-medium">{t.home.featureEsignature}</td>
+                    <td className="py-4 px-4 text-center text-slate-400">{t.home.notIncluded}</td>
+                    <td className="py-4 px-4 text-center text-green-600 font-medium">{t.home.included}</td>
+                    <td className="py-4 px-4 text-center text-green-600 font-medium">{t.home.included}</td>
+                  </tr>
+                  <tr className="border-b border-slate-100">
+                    <td className="py-4 px-4 text-slate-700">{t.home.featureBranding}</td>
+                    <td className="py-4 px-4 text-center text-slate-600">{t.home.scopegenBranding}</td>
+                    <td className="py-4 px-4 text-center text-slate-900 font-medium">{t.home.customLogo}</td>
+                    <td className="py-4 px-4 text-center text-slate-900 font-medium">{t.home.fullCustomBranding}</td>
+                  </tr>
+                  <tr className="border-b border-slate-100">
+                    <td className="py-4 px-4 text-slate-700">{t.home.featureSeats}</td>
+                    <td className="py-4 px-4 text-center text-slate-600">1</td>
+                    <td className="py-4 px-4 text-center text-slate-900 font-medium">1</td>
+                    <td className="py-4 px-4 text-center text-slate-900 font-medium">3</td>
+                  </tr>
+                  <tr className="border-b border-slate-100">
+                    <td className="py-4 px-4 text-slate-700">{t.home.featureSupport}</td>
+                    <td className="py-4 px-4 text-center text-slate-600">{t.home.emailSupport}</td>
+                    <td className="py-4 px-4 text-center text-slate-900 font-medium">{t.home.priorityEmail}</td>
+                    <td className="py-4 px-4 text-center text-slate-900 font-medium">{t.home.priorityPhoneEmail}</td>
+                  </tr>
+                  <tr className="border-b border-slate-100">
+                    <td className="py-4 px-4 text-slate-700">{t.home.featureTemplates}</td>
+                    <td className="py-4 px-4 text-center text-green-600">{t.home.included}</td>
+                    <td className="py-4 px-4 text-center text-green-600">{t.home.included}</td>
+                    <td className="py-4 px-4 text-center text-green-600">{t.home.included}</td>
+                  </tr>
+                  <tr className="border-b border-slate-100">
+                    <td className="py-4 px-4 text-slate-700">{t.home.featurePdfDownload}</td>
+                    <td className="py-4 px-4 text-center text-green-600">{t.home.included}</td>
+                    <td className="py-4 px-4 text-center text-green-600">{t.home.included}</td>
+                    <td className="py-4 px-4 text-center text-green-600">{t.home.included}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-4 px-4 text-slate-700">{t.home.featureMarketPricing}</td>
+                    <td className="py-4 px-4 text-center text-slate-400">{t.home.notIncluded}</td>
+                    <td className="py-4 px-4 text-center text-green-600">{t.home.included}</td>
+                    <td className="py-4 px-4 text-center text-green-600">{t.home.included}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
 
