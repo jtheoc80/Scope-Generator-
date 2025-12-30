@@ -143,7 +143,10 @@ export function CostInsights({ tradeId, address }: CostInsightsProps) {
         )}
 
         <p className="text-[10px] text-emerald-600/70 pt-1 border-t border-emerald-100">
-          Powered by 1build • Updated pricing for 3,000+ US counties
+          Based on industry cost databases • Updated pricing for 3,000+ US counties
+        </p>
+        <p className="text-[10px] text-emerald-600/50 mt-0.5">
+          Estimates are directional; final costs vary by site conditions and scope.
         </p>
       </CardContent>
     </Card>

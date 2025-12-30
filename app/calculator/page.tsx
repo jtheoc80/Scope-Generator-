@@ -636,7 +636,11 @@ export default function CalculatorPage() {
                         </div>
                       </div>
 
-                      <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                      <p className="text-xs text-slate-500 text-center mt-4 pt-4 border-t border-green-200" data-testid="estimate-disclaimer">
+                        Estimates are directional; final bids depend on site conditions, local labor/material pricing, and scope.
+                      </p>
+
+                      <div className="flex flex-col sm:flex-row gap-3 mt-4">
                         <Link
                           href="/app"
                           data-testid="button-get-proposal"
@@ -743,7 +747,7 @@ export default function CalculatorPage() {
                     <DollarSign className="w-5 h-5 text-primary" />
                   </div>
                   <h3 className="font-bold text-slate-900 mb-2">National Baseline</h3>
-                  <p className="text-slate-600 text-sm">We start with national average costs from industry databases including RSMeans and HomeAdvisor data.</p>
+                  <p className="text-slate-600 text-sm">We start with national average costs derived from industry cost databases, public market benchmarks, and internal adjustments.</p>
                 </div>
                 <div className="bg-slate-50 rounded-xl p-5">
                   <div className="w-10 h-10 bg-secondary/10 rounded-lg flex items-center justify-center mb-3">

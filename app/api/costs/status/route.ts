@@ -5,7 +5,7 @@ export async function GET() {
   return NextResponse.json({
     available: oneBuildService.isConfigured(),
     message: oneBuildService.isConfigured()
-      ? "1build cost data API is available"
-      : "1build external API key not configured"
+      ? "Cost data API is available"
+      : "Cost data API key not configured"
   });
 }
