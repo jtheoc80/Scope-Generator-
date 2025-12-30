@@ -87,6 +87,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/hooks/useLanguage";
 import { parseEstimateParams, getJobTypeFromEstimate, type EstimateParams } from "@/app/m/lib/estimate-params";
+// Google Maps shared config (places, geometry, drawing libraries)
+import { GOOGLE_MAPS_LIBRARIES, GOOGLE_MAPS_LOADER_ID } from "@/lib/google-maps-config";
 
 const JOB_TYPE_ICONS: Record<string, LucideIcon> = {
   "bathroom-remodel": Bath,
@@ -425,9 +427,6 @@ function CustomerSelector({
     </Popover>
   );
 }
-
-// Import shared Google Maps config (includes places, geometry, drawing)
-import { GOOGLE_MAPS_LIBRARIES, GOOGLE_MAPS_LOADER_ID } from "@/lib/google-maps-config";
 
 // Import JobAddress type and validation utilities from shared module
 import type { JobAddress } from "@/app/m/lib/job-address";

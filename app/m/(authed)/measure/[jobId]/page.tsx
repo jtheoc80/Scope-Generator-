@@ -142,8 +142,31 @@ export default function MeasurePage() {
   if (!job || !isMeasurementTrade(job.jobType)) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <p className="text-muted-foreground">Loading...</p>
+        <div className="text-center max-w-sm mx-auto p-4">
+          <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <h2 className="text-lg font-medium text-slate-900 mb-2">
+            Measurement Not Required
+          </h2>
+          <p className="text-sm text-muted-foreground mb-6">
+            {!job 
+              ? "This job could not be found." 
+              : `This job type (${job.jobType}) doesn't require map measurements.`}
+          </p>
+          <div className="flex flex-col gap-2">
+            <Button
+              onClick={() => router.push(`/m/capture/${jobId}`)}
+              className="w-full"
+            >
+              Continue to Photo Capture
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => router.back()}
+              className="w-full"
+            >
+              Go Back
+            </Button>
+          </div>
         </div>
       </div>
     );
