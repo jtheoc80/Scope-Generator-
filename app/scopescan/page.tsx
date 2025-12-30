@@ -5,10 +5,12 @@ import type { Metadata } from "next";
 import { 
   Camera, 
   Sparkles, 
-  Clock, 
-  Target, 
+  TrendingUp, 
+  FileCheck, 
   ArrowRight,
-  Lock,
+  Zap,
+  Clock,
+  Target,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -162,15 +164,15 @@ export default function ScopeScanPage() {
               {/* Trust / benefit strip */}
               <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-x-6 gap-y-2 text-sm text-slate-500">
                 <span className="inline-flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-slate-400" />
+                  <TrendingUp className="w-4 h-4 text-slate-400" />
                   Win jobs while homeowner intent is highest (same visit)
                 </span>
                 <span className="inline-flex items-center gap-2">
-                  <Lock className="w-4 h-4 text-slate-400" />
+                  <Zap className="w-4 h-4 text-slate-400" />
                   Beat slow quotes from vendors, subs, or office follow-ups
                 </span>
                 <span className="inline-flex items-center gap-2">
-                  <Target className="w-4 h-4 text-slate-400" />
+                  <FileCheck className="w-4 h-4 text-slate-400" />
                   Send a clean, professional scope your customer understands
                 </span>
               </div>
