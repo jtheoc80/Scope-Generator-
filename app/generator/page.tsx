@@ -118,10 +118,11 @@ const getFootagePlaceholder = (tradeId: string): string => {
   return "";
 };
 
-// Form Schema
+// Form Schema - clientName and address are optional for drafts
+// They are only required when exporting/sending the proposal
 const formSchema = z.object({
-  clientName: z.string().min(2, "Client name is required"),
-  address: z.string().min(5, "Address is required"),
+  clientName: z.string().optional(),
+  address: z.string().optional(),
 });
 
 // Trade-aware area options with translation keys
@@ -270,6 +271,9 @@ export default function Generator() {
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [isSavingForEmail, setIsSavingForEmail] = useState(false);
   const [photos, setPhotos] = useState<UploadedPhoto[]>([]);
+  // Draft-first: Track validation errors for finalize fields (client name + address)
+  // These are only shown when user tries to export/send
+  const [finalizeErrors, setFinalizeErrors] = useState<{ clientName?: string; address?: string }>({});
   const { toast } = useToast();
   const { user } = useAuth();
   const { t, language } = useLanguage();
@@ -392,7 +396,8 @@ export default function Generator() {
     
     const userMultiplier = (user?.priceMultiplier || 100) / 100;
     const tradeMultiplier = (user?.tradeMultipliers?.[service.tradeId] ?? 100) / 100;
-    const { multiplier: regionalMultiplier, region } = getRegionalMultiplier(watchedValues.address);
+    // Draft-first: address may be undefined, default to empty string for regional pricing
+    const { multiplier: regionalMultiplier, region } = getRegionalMultiplier(watchedValues.address || '');
     
     const lowPrice = baseLowPrice * userMultiplier * tradeMultiplier * regionalMultiplier;
     const highPrice = baseHighPrice * userMultiplier * tradeMultiplier * regionalMultiplier;
@@ -495,6 +500,37 @@ export default function Generator() {
 
   const hasValidServices = services.some(s => s.tradeId && s.jobTypeId);
 
+  // Draft-first: Check if finalize fields (client name + address) are valid
+  // These are required only for export/send actions, not for generating drafts
+  const validateFinalizeFields = (): boolean => {
+    const errors: { clientName?: string; address?: string } = {};
+    
+    if (!watchedValues.clientName || watchedValues.clientName.trim().length < 2) {
+      errors.clientName = "Client name is required to export/send";
+    }
+    if (!watchedValues.address || watchedValues.address.trim().length < 5) {
+      errors.address = "Job address is required to export/send";
+    }
+    
+    setFinalizeErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Check if finalize fields are filled (for UI state)
+  const hasFinalizeFields = Boolean(
+    watchedValues.clientName && 
+    watchedValues.clientName.trim().length >= 2 && 
+    watchedValues.address && 
+    watchedValues.address.trim().length >= 5
+  );
+
+  // Clear finalize errors when fields change
+  const clearFinalizeErrors = () => {
+    if (Object.keys(finalizeErrors).length > 0) {
+      setFinalizeErrors({});
+    }
+  };
+
   const onSubmit = async () => {
     if (!hasValidServices) {
       toast({
@@ -513,6 +549,16 @@ export default function Generator() {
 
   const handleDownload = async () => {
     if (!previewRef.current) return;
+    
+    // Draft-first: Validate finalize fields before download
+    if (!validateFinalizeFields()) {
+      toast({
+        title: t.common.error,
+        description: "Please fill in client name and address to download",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setIsDownloading(true);
     try {
@@ -671,14 +717,10 @@ export default function Generator() {
       return;
     }
 
-    if (!watchedValues.clientName || !watchedValues.address) {
-      toast({ 
-        title: t.common.error, 
-        description: t.generator.pleaseFillClientInfo,
-        variant: "destructive"
-      });
-      return;
-    }
+    // Draft-first: Client name and address are optional for drafts
+    // Use placeholder values if not provided
+    const clientName = watchedValues.clientName?.trim() || "Draft Proposal";
+    const address = watchedValues.address?.trim() || "Address pending";
 
     setIsSavingDraft(true);
     try {
@@ -724,9 +766,10 @@ export default function Generator() {
       // Combine all scopes for the main scope field (backwards compatibility)
       const allScope = lineItems.flatMap(item => item.scope);
 
+      // Draft-first: Use local clientName/address (may be placeholders for drafts)
       const proposalData = {
-        clientName: watchedValues.clientName,
-        address: watchedValues.address,
+        clientName,
+        address,
         // Primary service info (backwards compatibility)
         tradeId: firstService.tradeId,
         jobTypeId: firstService.jobTypeId,
@@ -744,11 +787,13 @@ export default function Generator() {
         isMultiService,
         estimatedDaysLow: totalDaysLow,
         estimatedDaysHigh: totalDaysHigh,
-        // Status
+        // Status - mark as draft if client info is placeholder
         status: "draft",
         isUnlocked: true,
         // Photo count
         photoCount: photos.length,
+        // Draft-first: Track if this is a draft without full client info
+        isDraftWithoutClientInfo: clientName === "Draft Proposal" || address === "Address pending",
       };
 
       const response = await fetch('/api/proposals', {
@@ -765,9 +810,13 @@ export default function Generator() {
       const savedProposal = await response.json();
       setSavedProposalId(savedProposal.id);
 
+      // Draft-first: Show appropriate message based on whether client info was provided
+      const isDraftOnly = clientName === "Draft Proposal" || address === "Address pending";
       toast({ 
         title: t.common.success, 
-        description: t.generator.draftSaved,
+        description: isDraftOnly 
+          ? "Draft saved! Add client name and address to export."
+          : t.generator.draftSaved,
       });
     } catch (error) {
       console.error("Error saving draft:", error);
@@ -794,6 +843,16 @@ export default function Generator() {
       return;
     }
 
+    // Draft-first: Validate finalize fields before email
+    if (!validateFinalizeFields()) {
+      toast({
+        title: t.common.error,
+        description: "Please fill in client name and address to send",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // If we already have a saved proposal ID, just open the modal
     if (savedProposalId) {
       setEmailModalOpen(true);
@@ -811,14 +870,7 @@ export default function Generator() {
       return;
     }
 
-    if (!watchedValues.clientName || !watchedValues.address) {
-      toast({ 
-        title: t.common.error, 
-        description: t.generator.pleaseFillClientInfo,
-        variant: "destructive"
-      });
-      return;
-    }
+    // Draft-first: At this point, we've already validated finalize fields above
 
     setIsSavingForEmail(true);
     try {
@@ -1174,8 +1226,14 @@ export default function Generator() {
                   <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                       
-                      {/* Client Info */}
+                      {/* Client Info - Draft-first: These are optional for generating drafts */}
                       <div className="space-y-4">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">
+                            Optional for Draft
+                          </span>
+                          <span>Required to export/send</span>
+                        </div>
                         <FormField
                           control={form.control}
                           name="clientName"
@@ -1183,9 +1241,24 @@ export default function Generator() {
                             <FormItem>
                               <FormLabel>{t.generator.clientName}</FormLabel>
                               <FormControl>
-                                <Input placeholder={t.generator.clientNamePlaceholder} {...field} data-testid="input-client-name" />
+                                <Input 
+                                  placeholder={t.generator.clientNamePlaceholder} 
+                                  {...field} 
+                                  data-testid="input-client-name"
+                                  className={cn(finalizeErrors.clientName && "border-red-500 focus-visible:ring-red-500")}
+                                  onChange={(e) => {
+                                    field.onChange(e);
+                                    clearFinalizeErrors();
+                                  }}
+                                />
                               </FormControl>
                               <FormMessage />
+                              {/* Draft-first: Show finalize validation error */}
+                              {finalizeErrors.clientName && (
+                                <p className="text-sm text-red-500 mt-1" data-testid="error-client-name">
+                                  {finalizeErrors.clientName}
+                                </p>
+                              )}
                             </FormItem>
                           )}
                         />
@@ -1197,13 +1270,23 @@ export default function Generator() {
                               <FormLabel>{t.generator.jobAddress}</FormLabel>
                               <FormControl>
                                 <JobAddressField 
-                                  value={field.value}
-                                  onChange={field.onChange}
+                                  value={field.value || ''}
+                                  onChange={(value) => {
+                                    field.onChange(value);
+                                    clearFinalizeErrors();
+                                  }}
                                   placeholder={t.generator.jobAddressPlaceholder}
                                   data-testid="input-address"
+                                  className={cn(finalizeErrors.address && "border-red-500")}
                                 />
                               </FormControl>
                               <FormMessage />
+                              {/* Draft-first: Show finalize validation error */}
+                              {finalizeErrors.address && (
+                                <p className="text-sm text-red-500 mt-1" data-testid="error-address">
+                                  {finalizeErrors.address}
+                                </p>
+                              )}
                             </FormItem>
                           )}
                         />
@@ -1366,14 +1449,16 @@ export default function Generator() {
                             {t.generator.saveDraft}
                           </Button>
                         )}
+                        {/* Draft-first: Download requires client info */}
                         {step === 2 && (
                           <Button 
                             variant="outline"
                             size="sm"
-                            className="gap-2"
+                            className={cn("gap-2", !hasFinalizeFields && "opacity-75")}
                             onClick={handleDownload}
                             disabled={isDownloading}
                             data-testid="button-download-pdf"
+                            title={!hasFinalizeFields ? "Add client name and address to download" : undefined}
                           >
                             {isDownloading ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
@@ -1383,14 +1468,16 @@ export default function Generator() {
                             {isDownloading ? t.generator.generatingPDF : t.generator.downloadPDF}
                           </Button>
                         )}
+                        {/* Draft-first: Email requires client info */}
                         {step === 2 && user && (
                           <Button 
                             variant="default"
                             size="sm"
-                            className="gap-2 bg-blue-600 hover:bg-blue-700"
+                            className={cn("gap-2 bg-blue-600 hover:bg-blue-700", !hasFinalizeFields && "opacity-75")}
                             onClick={handleEmailClick}
                             disabled={isSavingForEmail}
                             data-testid="button-email-proposal"
+                            title={!hasFinalizeFields ? "Add client name and address to send" : undefined}
                           >
                             {isSavingForEmail ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
@@ -1402,6 +1489,14 @@ export default function Generator() {
                         )}
                       </div>
                    </div>
+                   
+                   {/* Draft-first: Show info banner when client info is missing */}
+                   {step === 2 && !hasFinalizeFields && (
+                     <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800" data-testid="banner-finalize-required">
+                       <strong>Draft Mode:</strong>{" "}
+                       Add client name and job address to download PDF or send email.
+                     </div>
+                   )}
 
                    {/* The Document */}
                    <ProposalPreview 

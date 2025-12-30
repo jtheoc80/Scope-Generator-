@@ -70,26 +70,27 @@ test.describe('Proposal Creation Flow', () => {
     await page.goto('/generator');
     await page.waitForLoadState('networkidle');
 
-    // Fill required fields
+    // Draft-first: Client info is optional for draft generation
+    // Fill them for full proposal test
     const clientNameInput = page.locator('[data-testid="input-client-name"]');
     await clientNameInput.fill(proposalData.clientName);
 
     const addressInput = page.locator('[data-testid="input-address"]');
     await addressInput.fill(proposalData.address);
 
-    // Select trade
+    // Select trade (required for generate)
     const tradeSelect = page.locator('[data-testid="select-trade-0"]');
     await tradeSelect.click();
     await page.locator('[role="option"]').first().click();
     await page.waitForTimeout(500);
 
-    // Select job type
+    // Select job type (required for generate)
     const jobTypeSelect = page.locator('[data-testid="select-jobtype-0"]');
     await jobTypeSelect.click();
     await page.locator('[role="option"]').first().click();
     await page.waitForTimeout(500);
 
-    // Generate button should be enabled
+    // Generate button should be enabled (trade + job type selected)
     const generateButton = page.locator('[data-testid="button-generate-proposal"]');
     await expect(generateButton).toBeEnabled({ timeout: 5000 });
   });
