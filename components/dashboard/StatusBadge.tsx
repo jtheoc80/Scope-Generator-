@@ -22,22 +22,22 @@ const STATUS_META: Record<
   draft: {
     label: "Draft",
     icon: Clock,
-    className: "border-slate-200 bg-slate-50 text-slate-700",
+    className: "border-border bg-muted text-muted-foreground",
   },
   sent: {
     label: "Sent",
     icon: Send,
-    className: "border-slate-200 bg-white text-slate-700",
+    className: "border-border bg-card text-card-foreground",
   },
   viewed: {
     label: "Viewed",
     icon: Eye,
-    className: "border-slate-200 bg-white text-slate-700",
+    className: "border-border bg-card text-card-foreground",
   },
   accepted: {
     label: "Accepted",
     icon: CheckCircle2,
-    className: "border-slate-200 bg-white text-slate-700",
+    className: "border-border bg-card text-card-foreground",
   },
   won: {
     label: "Won",
@@ -47,12 +47,12 @@ const STATUS_META: Record<
   lost: {
     label: "Lost",
     icon: AlertCircle,
-    className: "border-red-200 bg-red-50 text-red-700",
+    className: "border-destructive/30 bg-destructive/10 text-destructive",
   },
   declined: {
     label: "Declined",
     icon: AlertCircle,
-    className: "border-red-200 bg-red-50 text-red-700",
+    className: "border-destructive/30 bg-destructive/10 text-destructive",
   },
 };
 
