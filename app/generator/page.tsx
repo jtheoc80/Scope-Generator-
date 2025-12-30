@@ -352,7 +352,7 @@ export default function Generator() {
     });
 
     hasAppliedTradeParamRef.current = true;
-  }, [availableTemplates, draftRestored, searchParams]);
+  }, [availableTemplates, draftRestored, searchParams, setServices]);
 
   const getJobTypeForService = (service: ServiceItem): JobType | null => {
     const trade = availableTemplates.find((t) => t.id === service.tradeId);
