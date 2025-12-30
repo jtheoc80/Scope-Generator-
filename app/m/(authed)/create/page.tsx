@@ -53,6 +53,8 @@ import {
   X,
   Settings2,
   RefreshCw,
+  Fence,
+  Car,
   type LucideIcon,
 } from "lucide-react";
 import { mobileApiFetch, newIdempotencyKey, MobileJob } from "@/app/m/lib/api";
@@ -80,10 +82,13 @@ import {
   getLastAddressForCustomer,
   saveLastAddressForCustomer,
   SavedCustomer,
+  isMeasurementTrade,
 } from "@/app/m/lib/job-memory";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/hooks/useLanguage";
 import { parseEstimateParams, getJobTypeFromEstimate, type EstimateParams } from "@/app/m/lib/estimate-params";
+// Google Maps shared config (places, geometry, drawing libraries)
+import { GOOGLE_MAPS_LIBRARIES, GOOGLE_MAPS_LOADER_ID } from "@/lib/google-maps-config";
 
 const JOB_TYPE_ICONS: Record<string, LucideIcon> = {
   "bathroom-remodel": Bath,
@@ -96,6 +101,8 @@ const JOB_TYPE_ICONS: Record<string, LucideIcon> = {
   electrical: Zap,
   windows: Square,
   siding: BrickWall,
+  fence: Fence,
+  driveway: Car,
 };
 
 function JobTypeIcon({ id }: { id: string }) {
@@ -421,9 +428,6 @@ function CustomerSelector({
   );
 }
 
-// Libraries for Google Maps Places Autocomplete
-const GOOGLE_MAPS_LIBRARIES: ("places")[] = ["places"];
-
 // Import JobAddress type and validation utilities from shared module
 import type { JobAddress } from "@/app/m/lib/job-address";
 import { isSelectableJobAddress, createJobAddressFromPlace } from "@/app/m/lib/job-address";
@@ -471,7 +475,7 @@ function JobAddressSelector({
   
   // Load Google Maps API
   const { isLoaded, loadError } = useJsApiLoader({
-    id: "google-maps-script",
+    id: GOOGLE_MAPS_LOADER_ID,
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
     libraries: GOOGLE_MAPS_LIBRARIES,
   });
@@ -1157,7 +1161,12 @@ function CreateJobPageInner() {
         }),
       });
 
-      router.push(`/m/capture/${res.jobId}`);
+      // Route to measurement page for fence/driveway trades, otherwise capture
+      if (isMeasurementTrade(finalJobType)) {
+        router.push(`/m/measure/${res.jobId}`);
+      } else {
+        router.push(`/m/capture/${res.jobId}`);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to create job");
     } finally {
