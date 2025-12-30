@@ -12,10 +12,10 @@ import { Button } from "@/components/ui/button";
  */
 export function ScopeScanTeaser() {
   const thumbnails = [
-    { src: "/scopescan-example-1.svg", alt: "Bathroom analysis" },
-    { src: "/scopescan-example-2.svg", alt: "Kitchen analysis" },
-    { src: "/scopescan-example-3.svg", alt: "Roofing analysis" },
-    { src: "/scopescan-example-1.svg", alt: "General project analysis" },
+    { src: "/images/scopescan/projects/bathroom-real.jpg", alt: "Bathroom analysis" },
+    { src: "/images/scopescan/projects/kitchen-real.jpg", alt: "Kitchen analysis" },
+    { src: "/images/scopescan/projects/roof-real.jpg", alt: "Roofing analysis" },
+    { src: "/images/scopescan/hero.jpg", alt: "General project analysis" },
   ];
 
   return (

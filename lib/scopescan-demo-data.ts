@@ -36,7 +36,7 @@ export const demoProjects: DemoProject[] = [
     id: "demo-bathroom-1",
     name: "Master Bathroom Remodel",
     type: "Bathroom Remodel",
-    imageSrc: "/scopescan/demo/scopescan-example-1.svg",
+    imageSrc: "/images/scopescan/projects/bathroom-real.jpg",
     imageAlt: "Master bathroom remodel project",
     summary: "Complete master bathroom renovation including demolition of existing fixtures, installation of new tile flooring, updated vanity with quartz countertop, walk-in shower conversion, and modern lighting fixtures.",
     scopeItems: [
@@ -63,7 +63,7 @@ export const demoProjects: DemoProject[] = [
     id: "demo-kitchen-1",
     name: "Kitchen Renovation",
     type: "Kitchen Remodel",
-    imageSrc: "/scopescan/demo/scopescan-example-2.svg",
+    imageSrc: "/images/scopescan/projects/kitchen-real.jpg",
     imageAlt: "Kitchen renovation project",
     summary: "Kitchen upgrade including cabinet refacing, new countertops, backsplash installation, appliance updates, and improved lighting throughout the space.",
     scopeItems: [
@@ -91,7 +91,7 @@ export const demoProjects: DemoProject[] = [
     id: "demo-roof-1",
     name: "Roof Replacement",
     type: "Roofing",
-    imageSrc: "/scopescan/demo/scopescan-example-3.svg",
+    imageSrc: "/images/scopescan/projects/roof-real.jpg",
     imageAlt: "Roof replacement project",
     summary: "Complete roof tear-off and replacement including new architectural shingles, underlayment, flashing, and ventilation improvements for a 2,200 sq ft roof area.",
     scopeItems: [
