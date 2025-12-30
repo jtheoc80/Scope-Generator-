@@ -49,27 +49,27 @@ export const metadata: Metadata = {
   },
 };
 
-const softwareApplicationJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  name: "ScopeScan",
-  applicationCategory: "BusinessApplication",
-  operatingSystem: "Web",
-  offers: {
-    "@type": "Offer",
-    price: "0",
-    priceCurrency: "USD",
-    description: "Demo available instantly",
-  },
-  description: metadataDescription,
-  url: "https://scopegenerator.com/scopescan",
-  brand: {
-    "@type": "Brand",
-    name: "ScopeGen",
-  },
-};
-
 export default function ScopeScanPage() {
+  const softwareApplicationJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "ScopeScan",
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web",
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
+      description: "Demo available instantly",
+    },
+    description: metadataDescription,
+    url: "https://scopegenerator.com/scopescan",
+    brand: {
+      "@type": "Brand",
+      name: "ScopeGen",
+    },
+  };
+
   const benefits = [
     {
       icon: Sparkles,
@@ -95,13 +95,16 @@ export default function ScopeScanPage() {
   ];
 
   return (
-    <Layout>
+    <>
+      {/* JSON-LD Structured Data */}
       <script
         type="application/ld+json"
-        // JSON.stringify is safe here since we fully control the object contents.
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationJsonLd) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(softwareApplicationJsonLd),
+        }}
       />
-      {/* Hero Section */}
+      <Layout>
+        {/* Hero Section */}
       <section className="bg-slate-50 py-12 sm:py-16 lg:py-20" data-testid="scopescan-hero">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="relative overflow-hidden mx-auto max-w-5xl rounded-2xl border border-slate-200 bg-white shadow-sm px-6 py-12 sm:px-10 sm:py-16">
@@ -280,5 +283,6 @@ export default function ScopeScanPage() {
         </div>
       </section>
     </Layout>
+    </>
   );
 }
