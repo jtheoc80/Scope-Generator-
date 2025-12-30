@@ -57,6 +57,10 @@ function formatCurrency(value: number, locale: string) {
   }).format(Math.round(value));
 }
 
+function isValidPrice(value: unknown): value is number {
+  return typeof value === "number" && !Number.isNaN(value) && Number.isFinite(value);
+}
+
 function formatShortDate(dateString: string, locale: string) {
   const d = new Date(dateString);
   if (Number.isNaN(d.getTime())) return "—";
@@ -232,7 +236,9 @@ export function RecentProposalsTable({
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filtered.map((p) => {
-                  const amount = (p.priceLow + p.priceHigh) / 2;
+                  // Validate price data before calculating average
+                  const hasValidPrices = isValidPrice(p.priceLow) && isValidPrice(p.priceHigh);
+                  const amount = hasValidPrices ? (p.priceLow + p.priceHigh) / 2 : null;
                   const last = p.lastViewedAt || p.createdAt;
                   const lastLabel = p.lastViewedAt ? "Viewed" : "Created";
                   const isDraft = normalizeStatus(p.status) === "draft";
@@ -248,7 +254,7 @@ export function RecentProposalsTable({
                         <StatusBadge status={p.status} />
                       </td>
                       <td className="px-6 py-4 font-semibold text-slate-900">
-                        {formatCurrency(amount, locale)}
+                        {amount !== null ? formatCurrency(amount, locale) : "—"}
                       </td>
                       <td className="px-6 py-4 text-slate-600">
                         <div className="flex items-center gap-2">
