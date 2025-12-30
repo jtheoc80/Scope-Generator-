@@ -620,6 +620,13 @@ export const translations = {
       aboutMobileWeb: "This is the mobile web version of ScopeGen. It provides the same photo capture and proposal generation features as the native app, but runs in your browser.",
       dataProcessedThroughApi: "All data is processed through your configured API endpoint. Photos are uploaded directly to your storage service.",
       loading: "Loading...",
+      // Draft-first flow
+      optionalForDraft: "Optional to Start",
+      requiredForExport: "Required to export/send",
+      draftModeHelper: "You can add customer & address later before sending",
+      clientDetailsRequired: "Client Details Required",
+      addClientNameAndAddress: "Add client name & address above to submit",
+      requiredToSend: "Required to send",
     },
     home: {
       heroTitle1: "Contractor Proposal Software",
@@ -1404,6 +1411,13 @@ export const translations = {
       aboutMobileWeb: "Esta es la versión web móvil de ScopeGen. Proporciona las mismas funciones de captura de fotos y generación de propuestas que la aplicación nativa, pero se ejecuta en su navegador.",
       dataProcessedThroughApi: "Todos los datos se procesan a través de su punto final de API configurado. Las fotos se suben directamente a su servicio de almacenamiento.",
       loading: "Cargando...",
+      // Draft-first flow
+      optionalForDraft: "Opcional para Comenzar",
+      requiredForExport: "Requerido para exportar/enviar",
+      draftModeHelper: "Puede agregar cliente y dirección después antes de enviar",
+      clientDetailsRequired: "Detalles del Cliente Requeridos",
+      addClientNameAndAddress: "Agregue nombre de cliente y dirección arriba para enviar",
+      requiredToSend: "Requerido para enviar",
     },
     home: {
       heroTitle1: "Software de Propuestas",

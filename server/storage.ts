@@ -1119,6 +1119,35 @@ export class DatabaseStorage implements IStorage {
     return job;
   }
 
+  /**
+   * Update mobile job client details (Draft-first flow)
+   * Used when user adds client name/address at the preview/submit stage
+   */
+  async updateMobileJob(jobId: number, userId: string, updates: {
+    clientName?: string;
+    address?: string;
+  }): Promise<typeof mobileJobs.$inferSelect | undefined> {
+    const job = await this.getMobileJob(jobId, userId);
+    if (!job) {
+      throw new Error("Job not found or access denied");
+    }
+
+    const updateData: Record<string, unknown> = { updatedAt: new Date() };
+    if (updates.clientName !== undefined) {
+      updateData.clientName = updates.clientName;
+    }
+    if (updates.address !== undefined) {
+      updateData.address = updates.address;
+    }
+
+    const [updated] = await db
+      .update(mobileJobs)
+      .set(updateData)
+      .where(eq(mobileJobs.id, jobId))
+      .returning();
+    return updated;
+  }
+
   async addMobileJobPhoto(jobId: number, userId: string, photo: {
     publicUrl: string;
     kind?: string;

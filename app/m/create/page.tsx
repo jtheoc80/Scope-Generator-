@@ -1114,14 +1114,14 @@ function CreateJobPageInner() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate address - must have placeId, lat/lng, AND be validated
-    if (!selectedAddress || !isSelectableJobAddress(selectedAddress)) {
+    // Draft-first: Address is now optional for starting the flow
+    // If provided, it must be valid and validated
+    if (selectedAddress && !isSelectableJobAddress(selectedAddress)) {
       setError("Please select a valid address from the suggestions.");
       return;
     }
     
-    // Require validation - never "lock in" without validation
-    if (!selectedAddress.validated) {
+    if (selectedAddress && !selectedAddress.validated) {
       setError("Please wait for address verification to complete.");
       return;
     }
@@ -1144,12 +1144,15 @@ function CreateJobPageInner() {
         headers: { "Idempotency-Key": newIdempotencyKey() },
         body: JSON.stringify({
           jobType: /^\d+$/.test(finalJobType) ? Number(finalJobType) : finalJobType,
-          customer: selectedCustomer?.name || "Customer",
-          address: selectedAddress.formatted,
-          // Include lat/lng and placeId for accurate job location
-          lat: selectedAddress.lat,
-          lng: selectedAddress.lng,
-          placeId: selectedAddress.placeId,
+          // Draft-first: Customer and address are optional - backend will use defaults
+          customer: selectedCustomer?.name || undefined,
+          address: selectedAddress?.formatted || undefined,
+          // Include lat/lng and placeId if address is provided
+          ...(selectedAddress && {
+            lat: selectedAddress.lat,
+            lng: selectedAddress.lng,
+            placeId: selectedAddress.placeId,
+          }),
           notes: internalNotes.trim() || undefined,
         }),
       });
@@ -1162,11 +1165,16 @@ function CreateJobPageInner() {
     }
   };
 
+  // Draft-first: Allow starting without address - only require job type
+  // Customer and address will be required at final submit/export
   const canStart =
-    !!selectedAddress &&
-    isSelectableJobAddress(selectedAddress) &&
-    selectedAddress.validated &&
-    !busy;
+    jobType &&
+    !busy &&
+    // If address is being validated, wait for it
+    !(selectedAddress && !selectedAddress.validated);
+  
+  // Check if client details are complete (for UI indicator)
+  const hasClientDetails = Boolean(selectedCustomer?.name && selectedAddress?.validated);
 
   // Get unique recent job types not in primary list
   const uniqueRecentTypes = recentJobTypes.filter(
@@ -1331,43 +1339,53 @@ function CreateJobPageInner() {
           </Card>
 
           {/* Section 2 & 3: Customer + Address - Side by side on desktop */}
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            {/* Customer */}
-            <Card className="rounded-lg border-border shadow-sm">
-              <CardContent className="p-4 lg:p-6 space-y-3">
-                <Label htmlFor="customer-combobox" className="text-sm font-medium text-foreground flex items-center gap-2">
-                  <User className="w-4 h-4 text-muted-foreground" aria-hidden />
-                  {t.mobile.customer}
-                </Label>
-                <CustomerSelector
-                  value={selectedCustomer}
-                  onChange={handleCustomerChange}
-                  disabled={busy}
-                  onRefresh={handleRefresh}
-                  t={t}
-                />
-              </CardContent>
-            </Card>
+          {/* Draft-first: These are optional for starting - required only at export/send */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="inline-flex items-center px-2 py-0.5 rounded bg-blue-100 text-blue-700 font-medium dark:bg-blue-900 dark:text-blue-200" data-testid="badge-optional-for-draft">
+                {t.mobile.optionalForDraft || "Optional to Start"}
+              </span>
+              <span>{t.mobile.requiredForExport || "Required to export/send"}</span>
+            </div>
+            
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              {/* Customer */}
+              <Card className="rounded-lg border-border shadow-sm">
+                <CardContent className="p-4 lg:p-6 space-y-3">
+                  <Label htmlFor="customer-combobox" className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <User className="w-4 h-4 text-muted-foreground" aria-hidden />
+                    {t.mobile.customer}
+                  </Label>
+                  <CustomerSelector
+                    value={selectedCustomer}
+                    onChange={handleCustomerChange}
+                    disabled={busy}
+                    onRefresh={handleRefresh}
+                    t={t}
+                  />
+                </CardContent>
+              </Card>
 
-            {/* Address - Uses strict JobAddress with Places Autocomplete */}
-            <Card className="rounded-lg border-border shadow-sm">
-              <CardContent className="p-4 lg:p-6 space-y-3">
-                <Label htmlFor="job-address-input" className="text-sm font-medium text-foreground flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-muted-foreground" aria-hidden />
-                  {t.mobile.jobAddress}
-                </Label>
-                <JobAddressSelector
-                  value={selectedAddress}
-                  customerId={selectedCustomer?.id}
-                  customerName={selectedCustomer?.name}
-                  onChange={setSelectedAddress}
-                  disabled={busy}
-                  onRefresh={handleRefresh}
-                  autoFocus={!selectedAddress} // Auto-focus if no address selected
-                  t={t}
-                />
-              </CardContent>
-            </Card>
+              {/* Address - Uses strict JobAddress with Places Autocomplete */}
+              <Card className="rounded-lg border-border shadow-sm">
+                <CardContent className="p-4 lg:p-6 space-y-3">
+                  <Label htmlFor="job-address-input" className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-muted-foreground" aria-hidden />
+                    {t.mobile.jobAddress}
+                  </Label>
+                  <JobAddressSelector
+                    value={selectedAddress}
+                    customerId={selectedCustomer?.id}
+                    customerName={selectedCustomer?.name}
+                    onChange={setSelectedAddress}
+                    disabled={busy}
+                    onRefresh={handleRefresh}
+                    autoFocus={false} // Don't auto-focus - it's optional now
+                    t={t}
+                  />
+                </CardContent>
+              </Card>
+            </div>
           </div>
 
           {/* Advanced Section (collapsed) */}
@@ -1425,6 +1443,7 @@ function CreateJobPageInner() {
               type="submit"
               className="w-full min-h-12 text-base gap-2"
               disabled={!canStart}
+              data-testid="button-start-scopescan"
             >
               {busy ? (
                 <>
@@ -1438,9 +1457,10 @@ function CreateJobPageInner() {
                 </>
               )}
             </Button>
-            {!busy && !canStart && (
-              <p className="text-center text-xs text-slate-500">
-                {t.mobile.startTypingAddress}
+            {/* Draft-first: Show different helper text based on state */}
+            {!busy && !hasClientDetails && (
+              <p className="text-center text-xs text-slate-500" data-testid="helper-draft-mode">
+                {t.mobile.draftModeHelper || "You can add customer & address later before sending"}
               </p>
             )}
             <p className="text-center text-xs text-slate-500">

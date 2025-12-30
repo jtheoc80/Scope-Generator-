@@ -100,7 +100,17 @@ export async function mobileApiFetch<T>(
 // Job types
 export type MobileJob = {
   jobId: number;
+  id?: number;
+  clientName?: string;
+  address?: string;
+  tradeId?: string;
+  tradeName?: string;
+  jobTypeId?: string;
+  jobTypeName?: string;
+  jobSize?: number;
   status?: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type DraftStatus = {
