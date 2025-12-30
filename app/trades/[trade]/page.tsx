@@ -39,7 +39,7 @@ export default async function TradePage({ params }: PageProps) {
             <div className="flex flex-col sm:flex-row gap-4">
               <Link
                 href={`/generator?trade=${def.key}`}
-                className="inline-flex items-center justify-center h-14 px-8 rounded-md bg-secondary text-slate-900 font-bold text-lg hover:bg-secondary/90 transition-all hover:scale-[1.02] shadow-[0_0_20px_rgba(249,115,22,0.25)]"
+                className="inline-flex items-center justify-center h-14 px-8 rounded-md bg-secondary text-secondary-foreground font-bold text-lg hover:bg-secondary/90 transition-all hover:scale-[1.02] shadow-[0_0_20px_rgba(249,115,22,0.25)]"
                 data-testid="trade-cta"
               >
                 {def.cta.label}
@@ -57,10 +57,10 @@ export default async function TradePage({ params }: PageProps) {
       </section>
 
       {/* What's included */}
-      <section id="included" className="py-14 bg-white">
+      <section id="included" className="py-14 bg-card">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
-            <h2 className="text-2xl sm:text-3xl font-heading font-bold text-slate-900 mb-4">
+            <h2 className="text-2xl sm:text-3xl font-heading font-bold text-foreground mb-4">
               What&apos;s included for {def.name.toLowerCase()}
             </h2>
             <p className="text-muted-foreground mb-8">
@@ -69,9 +69,9 @@ export default async function TradePage({ params }: PageProps) {
 
             <div className="grid md:grid-cols-2 gap-4">
               {def.whatsIncluded.map((item) => (
-                <div key={item} className="bg-slate-50 rounded-lg p-5 border border-slate-100 flex gap-3">
+                <div key={item} className="bg-accent rounded-lg p-5 border border-border flex gap-3">
                   <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <div className="text-slate-700">{item}</div>
+                  <div className="text-card-foreground">{item}</div>
                 </div>
               ))}
             </div>
@@ -80,10 +80,10 @@ export default async function TradePage({ params }: PageProps) {
       </section>
 
       {/* Add-ons */}
-      <section className="py-14 bg-slate-50">
+      <section className="py-14 bg-accent">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
-            <h2 className="text-2xl sm:text-3xl font-heading font-bold text-slate-900 mb-4">
+            <h2 className="text-2xl sm:text-3xl font-heading font-bold text-foreground mb-4">
               Common add-ons
             </h2>
             <p className="text-muted-foreground mb-8">
@@ -92,9 +92,9 @@ export default async function TradePage({ params }: PageProps) {
 
             <div className="grid md:grid-cols-2 gap-4">
               {def.addOns.map((item) => (
-                <div key={item} className="bg-white rounded-lg p-5 border border-slate-200 flex gap-3">
+                <div key={item} className="bg-card rounded-lg p-5 border border-border flex gap-3">
                   <PlusCircle className="w-5 h-5 text-secondary mt-0.5 flex-shrink-0" />
-                  <div className="text-slate-700">{item}</div>
+                  <div className="text-card-foreground">{item}</div>
                 </div>
               ))}
             </div>
@@ -113,7 +113,7 @@ export default async function TradePage({ params }: PageProps) {
           </p>
           <Link
             href={`/generator?trade=${def.key}`}
-            className="inline-flex items-center justify-center bg-secondary text-slate-900 font-bold text-lg px-10 py-4 rounded-md hover:bg-white hover:text-primary transition-colors shadow-lg"
+            className="inline-flex items-center justify-center bg-secondary text-secondary-foreground font-bold text-lg px-10 py-4 rounded-md hover:bg-card hover:text-primary transition-colors shadow-lg"
             data-testid="trade-cta-footer"
           >
             {def.cta.label}
