@@ -15,6 +15,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const { data: user } = useQuery({
     queryKey: ["/api/auth/user"],
+    enabled: typeof window !== "undefined",
     queryFn: async () => {
       const res = await fetch("/api/auth/user");
       if (!res.ok) return null;
