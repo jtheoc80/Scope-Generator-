@@ -48,20 +48,24 @@ test.describe('Homepage ScopeScan Teaser - Mobile', () => {
     const scopeScanTeaser = page.locator('[data-testid="section-scopescan-teaser"]');
     await expect(scopeScanTeaser).toBeVisible({ timeout: 15000 });
 
-    // Teaser headline should be visible
-    const headline = page.locator('[data-testid="scopescan-teaser-headline"]');
+    // Eyebrow pills should be visible
+    await expect(scopeScanTeaser).toContainText('ScopeScan');
+    await expect(scopeScanTeaser).toContainText('Close more deals');
+
+    // Teaser headline should be visible (H2)
+    const headline = page.locator('#scopescan-teaser-heading');
     await expect(headline).toBeVisible();
-    await expect(headline).toContainText(/ScopeScan/i);
+    await expect(headline).toHaveText('Close more deals with same-visit quotes.');
 
-    // Primary CTA should link to /scopescan/demo (Try Demo)
-    const primaryCta = page.locator('[data-testid="teaser-cta-primary"]');
+    // Primary CTA should link to /scopescan
+    const primaryCta = page.locator('[data-testid="scopescan-cta-primary"]');
     await expect(primaryCta).toBeVisible();
-    await expect(primaryCta).toHaveAttribute('href', '/scopescan/demo');
+    await expect(primaryCta).toHaveAttribute('href', '/scopescan');
 
-    // Secondary CTA should link to /scopescan (Learn More)
-    const secondaryCta = page.locator('[data-testid="teaser-cta-secondary"]');
+    // Secondary CTA should link to /scopescan#examples
+    const secondaryCta = page.locator('[data-testid="scopescan-cta-secondary"]');
     await expect(secondaryCta).toBeVisible();
-    await expect(secondaryCta).toHaveAttribute('href', '/scopescan');
+    await expect(secondaryCta).toHaveAttribute('href', '/scopescan#examples');
   });
 
   test('should display image thumbnails in teaser', async ({ page }) => {
@@ -71,9 +75,9 @@ test.describe('Homepage ScopeScan Teaser - Mobile', () => {
     const scopeScanTeaser = page.locator('[data-testid="section-scopescan-teaser"]');
     await expect(scopeScanTeaser).toBeVisible({ timeout: 15000 });
 
-    // Thumbnails grid should be visible
-    const thumbnails = page.locator('[data-testid="scopescan-teaser-thumbnails"]');
-    await expect(thumbnails).toBeVisible();
+    // Image collage should be visible
+    const images = page.locator('[data-testid="scopescan-teaser-images"]');
+    await expect(images).toBeVisible();
   });
 
   test('should NOT show Take Photo button on homepage', async ({ page }) => {
@@ -125,14 +129,14 @@ test.describe('Homepage ScopeScan Teaser - Desktop', () => {
     await expect(scopeScanTeaser).toBeVisible({ timeout: 15000 });
 
     // Teaser headline should be visible
-    const headline = page.locator('[data-testid="scopescan-teaser-headline"]');
+    const headline = page.locator('#scopescan-teaser-heading');
     await expect(headline).toBeVisible();
 
     // Both CTAs should be visible
-    const primaryCta = page.locator('[data-testid="teaser-cta-primary"]');
+    const primaryCta = page.locator('[data-testid="scopescan-cta-primary"]');
     await expect(primaryCta).toBeVisible();
 
-    const secondaryCta = page.locator('[data-testid="teaser-cta-secondary"]');
+    const secondaryCta = page.locator('[data-testid="scopescan-cta-secondary"]');
     await expect(secondaryCta).toBeVisible();
   });
 
@@ -211,7 +215,7 @@ test.describe('/scopescan Landing Page', () => {
     // Headline should be visible
     const headline = page.locator('[data-testid="scopescan-headline"]');
     await expect(headline).toBeVisible();
-    await expect(headline).toContainText(/Turn Job Site Photos Into Detailed Proposals/i);
+    await expect(headline).toHaveText('Close more deals with same-visit quoting.');
 
     // Proof section should be visible
     const proofSection = page.locator('[data-testid="scopescan-proof-section"]');
@@ -276,7 +280,7 @@ test.describe('Homepage ScopeScan Teaser - Tablet', () => {
     await expect(scopeScanTeaser).toBeVisible({ timeout: 15000 });
 
     // CTAs should be visible
-    const primaryCta = page.locator('[data-testid="teaser-cta-primary"]');
+    const primaryCta = page.locator('[data-testid="scopescan-cta-primary"]');
     await expect(primaryCta).toBeVisible();
   });
 });
