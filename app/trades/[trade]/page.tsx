@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!def) {
     return {
-      title: "Trade Not Found",
+      title: "Trade Not Found | ScopeGen",
     };
   }
 
@@ -32,29 +32,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       `${def.name.toLowerCase()} contractor estimates`,
       `${def.name.toLowerCase()} proposal template`,
       "contractor proposal software",
-      "construction proposal generator",
-      "professional contractor proposals",
+      "construction proposal templates",
+      "free contractor estimates",
     ],
     openGraph: {
       title: def.heroTitle,
       description: def.heroSubtitle,
       type: "website",
       url: `https://scopegenerator.com/trades/${def.key}`,
-      siteName: "ScopeGen",
-      images: [
-        {
-          url: "/opengraph.jpg",
-          width: 1200,
-          height: 630,
-          alt: `ScopeGen - ${def.name} Proposal Software`,
-        },
-      ],
     },
     twitter: {
       card: "summary_large_image",
       title: def.heroTitle,
       description: def.heroSubtitle,
-      images: ["/opengraph.jpg"],
     },
     alternates: {
       canonical: `https://scopegenerator.com/trades/${def.key}`,
