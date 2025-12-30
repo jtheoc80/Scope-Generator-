@@ -2,6 +2,7 @@ import Layout from "@/components/layout";
 import Link from "next/link";
 import { ScopeExamples } from "@/components/scopescan/ScopeExamples";
 import type { Metadata } from "next";
+import Script from "next/script";
 import { 
   Camera, 
   Sparkles, 
@@ -96,9 +97,11 @@ export default function ScopeScanPage() {
 
   return (
     <>
-      {/* JSON-LD Structured Data */}
-      <script
+      {/* JSON-LD Structured Data - injected in head for proper SEO crawling */}
+      <Script
+        id="scopescan-jsonld"
         type="application/ld+json"
+        strategy="beforeInteractive"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(softwareApplicationJsonLd),
         }}
