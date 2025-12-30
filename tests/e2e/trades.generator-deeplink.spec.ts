@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Trade landing deep-links to generator", () => {
   test("bathroom trade CTA preselects generator trade", async ({ page }) => {
-    // Ensure a restored draft can't override the query-param selection.
+    // Verify query-param selection works when no draft exists.
     await page.goto("/generator");
     await page.evaluate(() => {
       const keys = Object.keys(localStorage);
@@ -40,6 +40,29 @@ test.describe("Trade landing deep-links to generator", () => {
 
     const tradeSelect = page.locator('[data-testid="select-trade-0"]');
     await expect(tradeSelect).toContainText("Roofing", { timeout: 10000 });
+  });
+
+  test("restored draft takes precedence over query parameter", async ({ page }) => {
+    // Create a draft with a specific trade (bathroom)
+    await page.goto("/generator");
+    await page.waitForLoadState("networkidle");
+
+    // Select bathroom trade and save as draft
+    const tradeButton = page.locator('[data-testid="select-trade-0"]').first();
+    await tradeButton.click();
+    await page.getByRole("option", { name: /bathroom/i }).click();
+
+    // Wait for draft to be saved to localStorage
+    await page.waitForTimeout(500);
+
+    // Navigate with a different trade query parameter (roofing)
+    await page.goto("/generator?trade=roofing");
+    await page.waitForLoadState("networkidle");
+
+    // Verify the restored draft (bathroom) takes precedence over query param (roofing)
+    const tradeSelect = page.locator('[data-testid="select-trade-0"]');
+    await expect(tradeSelect).toContainText("Bathroom Remodel", { timeout: 10000 });
+    await expect(tradeSelect).not.toContainText("Roofing");
   });
 });
 
