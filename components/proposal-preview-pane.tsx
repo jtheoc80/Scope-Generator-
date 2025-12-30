@@ -88,12 +88,15 @@ export interface ProposalPreviewPaneHandle {
 }
 
 /**
- * ProposalPreviewPane - Responsive preview pane component
- * 
- * Desktop: Sticky panel on the right
- * Mobile: Bottom drawer that can be opened/closed
- * 
- * Uses placeholders for empty client/address fields
+ * ProposalPreviewPane - Proposal preview container used in generator layouts.
+ *
+ * Mobile: Renders a bottom drawer that can be opened/closed.
+ * Desktop: Rendering and sticky positioning are controlled by the parent
+ *          (e.g. via layout wrappers, `className`, and the `visible` prop).
+ *
+ * This component itself does not implement desktop sticky behavior; it focuses
+ * on rendering the proposal preview content and mobile drawer UI, using
+ * placeholders for empty client/address fields.
  */
 const ProposalPreviewPane = forwardRef<ProposalPreviewPaneHandle, ProposalPreviewPaneProps>(
   (
