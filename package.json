@@ -116,6 +116,6 @@
     "lighthouse": "^13.0.1",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "typescript": "5.9.3"
   }
 }
