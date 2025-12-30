@@ -1,8 +1,7 @@
-'use client';
-
 import Layout from "@/components/layout";
 import Link from "next/link";
 import { ScopeExamples } from "@/components/scopescan/ScopeExamples";
+import type { Metadata } from "next";
 import { 
   Camera, 
   Sparkles, 
@@ -18,7 +17,71 @@ import { Button } from "@/components/ui/button";
  * Professional marketing page for ScopeScan - no camera/upload UI
  * Links to /m/create for actual tool usage
  */
+const metadataDescription =
+  "ScopeScan turns job site photos into a professional scope of work and pricing in minutes—so contractors can send quotes immediately, beat slower competitors, and close more deals.";
+
+export const metadata: Metadata = {
+  title: "ScopeScan | Close More Deals With Same-Visit Quotes",
+  description: metadataDescription,
+  keywords: [
+    "same-visit quoting",
+    "instant contractor quotes",
+    "close more deals",
+    "job site quoting",
+    "scope of work generator",
+    "photo to proposal",
+    "construction proposal software",
+    "remodeling proposal generator",
+    "roofing quote software",
+    "bathroom remodel proposal",
+  ],
+  alternates: {
+    canonical: "/scopescan",
+  },
+  openGraph: {
+    title: "Close More Deals With Same-Visit Quotes | ScopeScan",
+    description: metadataDescription,
+    url: "https://scopegenerator.com/scopescan",
+    siteName: "ScopeGen",
+    type: "website",
+    images: [
+      {
+        url: "/images/scopescan/hero/hero-exterior.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Contractor quoting on-site with ScopeScan",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Close More Deals With Same-Visit Quotes | ScopeScan",
+    description: metadataDescription,
+    images: ["/images/scopescan/hero/hero-exterior.jpg"],
+  },
+};
+
 export default function ScopeScanPage() {
+  const softwareApplicationJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "ScopeScan",
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web",
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
+      description: "Demo available instantly",
+    },
+    description: metadataDescription,
+    url: "https://scopegenerator.com/scopescan",
+    brand: {
+      "@type": "Brand",
+      name: "ScopeGen",
+    },
+  };
+
   const benefits = [
     {
       icon: Sparkles,
@@ -38,13 +101,18 @@ export default function ScopeScanPage() {
   ];
 
   const howItWorks = [
-    { step: "1", title: "Snap Photos", description: "Take 6-10 photos of the job site" },
-    { step: "2", title: "AI Analyzes", description: "Vision AI extracts scope items" },
-    { step: "3", title: "Review & Send", description: "Edit pricing, then send proposal" },
+    { step: "1", title: "Capture the job", description: "Take a few photos in under 60 seconds." },
+    { step: "2", title: "Generate the quote", description: "AI produces scope + pricing in minutes." },
+    { step: "3", title: "Win the deal", description: "Send it immediately and close before competitors." },
   ];
 
   return (
     <Layout>
+      <script
+        type="application/ld+json"
+        // JSON.stringify is safe here since we fully control the object contents.
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationJsonLd) }}
+      />
       {/* Hero Section */}
       <section className="bg-slate-50 py-12 sm:py-16 lg:py-20" data-testid="scopescan-hero">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
@@ -58,7 +126,7 @@ export default function ScopeScanPage() {
             <div className="relative text-center">
               <div className="mb-4 flex justify-center">
                 <span className="inline-flex items-center rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700">
-                  ScopeScan
+                  Close More Deals
                 </span>
               </div>
 
@@ -70,15 +138,14 @@ export default function ScopeScanPage() {
                 className="text-balance text-3xl sm:text-4xl md:text-5xl font-heading font-bold mb-4 leading-tight text-slate-900"
                 data-testid="scopescan-headline"
               >
-                Turn Job Site Photos Into Detailed Proposals
+                Close more deals with same-visit quoting.
               </h1>
 
               <p
                 className="text-lg sm:text-xl text-slate-600 mb-8 max-w-2xl mx-auto"
                 data-testid="scopescan-subheadline"
               >
-                ScopeScan uses AI to analyze your photos and generate accurate scope items,
-                material lists, and pricing—all in minutes.
+                ScopeScan turns job site photos into a professional scope + pricing in minutes—so you can send the quote immediately and win the job before competitors respond.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -88,7 +155,7 @@ export default function ScopeScanPage() {
                     className="w-full sm:w-auto h-14 px-8 text-lg bg-orange-500 hover:bg-orange-600 shadow-sm focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2"
                   >
                     <Camera className="w-5 h-5 mr-2" />
-                    Start ScopeScan
+                    Close More Deals
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </Link>
@@ -99,7 +166,7 @@ export default function ScopeScanPage() {
                     className="w-full sm:w-auto h-14 px-8 text-lg border-slate-300 text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2"
                   >
                     <Sparkles className="w-5 h-5 mr-2" />
-                    Try Demo
+                    See Examples
                   </Button>
                 </Link>
               </div>
@@ -108,15 +175,15 @@ export default function ScopeScanPage() {
               <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-x-6 gap-y-2 text-sm text-slate-500">
                 <span className="inline-flex items-center gap-2">
                   <Clock className="w-4 h-4 text-slate-400" />
-                  Demo available instantly
+                  Win jobs while homeowner intent is highest (same visit)
                 </span>
                 <span className="inline-flex items-center gap-2">
                   <Lock className="w-4 h-4 text-slate-400" />
-                  Sign in required for full tool
+                  Beat slow quotes from vendors, subs, or office follow-ups
                 </span>
                 <span className="inline-flex items-center gap-2">
                   <Target className="w-4 h-4 text-slate-400" />
-                  Built for fast quoting on-site
+                  Send a clean, professional scope your customer understands
                 </span>
               </div>
             </div>
@@ -133,7 +200,7 @@ export default function ScopeScanPage() {
                 Why Contractors Love ScopeScan
               </h2>
               <p className="text-slate-600 max-w-xl mx-auto">
-                Stop spending hours writing proposals. Let AI do the heavy lifting.
+                Built for speed: minimal typing, mobile-first workflow that helps you sell.
               </p>
             </div>
             
@@ -203,7 +270,7 @@ export default function ScopeScanPage() {
                   className="h-14 px-10 text-lg bg-orange-500 hover:bg-orange-600 shadow-sm focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2"
                 >
                   <Camera className="w-5 h-5 mr-2" />
-                  Start ScopeScan
+                  Close More Deals
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
               </Link>
@@ -214,7 +281,7 @@ export default function ScopeScanPage() {
                   className="h-14 px-10 text-lg border-slate-300 text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2"
                 >
                   <Sparkles className="w-5 h-5 mr-2" />
-                  Try Demo First
+                  See Examples
                 </Button>
               </Link>
             </div>
