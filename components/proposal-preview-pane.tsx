@@ -130,7 +130,6 @@ const ProposalPreviewPane = forwardRef<ProposalPreviewPaneHandle, ProposalPrevie
       return {
         ...data,
         clientName: data.clientName?.trim() || 'Client Name',
-        address: data.address?.trim() || 'Job Address',
       };
     }, [data]);
 
