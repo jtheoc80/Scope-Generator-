@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef } from "react";
 import Layout from "@/components/layout";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -21,7 +21,7 @@ import ProposalPhotoUpload, { type UploadedPhoto } from "@/components/proposal-p
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
-import { useDraftPersistence, type ProposalDraft, type DraftServiceItem } from "@/hooks/useDraftPersistence";
+import { useGeneratorDraftPersistence } from "./hooks/useGeneratorDraftPersistence";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { apiRequest } from "@/lib/queryClient";
@@ -275,27 +275,10 @@ export default function Generator() {
   // Draft-first: Track validation errors for finalize fields (client name + address)
   // These are only shown when user tries to export/send
   const [finalizeErrors, setFinalizeErrors] = useState<{ clientName?: string; address?: string }>({});
-  // Track if draft was restored from localStorage (to show indicator)
-  const [draftRestored, setDraftRestored] = useState(false);
   const { toast } = useToast();
   const { user, isLoading: isAuthLoading } = useAuth();
   const { t, language } = useLanguage();
   const previewRef = useRef<HTMLDivElement>(null);
-  
-  // Draft persistence hook
-  const {
-    isSaving: isAutoSaving,
-    lastSavedRelative,
-    hasUnsavedChanges,
-    wasRestored,
-    scheduleSave,
-    resetDraft,
-    loadDraft,
-    markAsSaved,
-  } = useDraftPersistence({
-    userId: user?.id ?? null,
-    enabled: true,
-  });
 
   const userSelectedTrades = user?.selectedTrades || [];
   const availableTemplates = userSelectedTrades.length > 0
@@ -312,114 +295,21 @@ export default function Generator() {
 
   const watchedValues = form.watch();
 
-  // Convert current state to ProposalDraft format for persistence
-  const getCurrentDraft = useCallback((): ProposalDraft => {
-    return {
-      clientName: watchedValues.clientName || '',
-      address: watchedValues.address || '',
-      services: services.map(s => ({
-        id: s.id,
-        tradeId: s.tradeId,
-        jobTypeId: s.jobTypeId,
-        jobSize: s.jobSize,
-        homeArea: s.homeArea,
-        footage: s.footage,
-        options: s.options,
-      })),
-      photos: photos.map(p => ({
-        id: p.id,
-        url: p.url,
-        category: p.category,
-        caption: p.caption,
-        displayOrder: p.displayOrder,
-      })),
-      enhancedScopes,
-    };
-  }, [watchedValues.clientName, watchedValues.address, services, photos, enhancedScopes]);
-
-  // Restore draft from localStorage on mount
-  useEffect(() => {
-    // Wait for auth to settle before restoring
-    if (isAuthLoading) return;
-    
-    const savedDraft = loadDraft();
-    if (savedDraft) {
-      // Restore form values
-      form.setValue('clientName', savedDraft.clientName);
-      form.setValue('address', savedDraft.address);
-      
-      // Restore services
-      if (savedDraft.services.length > 0) {
-        setServices(savedDraft.services.map(s => ({
-          id: s.id,
-          tradeId: s.tradeId,
-          jobTypeId: s.jobTypeId,
-          jobSize: s.jobSize,
-          homeArea: s.homeArea,
-          footage: s.footage,
-          options: s.options,
-        })));
-      }
-      
-      // Restore photos (with type-safe defaults)
-      if (savedDraft.photos.length > 0) {
-        setPhotos(savedDraft.photos.map((p, index) => ({
-          id: p.id,
-          url: p.url,
-          category: (p.category as UploadedPhoto['category']) || 'other',
-          caption: p.caption || '',
-          displayOrder: p.displayOrder ?? index,
-        })));
-      }
-      
-      // Restore enhanced scopes
-      if (Object.keys(savedDraft.enhancedScopes).length > 0) {
-        setEnhancedScopes(savedDraft.enhancedScopes);
-      }
-      
-      setDraftRestored(true);
-      
-      // Mark as saved to prevent immediate re-save
-      markAsSaved(savedDraft);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthLoading]); // Only run once when auth settles
-
-  // Autosave on draft changes (debounced)
-  useEffect(() => {
-    // Skip during initial auth loading
-    if (isAuthLoading) return;
-    
-    const draft = getCurrentDraft();
-    scheduleSave(draft);
-  }, [getCurrentDraft, scheduleSave, isAuthLoading]);
-
-  // Handle reset draft
-  const handleResetDraft = useCallback(() => {
-    // Clear localStorage
-    resetDraft();
-    
-    // Reset form
-    form.reset({ clientName: '', address: '' });
-    
-    // Reset services to initial state
-    setServices([
-      { id: crypto.randomUUID(), tradeId: "", jobTypeId: "", jobSize: 2, homeArea: "", footage: null, options: {} }
-    ]);
-    
-    // Reset other state
-    setPhotos([]);
-    setEnhancedScopes({});
-    setStep(1);
-    setSavedProposalId(null);
-    setDraftRestored(false);
-    setFinalizeErrors({});
-    
-    toast({
-      title: "Draft cleared",
-      description: "Your draft has been reset.",
-    });
-  }, [resetDraft, form, toast]);
+  // Draft persistence hook - handles localStorage restore, autosave, and reset
+  const {
+    isAutoSaving,
+    lastSavedRelative,
+    hasUnsavedChanges,
+    draftRestored,
+    handleResetDraft,
+  } = useGeneratorDraftPersistence({
+    userId: user?.id ?? null,
+    isAuthLoading,
+    form,
+    state: { services, photos, enhancedScopes, watchedValues },
+    setters: { setServices, setPhotos, setEnhancedScopes, setStep, setSavedProposalId, setFinalizeErrors },
+    onReset: () => toast({ title: "Draft cleared", description: "Your draft has been reset." }),
+  });
 
   const getJobTypeForService = (service: ServiceItem): JobType | null => {
     const trade = availableTemplates.find((t) => t.id === service.tradeId);
@@ -1379,7 +1269,7 @@ export default function Generator() {
                     </div>
                     
                     {/* Draft restored banner */}
-                    {draftRestored && wasRestored && (
+                    {draftRestored && (
                       <div 
                         className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between text-sm"
                         data-testid="draft-restored-banner"
