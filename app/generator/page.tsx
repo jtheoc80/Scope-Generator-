@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import Layout from "@/components/layout";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -260,7 +260,7 @@ const getAreaOptionsForTrade = (tradeId: string, t: any): { value: string; label
   }
 };
 
-export default function Generator() {
+function GeneratorContent() {
   const [step, setStep] = useState<1 | 2>(1);
   const [services, setServices] = useState<ServiceItem[]>([
     { id: crypto.randomUUID(), tradeId: "", jobTypeId: "", jobSize: 2, homeArea: "", footage: null, options: {} }
@@ -1511,6 +1511,121 @@ export default function Generator() {
 
             {/* RIGHT COLUMN: Preview */}
             <div className="lg:col-span-8">
+              {!hasValidServices && (
+                <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50 p-8 text-center">
+                   <div className="bg-white p-4 rounded-full shadow-sm mb-4">
+                      <FileText className="w-8 h-8 text-slate-300" />
+                   </div>
+                   <h3 className="text-lg font-medium text-slate-900">{t.generator.readyToStart}</h3>
+                   <p className="max-w-xs mx-auto mt-2">{t.generator.readyToStartDesc}</p>
+                </div>
+              )}
+
+              {hasValidServices && (
+                <div className="relative animate-in fade-in duration-700">
+                   {/* Toolbar */}
+                   <div className="flex justify-between items-center mb-4">
+                      <div className="flex items-center gap-3">
+                        <h3 className="font-heading font-bold text-xl text-slate-700">{t.generator.livePreview}</h3>
+                        {/* Autosave status in toolbar */}
+                        {lastSavedRelative && !hasUnsavedChanges && (
+                          <span className="text-xs text-green-600 flex items-center gap-1" data-testid="toolbar-save-status">
+                            <Check className="w-3 h-3" />
+                            Saved {lastSavedRelative}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        {/* Reset Draft button */}
+                        {step === 2 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="gap-1 text-slate-500 hover:text-red-600 hover:bg-red-50"
+                            onClick={handleResetDraft}
+                            data-testid="button-reset-draft-toolbar"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                            Reset
+                          </Button>
+                        )}
+                        {step === 2 && user && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="gap-2"
+                            onClick={handleEnhanceScope}
+                            disabled={isEnhancing}
+                            data-testid="button-enhance-scope"
+                          >
+                            {isEnhancing ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Sparkles className="w-4 h-4" />
+                            )}
+                            {isEnhancing ? t.generator.enhancing : t.generator.enhanceWithAI}
+                          </Button>
+                        )}
+                        {step === 2 && user && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="gap-2"
+                            onClick={handleSaveDraft}
+                            disabled={isSavingDraft}
+                            data-testid="button-save-draft"
+                          >
+                            {isSavingDraft ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Save className="w-4 h-4" />
+                            )}
+                            {t.generator.saveDraft}
+                          </Button>
+                        )}
+                        {/* Draft-first: Download requires client info */}
+                        {step === 2 && (
+                          <Button 
+                            variant="outline"
+                            size="sm"
+                            className={cn("gap-2", !hasFinalizeFields && "opacity-75")}
+                            onClick={handleDownload}
+                            disabled={isDownloading}
+                            data-testid="button-download-pdf"
+                            title={!hasFinalizeFields ? "Add client name and address to download" : undefined}
+                          >
+                            {isDownloading ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Download className="w-4 h-4" />
+                            )}
+                            {isDownloading ? t.generator.generatingPDF : t.generator.downloadPDF}
+                          </Button>
+                        )}
+                        {/* Draft-first: Email requires client info */}
+                        {step === 2 && user && (
+                          <Button 
+                            variant="default"
+                            size="sm"
+                            className={cn("gap-2 bg-blue-600 hover:bg-blue-700", !hasFinalizeFields && "opacity-75")}
+                            onClick={handleEmailClick}
+                            disabled={isSavingForEmail}
+                            data-testid="button-email-proposal"
+                            title={!hasFinalizeFields ? "Add client name and address to send" : undefined}
+                          >
+                            {isSavingForEmail ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Mail className="w-4 h-4" />
+                            )}
+                            {isSavingForEmail ? 'Saving...' : (t.generator.emailProposal || 'Email Proposal')}
+                          </Button>
+                        )}
+                      </div>
+                   </div>
+                </div>
+              )}
+
               {/* Desktop Preview with Toolbar */}
               <div className="hidden lg:block">
                 {!hasValidServices ? (
@@ -1525,30 +1640,8 @@ export default function Generator() {
                   <div className="relative animate-in fade-in duration-700">
                      {/* Toolbar */}
                      <div className="flex justify-between items-center mb-4">
-                        <div className="flex items-center gap-3">
-                          <h3 className="font-heading font-bold text-xl text-slate-700">{t.generator.livePreview}</h3>
-                          {/* Autosave status in toolbar */}
-                          {lastSavedRelative && !hasUnsavedChanges && (
-                            <span className="text-xs text-green-600 flex items-center gap-1" data-testid="toolbar-save-status">
-                              <Check className="w-3 h-3" />
-                              Saved {lastSavedRelative}
-                            </span>
-                          )}
-                        </div>
+                        <h3 className="font-heading font-bold text-xl text-slate-700">{t.generator.livePreview}</h3>
                         <div className="flex gap-2 flex-wrap">
-                          {/* Reset Draft button */}
-                          {step === 2 && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="gap-1 text-slate-500 hover:text-red-600 hover:bg-red-50"
-                              onClick={handleResetDraft}
-                              data-testid="button-reset-draft-toolbar"
-                            >
-                              <RotateCcw className="w-4 h-4" />
-                              Reset
-                            </Button>
-                          )}
                           {step === 2 && user && (
                             <Button 
                               variant="outline" 
@@ -1689,5 +1782,19 @@ export default function Generator() {
         />
       )}
     </Layout>
+  );
+}
+
+export default function Generator() {
+  return (
+    <Suspense fallback={
+      <Layout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      </Layout>
+    }>
+      <GeneratorContent />
+    </Suspense>
   );
 }
