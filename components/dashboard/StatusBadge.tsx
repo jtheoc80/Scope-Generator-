@@ -65,6 +65,12 @@ function normalizeStatus(status: string): ProposalStatus {
   if (s === "won") return "won";
   if (s === "lost") return "lost";
   if (s === "declined") return "declined";
+  // Fallback to "draft" for unknown statuses to keep the UI stable,
+  // but log a warning so data quality issues are visible during development.
+  console.warn(
+    '[StatusBadge] Unknown proposal status encountered in normalizeStatus:',
+    status,
+  );
   return "draft";
 }
 
