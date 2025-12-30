@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Layout from "@/components/layout";
 import Link from "next/link";
 import { 
@@ -10,6 +10,7 @@ import {
   Fence, CircleDot, Palette, MapPin
 } from "lucide-react";
 import { regionalMultipliers } from "@/lib/regional-pricing";
+import { buildEstimateParams } from "@/app/m/lib/estimate-params";
 
 const calculatorTrades = [
   {
@@ -452,6 +453,19 @@ export default function CalculatorPage() {
 
   const TradeIcon = trade?.icon || Calculator;
 
+  // Build proposal handoff URL with current estimate state
+  const proposalUrl = useMemo(() => {
+    const params = buildEstimateParams({
+      trade: selectedTrade || undefined,
+      jobType: selectedJobType || undefined,
+      size: selectedSize || undefined,
+      zip: zipCode || undefined,
+      sqft: selectedSize === "custom" && customSqFt ? parseInt(customSqFt) : undefined,
+    });
+    const queryString = params.toString();
+    return queryString ? `/m/create?${queryString}` : "/m/create";
+  }, [selectedTrade, selectedJobType, selectedSize, zipCode, customSqFt]);
+
   return (
     <Layout>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
@@ -636,13 +650,17 @@ export default function CalculatorPage() {
                         </div>
                       </div>
 
-                      <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                      <p className="text-xs text-slate-500 text-center mt-4 pt-4 border-t border-green-200" data-testid="estimate-disclaimer">
+                        Estimates are directional; final bids depend on site conditions, local labor/material pricing, and scope.
+                      </p>
+
+                      <div className="flex flex-col sm:flex-row gap-3 mt-4">
                         <Link
-                          href="/app"
+                          href={proposalUrl}
                           data-testid="button-get-proposal"
                           className="flex-1 flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-primary text-white font-bold hover:bg-primary/90 transition-all shadow-lg hover:shadow-xl"
                         >
-                          Get a Professional Proposal
+                          Turn into a Proposal
                           <ArrowRight className="w-5 h-5" />
                         </Link>
                         <button
@@ -743,7 +761,7 @@ export default function CalculatorPage() {
                     <DollarSign className="w-5 h-5 text-primary" />
                   </div>
                   <h3 className="font-bold text-slate-900 mb-2">National Baseline</h3>
-                  <p className="text-slate-600 text-sm">We start with national average costs from industry databases including RSMeans and HomeAdvisor data.</p>
+                  <p className="text-slate-600 text-sm">We start with national average costs derived from industry cost databases, public market benchmarks, and internal adjustments.</p>
                 </div>
                 <div className="bg-slate-50 rounded-xl p-5">
                   <div className="w-10 h-10 bg-secondary/10 rounded-lg flex items-center justify-center mb-3">
@@ -825,11 +843,11 @@ export default function CalculatorPage() {
               Turn this estimate into a detailed, client-ready proposal in minutes. Free to try, no credit card required.
             </p>
             <Link
-              href="/app"
+              href={proposalUrl}
               data-testid="button-footer-cta"
               className="inline-flex items-center justify-center h-14 px-8 rounded-xl bg-white text-primary font-bold text-lg hover:bg-slate-100 transition-all shadow-lg hover:shadow-xl hover:scale-105"
             >
-              Try ScopeGen Free
+              Turn into a Proposal
               <ArrowRight className="ml-2 w-5 h-5" />
             </Link>
           </div>

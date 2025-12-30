@@ -188,7 +188,10 @@ export function MarketPricingWidget() {
         )}
 
         <p className="text-[10px] text-slate-400 text-center">
-          Powered by 1build • 3,000+ US counties
+          Based on industry cost databases • 3,000+ US counties
+        </p>
+        <p className="text-[10px] text-slate-400/70 text-center mt-0.5">
+          Estimates are directional; final costs vary by site and scope.
         </p>
       </CardContent>
     </Card>

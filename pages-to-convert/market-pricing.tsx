@@ -122,7 +122,7 @@ export default function MarketPricing() {
             <div className="text-center mb-8">
               <div className="inline-flex items-center gap-2 bg-emerald-100 text-emerald-700 px-4 py-2 rounded-full text-sm font-medium mb-4">
                 <Database className="w-4 h-4" />
-                Powered by 1build
+                Real-Time Cost Data
               </div>
               <h1 className="text-3xl md:text-4xl font-heading font-bold text-slate-900 mb-3">
                 Market Pricing Insights
@@ -344,7 +344,8 @@ export default function MarketPricing() {
                 </Card>
 
                 <div className="text-center text-sm text-slate-500">
-                  <p>Pricing data provided by 1build.com - updated regularly across 3,000+ US counties</p>
+                  <p>Pricing based on industry cost databases and public market benchmarks. Updated regularly across 3,000+ US counties.</p>
+                  <p className="mt-1 text-xs text-slate-400">Estimates are directional; final bids depend on site conditions, local labor/material pricing, and scope.</p>
                 </div>
               </div>
             )}

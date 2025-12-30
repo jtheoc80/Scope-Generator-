@@ -156,8 +156,8 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
         <div className="grid grid-cols-2 gap-8 mb-8">
           <div>
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Prepared For</h3>
-            <div className="font-bold text-lg">{data.clientName || "Client Name"}</div>
-            <div className="text-slate-600">{data.address || "123 Client Street"}</div>
+            <div className="font-bold text-lg" data-testid="preview-client-name">{data.clientName || "Client Name"}</div>
+            <div className="text-slate-600" data-testid="preview-address">{data.address || "123 Client Street"}</div>
           </div>
           <div className="text-right">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Date</h3>
@@ -165,7 +165,7 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 mt-4">
               {hasMultipleServices ? "Proposal Type" : "Job Type"}
             </h3>
-            <div className="font-medium">
+            <div className="font-medium" data-testid="preview-job-type">
               {hasMultipleServices ? (
                 <span className="flex items-center justify-end gap-1">
                   <Layers className="w-4 h-4" />
@@ -322,10 +322,10 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
                 ) : null;
               })()}
 
-              <ul className="list-disc pl-5 space-y-2 marker:text-secondary">
+              <ul className="list-disc pl-5 space-y-2 marker:text-secondary" data-testid="preview-scope-list">
                 {data.scope && data.scope.length > 0 ? (
                   data.scope.map((item: string, i: number) => (
-                    <li key={i}>{item}</li>
+                    <li key={i} data-testid={`preview-scope-item-${i}`}>{item}</li>
                   ))
                 ) : (
                   <>
@@ -370,7 +370,7 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
             <div className="border border-slate-200 rounded-lg p-6 bg-slate-50">
               <div className="flex justify-between items-end mb-2">
                 <span className="font-bold text-slate-700">Total Project Estimate</span>
-                <span className="text-2xl font-bold text-slate-900">
+                <span className="text-2xl font-bold text-slate-900" data-testid="preview-total-price">
                   ${Math.round(((data.priceRange?.low ?? 0) + (data.priceRange?.high ?? 0)) / 2).toLocaleString()}
                 </span>
               </div>

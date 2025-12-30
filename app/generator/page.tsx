@@ -16,6 +16,7 @@ import { Loader2, ChevronRight, Wand2, Download, FileText, Sparkles, Plus, Trash
 import JobAddressField from "@/components/job-address-field";
 import EmailProposalModal from "@/components/email-proposal-modal";
 import ProposalPreview from "@/components/proposal-preview";
+import ProposalPreviewPane, { type ProposalPreviewPaneHandle } from "@/components/proposal-preview-pane";
 import { CostInsights } from "@/components/cost-insights";
 import ProposalPhotoUpload, { type UploadedPhoto } from "@/components/proposal-photo-upload";
 import { useToast } from "@/hooks/use-toast";
@@ -279,6 +280,7 @@ export default function Generator() {
   const { user, isLoading: isAuthLoading } = useAuth();
   const { t, language } = useLanguage();
   const previewRef = useRef<HTMLDivElement>(null);
+  const previewPaneRef = useRef<ProposalPreviewPaneHandle>(null);
 
   const userSelectedTrades = user?.selectedTrades || [];
   const availableTemplates = userSelectedTrades.length > 0
@@ -1581,6 +1583,97 @@ export default function Generator() {
                       </div>
                    </div>
                    
+              {/* Desktop Preview with Toolbar */}
+              <div className="hidden lg:block">
+                {!hasValidServices ? (
+                  <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50 p-8 text-center">
+                     <div className="bg-white p-4 rounded-full shadow-sm mb-4">
+                        <FileText className="w-8 h-8 text-slate-300" />
+                     </div>
+                     <h3 className="text-lg font-medium text-slate-900">{t.generator.readyToStart}</h3>
+                     <p className="max-w-xs mx-auto mt-2">{t.generator.readyToStartDesc}</p>
+                  </div>
+                ) : (
+                  <div className="relative animate-in fade-in duration-700">
+                     {/* Toolbar */}
+                     <div className="flex justify-between items-center mb-4">
+                        <h3 className="font-heading font-bold text-xl text-slate-700">{t.generator.livePreview}</h3>
+                        <div className="flex gap-2 flex-wrap">
+                          {step === 2 && user && (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="gap-2"
+                              onClick={handleEnhanceScope}
+                              disabled={isEnhancing}
+                              data-testid="button-enhance-scope"
+                            >
+                              {isEnhancing ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Sparkles className="w-4 h-4" />
+                              )}
+                              {isEnhancing ? t.generator.enhancing : t.generator.enhanceWithAI}
+                            </Button>
+                          )}
+                          {step === 2 && user && (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="gap-2"
+                              onClick={handleSaveDraft}
+                              disabled={isSavingDraft}
+                              data-testid="button-save-draft"
+                            >
+                              {isSavingDraft ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Save className="w-4 h-4" />
+                              )}
+                              {t.generator.saveDraft}
+                            </Button>
+                          )}
+                          {/* Draft-first: Download requires client info */}
+                          {step === 2 && (
+                            <Button 
+                              variant="outline"
+                              size="sm"
+                              className={cn("gap-2", !hasFinalizeFields && "opacity-75")}
+                              onClick={handleDownload}
+                              disabled={isDownloading}
+                              data-testid="button-download-pdf"
+                              title={!hasFinalizeFields ? "Add client name and address to download" : undefined}
+                            >
+                              {isDownloading ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Download className="w-4 h-4" />
+                              )}
+                              {isDownloading ? t.generator.generatingPDF : t.generator.downloadPDF}
+                            </Button>
+                          )}
+                          {/* Draft-first: Email requires client info */}
+                          {step === 2 && user && (
+                            <Button 
+                              variant="default"
+                              size="sm"
+                              className={cn("gap-2 bg-blue-600 hover:bg-blue-700", !hasFinalizeFields && "opacity-75")}
+                              onClick={handleEmailClick}
+                              disabled={isSavingForEmail}
+                              data-testid="button-email-proposal"
+                              title={!hasFinalizeFields ? "Add client name and address to send" : undefined}
+                            >
+                              {isSavingForEmail ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Mail className="w-4 h-4" />
+                              )}
+                              {isSavingForEmail ? 'Saving...' : (t.generator.emailProposal || 'Email Proposal')}
+                            </Button>
+                          )}
+                        </div>
+                     </div>
+
                    {/* Draft-first: Show info banner when client info is missing */}
                    {step === 2 && !hasFinalizeFields && (
                      <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800" data-testid="banner-finalize-required">
@@ -1589,21 +1682,43 @@ export default function Generator() {
                      </div>
                    )}
 
-                   {/* The Document */}
-                   <ProposalPreview 
-                      ref={previewRef}
-                      data={previewData} 
-                      companyInfo={user ? {
-                        companyName: user.companyName,
-                        companyAddress: user.companyAddress,
-                        companyPhone: user.companyPhone,
-                        companyLogo: user.companyLogo,
-                      } : undefined}
-                      photos={previewData.photos}
-                      showPhotos={photos.length > 0}
-                   />
-                </div>
-              )}
+                     {/* The Document - Desktop */}
+                     <div data-testid="proposal-preview-container">
+                       <ProposalPreview 
+                          ref={previewRef}
+                          data={previewData} 
+                          companyInfo={user ? {
+                            companyName: user.companyName,
+                            companyAddress: user.companyAddress,
+                            companyPhone: user.companyPhone,
+                            companyLogo: user.companyLogo,
+                          } : undefined}
+                          photos={previewData.photos}
+                          showPhotos={photos.length > 0}
+                       />
+                     </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Mobile Preview Drawer */}
+              <ProposalPreviewPane
+                ref={previewPaneRef}
+                data={previewData}
+                companyInfo={user ? {
+                  companyName: user.companyName,
+                  companyAddress: user.companyAddress,
+                  companyPhone: user.companyPhone,
+                  companyLogo: user.companyLogo,
+                } : undefined}
+                photos={previewData.photos}
+                showPhotos={photos.length > 0}
+                hasValidServices={hasValidServices}
+                drawerLabel={t.generator.livePreview || 'Preview'}
+                emptyStateTitle={t.generator.readyToStart}
+                emptyStateDescription={t.generator.readyToStartDesc}
+                className="lg:hidden"
+              />
             </div>
           </div>
         </div>
