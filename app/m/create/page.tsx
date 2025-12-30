@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useJsApiLoader } from "@react-google-maps/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -83,6 +83,7 @@ import {
 } from "../lib/job-memory";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/hooks/useLanguage";
+import { parseEstimateParams, getJobTypeFromEstimate, type EstimateParams } from "../lib/estimate-params";
 
 const JOB_TYPE_ICONS: Record<string, LucideIcon> = {
   "bathroom-remodel": Bath,
@@ -1009,8 +1010,10 @@ function JobAddressSelector({
   );
 }
 
-export default function CreateJobPage() {
+// Inner component that uses useSearchParams (needs Suspense boundary)
+function CreateJobPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useLanguage();
   const [jobType, setJobType] = useState("bathroom-remodel");
   const [selectedCustomer, setSelectedCustomer] = useState<SavedCustomer | null>(null);
@@ -1024,9 +1027,36 @@ export default function CreateJobPage() {
   const [initialized, setInitialized] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [, forceUpdate] = useState(0);
+  
+  // Estimate handoff state
+  const [prefilledFromEstimate, setPrefilledFromEstimate] = useState(false);
+  const [estimateParams, setEstimateParams] = useState<EstimateParams | null>(null);
+  const hasAppliedEstimateParams = useRef(false);
+
+  // Parse estimate params from URL (from calculator handoff)
+  // This runs once on mount and applies params as initial defaults
+  useEffect(() => {
+    if (hasAppliedEstimateParams.current) return;
+    
+    const params = parseEstimateParams(searchParams);
+    if (params) {
+      hasAppliedEstimateParams.current = true;
+      setEstimateParams(params);
+      
+      // Apply job type from trade
+      const mappedJobType = getJobTypeFromEstimate(params);
+      if (mappedJobType) {
+        setJobType(mappedJobType);
+      }
+      
+      // Mark as prefilled for banner display
+      setPrefilledFromEstimate(true);
+    }
+  }, [searchParams]);
 
   // Load saved state on mount and sync with backend
   // IMPORTANT: Do NOT auto-populate address - user must explicitly select
+  // Also skip restoring job type if estimate params were applied
   useEffect(() => {
     const initializeData = async () => {
       // First, load from localStorage for instant display
@@ -1034,7 +1064,8 @@ export default function CreateJobPage() {
       const recent = getRecentJobTypes(3);
       setRecentJobTypes(recent);
 
-      if (lastSetup) {
+      // Only apply lastSetup if we didn't get estimate params
+      if (lastSetup && !hasAppliedEstimateParams.current) {
         // Only restore job type and customer, NOT address
         setJobType(lastSetup.jobType);
         if (lastSetup.customerId) {
@@ -1043,7 +1074,7 @@ export default function CreateJobPage() {
         }
         // DO NOT restore address - must be explicitly selected by user
         // This was the root cause of the 1/10 accuracy issue
-      } else if (recent.length > 0) {
+      } else if (recent.length > 0 && !hasAppliedEstimateParams.current) {
         setJobType(recent[0]);
       }
 
@@ -1183,6 +1214,35 @@ export default function CreateJobPage() {
             {t.mobile.wellRememberCustomers}
           </p>
         </div>
+
+        {/* Prefilled from estimate banner */}
+        {prefilledFromEstimate && (
+          <div 
+            data-testid="banner-prefilled-estimate"
+            className="flex items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-800 dark:bg-blue-950"
+          >
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                Prefilled from your estimate
+                {estimateParams?.trade && (
+                  <span className="text-blue-600 dark:text-blue-300">
+                    {" "}— {estimateParams.trade}
+                    {estimateParams.size && ` (${estimateParams.size})`}
+                  </span>
+                )}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPrefilledFromEstimate(false)}
+              className="rounded p-1 text-blue-600 hover:bg-blue-100 dark:text-blue-400 dark:hover:bg-blue-900"
+              aria-label="Dismiss"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
@@ -1390,5 +1450,18 @@ export default function CreateJobPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+// Wrapper with Suspense boundary for useSearchParams
+export default function CreateJobPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    }>
+      <CreateJobPageInner />
+    </Suspense>
   );
 }
