@@ -4,10 +4,31 @@ export interface Template {
   jobTypes: JobType[];
 }
 
+/**
+ * A section within the scope of work (for grouped display)
+ */
+export interface ScopeSection {
+  title: string;
+  items: string[];
+}
+
 export interface JobType {
   id: string;
   name: string;
+  /** Legacy flat scope array - use scopeSections for grouped display */
   baseScope: string[];
+  /** 
+   * Optional: Grouped scope sections with headings.
+   * When present, renderer should prefer this over baseScope for display.
+   * baseScope should still be populated for backward compatibility.
+   */
+  scopeSections?: ScopeSection[];
+  /** Optional: Items that are explicitly included (displayed in "Included" section) */
+  included?: string[];
+  /** Optional: Assumptions made for this scope (displayed in "Assumptions" section) */
+  assumptions?: string[];
+  /** Optional: Add-on items available for this job type */
+  addons?: string[];
   options: JobOption[];
   basePriceRange: { low: number; high: number };
   estimatedDays?: { low: number; high: number };
@@ -3092,6 +3113,7 @@ export const templates: Template[] = [
         estimatedDays: { low: 1, high: 2 },
         warranty: "10-year parts warranty with registration. 2-year labor warranty.",
         exclusions: ["Ductwork replacement", "Zoning systems", "Electrical panel upgrades", "Permits (if required by jurisdiction)"],
+        // Legacy flat array (kept for backward compatibility)
         baseScope: [
           "Recover existing refrigerant per EPA Section 608 regulations.",
           "Disconnect and remove existing outdoor A/C condenser unit.",
@@ -3117,6 +3139,82 @@ export const templates: Template[] = [
           "Register warranty with manufacturer.",
           "Provide system orientation and filter replacement instructions to homeowner.",
           "Clean up work area and remove all debris."
+        ],
+        // New grouped sections for better readability
+        scopeSections: [
+          {
+            title: "Removal & Demolition",
+            items: [
+              "Recover existing refrigerant per EPA Section 608 regulations.",
+              "Disconnect and remove existing outdoor A/C condenser unit.",
+              "Disconnect and remove existing indoor furnace.",
+              "Dispose of old equipment per environmental regulations."
+            ]
+          },
+          {
+            title: "Outdoor Unit Installation",
+            items: [
+              "Set new condenser unit on existing pad (or install new pad if required).",
+              "Install surge protector at outdoor disconnect (if selected)."
+            ]
+          },
+          {
+            title: "Indoor Unit Installation",
+            items: [
+              "Install new furnace in existing location.",
+              "Install new evaporator coil matched to condenser tonnage.",
+              "Install new drain pan and condensate line with trap."
+            ]
+          },
+          {
+            title: "Refrigerant System",
+            items: [
+              "Replace refrigerant line set if required by distance or condition.",
+              "Install new filter drier and service ports.",
+              "Braze all refrigerant connections with silver solder.",
+              "Pressure test system with nitrogen to 500 PSI.",
+              "Evacuate system to 500 microns using vacuum pump.",
+              "Charge system with factory-specified refrigerant (R-410A).",
+              "Verify subcooling and superheat values per manufacturer specs."
+            ]
+          },
+          {
+            title: "Electrical & Controls",
+            items: [
+              "Connect gas line to furnace (if gas) and test for leaks.",
+              "Connect and test existing or new thermostat.",
+              "Program and calibrate thermostat settings."
+            ]
+          },
+          {
+            title: "Commissioning & Testing",
+            items: [
+              "Verify airflow at all supply registers.",
+              "Test heating and cooling modes for proper operation.",
+              "Measure temperature differential (cooling: 16-22°F, heating: 40-70°F rise)."
+            ]
+          },
+          {
+            title: "Closeout & Handover",
+            items: [
+              "Register warranty with manufacturer.",
+              "Provide system orientation and filter replacement instructions to homeowner.",
+              "Clean up work area and remove all debris."
+            ]
+          }
+        ],
+        assumptions: [
+          "Existing ductwork is in good condition and properly sized.",
+          "Electrical service is adequate for new equipment.",
+          "Gas supply line is properly sized (if gas furnace).",
+          "Clear access to indoor and outdoor equipment locations.",
+          "No structural modifications required for equipment placement."
+        ],
+        addons: [
+          "Smart thermostat with room sensors and app setup",
+          "UV-C germicidal light in air handler",
+          "Complete duct cleaning service",
+          "New composite condenser pad"
         ],
         options: [
           {
