@@ -25,25 +25,29 @@ function stageDot(stage: PipelineStageKey) {
 }
 
 export function PipelineBar({
-  title = "Pipeline",
+  title,
   counts,
   className,
+  t,
 }: {
   title?: string;
   counts: Record<PipelineStageKey, number>;
   className?: string;
+  t?: (key: string) => string;
 }) {
   const total = STAGES.reduce((sum, s) => sum + (counts[s.key] || 0), 0);
+  const pipelineTitle = title ?? t?.("pipeline.title") ?? "Pipeline";
+  const proposalsLabel = t?.("pipeline.proposals") ?? "proposals";
 
   return (
     <Card className={cn("rounded-2xl border-slate-200 bg-white shadow-sm", className)}>
       <CardHeader className="flex flex-row items-center justify-between px-6 py-5">
         <div>
           <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            {title}
+            {pipelineTitle}
           </div>
           <div className="mt-1 text-sm font-semibold text-slate-900">
-            {total.toLocaleString()} proposals
+            {total.toLocaleString()} {proposalsLabel}
           </div>
         </div>
       </CardHeader>
