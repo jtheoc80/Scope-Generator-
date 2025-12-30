@@ -1,64 +1,88 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * Smoke Test: Homepage ScopeScan Marketing Section
+ * Smoke Test: Homepage ScopeScan Marketing Section + ScopeScan Landing Page
  * 
- * Tests the marketing-focused ScopeScan section on the homepage.
- * Verifies marketing content and CTA navigation.
+ * Tests the marketing-focused ScopeScan teaser on the homepage and the
+ * separate /scopescan landing page.
  */
 
 // Mobile tests with iPhone viewport
-test.describe('Homepage ScopeScan Marketing - Mobile', () => {
+test.describe('Homepage ScopeScan Teaser - Mobile', () => {
   test.beforeEach(async ({ page }) => {
     // Set mobile viewport (375px for the requirement)
     await page.setViewportSize({ width: 375, height: 812 });
   });
 
-  test('should display marketing headline and subheadline', async ({ page }) => {
+  test('should display ScopeScan teaser section after "Tired..." section', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('load');
 
-    // ScopeScan section should be visible
-    const scopeScanSection = page.locator('[data-testid="section-scope-scan"]');
-    await expect(scopeScanSection).toBeVisible({ timeout: 15000 });
+    // Pain points section should be visible
+    const painPointsSection = page.locator('[data-testid="section-pain-points"]');
+    await expect(painPointsSection).toBeVisible({ timeout: 15000 });
 
-    // Marketing headline should be visible
-    const heading = page.locator('[data-testid="scope-scan-heading"]');
-    await expect(heading).toBeVisible();
-    await expect(heading).toContainText(/Turn Job Site Photos Into Detailed Proposals/i);
+    // ScopeScan teaser section should be visible
+    const scopeScanTeaser = page.locator('[data-testid="section-scopescan-teaser"]');
+    await expect(scopeScanTeaser).toBeVisible({ timeout: 15000 });
 
-    // Subheadline should be visible
-    const subheadline = page.locator('[data-testid="scope-scan-subheadline"]');
-    await expect(subheadline).toBeVisible();
-    await expect(subheadline).toContainText(/ScopeScan uses AI/i);
+    // Verify the order: pain-points section comes before scopescan-teaser
+    // Both sections should exist and scopescan-teaser should appear after pain-points in DOM order
+    const painPointsBox = await painPointsSection.boundingBox();
+    const scopeScanBox = await scopeScanTeaser.boundingBox();
+    
+    expect(painPointsBox).toBeTruthy();
+    expect(scopeScanBox).toBeTruthy();
+    
+    // ScopeScan teaser should be below the pain points section
+    if (painPointsBox && scopeScanBox) {
+      expect(scopeScanBox.y).toBeGreaterThan(painPointsBox.y);
+    }
   });
 
-  test('should display CTA buttons that link to ScopeScan page', async ({ page }) => {
+  test('should display teaser headline and CTA buttons linking to /scopescan', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('load');
 
-    // Wait for section to be visible
-    const scopeScanSection = page.locator('[data-testid="section-scope-scan"]');
-    await expect(scopeScanSection).toBeVisible({ timeout: 15000 });
+    // Wait for teaser section to be visible
+    const scopeScanTeaser = page.locator('[data-testid="section-scopescan-teaser"]');
+    await expect(scopeScanTeaser).toBeVisible({ timeout: 15000 });
 
-    // Primary CTA should link to /m/create
-    const primaryCta = page.locator('[data-testid="cta-try-scopescan"]');
+    // Teaser headline should be visible
+    const headline = page.locator('[data-testid="scopescan-teaser-headline"]');
+    await expect(headline).toBeVisible();
+    await expect(headline).toContainText(/ScopeScan/i);
+
+    // Primary CTA should link to /scopescan
+    const primaryCta = page.locator('[data-testid="teaser-cta-primary"]');
     await expect(primaryCta).toBeVisible();
-    await expect(primaryCta).toHaveAttribute('href', '/m/create');
+    await expect(primaryCta).toHaveAttribute('href', '/scopescan');
 
-    // Secondary CTA should link to sample proposal section
-    const secondaryCta = page.locator('[data-testid="cta-see-sample"]');
+    // Secondary CTA should link to /scopescan#examples
+    const secondaryCta = page.locator('[data-testid="teaser-cta-secondary"]');
     await expect(secondaryCta).toBeVisible();
-    await expect(secondaryCta).toHaveAttribute('href', '#demo');
+    await expect(secondaryCta).toHaveAttribute('href', '/scopescan#examples');
+  });
+
+  test('should display image thumbnails in teaser', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('load');
+
+    const scopeScanTeaser = page.locator('[data-testid="section-scopescan-teaser"]');
+    await expect(scopeScanTeaser).toBeVisible({ timeout: 15000 });
+
+    // Thumbnails grid should be visible
+    const thumbnails = page.locator('[data-testid="scopescan-teaser-thumbnails"]');
+    await expect(thumbnails).toBeVisible();
   });
 
   test('should NOT show Take Photo button on homepage', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('load');
 
-    // Wait for section to be visible
-    const scopeScanSection = page.locator('[data-testid="section-scope-scan"]');
-    await expect(scopeScanSection).toBeVisible({ timeout: 15000 });
+    // Wait for teaser section to be visible
+    const scopeScanTeaser = page.locator('[data-testid="section-scopescan-teaser"]');
+    await expect(scopeScanTeaser).toBeVisible({ timeout: 15000 });
 
     // Take Photo button should NOT exist on homepage
     const takePhotoButton = page.locator('[data-testid="button-take-photo"]');
@@ -67,79 +91,42 @@ test.describe('Homepage ScopeScan Marketing - Mobile', () => {
     // Upload Photo button should NOT exist on homepage
     const uploadPhotoButton = page.locator('[data-testid="button-upload-photo"]');
     await expect(uploadPhotoButton).not.toBeVisible();
+
+    // Also verify text "Take Photo" does not appear on the page
+    const pageContent = await page.content();
+    expect(pageContent).not.toContain('Take Photo');
   });
 
-  test('clicking CTA should navigate to ScopeScan page with Start ScopeScan button', async ({ page }) => {
+  test('homepage has link to /scopescan', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('load');
 
-    // Wait for section to be visible
-    const scopeScanSection = page.locator('[data-testid="section-scope-scan"]');
-    await expect(scopeScanSection).toBeVisible({ timeout: 15000 });
-
-    // Click the primary CTA
-    const primaryCta = page.locator('[data-testid="cta-try-scopescan"]');
-    await primaryCta.click();
-
-    // Should navigate to /m/create
-    await page.waitForURL('**/m/create', { timeout: 15000 });
-    expect(page.url()).toContain('/m/create');
-
-    // The ScopeScan page should have a Start ScopeScan button
-    const startButton = page.getByRole('button', { name: /Start ScopeScan/i });
-    await expect(startButton).toBeVisible({ timeout: 15000 });
-  });
-
-  test('should display three benefits', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('load');
-
-    const scopeScanSection = page.locator('[data-testid="section-scope-scan"]');
-    await expect(scopeScanSection).toBeVisible({ timeout: 15000 });
-
-    // Three benefit cards should be visible
-    const benefit1 = page.locator('[data-testid="benefit-1"]');
-    const benefit2 = page.locator('[data-testid="benefit-2"]');
-    const benefit3 = page.locator('[data-testid="benefit-3"]');
-
-    await expect(benefit1).toBeVisible();
-    await expect(benefit2).toBeVisible();
-    await expect(benefit3).toBeVisible();
-  });
-
-  test('should display example projects grid', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('load');
-
-    const scopeScanSection = page.locator('[data-testid="section-scope-scan"]');
-    await expect(scopeScanSection).toBeVisible({ timeout: 15000 });
-
-    // Example projects grid should be visible
-    const examplesGrid = page.locator('[data-testid="example-projects-grid"]');
-    await expect(examplesGrid).toBeVisible();
+    // There should be at least one link to /scopescan on the homepage
+    const scopescanLink = page.locator('a[href="/scopescan"]');
+    await expect(scopescanLink.first()).toBeVisible({ timeout: 15000 });
   });
 });
 
 // Desktop tests with default viewport
-test.describe('Homepage ScopeScan Marketing - Desktop', () => {
-  test('should display marketing section on desktop viewport', async ({ page }) => {
+test.describe('Homepage ScopeScan Teaser - Desktop', () => {
+  test('should display teaser section on desktop viewport', async ({ page }) => {
     // Default viewport is desktop
     await page.goto('/');
     await page.waitForLoadState('load');
 
-    // ScopeScan section should be visible
-    const scopeScanSection = page.locator('[data-testid="section-scope-scan"]');
-    await expect(scopeScanSection).toBeVisible({ timeout: 15000 });
+    // ScopeScan teaser section should be visible
+    const scopeScanTeaser = page.locator('[data-testid="section-scopescan-teaser"]');
+    await expect(scopeScanTeaser).toBeVisible({ timeout: 15000 });
 
-    // Marketing headline should be visible
-    const heading = page.locator('[data-testid="scope-scan-heading"]');
-    await expect(heading).toBeVisible();
+    // Teaser headline should be visible
+    const headline = page.locator('[data-testid="scopescan-teaser-headline"]');
+    await expect(headline).toBeVisible();
 
     // Both CTAs should be visible
-    const primaryCta = page.locator('[data-testid="cta-try-scopescan"]');
+    const primaryCta = page.locator('[data-testid="teaser-cta-primary"]');
     await expect(primaryCta).toBeVisible();
 
-    const secondaryCta = page.locator('[data-testid="cta-see-sample"]');
+    const secondaryCta = page.locator('[data-testid="teaser-cta-secondary"]');
     await expect(secondaryCta).toBeVisible();
   });
 
@@ -147,8 +134,8 @@ test.describe('Homepage ScopeScan Marketing - Desktop', () => {
     await page.goto('/');
     await page.waitForLoadState('load');
 
-    const scopeScanSection = page.locator('[data-testid="section-scope-scan"]');
-    await expect(scopeScanSection).toBeVisible({ timeout: 15000 });
+    const scopeScanTeaser = page.locator('[data-testid="section-scopescan-teaser"]');
+    await expect(scopeScanTeaser).toBeVisible({ timeout: 15000 });
 
     // Old capture UI buttons should NOT exist
     const takePhotoButton = page.locator('[data-testid="button-take-photo"]');
@@ -162,7 +149,7 @@ test.describe('Homepage ScopeScan Marketing - Desktop', () => {
     await expect(oldEmptyState).not.toBeVisible();
   });
 
-  test('desktop hero section should still work alongside marketing ScopeScan', async ({ page }) => {
+  test('desktop hero section should still work alongside teaser', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('load');
 
@@ -179,25 +166,97 @@ test.describe('Homepage ScopeScan Marketing - Desktop', () => {
     const response = await page.goto('/');
     expect(response?.status()).toBeLessThan(400);
   });
+
+  test('calculator section appears before "Tired..." section in DOM order', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('load');
+
+    // Calculator is in the hero section - look for the trade select
+    const calculatorSelect = page.locator('[data-testid="select-trade"]');
+    await expect(calculatorSelect).toBeVisible({ timeout: 15000 });
+
+    // Pain points section ("Tired..." heading)
+    const painPointsSection = page.locator('[data-testid="section-pain-points"]');
+    await expect(painPointsSection).toBeVisible();
+
+    // Calculator should be above pain points in layout
+    const calcBox = await calculatorSelect.boundingBox();
+    const painBox = await painPointsSection.boundingBox();
+
+    expect(calcBox).toBeTruthy();
+    expect(painBox).toBeTruthy();
+
+    if (calcBox && painBox) {
+      expect(painBox.y).toBeGreaterThan(calcBox.y);
+    }
+  });
+});
+
+// ScopeScan Landing Page tests
+test.describe('/scopescan Landing Page', () => {
+  test('should render hero + proof section', async ({ page }) => {
+    await page.goto('/scopescan');
+    await page.waitForLoadState('load');
+
+    // Hero section should be visible
+    const hero = page.locator('[data-testid="scopescan-hero"]');
+    await expect(hero).toBeVisible({ timeout: 15000 });
+
+    // Headline should be visible
+    const headline = page.locator('[data-testid="scopescan-headline"]');
+    await expect(headline).toBeVisible();
+    await expect(headline).toContainText(/Turn Job Site Photos Into Detailed Proposals/i);
+
+    // Proof section should be visible
+    const proofSection = page.locator('[data-testid="scopescan-proof-section"]');
+    await expect(proofSection).toBeVisible();
+
+    // Example projects grid should be visible
+    const examplesGrid = page.locator('[data-testid="example-projects-grid"]');
+    await expect(examplesGrid).toBeVisible();
+  });
+
+  test('clicking "Start ScopeScan" navigates to tool page with Take Photo visible', async ({ page }) => {
+    await page.goto('/scopescan');
+    await page.waitForLoadState('load');
+
+    // Click the primary CTA
+    const startButton = page.locator('[data-testid="cta-start-scopescan"]');
+    await expect(startButton).toBeVisible({ timeout: 15000 });
+    await startButton.click();
+
+    // Should navigate to /m/create
+    await page.waitForURL('**/m/create', { timeout: 15000 });
+    expect(page.url()).toContain('/m/create');
+
+    // The tool page should have Start ScopeScan button
+    const scopeScanStartButton = page.getByRole('button', { name: /Start ScopeScan/i });
+    await expect(scopeScanStartButton).toBeVisible({ timeout: 15000 });
+  });
+
+  test('page should load without errors', async ({ page }) => {
+    const response = await page.goto('/scopescan');
+    expect(response?.status()).toBeLessThan(400);
+  });
 });
 
 // Tablet tests
-test.describe('Homepage ScopeScan Marketing - Tablet', () => {
+test.describe('Homepage ScopeScan Teaser - Tablet', () => {
   test.beforeEach(async ({ page }) => {
     // Set tablet viewport (iPad Mini)
     await page.setViewportSize({ width: 768, height: 1024 });
   });
 
-  test('should display marketing section on tablet viewport', async ({ page }) => {
+  test('should display teaser section on tablet viewport', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('load');
 
-    // ScopeScan section should be visible
-    const scopeScanSection = page.locator('[data-testid="section-scope-scan"]');
-    await expect(scopeScanSection).toBeVisible({ timeout: 15000 });
+    // ScopeScan teaser section should be visible
+    const scopeScanTeaser = page.locator('[data-testid="section-scopescan-teaser"]');
+    await expect(scopeScanTeaser).toBeVisible({ timeout: 15000 });
 
     // CTAs should be visible
-    const primaryCta = page.locator('[data-testid="cta-try-scopescan"]');
+    const primaryCta = page.locator('[data-testid="teaser-cta-primary"]');
     await expect(primaryCta).toBeVisible();
   });
 });
