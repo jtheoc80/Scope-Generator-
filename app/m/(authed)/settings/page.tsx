@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, AlertTriangle, Check } from "lucide-react";
-import { saveConfig, clearConfig, getConfig } from "../../lib/api";
+import { saveConfig, clearConfig, getConfig } from "@/app/m/lib/api";
 
 export default function MobileWebSettings() {
   const router = useRouter();

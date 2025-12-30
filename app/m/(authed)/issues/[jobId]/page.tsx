@@ -25,7 +25,7 @@ import {
   DraftStatus,
   DetectedIssue,
   AnalyzeResponse,
-} from "../../../lib/api";
+} from "@/app/m/lib/api";
 
 type SimilarScopeSuggestion = {
   itemCode: string;

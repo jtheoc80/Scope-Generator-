@@ -16,7 +16,7 @@ import {
   Smartphone,
 } from "lucide-react";
 import { PhoneUploadDialog } from "@/components/phone-upload-dialog";
-import { mobileApiFetch, newIdempotencyKey, PresignResponse } from "../../../lib/api";
+import { mobileApiFetch, newIdempotencyKey, PresignResponse } from "@/app/m/lib/api";
 
 type UploadedPhoto = {
   id: string;
