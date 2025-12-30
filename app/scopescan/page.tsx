@@ -2,6 +2,7 @@ import Layout from "@/components/layout";
 import Link from "next/link";
 import { ScopeExamples } from "@/components/scopescan/ScopeExamples";
 import type { Metadata } from "next";
+import Script from "next/script";
 import { 
   Camera, 
   Sparkles, 
@@ -97,13 +98,18 @@ export default function ScopeScanPage() {
   ];
 
   return (
-    <Layout>
-      <script
+    <>
+      {/* JSON-LD Structured Data - injected in head for proper SEO crawling */}
+      <Script
+        id="scopescan-jsonld"
         type="application/ld+json"
-        // JSON.stringify is safe here since we fully control the object contents.
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationJsonLd) }}
+        strategy="beforeInteractive"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(softwareApplicationJsonLd),
+        }}
       />
-      {/* Hero Section */}
+      <Layout>
+        {/* Hero Section */}
       <section className="bg-slate-50 py-12 sm:py-16 lg:py-20" data-testid="scopescan-hero">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="relative overflow-hidden mx-auto max-w-5xl rounded-2xl border border-slate-200 bg-white shadow-sm px-6 py-12 sm:px-10 sm:py-16">
@@ -282,5 +288,6 @@ export default function ScopeScanPage() {
         </div>
       </section>
     </Layout>
+    </>
   );
 }
