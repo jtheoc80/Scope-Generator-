@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   title: "ScopeScan | Close More Deals With Same-Visit Quotes",
   description: metadataDescription,
   alternates: {
-    canonical: "/scopescan",
+    canonical: "https://scopegenerator.com/scopescan",
   },
   openGraph: {
     title: "Close More Deals With Same-Visit Quotes | ScopeScan",
