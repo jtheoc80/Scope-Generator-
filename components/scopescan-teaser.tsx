@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Camera, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Camera, ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -45,15 +45,16 @@ export function ScopeScanTeaser() {
             </div>
             
             <div className="flex flex-col sm:flex-row gap-3">
-              <Link href="/scopescan" data-testid="teaser-cta-primary">
+              <Link href="/scopescan/demo" data-testid="teaser-cta-primary">
                 <Button className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600">
-                  Learn More
-                  <ArrowRight className="w-4 h-4 ml-2" />
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Try Demo
                 </Button>
               </Link>
-              <Link href="/scopescan#examples" data-testid="teaser-cta-secondary">
+              <Link href="/scopescan" data-testid="teaser-cta-secondary">
                 <Button variant="outline" className="w-full sm:w-auto">
-                  See Examples
+                  Learn More
+                  <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </Link>
             </div>

@@ -10,6 +10,7 @@ import {
   Target, 
   ArrowRight,
   CheckCircle2,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -92,28 +93,31 @@ export default function ScopeScanPage() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/m/create" data-testid="cta-start-scopescan">
+              <Link href="/scopescan/demo" data-testid="cta-try-demo">
                 <Button 
                   size="lg"
                   className="w-full sm:w-auto h-14 px-8 text-lg bg-orange-500 hover:bg-orange-600 shadow-lg hover:shadow-xl transition-all"
                 >
-                  <Camera className="w-5 h-5 mr-2" />
-                  Start ScopeScan
+                  <Sparkles className="w-5 h-5 mr-2" />
+                  Try Demo
                 </Button>
               </Link>
-              <Link href="#examples" data-testid="cta-see-examples">
+              <Link href="/sign-in?redirect_url=%2Fm%2Fcreate" data-testid="cta-start-scopescan">
                 <Button 
                   variant="outline"
                   size="lg"
                   className="w-full sm:w-auto h-14 px-8 text-lg border-slate-600 text-white hover:bg-slate-800"
                 >
-                  See Examples
+                  <Camera className="w-5 h-5 mr-2" />
+                  Start ScopeScan
+                  <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </Link>
             </div>
             
-            <p className="text-sm text-slate-400 mt-4">
-              No credit card required • First proposal free
+            <p className="text-sm text-slate-400 mt-4 flex items-center justify-center gap-2">
+              <Lock className="w-3 h-3" />
+              Sign in required for full tool • Demo available instantly
             </p>
           </div>
         </div>
@@ -235,18 +239,30 @@ export default function ScopeScanPage() {
           <p className="text-slate-300 mb-8 max-w-lg mx-auto">
             Join hundreds of contractors using ScopeScan to close more deals, faster.
           </p>
-          <Link href="/m/create" data-testid="cta-final-start-scopescan">
-            <Button 
-              size="lg"
-              className="h-14 px-10 text-lg bg-orange-500 hover:bg-orange-600 shadow-lg"
-            >
-              <Camera className="w-5 h-5 mr-2" />
-              Start ScopeScan Free
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link href="/scopescan/demo" data-testid="cta-final-try-demo">
+              <Button 
+                size="lg"
+                className="h-14 px-10 text-lg bg-orange-500 hover:bg-orange-600 shadow-lg"
+              >
+                <Sparkles className="w-5 h-5 mr-2" />
+                Try Demo First
+              </Button>
+            </Link>
+            <Link href="/sign-in?redirect_url=%2Fm%2Fcreate" data-testid="cta-final-start-scopescan">
+              <Button 
+                size="lg"
+                variant="outline"
+                className="h-14 px-10 text-lg border-slate-600 text-white hover:bg-slate-800"
+              >
+                <Camera className="w-5 h-5 mr-2" />
+                Start ScopeScan
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+            </Link>
+          </div>
           <p className="text-sm text-slate-500 mt-4">
-            No credit card required
+            Demo available instantly • Sign in for full tool
           </p>
         </div>
       </section>
