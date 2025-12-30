@@ -55,7 +55,7 @@ import {
   RefreshCw,
   type LucideIcon,
 } from "lucide-react";
-import { mobileApiFetch, newIdempotencyKey, MobileJob } from "../lib/api";
+import { mobileApiFetch, newIdempotencyKey, MobileJob } from "../../lib/api";
 import { 
   validateJobAddress, 
   applyCorrectedAddress,
@@ -80,10 +80,10 @@ import {
   getLastAddressForCustomer,
   saveLastAddressForCustomer,
   SavedCustomer,
-} from "../lib/job-memory";
+} from "../../lib/job-memory";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/hooks/useLanguage";
-import { parseEstimateParams, getJobTypeFromEstimate, type EstimateParams } from "../lib/estimate-params";
+import { parseEstimateParams, getJobTypeFromEstimate, type EstimateParams } from "../../lib/estimate-params";
 
 const JOB_TYPE_ICONS: Record<string, LucideIcon> = {
   "bathroom-remodel": Bath,
@@ -425,8 +425,8 @@ function CustomerSelector({
 const GOOGLE_MAPS_LIBRARIES: ("places")[] = ["places"];
 
 // Import JobAddress type and validation utilities from shared module
-import type { JobAddress } from "../lib/job-address";
-import { isSelectableJobAddress, createJobAddressFromPlace } from "../lib/job-address";
+import type { JobAddress } from "../../lib/job-address";
+import { isSelectableJobAddress, createJobAddressFromPlace } from "../../lib/job-address";
 
 // Job Address Selector with strict Places Autocomplete, accuracy gating, and Address Validation
 // Uses session tokens for Places API billing optimization
