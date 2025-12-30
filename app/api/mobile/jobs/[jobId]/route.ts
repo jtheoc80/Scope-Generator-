@@ -8,6 +8,8 @@ import { z } from "zod";
 const updateJobSchema = z.object({
   clientName: z.string().min(2).max(100).optional(),
   address: z.string().min(5).max(500).optional(),
+  // Persisted ScopeScan state (trade-specific).
+  scopeSelection: z.record(z.string(), z.unknown()).optional(),
 });
 
 // GET /api/mobile/jobs/:jobId - Get job details
@@ -50,6 +52,7 @@ export async function GET(
       jobTypeId: job.jobTypeId,
       jobTypeName: job.jobTypeName,
       jobSize: job.jobSize,
+      scopeSelection: job.scopeSelection ?? {},
       status: job.status,
       createdAt: job.createdAt,
       updatedAt: job.updatedAt,
@@ -93,18 +96,23 @@ export async function PATCH(
     }
 
     // At least one field must be provided
-    if (!parsed.data.clientName && !parsed.data.address) {
+    if (
+      parsed.data.clientName === undefined &&
+      parsed.data.address === undefined &&
+      parsed.data.scopeSelection === undefined
+    ) {
       return jsonError(
         requestId,
         400,
         "INVALID_INPUT",
-        "At least one of clientName or address must be provided"
+        "At least one field must be provided"
       );
     }
 
     const updatedJob = await storage.updateMobileJob(jobIdNum, authResult.userId, {
       clientName: parsed.data.clientName,
       address: parsed.data.address,
+      scopeSelection: parsed.data.scopeSelection,
     });
 
     if (!updatedJob) {
@@ -121,6 +129,7 @@ export async function PATCH(
       id: updatedJob.id,
       clientName: updatedJob.clientName,
       address: updatedJob.address,
+      scopeSelection: updatedJob.scopeSelection ?? {},
       status: updatedJob.status,
     });
   } catch (error) {

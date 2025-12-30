@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,19 +26,33 @@ import type { RoofingMeasurements } from "@/hooks/useEagleViewOrder";
 
 type PackageKey = "GOOD" | "BETTER" | "BEST";
 
+type ScopeSection = { title: string; items: string[] };
+type DraftLineItem = {
+  id: string;
+  tradeName: string;
+  jobTypeName: string;
+  scope: string[];
+  scopeSections?: ScopeSection[];
+  priceLow: number;
+  priceHigh: number;
+};
+
+type DraftPackage = {
+  label?: string;
+  // Legacy/simple payloads may provide a total only.
+  total?: number;
+  // New payloads (Driveway, and future trades) provide full line items.
+  lineItems?: DraftLineItem[];
+};
+
 type DraftPayload = {
-  scopeItems?: Array<{
-    name: string;
-    description?: string;
-    price?: number;
-  }>;
+  // Legacy fields (older drafts)
+  scopeItems?: Array<{ name: string; description?: string; price?: number }>;
   summary?: string;
   totalPrice?: number;
-  packages?: {
-    GOOD?: { total: number };
-    BETTER?: { total: number };
-    BEST?: { total: number };
-  };
+  // New mobile draft output
+  packages?: Partial<Record<PackageKey, DraftPackage>>;
+  defaultPackage?: PackageKey;
 };
 
 export default function PreviewPage() {
@@ -59,6 +73,7 @@ export default function PreviewPage() {
     address?: string;
     tradeId?: string;
     tradeName?: string;
+    scopeSelection?: Record<string, unknown>;
   } | null>(null);
   const [loadingJobInfo, setLoadingJobInfo] = useState(true);
   
@@ -91,6 +106,7 @@ export default function PreviewPage() {
           address: job.address,
           tradeId: job.tradeId,
           tradeName: job.tradeName,
+          scopeSelection: job.scopeSelection ?? {},
         });
         setClientName(job.clientName === "Customer" ? "" : job.clientName || "");
         setAddress(job.address === "Address TBD" ? "" : job.address || "");
@@ -113,13 +129,43 @@ export default function PreviewPage() {
     const payloadParam = searchParams.get("payload");
     if (payloadParam) {
       try {
-        const decoded = JSON.parse(decodeURIComponent(payloadParam));
+        // Some environments return already-decoded query params; support both.
+        let decoded: unknown;
+        try {
+          decoded = JSON.parse(decodeURIComponent(payloadParam));
+        } catch {
+          decoded = JSON.parse(payloadParam);
+        }
         setPayload(decoded);
       } catch {
         setError("Failed to load draft data");
       }
     }
   }, [searchParams]);
+
+  // Default package from payload (Driveway uses this)
+  useEffect(() => {
+    if (!payload) return;
+    if (payload.defaultPackage) {
+      setSelectedPackage(payload.defaultPackage);
+    }
+  }, [payload]);
+
+  const getPackageTotal = useCallback((pkg: PackageKey): number | undefined => {
+    const p = payload?.packages?.[pkg];
+    if (!p) return undefined;
+    if (typeof p.total === "number") return p.total;
+    if (Array.isArray(p.lineItems) && p.lineItems.length > 0) {
+      // Sum midpoints for a stable display number.
+      return p.lineItems.reduce((sum, li) => sum + Math.round((li.priceLow + li.priceHigh) / 2), 0);
+    }
+    return undefined;
+  }, [payload]);
+
+  const selectedLineItems = useMemo(() => {
+    const p = payload?.packages?.[selectedPackage];
+    return Array.isArray(p?.lineItems) ? p?.lineItems : [];
+  }, [payload, selectedPackage]);
 
   // Save client details
   const handleSaveClientDetails = useCallback(async () => {
@@ -481,12 +527,34 @@ export default function PreviewPage() {
           <div className="grid grid-cols-3 gap-2">
             {(["GOOD", "BETTER", "BEST"] as PackageKey[]).map((pkg) => {
               const isSelected = selectedPackage === pkg;
-              const price = payload.packages?.[pkg]?.total;
+              const price = getPackageTotal(pkg);
               
               return (
                 <button
                   key={pkg}
-                  onClick={() => setSelectedPackage(pkg)}
+                  onClick={async () => {
+                    setSelectedPackage(pkg);
+                    // Persist selection best-effort (Driveway wants chosen package stored).
+                    try {
+                      const existing = (jobInfo?.scopeSelection ?? {}) as Record<string, unknown>;
+                      const existingDriveway = (existing as any).driveway ?? {};
+                      await mobileApiFetch(`/api/mobile/jobs/${jobId}`, {
+                        method: "PATCH",
+                        headers: { "Idempotency-Key": newIdempotencyKey() },
+                        body: JSON.stringify({
+                          scopeSelection: {
+                            ...existing,
+                            driveway: {
+                              ...existingDriveway,
+                              selectedPackage: pkg.toLowerCase(),
+                            },
+                          },
+                        }),
+                      });
+                    } catch {
+                      // ignore persistence errors in preview UI
+                    }
+                  }}
                   disabled={submitting}
                   className={`
                     p-3 rounded-lg border-2 transition-all text-center
@@ -571,6 +639,57 @@ export default function PreviewPage() {
         </Card>
       )}
 
+      {/* Package details (new drafts, including Driveway) */}
+      {selectedLineItems.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <ClipboardList className="w-4 h-4" />
+              Scope of Work
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {selectedLineItems.map((li) => (
+              <div key={li.id} className="space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">{li.jobTypeName}</p>
+                    <p className="text-xs text-slate-500">{li.tradeName}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-slate-500">Est.</p>
+                    <p className="text-sm font-medium text-slate-900">
+                      {formatCurrency(Math.round((li.priceLow + li.priceHigh) / 2))}
+                    </p>
+                  </div>
+                </div>
+
+                {li.scopeSections && li.scopeSections.length > 0 ? (
+                  <div className="space-y-4" data-testid="scope-sections">
+                    {li.scopeSections.map((section) => (
+                      <div key={section.title} className="rounded-lg border border-slate-200 p-3">
+                        <p className="text-sm font-semibold text-slate-900">{section.title}</p>
+                        <ul className="mt-2 list-disc pl-5 text-sm text-slate-700 space-y-1">
+                          {section.items.map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <ul className="list-disc pl-5 text-sm text-slate-700 space-y-1">
+                    {li.scope.slice(0, 18).map((s) => (
+                      <li key={s}>{s}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Pricing Details - shown when no scope items or summary available */}
       {!payload.scopeItems && !payload.summary && payload.packages && (
         <Card>
@@ -628,9 +747,9 @@ export default function PreviewPage() {
             ⚠️ Add client name & address above to submit
           </p>
         )}
-        {payload.packages?.[selectedPackage]?.total !== undefined && hasCompleteClientDetails && (
+        {getPackageTotal(selectedPackage) !== undefined && hasCompleteClientDetails && (
           <p className="text-sm text-center text-slate-600 mt-2">
-            Total: {formatCurrency(payload.packages[selectedPackage]?.total)}
+            Total: {formatCurrency(getPackageTotal(selectedPackage))}
           </p>
         )}
       </div>

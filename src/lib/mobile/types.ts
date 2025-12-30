@@ -7,6 +7,8 @@ export const createMobileJobRequestSchema = z.object({
   jobType: z.union([z.number().int(), z.string().min(1)]),
   customer: z.string().min(1).optional(),
   address: z.string().min(1).optional(),
+  // Optional persisted ScopeScan state (trade-specific).
+  scopeSelection: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type CreateMobileJobRequest = z.infer<typeof createMobileJobRequestSchema>;

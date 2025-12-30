@@ -108,6 +108,7 @@ export type MobileJob = {
   jobTypeId?: string;
   jobTypeName?: string;
   jobSize?: number;
+  scopeSelection?: Record<string, unknown>;
   status?: string;
   createdAt?: string;
   updatedAt?: string;

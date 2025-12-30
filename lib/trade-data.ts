@@ -850,54 +850,54 @@ export const tradeData: Record<string, TradeData> = {
   },
   "concrete": {
     slug: "concrete",
-    name: "Concrete",
-    title: "Concrete Contractor Proposal Software | Free Estimate Templates | ScopeGen",
-    metaDescription: "Contractor proposal software for concrete professionals. Create professional contractor estimates for driveways, patios, and foundations. Free construction proposal templates.",
-    heroTitle: "Proposal Software for Concrete Contractors",
-    heroSubtitle: "Generate professional contractor estimates for driveways, patios, sidewalks, and foundations. Free construction proposal templates with accurate material calculations.",
+    // UI naming cleanup: call this trade "Driveway" (includes driveway + walkway).
+    name: "Driveway",
+    title: "Driveway Proposal Software | Free Estimate Templates | ScopeGen",
+    metaDescription: "Contractor proposal software for driveway projects. Create professional contractor estimates for driveway slabs and walkways. Free construction proposal templates.",
+    heroTitle: "Proposal Software for Driveway Contractors",
+    heroSubtitle: "Generate professional contractor estimates for driveway slabs and walkways. Free construction proposal templates with accurate material calculations.",
     benefits: [
-      "Free construction proposal templates for concrete work",
+      "Free construction proposal templates for driveway work",
       "Professional contractor estimates with PSI specs",
       "Construction bid software for accurate yardage",
       "Construction proposal with e-signature"
     ],
     features: [
       "Driveway Installation Proposals",
-      "Patio & Sidewalk Scopes",
-      "Foundation Repair Templates",
-      "Stamped Concrete Estimates",
-      "Concrete Removal & Replacement"
+      "Walkway / Sidewalk Scopes",
+      "Stamped / Decorative Finish Options",
+      "Removal & Replacement Scopes"
     ],
     testimonialQuote: "Concrete work requires detailed estimates. ScopeGen helps me include everything so there are no surprises.",
     testimonialAuthor: "Mark Johnson",
     testimonialBusiness: "Johnson Concrete Services",
     priceRange: "$2,000 - $25,000+",
-    commonProjects: ["Driveway replacement", "Patio installation", "Sidewalk repair", "Foundation work"],
+    commonProjects: ["Driveway replacement", "Driveway extension", "Walkway replacement", "Apron replacement"],
     faqs: [
       {
-        question: "How do I write a professional concrete contractor proposal?",
-        answer: "A professional concrete proposal includes dimensions, thickness, PSI specifications, reinforcement details, finishing type, and timeline. Contractor proposal software helps present technical details in a way homeowners understand while ensuring nothing is overlooked."
+        question: "How do I write a professional driveway proposal?",
+        answer: "A professional driveway proposal includes dimensions, thickness, PSI specifications, reinforcement details, finishing type, drainage considerations, and timeline. Contractor proposal software helps present technical details in a way homeowners understand while ensuring nothing is overlooked."
       },
       {
-        question: "What should be included in a concrete estimate?",
-        answer: "A complete concrete estimate covers site preparation, forms, reinforcement (rebar/mesh), concrete materials, finishing (broom, stamped, exposed aggregate), curing, and sealing. Professional contractor estimates also include removal of existing concrete if applicable."
+        question: "What should be included in a driveway estimate?",
+        answer: "A complete driveway estimate covers site preparation, forms, reinforcement (rebar/mesh), material quantities, finishing (broom, stamped, exposed aggregate), curing, and sealing. Professional contractor estimates also include removal of existing surfaces if applicable."
       },
       {
-        question: "How much does concrete proposal software cost?",
-        answer: "Concrete proposal software ranges from free to $50/month. ScopeGen offers free construction proposal templates for concrete contractors, making it the best proposal software for small contractors who need professional-looking estimates."
+        question: "How much does driveway proposal software cost?",
+        answer: "Driveway proposal software ranges from free to $50/month. ScopeGen offers free construction proposal templates for driveway contractors, making it the best proposal software for small contractors who need professional-looking estimates."
       },
       {
-        question: "How do concrete contractors calculate material needs?",
-        answer: "Calculate cubic yards by measuring length x width x depth, adding 5-10% for waste. Construction bid software helps maintain accurate calculations for different slab thicknesses and accounts for overdig and form waste."
+        question: "How do driveway contractors calculate material needs?",
+        answer: "Calculate cubic yards by measuring total square footage × thickness, then add waste. Contractor estimate software helps maintain consistent calculations for different slab thicknesses and site conditions."
       }
     ],
     seoContent: {
-      writeProposalTitle: "How to Write a Professional Concrete Proposal",
-      writeProposalContent: "Knowing how to write a contractor proposal for concrete work builds trust and wins jobs. Assess the site conditions including drainage and soil type. Your construction proposal templates should specify concrete thickness, PSI rating, reinforcement type, and finish style. Professional contractor estimates include curing time requirements and explain any limitations on use during the curing period.",
-      estimateTitle: "Creating Accurate Concrete Estimates",
-      estimateContent: "Contractor estimate software helps concrete professionals build accurate quotes. Calculate yardage based on dimensions and add appropriate waste factors. Factor in form lumber, reinforcement, finishing labor, and any required removal work. Construction bid software helps maintain consistent square-footage pricing for similar project types.",
-      whyChooseTitle: "Why Concrete Contractors Choose ScopeGen",
-      whyChooseContent: "Concrete contractors need proposal software for contractors that handles technical specifications accurately. ScopeGen's free construction proposal templates include concrete PSI specs, finishing options, and reinforcement details. Our construction proposal with e-signature feature helps lock in jobs quickly, especially important during good weather windows."
+      writeProposalTitle: "How to Write a Professional Driveway Proposal",
+      writeProposalContent: "Knowing how to write a contractor proposal for driveway work builds trust and wins jobs. Assess site conditions including drainage and base stability. Your construction proposal templates should specify slab thickness, PSI rating, reinforcement type, finish style, and joint plan. Professional contractor estimates include curing time requirements and explain any limitations on use during the curing period.",
+      estimateTitle: "Creating Accurate Driveway Estimates",
+      estimateContent: "Contractor estimate software helps driveway professionals build accurate quotes. Calculate yardage based on measured square footage and thickness, then add waste. Factor in forms, reinforcement, finishing labor, and any required removal work. Construction bid software helps maintain consistent square-foot pricing for similar project types.",
+      whyChooseTitle: "Why Driveway Contractors Choose ScopeGen",
+      whyChooseContent: "Driveway contractors need proposal software for contractors that handles technical specifications accurately. ScopeGen's free construction proposal templates include PSI specs, finish options, and reinforcement details. Our construction proposal with e-signature feature helps lock in jobs quickly, especially important during good weather windows."
     }
   },
   "tile-installation": {

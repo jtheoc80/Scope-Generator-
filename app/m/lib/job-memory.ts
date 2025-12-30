@@ -549,6 +549,8 @@ export const JOB_TYPES = [
   { id: "bathroom-remodel", label: "Bathroom", icon: "🛁", category: "interior" },
   { id: "kitchen-remodel", label: "Kitchen", icon: "🍳", category: "interior" },
   { id: "roofing", label: "Roofing", icon: "🏠", category: "exterior" },
+  // Driveway (Concrete) flow - user-facing name is Driveway everywhere.
+  { id: "driveway", label: "Driveway", icon: "🛣️", category: "exterior" },
   { id: "hvac", label: "HVAC", icon: "❄️", category: "systems" },
   { id: "plumbing", label: "Plumbing", icon: "🔧", category: "systems" },
   { id: "flooring", label: "Flooring", icon: "🪵", category: "interior" },

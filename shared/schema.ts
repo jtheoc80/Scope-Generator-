@@ -75,6 +75,11 @@ export type User = typeof users.$inferSelect;
 // Option value type - can be boolean, string, or nested object (e.g., __mobile metadata)
 export type OptionValue = boolean | string | Record<string, unknown>;
 
+export interface ScopeSection {
+  title: string;
+  items: string[];
+}
+
 // Line item interface for multi-service proposals
 export interface ProposalLineItem {
   id: string;
@@ -86,6 +91,14 @@ export interface ProposalLineItem {
   homeArea?: string;
   footage?: number;
   scope: string[];
+  /**
+   * Optional grouped scope sections (preferred for display).
+   * Stored inside JSON payloads; older proposals may omit this.
+   */
+  scopeSections?: ScopeSection[];
+  included?: string[];
+  assumptions?: string[];
+  addons?: string[];
   options: Record<string, OptionValue>;
   priceLow: number;
   priceHigh: number;
@@ -358,6 +371,11 @@ export const mobileJobs = pgTable("mobile_jobs", {
   jobSize: integer("job_size").notNull().default(2),
 
   jobNotes: text("job_notes"),
+  /**
+   * Trade-specific ScopeScan state that must persist across reloads.
+   * Used for Driveway measurements/toggles/packages (and future trades).
+   */
+  scopeSelection: jsonb("scope_selection").$type<Record<string, unknown>>().notNull().default({}),
   status: varchar("status", { length: 20 }).notNull().default("created"), // created, photos_uploaded, drafting, drafted, submitted
 
   createdAt: timestamp("created_at").defaultNow(),

@@ -2,6 +2,7 @@ import { db } from "@/server/db";
 import { mobileJobDrafts, mobileJobs, mobileJobPhotos, proposalTemplates, users } from "@shared/schema";
 import { and, eq, isNull, lte, or, desc } from "drizzle-orm";
 import { generateMobileDraft } from "./pipeline";
+import { generateDrivewayDraft } from "./driveway";
 import { ensureVisionWorker } from "@/src/lib/mobile/vision/worker";
 import { logDraftError, logError } from "../error-logger";
 
@@ -296,22 +297,37 @@ async function runDraft(draft: typeof mobileJobDrafts.$inferSelect) {
       pendingPhotos: pendingCount,
     });
 
-    const draftPayload = await generateMobileDraft({
-      job: {
-        id: job.id,
-        clientName: job.clientName,
-        address: job.address,
-        tradeId: job.tradeId,
-        tradeName: job.tradeName,
-        jobTypeId: job.jobTypeId,
-        jobTypeName: job.jobTypeName,
-        jobSize: job.jobSize,
-        jobNotes: enhancedJobNotes.trim() || null,
-      },
-      template,
-      user,
-      photos: photos.map((p) => ({ publicUrl: p.publicUrl, kind: p.kind, findings: p.findings })),
-    });
+    const isDriveway = job.jobTypeId === "driveway";
+
+    const draftPayload = isDriveway
+      ? generateDrivewayDraft({
+          job: {
+            id: job.id,
+            tradeId: job.tradeId,
+            tradeName: job.tradeName,
+            jobTypeId: job.jobTypeId,
+            jobTypeName: job.jobTypeName,
+            jobSize: job.jobSize,
+          },
+          user,
+          driveway: ((job.scopeSelection as any)?.driveway ?? {}) as any,
+        })
+      : await generateMobileDraft({
+          job: {
+            id: job.id,
+            clientName: job.clientName,
+            address: job.address,
+            tradeId: job.tradeId,
+            tradeName: job.tradeName,
+            jobTypeId: job.jobTypeId,
+            jobTypeName: job.jobTypeName,
+            jobSize: job.jobSize,
+            jobNotes: enhancedJobNotes.trim() || null,
+          },
+          template,
+          user,
+          photos: photos.map((p) => ({ publicUrl: p.publicUrl, kind: p.kind, findings: p.findings })),
+        });
 
     await db
       .update(mobileJobDrafts)

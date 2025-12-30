@@ -21,7 +21,10 @@ export const VALID_TRADES = [
   "windows",
   "deck",
   "fence",
+  // Back-compat: old calculator trade ID.
   "concrete",
+  // New user-facing naming (Driveway).
+  "driveway",
   "tile",
   "cabinets",
 ] as const;
@@ -45,7 +48,9 @@ export const TRADE_TO_JOB_TYPE: Record<string, string> = {
   windows: "windows",
   deck: "deck",
   fence: "fence",
-  concrete: "concrete",
+  // Driveway (Concrete) flow upgrade: user-facing name is Driveway.
+  concrete: "driveway",
+  driveway: "driveway",
   tile: "tile",
   cabinets: "cabinets",
 };

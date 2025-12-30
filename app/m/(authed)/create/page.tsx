@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Accordion,
   AccordionContent,
@@ -96,6 +97,7 @@ const JOB_TYPE_ICONS: Record<string, LucideIcon> = {
   electrical: Zap,
   windows: Square,
   siding: BrickWall,
+  driveway: Square,
 };
 
 function JobTypeIcon({ id }: { id: string }) {
@@ -1016,6 +1018,11 @@ function CreateJobPageInner() {
   const searchParams = useSearchParams();
   const { t } = useLanguage();
   const [jobType, setJobType] = useState("bathroom-remodel");
+  // Driveway-only sub-selection (Driveway slab + optional Walkway).
+  const [drivewaySelections, setDrivewaySelections] = useState<{
+    drivewaySlab: boolean;
+    walkway: boolean;
+  }>({ drivewaySlab: true, walkway: false });
   const [selectedCustomer, setSelectedCustomer] = useState<SavedCustomer | null>(null);
   // JobAddress is the single source of truth - never auto-populated
   const [selectedAddress, setSelectedAddress] = useState<JobAddress | null>(null);
@@ -1154,10 +1161,22 @@ function CreateJobPageInner() {
             placeId: selectedAddress.placeId,
           }),
           notes: internalNotes.trim() || undefined,
+          ...(finalJobType === "driveway" && {
+            scopeSelection: {
+              driveway: {
+                drivewaySlabSelected: drivewaySelections.drivewaySlab,
+                walkwaySelected: drivewaySelections.walkway,
+              },
+            },
+          }),
         }),
       });
 
-      router.push(`/m/capture/${res.jobId}`);
+      if (finalJobType === "driveway") {
+        router.push(`/m/measure/${res.jobId}`);
+      } else {
+        router.push(`/m/capture/${res.jobId}`);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to create job");
     } finally {
@@ -1294,6 +1313,55 @@ function CreateJobPageInner() {
                   />
                 ))}
               </div>
+
+              {/* Driveway sub-selection (Driveway slab + Walkway) */}
+              {jobType === "driveway" && (
+                <div
+                  className="rounded-lg border border-border bg-muted/20 p-3 space-y-2"
+                  data-testid="driveway-subselection"
+                >
+                  <p className="text-xs font-medium text-foreground">Include</p>
+                  <div className="flex flex-col gap-2">
+                    <label className="flex items-center gap-2 text-sm">
+                      <Checkbox
+                        checked={drivewaySelections.drivewaySlab}
+                        onCheckedChange={(checked) => {
+                          const next = Boolean(checked);
+                          const keepAtLeastOne = next || drivewaySelections.walkway;
+                          setDrivewaySelections((prev) => ({
+                            ...prev,
+                            drivewaySlab: keepAtLeastOne ? next : true,
+                          }));
+                        }}
+                        disabled={busy}
+                        aria-label="Driveway slab"
+                        data-testid="checkbox-driveway-slab"
+                      />
+                      <span>Driveway slab</span>
+                    </label>
+                    <label className="flex items-center gap-2 text-sm">
+                      <Checkbox
+                        checked={drivewaySelections.walkway}
+                        onCheckedChange={(checked) => {
+                          const next = Boolean(checked);
+                          const keepAtLeastOne = next || drivewaySelections.drivewaySlab;
+                          setDrivewaySelections((prev) => ({
+                            ...prev,
+                            walkway: keepAtLeastOne ? next : true,
+                          }));
+                        }}
+                        disabled={busy}
+                        aria-label="Walkway / sidewalk"
+                        data-testid="checkbox-walkway"
+                      />
+                      <span>Walkway / sidewalk</span>
+                    </label>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Select one or both.
+                  </p>
+                </div>
+              )}
 
               {/* More options */}
               <Popover>

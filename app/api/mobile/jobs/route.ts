@@ -96,6 +96,7 @@ export async function POST(request: NextRequest) {
       jobTypeName: template.jobTypeName,
       jobSize: 2,
       jobNotes: undefined,
+      scopeSelection: parsed.data.scopeSelection ?? {},
       createIdempotencyKey: idem,
     });
     logEvent("mobile.jobs.create.ok", {

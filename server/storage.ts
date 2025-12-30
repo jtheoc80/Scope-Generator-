@@ -148,6 +148,7 @@ export interface IStorage {
     jobTypeName: string;
     jobSize?: number;
     jobNotes?: string | null;
+    scopeSelection?: Record<string, unknown> | null;
     createIdempotencyKey?: string | null;
   }): Promise<typeof mobileJobs.$inferSelect>;
 
@@ -1077,6 +1078,7 @@ export class DatabaseStorage implements IStorage {
     jobTypeName: string;
     jobSize?: number;
     jobNotes?: string | null;
+    scopeSelection?: Record<string, unknown> | null;
     createIdempotencyKey?: string | null;
   }): Promise<typeof mobileJobs.$inferSelect> {
     if (job.createIdempotencyKey) {
@@ -1097,6 +1099,7 @@ export class DatabaseStorage implements IStorage {
         jobTypeName: job.jobTypeName,
         jobSize: job.jobSize ?? 2,
         jobNotes: job.jobNotes ?? null,
+        scopeSelection: (job.scopeSelection ?? {}) as Record<string, unknown>,
         status: "created",
       } as typeof mobileJobs.$inferInsert)
       .returning();
@@ -1126,6 +1129,7 @@ export class DatabaseStorage implements IStorage {
   async updateMobileJob(jobId: number, userId: string, updates: {
     clientName?: string;
     address?: string;
+    scopeSelection?: Record<string, unknown>;
   }): Promise<typeof mobileJobs.$inferSelect | undefined> {
     const job = await this.getMobileJob(jobId, userId);
     if (!job) {
@@ -1138,6 +1142,9 @@ export class DatabaseStorage implements IStorage {
     }
     if (updates.address !== undefined) {
       updateData.address = updates.address;
+    }
+    if (updates.scopeSelection !== undefined) {
+      updateData.scopeSelection = updates.scopeSelection;
     }
 
     const [updated] = await db

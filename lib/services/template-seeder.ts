@@ -248,6 +248,27 @@ const defaultTemplates: Record<string, {
     warranty: 'Manufacturer warranty on windows. 1-year labor warranty.',
     exclusions: ['Structural modifications', 'Interior painting'],
   },
+  // Driveway (Concrete) flow - UI naming is "Driveway" everywhere.
+  // Note: internal tradeId remains "concrete" for migration safety / pricing multipliers.
+  'driveway': {
+    tradeId: 'concrete',
+    tradeName: 'Driveway',
+    jobTypeId: 'driveway',
+    jobTypeName: 'Driveway',
+    baseScope: [
+      'Provide driveway and/or walkway concrete replacement/installation per selected measurements.',
+      'Confirm existing conditions (base, access, and drainage) prior to pour.',
+      'Install control joints and finish per selected package.',
+      'Clean up and haul off debris.',
+    ],
+    options: [],
+    basePriceLow: 6000,
+    basePriceHigh: 18000,
+    estimatedDaysLow: 2,
+    estimatedDaysHigh: 4,
+    warranty: '1-year labor warranty on workmanship (materials per manufacturer).',
+    exclusions: ['Permits/engineering unless specified', 'Unseen subsurface conditions'],
+  },
   'doors': {
     tradeId: 'doors',
     tradeName: 'Doors',
