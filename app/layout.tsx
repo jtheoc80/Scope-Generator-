@@ -83,6 +83,9 @@ export default function RootLayout({
 }>) {
   const content = (
     <html lang="en">
+      <head>
+        <GoogleAnalytics />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
@@ -91,7 +94,6 @@ export default function RootLayout({
           {children}
         </Providers>
         <VercelAnalytics />
-        <GoogleAnalytics />
       </body>
     </html>
   );
