@@ -129,7 +129,7 @@ export function RecentProposalsTable({
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={locale.startsWith("es") ? "Buscar propuestas…" : "Search proposals…"}
+              placeholder={locale && locale.toLowerCase().startsWith("es") ? "Buscar propuestas…" : "Search proposals…"}
               className="h-9 rounded-xl border-slate-200 bg-slate-50 pl-9"
               aria-label="Search proposals by client name, address, or job type"
             />
