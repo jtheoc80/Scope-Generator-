@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, ChevronRight, Wand2, Download, FileText, Sparkles, Plus, Trash2, GripVertical, Save, Camera, Mail } from "lucide-react";
+import { Loader2, ChevronRight, Wand2, Download, FileText, Sparkles, Plus, Trash2, GripVertical, Save, Camera, Mail, RotateCcw, Check } from "lucide-react";
 import JobAddressField from "@/components/job-address-field";
 import EmailProposalModal from "@/components/email-proposal-modal";
 import ProposalPreview from "@/components/proposal-preview";
@@ -22,6 +22,7 @@ import ProposalPhotoUpload, { type UploadedPhoto } from "@/components/proposal-p
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useGeneratorDraftPersistence } from "./hooks/useGeneratorDraftPersistence";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { apiRequest } from "@/lib/queryClient";
@@ -276,7 +277,7 @@ export default function Generator() {
   // These are only shown when user tries to export/send
   const [finalizeErrors, setFinalizeErrors] = useState<{ clientName?: string; address?: string }>({});
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const { t, language } = useLanguage();
   const previewRef = useRef<HTMLDivElement>(null);
   const previewPaneRef = useRef<ProposalPreviewPaneHandle>(null);
@@ -295,6 +296,22 @@ export default function Generator() {
   });
 
   const watchedValues = form.watch();
+
+  // Draft persistence hook - handles localStorage restore, autosave, and reset
+  const {
+    isAutoSaving,
+    lastSavedRelative,
+    hasUnsavedChanges,
+    draftRestored,
+    handleResetDraft,
+  } = useGeneratorDraftPersistence({
+    userId: user?.id ?? null,
+    isAuthLoading,
+    form,
+    state: { services, photos, enhancedScopes, watchedValues },
+    setters: { setServices, setPhotos, setEnhancedScopes, setStep, setSavedProposalId, setFinalizeErrors },
+    onReset: () => toast({ title: "Draft cleared", description: "Your draft has been reset." }),
+  });
 
   const getJobTypeForService = (service: ServiceItem): JobType | null => {
     const trade = availableTemplates.find((t) => t.id === service.tradeId);
@@ -1218,11 +1235,63 @@ export default function Generator() {
               <Card className="border-t-4 border-t-primary shadow-md">
                 <CardContent className="p-6">
                   <div className="mb-6">
-                    <h2 className="text-xl font-heading font-bold flex items-center gap-2">
-                      <Wand2 className="w-5 h-5 text-secondary" />
-                      {t.generator.title}
-                    </h2>
-                    <p className="text-sm text-muted-foreground">{t.generator.subtitle}</p>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h2 className="text-xl font-heading font-bold flex items-center gap-2">
+                          <Wand2 className="w-5 h-5 text-secondary" />
+                          {t.generator.title}
+                        </h2>
+                        <p className="text-sm text-muted-foreground">{t.generator.subtitle}</p>
+                      </div>
+                      
+                      {/* Draft saved indicator */}
+                      {(lastSavedRelative || isAutoSaving || hasUnsavedChanges) && (
+                        <div 
+                          className="flex items-center gap-1.5 text-xs text-muted-foreground"
+                          data-testid="draft-save-indicator"
+                        >
+                          {isAutoSaving ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              <span>Saving...</span>
+                            </>
+                          ) : hasUnsavedChanges ? (
+                            <>
+                              <span className="w-2 h-2 bg-amber-400 rounded-full" />
+                              <span>Unsaved</span>
+                            </>
+                          ) : lastSavedRelative ? (
+                            <>
+                              <Check className="w-3 h-3 text-green-600" />
+                              <span className="text-green-700">Saved {lastSavedRelative}</span>
+                            </>
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Draft restored banner */}
+                    {draftRestored && (
+                      <div 
+                        className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between text-sm"
+                        data-testid="draft-restored-banner"
+                      >
+                        <span className="text-blue-700">
+                          ✓ Draft restored from previous session
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+                          onClick={handleResetDraft}
+                          data-testid="button-reset-draft"
+                        >
+                          <RotateCcw className="w-3 h-3 mr-1" />
+                          Reset
+                        </Button>
+                      </div>
+                    )}
                   </div>
 
                   <Form {...form}>
@@ -1415,8 +1484,30 @@ export default function Generator() {
                   <div className="relative animate-in fade-in duration-700">
                      {/* Toolbar */}
                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-heading font-bold text-xl text-slate-700">{t.generator.livePreview}</h3>
+                        <div className="flex items-center gap-3">
+                          <h3 className="font-heading font-bold text-xl text-slate-700">{t.generator.livePreview}</h3>
+                          {/* Autosave status in toolbar */}
+                          {lastSavedRelative && !hasUnsavedChanges && (
+                            <span className="text-xs text-green-600 flex items-center gap-1" data-testid="toolbar-save-status">
+                              <Check className="w-3 h-3" />
+                              Saved {lastSavedRelative}
+                            </span>
+                          )}
+                        </div>
                         <div className="flex gap-2 flex-wrap">
+                          {/* Reset Draft button */}
+                          {step === 2 && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="gap-1 text-slate-500 hover:text-red-600 hover:bg-red-50"
+                              onClick={handleResetDraft}
+                              data-testid="button-reset-draft-toolbar"
+                            >
+                              <RotateCcw className="w-4 h-4" />
+                              Reset
+                            </Button>
+                          )}
                           {step === 2 && user && (
                             <Button 
                               variant="outline" 
