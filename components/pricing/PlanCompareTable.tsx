@@ -72,13 +72,13 @@ export function PlanCompareTable({ t }: CompareTableProps) {
       key: "starter",
       name: t.home.starterPlan,
       tagline: "Pay as you go",
-      price: t.home.perProposal, // "Pay per use"
+      price: `${t.home.starterPrice} ${t.home.starterPriceLabel}`, // "$9 per proposal"
     },
     {
       key: "pro",
       name: t.home.proPlan,
       tagline: "Best for solo operators",
-      price: "15/month",
+      price: `${t.home.proPrice}${t.home.proPriceLabel}`, // "$29/month"
       recommended: true,
       microcopy: "Most popular",
     },
@@ -86,7 +86,7 @@ export function PlanCompareTable({ t }: CompareTableProps) {
       key: "crew",
       name: t.home.crewPlan,
       tagline: "Built for teams",
-      price: "50/month",
+      price: `${t.home.crewPrice}${t.home.crewPriceLabel}`, // "$79/month"
     },
   ];
 
@@ -98,9 +98,9 @@ export function PlanCompareTable({ t }: CompareTableProps) {
           id: "proposals",
           label: t.home.featureProposals,
           values: {
-            starter: { kind: "text", value: t.home.perProposal },
-            pro: { kind: "text", value: "15/month" },
-            crew: { kind: "text", value: "50/month" },
+            starter: { kind: "text", value: t.home.starterFeature1 }, // "Pay per proposal"
+            pro: { kind: "text", value: t.home.proFeature1 }, // "15 proposals/month"
+            crew: { kind: "text", value: t.home.crewFeature1 }, // "50 proposals/month"
           },
         },
         {
