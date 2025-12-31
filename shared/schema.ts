@@ -75,6 +75,12 @@ export type User = typeof users.$inferSelect;
 // Option value type - can be boolean, string, or nested object (e.g., __mobile metadata)
 export type OptionValue = boolean | string | Record<string, unknown>;
 
+// Structured scope sections (grouped display)
+export interface ScopeSection {
+  title: string;
+  items: string[];
+}
+
 // Line item interface for multi-service proposals
 export interface ProposalLineItem {
   id: string;
@@ -86,6 +92,7 @@ export interface ProposalLineItem {
   homeArea?: string;
   footage?: number;
   scope: string[];
+  scopeSections?: ScopeSection[];
   options: Record<string, OptionValue>;
   priceLow: number;
   priceHigh: number;
@@ -107,6 +114,8 @@ export const proposals = pgTable("proposals", {
   jobTypeName: varchar("job_type_name").notNull(),
   jobSize: integer("job_size").notNull().default(2),
   scope: text("scope").array().notNull(),
+  // Optional structured scope sections (preferred for display when present)
+  scopeSections: jsonb("scope_sections").$type<ScopeSection[]>(),
   options: jsonb("options").notNull().default({}),
   priceLow: integer("price_low").notNull(),
   priceHigh: integer("price_high").notNull(),
@@ -773,6 +782,11 @@ const lineItemOptionValueSchema: z.ZodType<boolean | string | Record<string, unk
   z.record(z.string(), z.unknown()),
 ]);
 
+export const scopeSectionSchema = z.object({
+  title: z.string(),
+  items: z.array(z.string()),
+});
+
 export const proposalLineItemSchema = z.object({
   id: z.string(),
   tradeId: z.string(),
@@ -783,6 +797,7 @@ export const proposalLineItemSchema = z.object({
   homeArea: z.string().optional(),
   footage: z.number().optional(),
   scope: z.array(z.string()),
+  scopeSections: z.array(scopeSectionSchema).optional(),
   options: z.record(z.string(), lineItemOptionValueSchema),
   priceLow: z.number(),
   priceHigh: z.number(),
@@ -809,6 +824,7 @@ export const insertProposalSchema = createInsertSchema(proposals).omit({
   updatedAt: true,
 }).extend({
   scope: z.array(z.string()),
+  scopeSections: z.array(scopeSectionSchema).optional(),
   options: z.record(z.string(), optionValueSchema).optional(),
   lineItems: z.array(proposalLineItemSchema).optional(),
   isMultiService: z.boolean().optional(),

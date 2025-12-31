@@ -22,6 +22,7 @@ interface Proposal {
   address: string;
   jobTypeName: string;
   scope: string[];
+  scopeSections?: Array<{ title: string; items: string[] }>;
   priceLow: number;
   priceHigh: number;
   estimatedDaysLow?: number;
@@ -30,10 +31,11 @@ interface Proposal {
   status?: string;
   isUnlocked?: boolean;
   lineItems?: Array<{
-    serviceId: string;
+    id: string;
     tradeName: string;
     jobTypeName: string;
     scope: string[];
+    scopeSections?: Array<{ title: string; items: string[] }>;
     priceLow: number;
     priceHigh: number;
     estimatedDaysLow?: number;
@@ -132,6 +134,7 @@ export default function ProposalViewPage() {
     address: proposal.address,
     jobTypeName: proposal.jobTypeName,
     scope: proposal.scope,
+    scopeSections: proposal.scopeSections,
     priceRange: {
       low: proposal.priceLow,
       high: proposal.priceHigh,
@@ -141,10 +144,11 @@ export default function ProposalViewPage() {
       high: proposal.estimatedDaysHigh,
     } : undefined,
     lineItems: proposal.lineItems?.map(item => ({
-      serviceId: item.serviceId,
+      serviceId: item.id,
       tradeName: item.tradeName,
       jobTypeName: item.jobTypeName,
       scope: item.scope,
+      scopeSections: item.scopeSections,
       priceRange: { low: item.priceLow, high: item.priceHigh },
       estimatedDays: item.estimatedDaysLow && item.estimatedDaysHigh 
         ? { low: item.estimatedDaysLow, high: item.estimatedDaysHigh }
