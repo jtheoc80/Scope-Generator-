@@ -53,8 +53,8 @@ const proposals: ProposalData[] = [
     id: "roofing",
     title: "Roof Replacement",
     type: "Sample",
-    imageSrc: "/images/scopescan/projects/roof-real.jpg",
-    imageAlt: "Real roof replacement job site photo",
+    imageSrc: "https://images.unsplash.com/photo-1632759145954-d0e5f3b8b6e8?w=800&h=500&fit=crop&crop=center",
+    imageAlt: "Residential roof with asphalt shingles",
     lineItems: [
       { description: "Tear off shingles + underlayment", amount: 2400 },
       { description: "Replace damaged decking (allowance)", amount: 1200 },
