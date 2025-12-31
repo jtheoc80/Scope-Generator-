@@ -123,11 +123,27 @@ test.describe('Proposal Scope Sections', () => {
     }
     await page.waitForTimeout(500);
 
-    // Select first job type
+    // Select a job type that still uses legacy flat scope format
+    // (Tub-to-Shower and Shower Remodel now use scopeSections, so select Half Bath)
     const jobTypeSelect = page.locator('[data-testid="select-jobtype-0"]');
     await expect(jobTypeSelect).toBeVisible({ timeout: 5000 });
     await jobTypeSelect.click();
-    await page.locator('[role="option"]').first().click();
+    
+    // Look for Half Bath or Full Bathroom Gut which still use flat scope
+    const halfBathOption = page.locator('[role="option"]').filter({ hasText: /Half Bath|Powder Room/i });
+    if (await halfBathOption.count() > 0) {
+      await halfBathOption.click();
+    } else {
+      // Fallback to Full Bathroom Gut which also uses flat scope
+      const fullGutOption = page.locator('[role="option"]').filter({ hasText: /Full.*Gut|Gut.*Remodel/i });
+      if (await fullGutOption.count() > 0) {
+        await fullGutOption.click();
+      } else {
+        // Skip test if no legacy format job type found
+        test.skip();
+        return;
+      }
+    }
     await page.waitForTimeout(500);
 
     // Verify the preview container is visible
@@ -189,7 +205,7 @@ test.describe('Proposal Scope Sections', () => {
     const scopeSections = previewContainer.locator('[data-testid="preview-scope-sections"]');
     await expect(scopeSections).toBeVisible({ timeout: 5000 });
 
-    // Now switch to Bathroom (legacy format)
+    // Now switch to Bathroom (legacy format - select Half Bath which uses flat scope)
     await tradeSelect.click();
     const bathroomOption = page.locator('[role="option"]').filter({ hasText: /bathroom/i }).first();
     if (await bathroomOption.count() > 0) {
@@ -200,7 +216,13 @@ test.describe('Proposal Scope Sections', () => {
     await page.waitForTimeout(500);
 
     await jobTypeSelect.click();
-    await page.locator('[role="option"]').first().click();
+    // Select Half Bath which still uses legacy flat scope format
+    const halfBathOption = page.locator('[role="option"]').filter({ hasText: /Half Bath|Powder Room/i });
+    if (await halfBathOption.count() > 0) {
+      await halfBathOption.click();
+    } else {
+      await page.locator('[role="option"]').first().click();
+    }
     await page.waitForTimeout(500);
 
     // Verify flat list is now shown instead of sections
