@@ -268,7 +268,7 @@ export default function SelectIssuesPage() {
       // Poll until READY with exponential backoff
       // Strategy: Start with quick polls (500ms), gradually increase to max 5s
       // Total timeout: ~90 seconds (accommodates AI generation + potential retries)
-      // Backoff schedule: 500ms → 1s → 2s → 3s → 5s (repeating 5s thereafter)
+      // Backoff schedule: 500ms → 750ms → 1.1s → 1.7s → 2.5s → 3.8s → 5s (repeating 5s thereafter)
       const maxAttempts = 30;
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
         // Calculate delay with exponential backoff, capped at 5 seconds
