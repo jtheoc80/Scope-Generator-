@@ -73,6 +73,147 @@ function buildDrainageSection(params: {
   return { title: "Drainage considerations", items };
 }
 
+/**
+ * Driveway Pricing Configuration
+ * 
+ * This configuration object centralizes all pricing constants used in driveway
+ * proposal calculations. All values represent cost adjustments per square foot ($/SF)
+ * unless otherwise noted.
+ * 
+ * Pricing Model Overview:
+ * - Base price range: $10-$16/SF for standard 4" broom finish concrete driveway
+ * - Adjustments are additive based on project characteristics
+ * - Package multipliers (GOOD/BETTER/BEST) apply to the adjusted base
+ * - User and trade multipliers apply last for regional/business adjustments
+ */
+const DRIVEWAY_PRICING_CONFIG = {
+  /**
+   * Base pricing per square foot for GOOD package (standard configuration)
+   * - baseLow: Minimum price for competitive market conditions
+   * - baseHigh: Maximum price for premium market conditions or complex projects
+   */
+  basePricing: {
+    baseLow: 10,    // $/SF - Base minimum price
+    baseHigh: 16,   // $/SF - Base maximum price
+  },
+
+  /**
+   * Removal cost adjustments ($/SF)
+   * Cost to remove and haul away existing surface before new concrete placement
+   * - none: No removal needed (new construction or prepared surface)
+   * - asphalt: Remove asphalt overlay (lighter material, easier removal)
+   * - concrete: Remove existing concrete (heavier, requires breaking/sawing)
+   */
+  removalCosts: {
+    none: 0,
+    asphalt: 1.5,
+    concrete: 2.5,
+  },
+
+  /**
+   * Base condition cost adjustments ($/SF)
+   * Cost to prepare and stabilize the subgrade before concrete placement
+   * - good: Stable, compacted base requires minimal work
+   * - unknown: Standard allowance for inspection and minor corrections
+   * - poor: Significant work needed (soft spots, regrade, additional material)
+   */
+  baseConditionCosts: {
+    good: 0,
+    unknown: 0.75,
+    poor: 2.0,
+  },
+
+  /**
+   * Site access cost adjustments ($/SF)
+   * Additional costs for material delivery and equipment access challenges
+   * - easy: Standard truck access, minimal handling
+   * - tight: Limited access, requires smaller equipment or additional labor
+   * - no-truck-access: Requires pump truck, buggy, or hand placement
+   */
+  accessCosts: {
+    easy: 0,
+    tight: 0.5,
+    "no-truck-access": 1.5,
+  },
+
+  /**
+   * Finish type cost adjustments ($/SF)
+   * Premium finishes require additional labor, materials, and expertise
+   * - broom: Standard slip-resistant finish (baseline)
+   * - exposed: Exposed aggregate with wash and sealer
+   * - stamped: Decorative pattern with color/release agents and detailing
+   */
+  finishCosts: {
+    broom: 0,
+    exposed: 4.0,
+    stamped: 6.0,
+  },
+
+  /**
+   * Thickness cost adjustments ($/SF)
+   * Additional concrete volume and placement costs for thicker slabs
+   * - 4": Standard residential driveway thickness (baseline)
+   * - 5": Enhanced thickness for heavier vehicles or poor soil
+   * - 6": Heavy-duty thickness for large vehicles or commercial use
+   */
+  thicknessCosts: {
+    4: 0,
+    5: 1.0,
+    6: 2.0,
+  },
+
+  /**
+   * Reinforcement cost adjustments ($/SF)
+   * Cost of reinforcement materials and installation labor
+   * - none: No reinforcement (not recommended for most applications)
+   * - fiber: Synthetic fibers mixed into concrete (crack control)
+   * - wire-mesh: Welded wire fabric (structural reinforcement)
+   * - #3-rebar: 3/8" rebar grid (standard structural reinforcement)
+   * - #4-rebar: 1/2" rebar grid (heavy-duty structural reinforcement)
+   */
+  reinforcementCosts: {
+    none: 0,
+    fiber: 0.5,
+    "wire-mesh": 1.0,
+    "#3-rebar": 2.0,
+    "#4-rebar": 3.0,
+  },
+
+  /**
+   * Package tier multipliers (applied to adjusted base price)
+   * These multipliers reflect the comprehensive service level differences:
+   * 
+   * - GOOD (1.0x): Standard scope with baseline specifications
+   *   - 4" thickness, broom finish, no reinforcement
+   *   - Standard base prep and drainage considerations
+   * 
+   * - BETTER (1.15x): Enhanced scope with quality upgrades
+   *   - 5" thickness minimum, wire mesh reinforcement
+   *   - Enhanced base allowance and compaction
+   *   - Better long-term performance and durability
+   * 
+   * - BEST (1.35x): Premium scope with top-tier features
+   *   - 6" thickness minimum, rebar reinforcement
+   *   - Premium base work with verification
+   *   - Includes sealing and comprehensive drainage planning
+   *   - Maximum longevity and performance
+   */
+  packageMultipliers: {
+    GOOD: 1.0,
+    BETTER: 1.15,
+    BEST: 1.35,
+  },
+} as const;
+
+/**
+ * Calculate per-square-foot cost adjustments based on project characteristics
+ * 
+ * This function applies additive adjustments to the base price for various
+ * project factors. All adjustments are per square foot and sum together
+ * before package multipliers are applied.
+ * 
+ * @returns Object with individual adjustment values ($/SF) for each factor
+ */
 function pricePerSFInputs(params: {
   removalType: DrivewayRemovalType;
   baseCondition: DrivewayBaseCondition;
@@ -81,21 +222,38 @@ function pricePerSFInputs(params: {
   thicknessIn: 4 | 5 | 6;
   reinforcement: DrivewayReinforcement;
 }) {
-  // Simple heuristics (kept deterministic + transparent).
-  const removal = params.removalType === "none" ? 0 : params.removalType === "asphalt" ? 1.5 : 2.5;
-  const base = params.baseCondition === "good" ? 0 : params.baseCondition === "unknown" ? 0.75 : 2.0;
-  const access = params.accessType === "easy" ? 0 : params.accessType === "tight" ? 0.5 : 1.5;
-  const finish = params.finishType === "broom" ? 0 : params.finishType === "exposed" ? 4.0 : 6.0;
-  const thickness = params.thicknessIn === 4 ? 0 : params.thicknessIn === 5 ? 1.0 : 2.0;
-  const rebar = params.reinforcement === "none" ? 0
-    : params.reinforcement === "fiber" ? 0.5
-    : params.reinforcement === "wire-mesh" ? 1.0
-    : params.reinforcement === "#3-rebar" ? 2.0
-    : 3.0;
-
-  return { removal, base, access, finish, thickness, rebar };
+  return {
+    removal: DRIVEWAY_PRICING_CONFIG.removalCosts[params.removalType],
+    base: DRIVEWAY_PRICING_CONFIG.baseConditionCosts[params.baseCondition],
+    access: DRIVEWAY_PRICING_CONFIG.accessCosts[params.accessType],
+    finish: DRIVEWAY_PRICING_CONFIG.finishCosts[params.finishType],
+    thickness: DRIVEWAY_PRICING_CONFIG.thicknessCosts[params.thicknessIn],
+    rebar: DRIVEWAY_PRICING_CONFIG.reinforcementCosts[params.reinforcement],
+  };
 }
 
+/**
+ * Compute price range for a specific package tier
+ * 
+ * Pricing calculation follows this formula:
+ * 
+ * 1. Start with base price range (baseLow to baseHigh $/SF)
+ * 2. Add all project-specific adjustments (removal, base, access, finish, thickness, reinforcement)
+ * 3. Apply package tier multiplier (GOOD=1.0x, BETTER=1.15x, BEST=1.35x)
+ * 4. Multiply by total square footage
+ * 5. Apply user price multiplier (regional pricing adjustment, default 100%)
+ * 6. Apply trade-specific multiplier (specialty trade markup, default 100%)
+ * 
+ * Example for 500 SF driveway with BETTER package:
+ * - Base: $10-$16/SF
+ * - Adjustments: +$2.5 concrete removal, +$0.75 unknown base, +$1.0 wire-mesh
+ * - Adjusted: $14.25-$20.25/SF
+ * - With BETTER multiplier (1.15x): $16.39-$23.29/SF
+ * - Total: $8,195-$11,645
+ * - After user/trade multipliers (if any)
+ * 
+ * @returns Price range object with low and high values in dollars
+ */
 function computePriceRangeForPackage(params: {
   totalSF: number;
   packageKey: DrivewayPackage;
@@ -110,9 +268,11 @@ function computePriceRangeForPackage(params: {
 }) {
   const totalSF = Math.max(0, params.totalSF);
 
-  // Base pricing for GOOD (per SF), then scale.
-  const baseLow = 10;
-  const baseHigh = 16;
+  // Step 1: Get base pricing from configuration
+  const baseLow = DRIVEWAY_PRICING_CONFIG.basePricing.baseLow;
+  const baseHigh = DRIVEWAY_PRICING_CONFIG.basePricing.baseHigh;
+
+  // Step 2: Calculate all project-specific adjustments
   const adjustments = pricePerSFInputs({
     removalType: params.removalType,
     baseCondition: params.baseCondition,
@@ -122,23 +282,36 @@ function computePriceRangeForPackage(params: {
     reinforcement: params.reinforcement,
   });
 
-  const adj = adjustments.removal + adjustments.base + adjustments.access + adjustments.finish + adjustments.thickness + adjustments.rebar;
+  // Sum all adjustments (additive model)
+  const totalAdjustment = 
+    adjustments.removal + 
+    adjustments.base + 
+    adjustments.access + 
+    adjustments.finish + 
+    adjustments.thickness + 
+    adjustments.rebar;
 
-  let lowPerSF = baseLow + adj;
-  let highPerSF = baseHigh + adj;
+  // Step 3: Apply adjustments to base price
+  let lowPerSF = baseLow + totalAdjustment;
+  let highPerSF = baseHigh + totalAdjustment;
 
-  // Package multipliers (Best includes sealing/drainage suggestions/premium workflow).
-  const pkgMult = params.packageKey === "GOOD" ? 1.0 : params.packageKey === "BETTER" ? 1.15 : 1.35;
+  // Step 4: Apply package tier multiplier
+  const pkgMult = DRIVEWAY_PRICING_CONFIG.packageMultipliers[params.packageKey];
   lowPerSF *= pkgMult;
   highPerSF *= pkgMult;
 
-  // Apply user price multiplier + optional trade multiplier.
+  // Step 5: Apply user price multiplier (stored as percentage, e.g., 110 = 110%)
   const userMult = (params.user.priceMultiplier ?? 100) / 100;
+
+  // Step 6: Apply trade-specific multiplier (stored as percentage, e.g., 105 = 105%)
   const tradeMultMap = (params.user.tradeMultipliers || {}) as Record<string, number>;
   const tradeMult = typeof tradeMultMap[params.tradeId] === "number" ? tradeMultMap[params.tradeId] / 100 : 1.0;
 
+  // Calculate final price range (multiply by area and all multipliers)
   const low = round0(totalSF * lowPerSF * userMult * tradeMult);
   const high = round0(totalSF * highPerSF * userMult * tradeMult);
+
+  // Ensure high is always >= low (edge case protection)
   return { low: Math.min(low, high), high: Math.max(low, high) };
 }
 
