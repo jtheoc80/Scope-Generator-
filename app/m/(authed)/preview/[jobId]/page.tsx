@@ -133,11 +133,22 @@ export default function PreviewPage() {
         let decoded: DraftPayload;
         try {
           decoded = JSON.parse(decodeURIComponent(payloadParam)) as DraftPayload;
-        } catch {
+        } catch (innerError) {
+          console.warn(
+            "Failed to decode or parse payload query parameter with decodeURIComponent; falling back to raw JSON.parse.",
+            {
+              error: innerError,
+              payloadParamPreview: payloadParam.slice(0, 200),
+            }
+          );
           decoded = JSON.parse(payloadParam) as DraftPayload;
         }
         setPayload(decoded ?? null);
-      } catch {
+      } catch (outerError) {
+        console.error("Failed to parse payload query parameter from URL search params.", {
+          error: outerError,
+          payloadParamPreview: payloadParam.slice(0, 200),
+        });
         setError("Failed to load draft data");
       }
     }
