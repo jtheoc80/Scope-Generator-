@@ -29,6 +29,8 @@ interface Proposal {
   priceHigh: number;
   status: string;
   createdAt: string;
+  photoCount?: number | null;
+  thumbnailUrl?: string | null;
   publicToken?: string | null;
   contractorSignature?: string | null;
   contractorSignedAt?: string | null;

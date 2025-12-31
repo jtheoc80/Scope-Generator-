@@ -28,7 +28,7 @@ import {
   type InsertProposalView,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sql, count, inArray } from "drizzle-orm";
+import { eq, desc, and, sql, count, inArray, getTableColumns } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -69,7 +69,7 @@ export interface IStorage {
   createProposal(proposal: InsertProposal): Promise<Proposal>;
   getProposal(id: number): Promise<Proposal | undefined>;
   getProposalByPublicToken(token: string): Promise<Proposal | undefined>;
-  getProposalsByUser(userId: string): Promise<Proposal[]>;
+  getProposalsByUser(userId: string): Promise<(Proposal & { thumbnailUrl: string | null })[]>;
   updateProposal(id: number, userId: string, updates: Partial<InsertProposal>): Promise<Proposal | undefined>;
   deleteProposal(id: number, userId: string): Promise<boolean>;
   unlockProposal(id: number, userId: string): Promise<Proposal | undefined>;
@@ -257,9 +257,34 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
-  async getProposalsByUser(userId: string): Promise<Proposal[]> {
+  async getProposalsByUser(userId: string): Promise<(Proposal & { thumbnailUrl: string | null })[]> {
+    /**
+     * Dashboard/list thumbnail selection logic:
+     * 1) Prefer `category = 'hero'` (acts like a cover photo today)
+     * 2) Prefer "overview-ish" categories next (best-effort with current enum)
+     * 3) Otherwise fall back to most recently uploaded photo
+     *
+     * TODO: Add explicit `isCover` (or similar) and richer tags ('overview'/'wide'/'front')
+     * and update the ordering accordingly.
+     */
     return await db
-      .select()
+      .select({
+        ...getTableColumns(proposals),
+        thumbnailUrl: sql<string | null>`(
+          select pp.public_url
+          from proposal_photos as pp
+          where pp.proposal_id = ${proposals.id}
+          order by
+            (pp.category = 'hero') desc,
+            case
+              when pp.category in ('existing', 'kitchen', 'roofing', 'siding', 'windows', 'hvac') then 0
+              else 1
+            end asc,
+            pp.display_order asc,
+            pp.created_at desc
+          limit 1
+        )`,
+      })
       .from(proposals)
       .where(eq(proposals.userId, userId))
       .orderBy(desc(proposals.createdAt));
