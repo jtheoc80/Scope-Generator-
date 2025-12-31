@@ -51,7 +51,6 @@ export function ProposalThumbnail({
           +{Math.max(0, (count ?? 0) - 1)}
         </span>
       ) : null}
-      <span className="sr-only">View proposal</span>
     </Link>
   );
 }
