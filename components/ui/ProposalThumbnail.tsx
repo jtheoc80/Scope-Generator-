@@ -31,7 +31,7 @@ export function ProposalThumbnail({
     <Link
       href={href}
       className={cn(
-        "group relative block overflow-hidden rounded-lg border border-slate-200 bg-slate-100",
+        "group relative block overflow-hidden rounded-lg border bg-muted",
         className,
       )}
       aria-label="View proposal"
@@ -47,7 +47,7 @@ export function ProposalThumbnail({
         onError={() => setFailed(true)}
       />
       {(count ?? 0) > 1 ? (
-        <span className="pointer-events-none absolute bottom-1 right-1 rounded-md bg-slate-900/70 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
+        <span className="pointer-events-none absolute bottom-1 right-1 rounded-md bg-foreground/70 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-background">
           +{Math.max(0, (count ?? 0) - 1)}
         </span>
       ) : null}
