@@ -51,6 +51,13 @@ export default function MeasurePage() {
           router.replace(`/m/capture/${jobId}`);
           return;
         }
+        
+        // Redirect driveway jobs to the dedicated driveway route
+        // for the upgraded experience (packages, add-ons, proposal generation)
+        if (res.jobType === "driveway") {
+          router.replace(`/m/measure/driveway/${jobId}`);
+          return;
+        }
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load job");
       } finally {
