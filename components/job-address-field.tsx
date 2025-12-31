@@ -10,6 +10,12 @@ type Props = {
   value: string;
   onChange: (val: string) => void;
   onResolvedLatLng?: (lat: number, lng: number) => void;
+  onResolvedPlace?: (place: {
+    placeId: string;
+    formattedAddress: string;
+    lat: number;
+    lng: number;
+  }) => void;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
@@ -20,6 +26,7 @@ export default function JobAddressField({
   value, 
   onChange, 
   onResolvedLatLng,
+  onResolvedPlace,
   placeholder = '123 Main St, City, State',
   className,
   disabled,
@@ -29,6 +36,7 @@ export default function JobAddressField({
   const autoRef = useRef<google.maps.places.Autocomplete | null>(null);
   const onChangeRef = useRef(onChange);
   const onResolvedLatLngRef = useRef(onResolvedLatLng);
+  const onResolvedPlaceRef = useRef(onResolvedPlace);
 
   // Keep refs updated
   useEffect(() => {
@@ -38,6 +46,10 @@ export default function JobAddressField({
   useEffect(() => {
     onResolvedLatLngRef.current = onResolvedLatLng;
   }, [onResolvedLatLng]);
+
+  useEffect(() => {
+    onResolvedPlaceRef.current = onResolvedPlace;
+  }, [onResolvedPlace]);
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: GOOGLE_MAPS_LOADER_ID,
@@ -58,6 +70,7 @@ export default function JobAddressField({
     autoRef.current.addListener('place_changed', () => {
       const place = autoRef.current?.getPlace();
       const formatted = place?.formatted_address ?? '';
+      const placeId = place?.place_id ?? '';
       
       // Update the controlled input value
       if (formatted) {
@@ -68,6 +81,16 @@ export default function JobAddressField({
       const loc = place?.geometry?.location;
       if (loc && onResolvedLatLngRef.current) {
         onResolvedLatLngRef.current(loc.lat(), loc.lng());
+      }
+
+      // Provide full place details if callback is given
+      if (loc && placeId && formatted && onResolvedPlaceRef.current) {
+        onResolvedPlaceRef.current({
+          placeId,
+          formattedAddress: formatted,
+          lat: loc.lat(),
+          lng: loc.lng(),
+        });
       }
     });
 

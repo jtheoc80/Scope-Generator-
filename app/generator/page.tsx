@@ -48,6 +48,7 @@ import {
   Check,
 } from "lucide-react";
 import JobAddressField from "@/components/job-address-field";
+import CustomerPicker from "@/components/customer-picker";
 import EmailProposalModal from "@/components/email-proposal-modal";
 import ProposalPreview from "@/components/proposal-preview";
 import ProposalPreviewPane, {
@@ -66,6 +67,14 @@ import jsPDF from "jspdf";
 import { apiRequest } from "@/lib/queryClient";
 import { getRegionalMultiplier } from "@/lib/regional-pricing";
 import { cn } from "@/lib/utils";
+import {
+  getCustomerById,
+  getLastJobSetup,
+  saveAddress,
+  saveLastAddressForCustomer,
+  syncAllData,
+  type SavedCustomer,
+} from "@/app/m/lib/job-memory";
 
 // Service item interface for multi-trade support
 interface ServiceItem {
@@ -415,6 +424,9 @@ function TradeParamHandler({
 
 function GeneratorContent() {
   const [step, setStep] = useState<1 | 2>(1);
+  const [selectedCustomer, setSelectedCustomer] = useState<SavedCustomer | null>(
+    null,
+  );
   const [services, setServices] = useState<ServiceItem[]>([
     {
       id: crypto.randomUUID(),
@@ -448,8 +460,15 @@ function GeneratorContent() {
   const { t, language } = useLanguage();
   const previewRef = useRef<HTMLDivElement>(null);
   const previewPaneRef = useRef<ProposalPreviewPaneHandle>(null);
+  const resolvedPlaceRef = useRef<{
+    placeId: string;
+    formattedAddress: string;
+    lat: number;
+    lng: number;
+  } | null>(null);
 
   const userSelectedTrades = user?.selectedTrades || [];
+  const userId = user?.id ?? null;
   const availableTemplates =
     userSelectedTrades.length > 0
       ? templates.filter((t) => userSelectedTrades.includes(t.id))
@@ -464,6 +483,63 @@ function GeneratorContent() {
   });
 
   const watchedValues = form.watch();
+
+  // Sync customer/address memory and restore last customer (ScopeScan parity)
+  useEffect(() => {
+    if (isAuthLoading) return;
+    if (!userId) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        await syncAllData();
+      } catch {
+        // Ignore sync errors (local-first).
+      }
+
+      if (cancelled) return;
+
+      const last = getLastJobSetup();
+      if (last?.customerId) {
+        const c = getCustomerById(last.customerId);
+        if (c) {
+          setSelectedCustomer(c);
+          // Only prefill if user hasn't typed anything yet.
+          const currentName = form.getValues("clientName") || "";
+          if (!currentName.trim()) {
+            form.setValue("clientName", c.name, { shouldDirty: true });
+          }
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, isAuthLoading, form]);
+
+  const saveResolvedAddressForCustomer = async (
+    customer: SavedCustomer,
+    formatted: string,
+  ) => {
+    const place = resolvedPlaceRef.current;
+
+    // Only save addresses selected via autocomplete (placeId + lat/lng).
+    if (!place?.placeId || !place.formattedAddress) return;
+
+    try {
+      const saved = await saveAddress({
+        formatted,
+        placeId: place.placeId,
+        lat: String(place.lat),
+        lng: String(place.lng),
+        customerId: customer.id,
+      });
+      saveLastAddressForCustomer(customer.id, saved);
+    } catch {
+      // Ignore (customer/address memory is best-effort).
+    }
+  };
 
   // Draft persistence hook - handles localStorage restore, autosave, and reset
   const {
@@ -491,6 +567,11 @@ function GeneratorContent() {
         description: "Your draft has been reset.",
       }),
   });
+
+  const handleResetAll = () => {
+    setSelectedCustomer(null);
+    handleResetDraft();
+  };
 
   // Callback to handle trade parameter from URL
   const handleTradeParam = (tradeId: string | null) => {
@@ -1720,7 +1801,7 @@ function GeneratorContent() {
                           variant="ghost"
                           size="sm"
                           className="h-7 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-100"
-                          onClick={handleResetDraft}
+                          onClick={handleResetAll}
                           data-testid="button-reset-draft"
                         >
                           <RotateCcw className="w-3 h-3 mr-1" />
@@ -1743,6 +1824,30 @@ function GeneratorContent() {
                           </span>
                           <span>Required to export/send</span>
                         </div>
+
+                        {/* Customer (ScopeScan-style memory) */}
+                        <div className="space-y-2" data-testid="customer-picker">
+                          <label className="text-sm font-medium">Customer</label>
+                          <CustomerPicker
+                            value={selectedCustomer}
+                            onChange={(customer) => {
+                              setSelectedCustomer(customer);
+                              if (customer) {
+                                form.setValue("clientName", customer.name, {
+                                  shouldDirty: true,
+                                });
+                                clearFinalizeErrors();
+                              }
+                            }}
+                            disabled={isGenerating}
+                            placeholder="Search customers or add new…"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Pick a saved customer (name + phone/email) like
+                            ScopeScan.
+                          </p>
+                        </div>
+
                         <FormField
                           control={form.control}
                           name="clientName"
@@ -1763,6 +1868,13 @@ function GeneratorContent() {
                                   onChange={(e) => {
                                     field.onChange(e);
                                     clearFinalizeErrors();
+                                    if (
+                                      selectedCustomer &&
+                                      e.target.value.trim() !==
+                                        selectedCustomer.name.trim()
+                                    ) {
+                                      setSelectedCustomer(null);
+                                    }
                                   }}
                                 />
                               </FormControl>
@@ -1791,6 +1903,16 @@ function GeneratorContent() {
                                   onChange={(value) => {
                                     field.onChange(value);
                                     clearFinalizeErrors();
+                                  }}
+                                  onResolvedPlace={(place) => {
+                                    resolvedPlaceRef.current = place;
+                                    // Best-effort: save resolved address to selected customer memory.
+                                    if (selectedCustomer) {
+                                      void saveResolvedAddressForCustomer(
+                                        selectedCustomer,
+                                        place.formattedAddress,
+                                      );
+                                    }
                                   }}
                                   placeholder={
                                     t.generator.jobAddressPlaceholder
@@ -1980,7 +2102,7 @@ function GeneratorContent() {
                           variant="ghost"
                           size="sm"
                           className="gap-1 text-slate-500 hover:text-red-600 hover:bg-red-50"
-                          onClick={handleResetDraft}
+                          onClick={handleResetAll}
                           data-testid="button-reset-draft-toolbar"
                         >
                           <RotateCcw className="w-4 h-4" />
