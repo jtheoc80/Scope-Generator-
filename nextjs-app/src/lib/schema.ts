@@ -66,6 +66,8 @@ export const proposals = pgTable("proposals", {
   jobTypeName: varchar("job_type_name").notNull(),
   jobSize: integer("job_size").notNull().default(2),
   scope: text("scope").array().notNull(),
+  // Optional structured scope sections (preferred for display when present)
+  scopeSections: jsonb("scope_sections").$type<Array<{ title: string; items: string[] }>>(),
   options: jsonb("options").notNull().default({}),
   priceLow: integer("price_low").notNull(),
   priceHigh: integer("price_high").notNull(),
@@ -202,6 +204,7 @@ export const insertProposalSchema = createInsertSchema(proposals).omit({
   updatedAt: true,
 }).extend({
   scope: z.array(z.string()),
+  scopeSections: z.array(z.object({ title: z.string(), items: z.array(z.string()) })).optional(),
   options: z.record(z.string(), z.boolean()).optional(),
 });
 

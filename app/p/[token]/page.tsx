@@ -19,9 +19,24 @@ interface PublicProposalResponse {
     address: string;
     jobTypeName: string;
     scope: string[];
+    scopeSections?: Array<{ title: string; items: string[] }>;
     priceLow: number;
     priceHigh: number;
     options: Record<string, boolean>;
+    lineItems?: Array<{
+      id: string;
+      tradeName: string;
+      jobTypeName: string;
+      scope: string[];
+      scopeSections?: Array<{ title: string; items: string[] }>;
+      priceLow: number;
+      priceHigh: number;
+      estimatedDaysLow?: number;
+      estimatedDaysHigh?: number;
+    }>;
+    isMultiService?: boolean;
+    estimatedDaysLow?: number;
+    estimatedDaysHigh?: number;
     status?: string;
     acceptedAt?: string;
     acceptedByName?: string;
@@ -154,10 +169,27 @@ export default function PublicProposal() {
     address: data.proposal.address,
     jobTypeName: data.proposal.jobTypeName,
     scope: data.proposal.scope,
+    scopeSections: data.proposal.scopeSections,
     priceRange: {
       low: data.proposal.priceLow,
       high: data.proposal.priceHigh,
     },
+    estimatedDays:
+      data.proposal.estimatedDaysLow && data.proposal.estimatedDaysHigh
+        ? { low: data.proposal.estimatedDaysLow, high: data.proposal.estimatedDaysHigh }
+        : undefined,
+    lineItems: data.proposal.lineItems?.map((item) => ({
+      serviceId: item.id,
+      tradeName: item.tradeName,
+      jobTypeName: item.jobTypeName,
+      scope: item.scope,
+      scopeSections: item.scopeSections,
+      priceRange: { low: item.priceLow, high: item.priceHigh },
+      estimatedDays:
+        item.estimatedDaysLow && item.estimatedDaysHigh
+          ? { low: item.estimatedDaysLow, high: item.estimatedDaysHigh }
+          : { low: 1, high: 3 },
+    })),
     ...data.proposal.options,
   };
 

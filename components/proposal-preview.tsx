@@ -291,10 +291,15 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
               </p>
 
               {lineItems.map((item, serviceIndex) => {
+                const serviceScopeItems =
+                  item.scopeSections && item.scopeSections.length > 0
+                    ? item.scopeSections.flatMap((s) => s.items)
+                    : item.scope;
+
                 // Find photos matching this service's scope items
-                const servicePhotos = item.scope.flatMap(scopeItem => 
-                  organizedPhotos.scopePhotos[scopeItem] || []
-                ).slice(0, 2); // Max 2 photos per service section
+                const servicePhotos = serviceScopeItems
+                  .flatMap((scopeItem) => organizedPhotos.scopePhotos[scopeItem] || [])
+                  .slice(0, 2); // Max 2 photos per service section
                 
                 return (
                   <div key={item.serviceId} className="border-l-4 border-l-secondary pl-4">
@@ -314,12 +319,29 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
                       />
                     )}
 
-                    {/* All scope items shown */}
-                    <ul className="list-disc pl-5 space-y-2 marker:text-secondary">
-                      {item.scope.map((scopeItem, i) => (
-                        <li key={i}>{scopeItem}</li>
-                      ))}
-                    </ul>
+                    {/* All scope items shown (prefer grouped sections if present) */}
+                    {item.scopeSections && item.scopeSections.length > 0 ? (
+                      <div className="space-y-4">
+                        {item.scopeSections.map((section, sectionIndex) => (
+                          <div key={sectionIndex} className="scope-section">
+                            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide mb-2 border-b border-slate-200 pb-1">
+                              {section.title}
+                            </h4>
+                            <ul className="list-disc pl-5 space-y-1.5 marker:text-secondary">
+                              {section.items.map((scopeItem, i) => (
+                                <li key={i}>{scopeItem}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <ul className="list-disc pl-5 space-y-2 marker:text-secondary">
+                        {item.scope.map((scopeItem, i) => (
+                          <li key={i}>{scopeItem}</li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 );
               })}

@@ -1086,6 +1086,7 @@ function GeneratorContent() {
             homeArea: service.homeArea,
             footage: service.footage || undefined,
             scope: enhancedScopes[service.id] || serviceData.scope,
+            scopeSections: serviceData.scopeSections,
             options: service.options,
             priceLow: serviceData.priceRange.low,
             priceHigh: serviceData.priceRange.high,
@@ -1130,6 +1131,8 @@ function GeneratorContent() {
           : firstServiceData.jobTypeName,
         jobSize: firstService.jobSize,
         scope: allScope,
+        // Structured scope (single-service only; multi-service scopes live on each line item)
+        scopeSections: isMultiService ? undefined : firstServiceData.scopeSections,
         options: firstService.options,
         // Pricing
         priceLow: totalPriceLow,
@@ -1254,6 +1257,7 @@ function GeneratorContent() {
             homeArea: service.homeArea,
             footage: service.footage || undefined,
             scope: enhancedScopes[service.id] || serviceData.scope,
+            scopeSections: serviceData.scopeSections,
             options: service.options,
             priceLow: serviceData.priceRange.low,
             priceHigh: serviceData.priceRange.high,
@@ -1297,6 +1301,8 @@ function GeneratorContent() {
           : firstServiceData.jobTypeName,
         jobSize: firstService.jobSize,
         scope: allScope,
+        // Structured scope (single-service only; multi-service scopes live on each line item)
+        scopeSections: isMultiService ? undefined : firstServiceData.scopeSections,
         options: firstService.options,
         // Pricing
         priceLow: totalPriceLow,
