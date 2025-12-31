@@ -551,8 +551,13 @@ export default function PreviewPage() {
                           },
                         }),
                       });
-                    } catch {
-                      // ignore persistence errors in preview UI
+                    } catch (error) {
+                      // Log but do not surface persistence errors in preview UI
+                      console.error("Failed to persist selected package for preview", {
+                        jobId,
+                        selectedPackage: pkg,
+                        error,
+                      });
                     }
                   }}
                   disabled={submitting}
