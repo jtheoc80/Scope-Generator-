@@ -91,13 +91,29 @@ function computeConcreteCY(totalSF: number, thicknessIn: number) {
   return round1(cy);
 }
 
+const DRIVEWAY_PACKAGE_THICKNESS_BETTER_MIN_IN = 5;
+
+const DRIVEWAY_PACKAGE_PREMIUM_FINISH_TYPES: DrivewayFinishType[] = ["stamped", "exposed"];
+
+const DRIVEWAY_PACKAGE_REINFORCEMENT_BETTER: DrivewayReinforcement[] = [
+  "wire-mesh",
+  "#3-rebar",
+  "#4-rebar",
+];
+
 function normalizePackageFromSelections(params: {
   finishType: DrivewayFinishType;
   thicknessIn: number;
   reinforcement: DrivewayReinforcement;
 }): DrivewayPackage {
-  if (params.finishType === "stamped" || params.finishType === "exposed") return "best";
-  if (params.thicknessIn >= 5 || params.reinforcement === "wire-mesh" || params.reinforcement === "#3-rebar" || params.reinforcement === "#4-rebar") {
+  if (DRIVEWAY_PACKAGE_PREMIUM_FINISH_TYPES.includes(params.finishType)) {
+    return "best";
+  }
+
+  if (
+    params.thicknessIn >= DRIVEWAY_PACKAGE_THICKNESS_BETTER_MIN_IN ||
+    DRIVEWAY_PACKAGE_REINFORCEMENT_BETTER.includes(params.reinforcement)
+  ) {
     return "better";
   }
   return "good";
