@@ -552,9 +552,16 @@ export default function DrivewayMeasurePage() {
         }),
       });
 
-      // Poll until READY (same behavior as /m/issues)
-      for (let i = 0; i < 60; i++) {
-        await new Promise((r) => setTimeout(r, 1000));
+      // Poll until READY with exponential backoff
+      // Strategy: Start with quick polls (500ms), gradually increase to max 5s
+      // Total timeout: ~90 seconds (accommodates AI generation + potential retries)
+      // Backoff schedule: 500ms → 1s → 2s → 3s → 5s (repeating 5s thereafter)
+      const maxAttempts = 30;
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        // Calculate delay with exponential backoff, capped at 5 seconds
+        const delay = Math.min(500 * Math.pow(1.5, attempt), 5000);
+        await new Promise((r) => setTimeout(r, delay));
+        
         const draft = await mobileApiFetch<DraftStatus>(`/api/mobile/jobs/${jobId}/draft`, { method: "GET" });
         if (draft.status === "READY" && (draft as any).payload) {
           const encodedPayload = encodeURIComponent(JSON.stringify((draft as any).payload));
@@ -562,10 +569,10 @@ export default function DrivewayMeasurePage() {
           return;
         }
         if (draft.status === "FAILED") {
-          throw new Error("Scope generation failed. Please try again.");
+          throw new Error("Scope generation failed. Please try again or contact support if the issue persists.");
         }
       }
-      throw new Error("Scope generation timed out. Please try again.");
+      throw new Error("Scope generation is taking longer than expected. Please refresh the page and check if your scope was created, or try again in a few moments.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to generate proposal");
     } finally {
