@@ -53,7 +53,7 @@ const proposals: ProposalData[] = [
     id: "roofing",
     title: "Roof Replacement",
     type: "Sample",
-    imageSrc: "/images/examples/roof-before.jpg",
+    imageSrc: "/images/examples/roof-jobsite.jpg",
     imageAlt: "Roof replacement job site photo",
     lineItems: [
       { description: "Tear off shingles + underlayment", amount: 2400 },
