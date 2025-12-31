@@ -579,6 +579,9 @@ function GeneratorContent() {
 
     const opts = service.options || {};
     let extraCost = 0;
+    
+    // Collect scopeAdditions separately for merging into scopeSections
+    const optionScopeAdditions: string[] = [];
 
     jobType.options.forEach((opt) => {
       const value = opts[opt.id];
@@ -586,13 +589,18 @@ function GeneratorContent() {
         if (opt.type === "select" && opt.choices && typeof value === "string") {
           const selectedChoice = opt.choices.find((c) => c.value === value);
           if (selectedChoice) {
-            if (selectedChoice.scopeAddition)
+            if (selectedChoice.scopeAddition) {
               finalScope.push(selectedChoice.scopeAddition);
+              optionScopeAdditions.push(selectedChoice.scopeAddition);
+            }
             if (selectedChoice.priceModifier)
               extraCost += selectedChoice.priceModifier;
           }
         } else if (opt.type === "boolean" && value === true) {
-          if (opt.scopeAddition) finalScope.push(opt.scopeAddition);
+          if (opt.scopeAddition) {
+            finalScope.push(opt.scopeAddition);
+            optionScopeAdditions.push(opt.scopeAddition);
+          }
           if (opt.priceModifier) extraCost += opt.priceModifier;
         }
       }
@@ -690,14 +698,28 @@ function GeneratorContent() {
     }
 
     const trade = availableTemplates.find((t) => t.id === service.tradeId);
+    
+    // Merge scopeAdditions into scopeSections if they exist
+    // Add them to a "Selected Options" section or append to the last section
+    let mergedScopeSections = jobType.scopeSections;
+    if (jobType.scopeSections && optionScopeAdditions.length > 0) {
+      // Create a copy of scopeSections and add options items to a new section
+      mergedScopeSections = [
+        ...jobType.scopeSections,
+        {
+          title: "Selected Options & Customizations",
+          items: optionScopeAdditions
+        }
+      ];
+    }
 
     return {
       serviceId: service.id,
       tradeName: trade?.trade || "",
       jobTypeName: jobType.name,
       scope: enhancedScopes[service.id] || finalScope,
-      // Pass through new section-based scope fields from template
-      scopeSections: jobType.scopeSections,
+      // Pass through new section-based scope fields from template, merged with option selections
+      scopeSections: mergedScopeSections,
       included: jobType.included,
       assumptions: jobType.assumptions,
       addons: jobType.addons,

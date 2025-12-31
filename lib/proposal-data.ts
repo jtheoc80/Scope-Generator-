@@ -59,7 +59,14 @@ export const templates: Template[] = [
         exclusions: [
           "Repair of hidden water damage discovered after demolition",
           "Electrical upgrades beyond existing circuits",
-          "Permits and inspection fees (if required)"
+          "Permits and inspection fees (if required)",
+          "Drain relocation may be required depending on existing conditions (quoted separately if needed)"
+        ],
+        assumptions: [
+          "Existing plumbing rough-in is accessible and in serviceable condition",
+          "No hidden water damage, mold, or rot in wall cavities",
+          "Standard ceiling height (8 ft or less)",
+          "Homeowner to select fixtures/finishes prior to material ordering"
         ],
         baseScope: [
           "Demolish existing bathtub and surround down to studs.",
@@ -75,19 +82,86 @@ export const templates: Template[] = [
           "Caulk all corners and transitions with mildew-resistant silicone.",
           "Final cleanup and debris removal; protect finished work."
         ],
+        scopeSections: [
+          {
+            title: "Pre-Construction / Protection",
+            items: [
+              "Site protection including floor covering and dust barriers.",
+              "Protect adjacent finishes and fixtures from damage."
+            ]
+          },
+          {
+            title: "Demolition",
+            items: [
+              "Demolish existing bathtub and surround down to studs.",
+              "Remove and dispose of all debris off-site per local regulations."
+            ]
+          },
+          {
+            title: "Plumbing (Rough-in / Adjustments)",
+            items: [
+              "Verify/modify shower valve location as required.",
+              "Verify shower drain location; adjust if needed (conditional).",
+              "Install new shower valve, mixing valve, and trim kit."
+            ]
+          },
+          {
+            title: "Waterproofing / Backer",
+            items: [
+              "Install waterproof backer board (cement board or foam board system).",
+              "Apply waterproof membrane to all wet areas meeting TCNA standards.",
+              "Seal all seams and fasteners per manufacturer specifications."
+            ]
+          },
+          {
+            title: "Wall Finish Installation",
+            items: [
+              "Install wall finish per selected wall system type.",
+              "Ensure plumb, level, and proper transitions at all corners.",
+              "Install trim profiles and corner pieces as required.",
+              "Seal all edges and joints with appropriate caulk/sealant."
+            ]
+          },
+          {
+            title: "Shower Door / Enclosure",
+            items: [
+              "Measure and install shower door/enclosure per selection.",
+              "Seal door frame to walls with silicone."
+            ]
+          },
+          {
+            title: "Finish / Cleanup",
+            items: [
+              "Final caulking at all transitions with mildew-resistant silicone.",
+              "Final cleanup, debris removal, and protect finished work.",
+              "Walkthrough and punch list completion with homeowner."
+            ]
+          }
+        ],
         options: [
+          {
+            id: "wall-system-type",
+            label: "Wall Finish Type",
+            type: "select",
+            choices: [
+              { value: "tile", label: "Tile", priceModifier: 0, scopeAddition: "Tile shower walls to ceiling height using thin-set mortar method. Grout all tile joints with premium sanded grout; seal grout lines." },
+              { value: "acrylic", label: "Acrylic Surround", priceModifier: -800, scopeAddition: "Install acrylic shower surround panels with matching trim pieces. Seal all seams with silicone." },
+              { value: "solid_surface", label: "Solid Surface Shower Wall System", priceModifier: 1200, scopeAddition: "Install solid-surface wall panels using approved adhesive. Install trim profiles and corner pieces as required. Seal all edges and joints with color-matched sealant. Ensure plumb, level, and proper transitions throughout." }
+            ]
+          },
           {
             id: "niche",
             label: "Add Recessed Niche",
             type: "boolean",
             priceModifier: 450,
-            scopeAddition: "Frame and install recessed tiled niche (12x24) for soap/shampoo storage with matching tile."
+            scopeAddition: "Frame and install recessed niche (12x24) for soap/shampoo storage with matching finish."
           },
           {
             id: "glass-door",
             label: "Glass Door Style",
             type: "select",
             choices: [
+              { value: "none", label: "No Glass Door (Curtain Rod Only)", priceModifier: 0, scopeAddition: "Install curtain rod for shower curtain." },
               { value: "framed", label: "Framed Sliding Door", priceModifier: 800, scopeAddition: "Install framed sliding glass shower door with chrome hardware." },
               { value: "semi-frameless", label: "Semi-Frameless Pivot", priceModifier: 1200, scopeAddition: "Install semi-frameless pivot glass door with brushed nickel hardware." },
               { value: "frameless", label: "Frameless Fixed Panel", priceModifier: 1800, scopeAddition: "Install frameless fixed glass panel with stainless steel clips and hardware." }
@@ -98,7 +172,7 @@ export const templates: Template[] = [
             label: "Built-in Shower Bench",
             type: "boolean",
             priceModifier: 650,
-            scopeAddition: "Construct waterproof concrete bench seat (approx. 18\" x 30\") and tile to match walls."
+            scopeAddition: "Construct waterproof bench seat (approx. 18\" x 30\") with matching wall finish."
           },
           {
             id: "linear-drain",
@@ -113,6 +187,164 @@ export const templates: Template[] = [
             type: "boolean",
             priceModifier: 1200,
             scopeAddition: "Install (3) wall-mounted body spray jets with dedicated valve control."
+          },
+          {
+            id: "valve-upgrade",
+            label: "Upgrade Shower Valve/Trim",
+            type: "boolean",
+            priceModifier: 350,
+            scopeAddition: "Upgrade to premium thermostatic shower valve with matching trim kit."
+          }
+        ]
+      },
+      {
+        id: "shower-remodel",
+        name: "Shower Remodel",
+        basePriceRange: { low: 6500, high: 10000 },
+        estimatedDays: { low: 4, high: 7 },
+        warranty: "1-year labor warranty on all workmanship. Manufacturer warranties apply to all fixtures and materials.",
+        exclusions: [
+          "Repair of hidden water damage discovered after demolition",
+          "Electrical upgrades beyond existing circuits",
+          "Permits and inspection fees (if required)",
+          "Drain relocation may be required depending on existing conditions (quoted separately if needed)",
+          "Glass lead time may extend project schedule"
+        ],
+        assumptions: [
+          "Existing shower pan/base to be replaced or is in serviceable condition",
+          "Existing plumbing rough-in is accessible and in serviceable condition",
+          "No hidden water damage, mold, or rot in wall cavities",
+          "Standard ceiling height (8 ft or less)",
+          "Homeowner to select fixtures/finishes prior to material ordering"
+        ],
+        baseScope: [
+          "Demolish existing shower surround and associated materials.",
+          "Dispose of all debris off-site in accordance with local regulations.",
+          "Inspect framing and plumbing for water damage; report findings to homeowner.",
+          "Install new shower base if required, with proper slope to drain.",
+          "Install waterproof backer board on all shower walls.",
+          "Apply waterproof membrane to all wet areas.",
+          "Install new shower valve and trim if included.",
+          "Install wall finish per selected system type.",
+          "Install shower head, arm, and escutcheon plate.",
+          "Caulk all corners and transitions with mildew-resistant silicone.",
+          "Final cleanup and debris removal; protect finished work."
+        ],
+        scopeSections: [
+          {
+            title: "Pre-Construction / Protection",
+            items: [
+              "Site protection including floor covering and dust barriers.",
+              "Protect adjacent finishes and fixtures from damage."
+            ]
+          },
+          {
+            title: "Demolition",
+            items: [
+              "Demo existing shower surround and associated materials.",
+              "Remove and dispose of all debris off-site per local regulations."
+            ]
+          },
+          {
+            title: "Plumbing (Rough-in / Adjustments)",
+            items: [
+              "Verify/modify shower valve location as required.",
+              "Verify shower drain location; adjust if needed (as allowance or conditional).",
+              "Replace/upgrade shower valve and trim if included."
+            ]
+          },
+          {
+            title: "Waterproofing / Backer",
+            items: [
+              "Install waterproof backer board (e.g., waterproof foam board system or cement board).",
+              "Apply waterproofing method per manufacturer specifications.",
+              "Seal all seams and fasteners per manufacturer method."
+            ]
+          },
+          {
+            title: "Wall System Install",
+            items: [
+              "Install wall finish per selected wall system type.",
+              "Ensure plumb, level, and proper transitions at all corners.",
+              "Install trim profiles and corner pieces as required.",
+              "Seal all edges and joints with appropriate caulk/sealant."
+            ]
+          },
+          {
+            title: "Shower Door / Enclosure",
+            items: [
+              "Measure and install shower door/enclosure per selection.",
+              "Seal door frame to walls with silicone."
+            ]
+          },
+          {
+            title: "Finish / Cleanup",
+            items: [
+              "Final caulking at all transitions with mildew-resistant silicone.",
+              "Final cleanup, debris removal, and haul-off.",
+              "Basic punch list and walkthrough with homeowner."
+            ]
+          }
+        ],
+        options: [
+          {
+            id: "wall-system-type",
+            label: "Wall Finish Type",
+            type: "select",
+            choices: [
+              { value: "tile", label: "Tile", priceModifier: 0, scopeAddition: "Tile shower walls to ceiling height using thin-set mortar method. Grout all tile joints with premium sanded grout; seal grout lines." },
+              { value: "acrylic", label: "Acrylic Surround", priceModifier: -800, scopeAddition: "Install acrylic shower surround panels with matching trim pieces. Seal all seams with silicone." },
+              { value: "solid_surface", label: "Solid Surface Shower Wall System", priceModifier: 1200, scopeAddition: "Install solid-surface wall panels using approved adhesive. Install trim profiles and corner pieces as required. Seal all edges and joints with color-matched sealant. Ensure plumb, level, and proper transitions throughout." }
+            ]
+          },
+          {
+            id: "shower-base",
+            label: "Shower Base",
+            type: "select",
+            choices: [
+              { value: "keep", label: "Keep Existing Base", priceModifier: 0, scopeAddition: "Retain existing shower base; inspect and seal as needed." },
+              { value: "acrylic", label: "New Acrylic Base", priceModifier: 600, scopeAddition: "Install new acrylic shower base with proper slope to drain." },
+              { value: "tile", label: "New Tile Floor / Mud Pan", priceModifier: 1400, scopeAddition: "Install new mortar bed shower pan with tile floor and linear or center drain." }
+            ]
+          },
+          {
+            id: "niche",
+            label: "Add Recessed Niche",
+            type: "boolean",
+            priceModifier: 450,
+            scopeAddition: "Frame and install recessed niche (12x24) for soap/shampoo storage with matching finish."
+          },
+          {
+            id: "glass-door",
+            label: "Shower Door Type",
+            type: "select",
+            choices: [
+              { value: "none", label: "No Glass Door (Curtain Rod Only)", priceModifier: 0, scopeAddition: "Install curtain rod for shower curtain." },
+              { value: "framed", label: "Standard Framed Door", priceModifier: 800, scopeAddition: "Install framed glass shower door with chrome hardware." },
+              { value: "semi-frameless", label: "Semi-Frameless Door", priceModifier: 1200, scopeAddition: "Install semi-frameless pivot glass door with brushed nickel hardware." },
+              { value: "frameless", label: "Frameless Glass Door", priceModifier: 1800, scopeAddition: "Install frameless glass door/panel with stainless steel hardware." }
+            ]
+          },
+          {
+            id: "bench",
+            label: "Built-in Shower Bench",
+            type: "boolean",
+            priceModifier: 650,
+            scopeAddition: "Construct waterproof bench seat (approx. 18\" x 30\") with matching wall finish."
+          },
+          {
+            id: "valve-upgrade",
+            label: "Upgrade Shower Valve/Trim",
+            type: "boolean",
+            priceModifier: 350,
+            scopeAddition: "Upgrade to premium thermostatic shower valve with matching trim kit."
+          },
+          {
+            id: "linear-drain",
+            label: "Linear Drain Upgrade",
+            type: "boolean",
+            priceModifier: 550,
+            scopeAddition: "Install linear stainless steel drain system in lieu of standard center drain."
           }
         ]
       },
@@ -317,6 +549,194 @@ export const templates: Template[] = [
             type: "boolean",
             priceModifier: 225,
             scopeAddition: "Remove old light and install new vanity light fixture above mirror."
+          }
+        ]
+      },
+      {
+        id: "walk-in-tub",
+        name: "Walk-In Tub Installation",
+        basePriceRange: { low: 8000, high: 15000 },
+        estimatedDays: { low: 3, high: 5 },
+        warranty: "2-year labor warranty on all workmanship. Manufacturer warranty on tub and components (typically 1-3 years on door seal, lifetime on shell).",
+        exclusions: [
+          "Subfloor repair excluded unless discovered and approved during demo",
+          "Electrical upgrades beyond dedicated circuit (panel upgrades excluded)",
+          "Permit fees (allowance toggle available)",
+          "Hidden water damage or mold remediation",
+          "Water heater replacement or upgrade (quoted separately if needed)"
+        ],
+        assumptions: [
+          "Existing tub alcove dimensions accommodate standard walk-in tub (verify during site visit)",
+          "Existing water supply lines and drain are accessible and in serviceable condition",
+          "Standard residential electrical service (100A+ panel) with available breaker space",
+          "Existing water heater capacity is adequate for tub fill volume (40+ gallon recommended)",
+          "Floor structure is sound and can support filled tub weight",
+          "Homeowner to select tub model and options prior to ordering"
+        ],
+        baseScope: [
+          "Protect floors and adjacent areas with drop cloths and plastic sheeting.",
+          "Disconnect and remove existing bathtub, surround, and associated fixtures.",
+          "Dispose of all demolition debris off-site per local regulations.",
+          "Inspect and repair subfloor as needed (minor repairs included).",
+          "Verify water supply lines and shutoffs; replace supply lines.",
+          "Modify drain alignment as needed for walk-in tub connection.",
+          "Install walk-in tub unit; level, secure, and connect plumbing.",
+          "Install tub filler, handheld shower (if selected), and drain assembly.",
+          "Verify electrical capacity; install dedicated GFCI circuit if jets/heater selected.",
+          "Install wall surround panels or prepare walls for tile (per selection).",
+          "Test for leaks, function test door seal, and test jets/heater if included.",
+          "Final cleanup, debris removal, and homeowner walkthrough."
+        ],
+        scopeSections: [
+          {
+            title: "Pre-Construction / Protection",
+            items: [
+              "Protect floors and adjacent areas with drop cloths and plastic sheeting.",
+              "Install dust barriers as needed to protect rest of home."
+            ]
+          },
+          {
+            title: "Demolition",
+            items: [
+              "Disconnect and remove existing bathtub and surround.",
+              "Remove associated fixtures (faucet, drain, overflow).",
+              "Dispose of all demolition debris off-site per local regulations."
+            ]
+          },
+          {
+            title: "Plumbing",
+            items: [
+              "Verify water supply lines and shutoffs; replace supply lines as needed.",
+              "Modify drain alignment as required for walk-in tub connection (typical install).",
+              "Install tub filler, handheld shower (if selected), and drain assembly.",
+              "Connect all supply and drain lines; test for leaks."
+            ]
+          },
+          {
+            title: "Electrical Capacity",
+            items: [
+              "Verify electrical capacity for walk-in tub features.",
+              "If jets/heater selected: install dedicated GFCI circuit (may require permit).",
+              "Connect tub electrical components per manufacturer specifications."
+            ]
+          },
+          {
+            title: "Hot Water Capacity Check",
+            items: [
+              "Verify existing water heater capacity for tub fill volume.",
+              "Recommend water heater upgrade if inadequate (quoted separately)."
+            ]
+          },
+          {
+            title: "Walk-In Tub Installation",
+            items: [
+              "Position and level walk-in tub unit in alcove.",
+              "Secure tub to wall studs and floor per manufacturer specs.",
+              "Connect all plumbing and electrical components.",
+              "Test for leaks and verify door seal integrity.",
+              "Function test jets and inline heater if included."
+            ]
+          },
+          {
+            title: "Surround / Wall Finish",
+            items: [
+              "Install wall surround panels or prepare walls for tile (per selection).",
+              "Install trim profiles, corner pieces, and accessories.",
+              "Seal all edges and transitions with silicone."
+            ]
+          },
+          {
+            title: "Finish / Cleanup",
+            items: [
+              "Patch, paint, or touch up walls as needed (define scope per estimate).",
+              "Final cleanup and debris disposal.",
+              "Walkthrough with homeowner; demonstrate tub operation and safety features."
+            ]
+          }
+        ],
+        options: [
+          {
+            id: "jets",
+            label: "Hydrotherapy Jets",
+            type: "boolean",
+            priceModifier: 1500,
+            scopeAddition: "Walk-in tub includes hydrotherapy jet system with air/water jets. Verify electrical capacity; dedicated GFCI circuit required."
+          },
+          {
+            id: "heater",
+            label: "Inline Water Heater",
+            type: "boolean",
+            priceModifier: 800,
+            scopeAddition: "Walk-in tub includes inline water heater to maintain bath temperature. Verify electrical capacity; dedicated GFCI circuit required."
+          },
+          {
+            id: "electrical-circuit",
+            label: "Dedicated Electrical Circuit",
+            type: "select",
+            choices: [
+              { value: "verify", label: "Verify & Quote If Needed", priceModifier: 0, scopeAddition: "Verify existing electrical capacity. If dedicated GFCI circuit is required for jets/heater, quote electrical work separately." },
+              { value: "include", label: "Include Dedicated GFCI Circuit", priceModifier: 450, scopeAddition: "Install new dedicated 20A GFCI circuit from electrical panel to tub location. Includes breaker, wiring, and GFCI outlet." },
+              { value: "exclude", label: "Exclude (Homeowner to Arrange)", priceModifier: 0, scopeAddition: "Electrical circuit work excluded from this scope. Homeowner to arrange licensed electrician if dedicated circuit required." }
+            ]
+          },
+          {
+            id: "shower-config",
+            label: "Shower Configuration",
+            type: "select",
+            choices: [
+              { value: "tub_only", label: "Tub Only (No Shower)", priceModifier: 0, scopeAddition: "Walk-in tub installed for bathing only; no showerhead or shower configuration." },
+              { value: "handheld", label: "Tub + Handheld Shower", priceModifier: 250, scopeAddition: "Install handheld showerhead on adjustable slide bar for seated showering and rinsing." },
+              { value: "tub_shower_kit", label: "Tub + Shower Conversion Kit", priceModifier: 800, scopeAddition: "Install full shower conversion kit with wall-mount showerhead, diverter valve, and surround panels for standing shower capability." }
+            ]
+          },
+          {
+            id: "surround-type",
+            label: "Wall Surround Type",
+            type: "select",
+            choices: [
+              { value: "acrylic", label: "Acrylic Surround Panels", priceModifier: 0, scopeAddition: "Install acrylic wall surround panels with matching trim pieces. Seal all seams with silicone." },
+              { value: "solid_surface", label: "Solid Surface Wall System", priceModifier: 1200, scopeAddition: "Install solid-surface wall panels using approved adhesive. Install trim profiles and corner pieces as required. Seal all edges and joints with color-matched sealant." },
+              { value: "tile", label: "Tile Walls", priceModifier: 1800, scopeAddition: "Tile walls above tub to ceiling height using thin-set mortar method. Install waterproof backer board. Grout all tile joints; seal grout lines." }
+            ]
+          },
+          {
+            id: "fixture-finish",
+            label: "Fixture Finish",
+            type: "select",
+            choices: [
+              { value: "chrome", label: "Chrome", priceModifier: 0, scopeAddition: "All fixtures in polished chrome finish." },
+              { value: "brushed-nickel", label: "Brushed Nickel", priceModifier: 150, scopeAddition: "All fixtures in brushed nickel finish." },
+              { value: "matte-black", label: "Matte Black", priceModifier: 200, scopeAddition: "All fixtures in matte black finish." },
+              { value: "oil-rubbed-bronze", label: "Oil-Rubbed Bronze", priceModifier: 200, scopeAddition: "All fixtures in oil-rubbed bronze finish." }
+            ]
+          },
+          {
+            id: "grab-bars",
+            label: "Safety Grab Bars",
+            type: "boolean",
+            priceModifier: 350,
+            scopeAddition: "Install (2) ADA-compliant grab bars: one inside tub area, one at entry. Secured to wall studs or blocking."
+          },
+          {
+            id: "water-heater-check",
+            label: "Hot Water Capacity Assessment",
+            type: "boolean",
+            priceModifier: 0,
+            scopeAddition: "Assess existing water heater capacity for walk-in tub fill requirements. Provide recommendation if upgrade needed."
+          },
+          {
+            id: "water-heater-upgrade",
+            label: "Water Heater Upgrade Allowance",
+            type: "boolean",
+            priceModifier: 1500,
+            scopeAddition: "Allowance for water heater upgrade or installation of mixing valve to ensure adequate hot water for tub fill. Final cost determined after assessment."
+          },
+          {
+            id: "permit-allowance",
+            label: "Permit Allowance",
+            type: "boolean",
+            priceModifier: 300,
+            scopeAddition: "Allowance for permit fees and inspections if required by local jurisdiction. Contractor to obtain permits."
           }
         ]
       }
