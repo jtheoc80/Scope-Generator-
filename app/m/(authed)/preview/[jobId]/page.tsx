@@ -130,13 +130,13 @@ export default function PreviewPage() {
     if (payloadParam) {
       try {
         // Some environments return already-decoded query params; support both.
-        let decoded: unknown;
+        let decoded: DraftPayload;
         try {
-          decoded = JSON.parse(decodeURIComponent(payloadParam));
+          decoded = JSON.parse(decodeURIComponent(payloadParam)) as DraftPayload;
         } catch {
-          decoded = JSON.parse(payloadParam);
+          decoded = JSON.parse(payloadParam) as DraftPayload;
         }
-        setPayload(decoded);
+        setPayload(decoded ?? null);
       } catch {
         setError("Failed to load draft data");
       }
