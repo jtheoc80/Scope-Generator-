@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { ProposalThumbnail } from "@/components/ui/ProposalThumbnail";
 import { cn } from "@/lib/utils";
 import {
   Calendar,
@@ -29,6 +30,8 @@ export interface ProposalRow {
   priceHigh: number;
   status: string;
   createdAt: string;
+  photoCount?: number | null;
+  thumbnailUrl?: string | null;
   publicToken?: string | null;
   contractorSignature?: string | null;
   lastViewedAt?: string | null;
@@ -222,6 +225,7 @@ export function RecentProposalsTable({
             <table className="w-full text-sm">
               <thead className="border-y border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
+                  <th className="hidden px-6 py-3 text-left font-semibold md:table-cell">Preview</th>
                   <th className="px-6 py-3 text-left font-semibold">Proposal</th>
                   <th className="px-6 py-3 text-left font-semibold">Trade</th>
                   <th className="px-6 py-3 text-left font-semibold">Status</th>
@@ -239,9 +243,33 @@ export function RecentProposalsTable({
 
                   return (
                     <tr key={p.id} className="bg-white">
+                      <td className="hidden px-6 py-4 md:table-cell">
+                        {p.thumbnailUrl ? (
+                          <ProposalThumbnail
+                            href={`/proposals/${p.id}`}
+                            url={p.thumbnailUrl}
+                            count={p.photoCount}
+                            title={p.clientName}
+                            className="h-11 w-11"
+                          />
+                        ) : null}
+                      </td>
                       <td className="px-6 py-4">
-                        <div className="font-semibold text-slate-900">{p.clientName}</div>
-                        <div className="mt-0.5 text-xs text-slate-500">{p.address}</div>
+                        <div className="flex items-start gap-3">
+                          {p.thumbnailUrl ? (
+                            <ProposalThumbnail
+                              href={`/proposals/${p.id}`}
+                              url={p.thumbnailUrl}
+                              count={p.photoCount}
+                              title={p.clientName}
+                              className="mt-0.5 h-9 w-9 md:hidden"
+                            />
+                          ) : null}
+                          <div className="min-w-0">
+                            <div className="font-semibold text-slate-900">{p.clientName}</div>
+                            <div className="mt-0.5 text-xs text-slate-500">{p.address}</div>
+                          </div>
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-slate-700">{p.jobTypeName}</td>
                       <td className="px-6 py-4">
