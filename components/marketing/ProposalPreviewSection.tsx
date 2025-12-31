@@ -287,13 +287,6 @@ function ProposalCard({ proposal }: { proposal: ProposalData }) {
               onError={() => setImageError(true)}
             />
           )}
-          {/* Corner pill */}
-          <div className="absolute top-3 left-3">
-            <span className="inline-flex items-center gap-1.5 bg-white/95 backdrop-blur-sm text-slate-700 text-xs font-medium px-2.5 py-1.5 rounded-full shadow-sm border border-white/50">
-              <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-              Real job photo
-            </span>
-          </div>
         </div>
 
         {/* Proposal Preview */}
