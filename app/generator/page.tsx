@@ -329,8 +329,27 @@ const getAreaOptionsForTrade = (
       // Electrical can be in more areas than plumbing, but not exterior
       return toOptions(electricalAreaValues);
     case "hvac":
-      // HVAC typically affects whole house or specific rooms
-      return toOptions([...interiorRoomValues, "garage"]);
+      // HVAC has both interior components (air handlers, furnaces, ductwork) 
+      // and exterior components (condensers, outdoor units)
+      // Interior: rooms where ducts, vents, air handlers are located
+      // Exterior: where outdoor units/condensers are typically placed
+      return toOptions([
+        // Interior areas - where HVAC equipment and ductwork are located
+        "living-room",
+        "dining-room",
+        "bedroom",
+        "master-bedroom",
+        "home-office",
+        "laundry-room",
+        "basement",      // Common location for furnaces/air handlers
+        "attic",         // Common for ductwork and air handlers
+        "whole-house",   // Whole house HVAC systems
+        // Exterior areas - where outdoor units/condensers are placed
+        "backyard",      // Most common condenser location
+        "side-yard",     // Very common condenser location
+        "garage",        // Air handlers in warm climates, mini-splits
+        "carport",       // Sometimes outdoor units near carport
+      ]);
     case "handyman":
       // Handyman can work anywhere
       return toOptions([...interiorRoomValues, ...exteriorAreaValues]);
