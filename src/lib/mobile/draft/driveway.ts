@@ -367,15 +367,12 @@ export function generateDrivewayDraft(params: {
   const better = makeLineItem("BETTER");
   const best = makeLineItem("BEST");
 
-  // Default package: honor user selection if present; otherwise infer from finish/thickness/reinforcement.
-  const requested = toStr((params.driveway.selectedPackage || "").toUpperCase(), ["GOOD", "BETTER", "BEST"] as const, "BETTER");
-  const defaultPackage: DrivewayPackage =
-    requested ||
-    (finishType === "stamped" || finishType === "exposed"
-      ? "BEST"
-      : thicknessIn >= 5 || reinforcement !== "none"
-        ? "BETTER"
-        : "GOOD");
+  // Default package: honor a valid user selection if present; otherwise fall back to BETTER.
+  const defaultPackage = toStr(
+    (params.driveway.selectedPackage || "").toUpperCase(),
+    ["GOOD", "BETTER", "BEST"] as const,
+    "BETTER",
+  ) as DrivewayPackage;
 
   return {
     packages: {
