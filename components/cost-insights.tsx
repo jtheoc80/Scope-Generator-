@@ -10,8 +10,23 @@ interface CostInsightsProps {
 }
 
 function extractZipCode(address: string): string | null {
-  const zipMatch = address.match(/\b(\d{5})(?:-\d{4})?\b/);
-  return zipMatch ? zipMatch[1] : null;
+  // First, try to match ZIP code after a 2-letter state abbreviation at the end of the address
+  // This is the standard US address format: "City, ST 12345" or "City, ST 12345-6789"
+  const stateZipMatch = address.match(/\b[A-Z]{2}\s+(\d{5})(?:-\d{4})?\s*$/i);
+  if (stateZipMatch) {
+    return stateZipMatch[1];
+  }
+  
+  // Fallback: get the LAST 5-digit number in the address
+  // This handles edge cases where the format might be slightly different
+  const allMatches = address.match(/\b(\d{5})(?:-\d{4})?\b/g);
+  if (allMatches && allMatches.length > 0) {
+    const lastMatch = allMatches[allMatches.length - 1];
+    // Extract just the 5-digit portion (in case it's a ZIP+4)
+    return lastMatch.substring(0, 5);
+  }
+  
+  return null;
 }
 
 function formatCurrency(amount: number): string {
