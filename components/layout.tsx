@@ -29,45 +29,73 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col font-sans">
       <header className="border-b border-border bg-white sticky top-0 z-50">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <div className="bg-secondary p-1.5 rounded-sm">
-              <Hammer className="w-5 h-5 text-primary-foreground" />
+        <div className="container mx-auto px-4 h-14 md:h-16 flex items-center justify-between">
+          <Link
+            href="/"
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+          >
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-secondary">
+              <Hammer className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-heading font-bold text-primary uppercase tracking-tight">
+            <span className="text-lg sm:text-xl font-heading font-bold text-primary uppercase tracking-tight leading-none">
               ScopeGen
             </span>
           </Link>
 
           {/* Desktop Navigation - Alphabetical Order */}
-          <nav className="hidden md:flex items-center gap-6">
-            <Link href="/dashboard" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+          <nav className="hidden md:flex items-center gap-4 lg:gap-6">
+            <Link
+              href="/dashboard"
+              className="text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
+            >
               {t.nav.dashboard}
             </Link>
-            <Link href="/#how-it-works" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+            <Link
+              href="/#how-it-works"
+              className="text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
+            >
               {t.nav.howItWorks}
             </Link>
-            <Link href="/market-pricing" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors" data-testid="nav-market-pricing">
+            <Link
+              href="/market-pricing"
+              className="text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
+              data-testid="nav-market-pricing"
+            >
               {t.nav.marketPricing}
             </Link>
-            <Link href="/#pricing" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+            <Link
+              href="/#pricing"
+              className="text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
+            >
               {t.pricing.title}
             </Link>
             {(user?.subscriptionPlan === 'pro' || user?.subscriptionPlan === 'crew') && (
-              <Link href="/pricing-insights" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+              <Link
+                href="/pricing-insights"
+                className="text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
+              >
                 {t.nav.pricingInsights}
               </Link>
             )}
             {user?.subscriptionPlan === 'crew' && (
-              <Link href="/search-console" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+              <Link
+                href="/search-console"
+                className="text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
+              >
                 {t.nav.searchConsole}
               </Link>
             )}
-            <Link href="/settings" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+            <Link
+              href="/settings"
+              className="text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
+            >
               {t.nav.settings}
             </Link>
             {user?.subscriptionPlan === 'crew' && (
-              <Link href="/crew" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+              <Link
+                href="/crew"
+                className="text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
+              >
                 {t.nav.team}
               </Link>
             )}
@@ -75,14 +103,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             {user ? (
               <Link
                 href="/sign-out"
-                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+                className="text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
               >
                 {t.nav.signOut}
               </Link>
             ) : (
               <Link
                 href="/sign-in"
-                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+                className="text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
               >
                 {t.nav.signIn}
               </Link>
@@ -90,16 +118,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             {user && (
               <Link 
                 href="/m/create" 
-                className="flex items-center gap-1.5 text-sm font-medium text-orange-600 hover:text-orange-700 transition-colors"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition-colors"
                 title="Start ScopeScan™"
                 data-testid="nav-photo-capture"
               >
-                <Camera className="w-4 h-4" />
-                <span>📷</span>
+                <Camera className="h-5 w-5" />
               </Link>
             )}
             {location === "/" && (
-              <Link href="/app" className="bg-orange-500 text-white px-4 py-2 rounded-md text-sm font-semibold hover:bg-orange-600 transition-colors">
+              <Link
+                href="/app"
+                className="inline-flex items-center justify-center h-10 px-4 rounded-lg bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 transition-colors"
+              >
                 {t.hero.cta}
               </Link>
             )}
