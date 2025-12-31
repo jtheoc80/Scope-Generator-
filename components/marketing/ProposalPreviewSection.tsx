@@ -53,7 +53,7 @@ const proposals: ProposalData[] = [
     id: "roofing",
     title: "Roof Replacement",
     type: "Sample",
-    imageSrc: "https://images.unsplash.com/photo-1632759145954-d0e5f3b8b6e8?w=800&h=500&fit=crop&crop=center",
+    imageSrc: "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&h=500&fit=crop",
     imageAlt: "Residential roof with asphalt shingles",
     lineItems: [
       { description: "Tear off shingles + underlayment", amount: 2400 },
@@ -272,11 +272,19 @@ function ProposalCard({ proposal }: { proposal: ProposalData }) {
     <>
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
         {/* Job Photo */}
-        <div className="relative aspect-[16/10] bg-slate-100">
+        <div className="relative aspect-[16/10] bg-slate-100 overflow-hidden">
           {imageError ? (
             <div className="absolute inset-0 bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center">
               <span className="text-slate-500 text-sm">Job Photo</span>
             </div>
+          ) : proposal.imageSrc.startsWith("http") ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={proposal.imageSrc}
+              alt={proposal.imageAlt}
+              className="absolute inset-0 w-full h-full object-cover"
+              onError={() => setImageError(true)}
+            />
           ) : (
             <Image
               src={proposal.imageSrc}
