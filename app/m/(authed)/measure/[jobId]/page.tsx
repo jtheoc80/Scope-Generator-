@@ -25,12 +25,15 @@ const GOOGLE_MAPS_LIBRARIES: ("drawing" | "geometry")[] = ["drawing", "geometry"
 
 const DEFAULT_CENTER: LatLng = { lat: 30.2672, lng: -97.7431 }; // Austin fallback
 
+// Conversion factor: 1 square meter = 10.7639104167 square feet
+const SQ_METERS_TO_SQ_FEET = 10.7639104167;
+
 function metersToFeet(m: number) {
   return m * 3.28084;
 }
 
 function meters2ToSqft(m2: number) {
-  return m2 * 10.7639104167;
+  return m2 * SQ_METERS_TO_SQ_FEET;
 }
 
 function haversineMeters(a: LatLng, b: LatLng) {
