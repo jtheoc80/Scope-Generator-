@@ -271,10 +271,6 @@ export default function SelectIssuesPage() {
       // Backoff schedule: 500ms → 750ms → 1.1s → 1.7s → 2.5s → 3.8s → 5s (repeating 5s thereafter)
       const maxAttempts = 30;
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        // Calculate delay with exponential backoff, capped at 5 seconds
-        const delay = Math.min(500 * Math.pow(1.5, attempt), 5000);
-        await new Promise((r) => setTimeout(r, delay));
-
         const draft = await mobileApiFetch<DraftStatus>(
           `/api/mobile/jobs/${jobId}/draft`,
           { method: "GET" }
@@ -289,6 +285,10 @@ export default function SelectIssuesPage() {
         if (draft.status === "FAILED") {
           throw new Error("Scope generation failed. Please try again or contact support if the issue persists.");
         }
+
+        // Calculate delay with exponential backoff, capped at 5 seconds
+        const delay = Math.min(500 * Math.pow(1.5, attempt), 5000);
+        await new Promise((r) => setTimeout(r, delay));
       }
 
       throw new Error("Scope generation is taking longer than expected. Please refresh the page and check if your scope was created, or try again in a few moments.");
