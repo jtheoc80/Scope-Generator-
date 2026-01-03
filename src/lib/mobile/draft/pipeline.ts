@@ -21,7 +21,7 @@ export type MobilePhotoInput = {
 };
 
 export type MobileDraftOutput = {
-  packages: Record<"GOOD" | "BETTER" | "BEST", { label: string; lineItems: ProposalLineItem[] }>;
+  packages: Record<"GOOD" | "BETTER" | "BEST", { label: string; total: number; lineItems: ProposalLineItem[] }>;
   defaultPackage: "GOOD" | "BETTER" | "BEST";
   confidence: number;
   questions: string[];
@@ -317,11 +317,16 @@ export async function generateMobileDraft(params: {
     enhanceSuccess: enhance.success,
   });
 
+  // Calculate totals as midpoint of priceLow and priceHigh for each package
+  const goodTotal = Math.round((good.priceLow + good.priceHigh) / 2);
+  const betterTotal = Math.round((better.priceLow + better.priceHigh) / 2);
+  const bestTotal = Math.round((best.priceLow + best.priceHigh) / 2);
+
   return {
     packages: {
-      GOOD: { label: "Good", lineItems: [good] },
-      BETTER: { label: "Better", lineItems: [better] },
-      BEST: { label: "Best", lineItems: [best] },
+      GOOD: { label: "Good", total: goodTotal, lineItems: [good] },
+      BETTER: { label: "Better", total: betterTotal, lineItems: [better] },
+      BEST: { label: "Best", total: bestTotal, lineItems: [best] },
     },
     defaultPackage: "BETTER",
     confidence,

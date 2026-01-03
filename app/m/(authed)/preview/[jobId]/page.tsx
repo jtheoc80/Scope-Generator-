@@ -35,9 +35,9 @@ type DraftPayload = {
   summary?: string;
   totalPrice?: number;
   packages?: {
-    GOOD?: { total: number };
-    BETTER?: { total: number };
-    BEST?: { total: number };
+    GOOD?: { total: number; lineItems?: Array<{ priceLow: number; priceHigh: number }> };
+    BETTER?: { total: number; lineItems?: Array<{ priceLow: number; priceHigh: number }> };
+    BEST?: { total: number; lineItems?: Array<{ priceLow: number; priceHigh: number }> };
   };
 };
 
