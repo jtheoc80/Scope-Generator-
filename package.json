@@ -7,7 +7,7 @@
     "prebuild": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\"",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "npx eslint",
     "typecheck": "npx -p typescript tsc --noEmit",
     "test:e2e": "npx playwright test",
     "test:ci": "echo 'Unit tests not yet configured' && exit 0",
