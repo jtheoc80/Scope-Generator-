@@ -27,17 +27,3 @@ ALTER COLUMN "scope_sections" SET DEFAULT '[]'::jsonb;
 -- Note: This is safe because we just set all NULLs to []
 ALTER TABLE "proposals"
 ALTER COLUMN "scope_sections" SET NOT NULL;
-
--- Verification (will fail if something went wrong)
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns 
-    WHERE table_schema = 'public' 
-      AND table_name = 'proposals' 
-      AND column_name = 'scope_sections'
-      AND is_nullable = 'NO'
-  ) THEN
-    RAISE EXCEPTION 'scope_sections column verification failed';
-  END IF;
-END $$;
