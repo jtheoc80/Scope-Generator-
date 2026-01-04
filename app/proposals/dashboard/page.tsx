@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Layout from '@/components/layout';
 
 // Sample data - in production this would come from API
 const SAMPLE_PROPOSALS = [
@@ -87,7 +88,8 @@ export default function ContractorProposalDashboard() {
   });
 
   return (
-    <div className="min-h-screen bg-[#f5f6f8]">
+    <Layout>
+      <div className="min-h-screen bg-[#f5f6f8]">
       {/* Alert Banner */}
       {pendingCount > 0 && (
         <div className="bg-white border-l-[3px] border-[#d69e2e]">
@@ -470,5 +472,6 @@ export default function ContractorProposalDashboard() {
         </div>
       </div>
     </div>
+    </Layout>
   );
 }
