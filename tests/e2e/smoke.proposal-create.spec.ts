@@ -9,7 +9,7 @@ import { getDefaultProposalData } from '../../qa/flows/proposal';
  * Tests the proposal generator and saving functionality.
  */
 
-test.describe('Proposal Creation Flow', () => {
+test.describe('Proposal Creation Flow @smoke', () => {
   test('should display generator page with form elements', async ({ page }) => {
     await page.goto('/generator');
     await page.waitForLoadState('networkidle');

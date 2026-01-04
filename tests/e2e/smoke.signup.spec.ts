@@ -8,7 +8,7 @@ import { generateTestUser, captureConsoleErrors } from '../../qa/flows/auth';
  * Tests user registration through Clerk authentication.
  */
 
-test.describe('Sign Up Flow', () => {
+test.describe('Sign Up Flow @smoke', () => {
   test('should display sign up page with required elements', async ({ page }) => {
     await page.goto('/sign-up');
     await page.waitForLoadState('networkidle');

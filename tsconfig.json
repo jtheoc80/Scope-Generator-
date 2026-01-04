@@ -58,6 +58,11 @@
     // Generated Next.js type artifacts accidentally committed
     "types/routes.d.ts",
     "types/cache-life.d.ts",
-    "types/validator.ts"
+    "types/validator.ts",
+    // E2E tests are handled by Playwright's own TS compilation
+    "tests/**",
+    "qa/**",
+    // Legacy src/ directory (not used by Next.js app router)
+    "src/**"
   ]
 }
