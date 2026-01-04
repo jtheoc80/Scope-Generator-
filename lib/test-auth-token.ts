@@ -7,7 +7,7 @@
  * SECURITY: Only used for test auth mode (AUTH_MODE=test).
  */
 
-import { createHmac, timingSafeEqual } from 'crypto';
+import { createHmac, timingSafeEqual, randomBytes } from 'crypto';
 
 export interface TestSessionData {
   userId: string;
@@ -36,11 +36,11 @@ function getTestAuthSecret(): string {
   // Generate a random secret at startup if none is configured
   // This is more secure than a hardcoded default but tokens won't survive restarts
   if (!generatedSecret) {
-    generatedSecret = require('crypto').randomBytes(32).toString('hex');
+    generatedSecret = randomBytes(32).toString('hex');
     console.warn('[TEST-AUTH] No TEST_AUTH_SECRET found, generated random secret. Tokens will not survive server restarts.');
   }
   
-  return generatedSecret;
+  return generatedSecret as string;
 }
 
 /**
@@ -96,7 +96,7 @@ export function verifySignedToken(token: string): TestSessionData | null {
     let providedBuffer: Buffer;
     try {
       providedBuffer = Buffer.from(providedSignature, 'base64');
-    } catch (error) {
+    } catch {
       console.error('[TEST-AUTH] Invalid signature encoding');
       return null;
     }
@@ -119,14 +119,14 @@ export function verifySignedToken(token: string): TestSessionData | null {
     
     try {
       dataString = Buffer.from(encodedData, 'base64').toString('utf-8');
-    } catch (error) {
+    } catch {
       console.error('[TEST-AUTH] Invalid data encoding');
       return null;
     }
     
     try {
       parsedData = JSON.parse(dataString);
-    } catch (error) {
+    } catch {
       console.error('[TEST-AUTH] Invalid JSON in token data');
       return null;
     }
