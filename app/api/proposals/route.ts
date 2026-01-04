@@ -76,9 +76,9 @@ export async function POST(request: NextRequest) {
     const proposal = await storage.createProposal(validationResult.data);
     return NextResponse.json(proposal);
   } catch (error) {
-    console.error('Error creating proposal:', error);
+    console.error("Error creating proposal:", error);
     return NextResponse.json(
-      { message: 'Failed to create proposal' },
+      { message: "Failed to create proposal" },
       { status: 500 }
     );
   }
