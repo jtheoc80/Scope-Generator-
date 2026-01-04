@@ -525,9 +525,9 @@ export default function PricingInsights() {
                     <BarChart3 className="w-12 h-12 text-slate-300 mx-auto mb-4" />
                     <h3 className="text-lg font-semibold text-slate-900 mb-2">No Proposals Yet</h3>
                     <p className="text-slate-500 mb-6">Create your first proposal to start tracking your performance metrics.</p>
-                    <a href="/app" className="bg-primary text-white px-6 py-3 rounded-md font-semibold" data-testid="link-create-proposal">
+                    <Link href="/app" className="bg-primary text-white px-6 py-3 rounded-md font-semibold" data-testid="link-create-proposal">
                       Create a Proposal
-                    </a>
+                    </Link>
                   </CardContent>
                 </Card>
               ) : (
@@ -664,22 +664,22 @@ export default function PricingInsights() {
                   <div className="mt-8 border-t pt-6">
                     <h4 className="font-semibold text-slate-900 mb-4">Quick Actions</h4>
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <a
+                      <Link
                         href="/settings"
                         className="flex items-center justify-between p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
                         data-testid="link-adjust-multiplier"
                       >
                         <span className="font-medium">Adjust Price Multiplier</span>
                         <ChevronRight className="w-5 h-5 text-slate-400" />
-                      </a>
-                      <a
+                      </Link>
+                      <Link
                         href="/app"
                         className="flex items-center justify-between p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
                         data-testid="link-new-proposal"
                       >
                         <span className="font-medium">Create New Proposal</span>
                         <ChevronRight className="w-5 h-5 text-slate-400" />
-                      </a>
+                      </Link>
                     </div>
                   </div>
                 </CardContent>
