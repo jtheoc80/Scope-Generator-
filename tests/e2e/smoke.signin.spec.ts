@@ -3,7 +3,6 @@ import {
   captureConsoleErrors,
   setupDiagnostics,
   printDiagnostics,
-  filterAcceptableErrors,
 } from '../../qa/flows/auth';
 import {
   goToSignIn,
