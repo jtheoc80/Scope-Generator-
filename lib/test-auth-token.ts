@@ -114,8 +114,22 @@ export function verifySignedToken(token: string): TestSessionData | null {
     }
     
     // Decode the session data
-    const dataString = Buffer.from(encodedData, 'base64').toString('utf-8');
-    const parsedData = JSON.parse(dataString);
+    let dataString: string;
+    let parsedData: unknown;
+    
+    try {
+      dataString = Buffer.from(encodedData, 'base64').toString('utf-8');
+    } catch (error) {
+      console.error('[TEST-AUTH] Invalid data encoding');
+      return null;
+    }
+    
+    try {
+      parsedData = JSON.parse(dataString);
+    } catch (error) {
+      console.error('[TEST-AUTH] Invalid JSON in token data');
+      return null;
+    }
     
     // Validate the parsed data structure
     if (!isValidSessionData(parsedData)) {
