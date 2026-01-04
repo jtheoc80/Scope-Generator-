@@ -79,6 +79,8 @@ export type OptionValue = boolean | string | Record<string, unknown>;
 export interface ScopeSection {
   title: string;
   items: string[];
+  // Remedy type for repair vs replace decisioning (optional, for tracking)
+  remedy?: "repair" | "replace" | "either";
 }
 
 // Line item interface for multi-service proposals

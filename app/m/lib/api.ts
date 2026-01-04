@@ -130,6 +130,26 @@ export type SubmitResponse = {
 };
 
 // Types for issue analysis
+
+// Remedy types for repair vs replace decisioning
+export type RemedyType = "repair" | "replace" | "either";
+
+export type RemedyOption = {
+  available: boolean;
+  notes?: string;
+  estimatedCost?: { low: number; high: number };
+  scopeItems?: string[];
+};
+
+export type Remedy = {
+  repair?: RemedyOption;
+  replace?: RemedyOption;
+  recommended: RemedyType;
+  rationale: string[];
+  selectedRemedy?: RemedyType;
+  confidence?: number;
+};
+
 export type DetectedIssue = {
   id: string;
   label: string;
@@ -137,6 +157,10 @@ export type DetectedIssue = {
   confidence: number;
   category: "damage" | "repair" | "maintenance" | "upgrade" | "inspection" | "other";
   photoIds: number[];
+  // Remedy support (repair vs replace)
+  issueType?: string;
+  tags?: string[];
+  remedies?: Remedy;
 };
 
 export type AnalyzeResponse = {
@@ -147,3 +171,16 @@ export type AnalyzeResponse = {
   suggestedProblem?: string;
   needsMorePhotos?: string[];
 };
+
+// Helper to get effective remedy (user selection or AI recommendation)
+export function getEffectiveRemedy(issue: DetectedIssue): RemedyType {
+  if (!issue.remedies) return "repair";
+  return issue.remedies.selectedRemedy ?? issue.remedies.recommended;
+}
+
+// Helper to check if issue supports remedy selection
+export function hasRemedyOptions(issue: DetectedIssue): boolean {
+  if (!issue.remedies) return false;
+  const { repair, replace } = issue.remedies;
+  return (repair?.available ?? false) || (replace?.available ?? false);
+}
