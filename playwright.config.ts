@@ -108,16 +108,14 @@ export default defineConfig({
   /* Directory for test artifacts */
   outputDir: 'qa/reports/test-results',
 
-  /* 
-   * Run your local dev server before starting the tests.
-   * In CI, we start the server separately (via npm run start) for better control.
-   * Locally, this auto-starts dev server if not already running.
+   * Web server configuration for Playwright tests.
+   * - In CI, the server is started separately in the workflow; this will reuse it.
+   * - Locally, this will start the dev server if it's not already running.
    */
   webServer: {
-    command: process.env.CI ? 'npm run start' : 'npm run dev',
+    command: 'npm run dev',
     url: baseURL,
+    reuseExistingServer: true,
     timeout: 120000,
-    /* Don't start server in CI - it's started separately in the workflow */
-    ...(process.env.CI && { reuseExistingServer: true }),
   },
 });
