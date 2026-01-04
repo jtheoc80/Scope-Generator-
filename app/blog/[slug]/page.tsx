@@ -281,7 +281,6 @@ export default async function BlogPostPage({ params }: PageProps) {
     datePublished: new Date(post.datePublished).toISOString(),
     dateModified: new Date(post.dateModified).toISOString(),
     author: post.author.name,
-    image: post.heroImage || post.ogImage,
     type: "BlogPosting",
     image: post.heroImage
       ? `https://scopegenerator.com${post.heroImage}`
@@ -334,7 +333,7 @@ export default async function BlogPostPage({ params }: PageProps) {
                 </span>
                 <span className="flex items-center gap-1">
                   <Calendar className="h-4 w-4" />
-                  {post.date}
+                  {post.datePublished}
                 </span>
                 <span className="flex items-center gap-1">
                   <Clock className="h-4 w-4" />
@@ -352,7 +351,7 @@ export default async function BlogPostPage({ params }: PageProps) {
                   <User className="w-6 h-6 text-slate-400" />
                 </div>
                 <div>
-                  <p className="font-medium text-white">{post.author}</p>
+                  <p className="font-medium text-white">{post.author.name}</p>
                   <p className="text-sm text-slate-400">Construction Industry Expert</p>
                 </div>
               </div>
@@ -388,7 +387,7 @@ export default async function BlogPostPage({ params }: PageProps) {
           <div className="container mx-auto px-4 py-3">
             <div className="max-w-3xl mx-auto flex items-center gap-2 text-sm text-slate-600">
               <RefreshCw className="h-4 w-4" />
-              <span>Last updated: {post.date}</span>
+              <span>Last updated: {post.dateModified}</span>
             </div>
           </div>
         </div>
