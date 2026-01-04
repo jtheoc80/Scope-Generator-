@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { storage } from '@/lib/services/storage';
+import { createSignedToken, verifySignedToken } from '@/lib/test-auth-token';
 
 /**
  * QA Test Login - For E2E tests to authenticate without Clerk.
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
       await storage.addProposalCredits(userId, 10, expiresAt);
     }
 
-    // Create test session token
+    // Create cryptographically signed test session token
     const sessionData = {
       userId,
       email,
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
       expiresAt: Date.now() + (TEST_SESSION_MAX_AGE * 1000),
     };
     
-    const sessionToken = Buffer.from(JSON.stringify(sessionData)).toString('base64');
+    const sessionToken = createSignedToken(sessionData);
 
     // Set session cookie
     const cookieStore = await cookies();
@@ -127,13 +128,11 @@ export async function GET() {
       return NextResponse.json({ authenticated: false });
     }
 
-    const sessionData = JSON.parse(
-      Buffer.from(sessionCookie.value, 'base64').toString('utf-8')
-    );
+    // Verify the cryptographically signed token
+    const sessionData = verifySignedToken(sessionCookie.value);
 
-    // Check if session is expired
-    if (sessionData.expiresAt < Date.now()) {
-      return NextResponse.json({ authenticated: false, reason: 'expired' });
+    if (!sessionData) {
+      return NextResponse.json({ authenticated: false, reason: 'invalid_token' });
     }
 
     return NextResponse.json({
