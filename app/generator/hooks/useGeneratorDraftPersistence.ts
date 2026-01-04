@@ -16,6 +16,11 @@ export interface ServiceItem {
   homeArea: string;
   footage: number | null;
   options: Record<string, boolean | string>;
+  // Window-specific fields (for window-replacement job type)
+  windowQuantity: number;
+  windowSizePreset: string;
+  windowWidthIn: number | null;
+  windowHeightIn: number | null;
 }
 
 /**
@@ -126,6 +131,11 @@ export function useGeneratorDraftPersistence(
         homeArea: s.homeArea,
         footage: s.footage,
         options: s.options,
+        // Window-specific fields
+        windowQuantity: s.windowQuantity,
+        windowSizePreset: s.windowSizePreset,
+        windowWidthIn: s.windowWidthIn,
+        windowHeightIn: s.windowHeightIn,
       })),
       photos: photos.map(p => ({
         id: p.id,
@@ -153,7 +163,7 @@ export function useGeneratorDraftPersistence(
       form.setValue('clientName', savedDraft.clientName);
       form.setValue('address', savedDraft.address);
       
-      // Restore services
+      // Restore services (with backward-compatible defaults for window fields)
       if (savedDraft.services.length > 0) {
         setServices(savedDraft.services.map(s => ({
           id: s.id,
@@ -163,6 +173,11 @@ export function useGeneratorDraftPersistence(
           homeArea: s.homeArea,
           footage: s.footage,
           options: s.options,
+          // Window fields with defaults for backward compatibility
+          windowQuantity: s.windowQuantity ?? 1,
+          windowSizePreset: s.windowSizePreset ?? "30x60",
+          windowWidthIn: s.windowWidthIn ?? null,
+          windowHeightIn: s.windowHeightIn ?? null,
         })));
       }
       
@@ -206,9 +221,21 @@ export function useGeneratorDraftPersistence(
     // Reset form
     form.reset({ clientName: '', address: '' });
     
-    // Reset services to initial state
+    // Reset services to initial state (with window defaults)
     setServices([
-      { id: crypto.randomUUID(), tradeId: "", jobTypeId: "", jobSize: 2, homeArea: "", footage: null, options: {} }
+      { 
+        id: crypto.randomUUID(), 
+        tradeId: "", 
+        jobTypeId: "", 
+        jobSize: 2, 
+        homeArea: "", 
+        footage: null, 
+        options: {},
+        windowQuantity: 1,
+        windowSizePreset: "30x60",
+        windowWidthIn: null,
+        windowHeightIn: null,
+      }
     ]);
     
     // Reset other state

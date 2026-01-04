@@ -7,7 +7,8 @@
  */
 
 // Schema version - increment when draft structure changes
-export const DRAFT_SCHEMA_VERSION = 1;
+// v2: Added window-specific fields (windowQuantity, windowSizePreset, windowWidthIn, windowHeightIn)
+export const DRAFT_SCHEMA_VERSION = 2;
 
 // localStorage key prefix
 const STORAGE_KEY_PREFIX = 'scopegen_proposal_draft';
@@ -23,6 +24,12 @@ export interface DraftServiceItem {
   homeArea: string;
   footage: number | null;
   options: Record<string, boolean | string>;
+  // Window-specific fields (for window-replacement job type)
+  // Optional for backward compatibility - defaults applied on load
+  windowQuantity?: number;
+  windowSizePreset?: string;
+  windowWidthIn?: number | null;
+  windowHeightIn?: number | null;
 }
 
 /**
@@ -91,6 +98,11 @@ export function createEmptyDraft(): ProposalDraft {
         homeArea: '',
         footage: null,
         options: {},
+        // Window defaults
+        windowQuantity: 1,
+        windowSizePreset: "30x60",
+        windowWidthIn: null,
+        windowHeightIn: null,
       }
     ],
     photos: [],
@@ -150,6 +162,30 @@ export function serializeDraft(draft: ProposalDraft): string {
 }
 
 /**
+ * Migrate a draft from an older schema version to the current version
+ * @param draft - The draft to migrate
+ * @param fromVersion - The version to migrate from
+ * @returns Migrated draft
+ */
+function migrateDraft(draft: ProposalDraft, fromVersion: number): ProposalDraft {
+  // v1 -> v2: Add window-specific fields with defaults
+  if (fromVersion === 1) {
+    return {
+      ...draft,
+      services: draft.services.map(s => ({
+        ...s,
+        windowQuantity: s.windowQuantity ?? 1,
+        windowSizePreset: s.windowSizePreset ?? "30x60",
+        windowWidthIn: s.windowWidthIn ?? null,
+        windowHeightIn: s.windowHeightIn ?? null,
+      })),
+    };
+  }
+  
+  return draft;
+}
+
+/**
  * Deserialize a draft from storage
  * @param raw - The raw JSON string from localStorage
  * @returns DeserializeResult with success status and draft data
@@ -174,7 +210,19 @@ export function deserializeDraft(raw: string | null): DeserializeResult {
       return { success: false, draft: null, timestamp: null, error: 'Missing version' };
     }
 
-    // Schema version mismatch - fail gracefully
+    // Attempt migration from older versions (1 -> 2 supported)
+    if (version < DRAFT_SCHEMA_VERSION && version >= 1) {
+      const migratedDraft = migrateDraft(draft, version);
+      
+      // Validate migrated draft structure
+      if (!validateDraftStructure(migratedDraft)) {
+        return { success: false, draft: null, timestamp: null, error: 'Invalid draft structure after migration' };
+      }
+
+      return { success: true, draft: migratedDraft, timestamp };
+    }
+
+    // Schema version mismatch (too new) - fail gracefully
     if (version !== DRAFT_SCHEMA_VERSION) {
       return { 
         success: false, 

@@ -102,6 +102,11 @@ export interface ProposalLineItem {
   estimatedDaysHigh?: number;
   warranty?: string;
   exclusions?: string[];
+  // Window-specific fields (for window-replacement job type)
+  windowQuantity?: number;
+  windowSizePreset?: string;
+  windowWidthIn?: number;
+  windowHeightIn?: number;
 }
 
 // Proposals table
@@ -1018,6 +1023,11 @@ export const proposalLineItemSchema = z.object({
   footage: z.number().optional(),
   scope: z.array(z.string()),
   scopeSections: z.array(scopeSectionSchema).optional(),
+  // Window-specific fields (for window-replacement job type)
+  windowQuantity: z.number().min(1).max(50).optional(),
+  windowSizePreset: z.string().optional(),
+  windowWidthIn: z.number().min(12).max(120).optional(),
+  windowHeightIn: z.number().min(12).max(120).optional(),
   options: z.record(z.string(), lineItemOptionValueSchema),
   priceLow: z.number(),
   priceHigh: z.number(),
