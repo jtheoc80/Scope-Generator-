@@ -297,7 +297,9 @@ export default function CapturePhotosPage() {
         if (!isMounted) return;
 
         const suggestions = Array.isArray(res.suggestions) ? res.suggestions : [];
-        const disabled = res.disabled === true || (res.ok === true && suggestions.length === 0);
+        // IMPORTANT: "no suggestions" is not the same as "unavailable".
+        // Only treat as unavailable when the backend explicitly disables the feature.
+        const disabled = res.disabled === true;
 
         setSimilarCount(suggestions.length);
         setSimilarStatus(disabled ? "ready" : (res.status ?? "ready"));

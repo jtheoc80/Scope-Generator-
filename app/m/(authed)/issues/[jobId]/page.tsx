@@ -26,6 +26,7 @@ import {
   DetectedIssue,
   AnalyzeResponse,
 } from "@/app/m/lib/api";
+import { deriveSuggestionsStatus, SuggestionsStatus } from "@/src/lib/mobile/suggestions-status";
 
 type SimilarScopeSuggestion = {
   itemCode: string;
@@ -65,7 +66,9 @@ export default function SelectIssuesPage() {
   const [customIssues, setCustomIssues] = useState<DetectedIssue[]>([]);
   const [similarStatus, setSimilarStatus] = useState<"idle" | "loading" | "pending" | "ready" | "error">("idle");
   const [similarSuggestions, setSimilarSuggestions] = useState<SimilarScopeSuggestion[]>([]);
-  const [similarUnavailable, setSimilarUnavailable] = useState(false);
+  const [similarDisabled, setSimilarDisabled] = useState(false);
+  const [similarDisabledReason, setSimilarDisabledReason] = useState<string | undefined>();
+  const [similarHadError, setSimilarHadError] = useState(false);
   const [suggestedProblem, setSuggestedProblem] = useState<string | undefined>();
   const [needsMorePhotos, setNeedsMorePhotos] = useState<string[]>([]);
   const [photosAnalyzed, setPhotosAnalyzed] = useState(0);
@@ -167,7 +170,9 @@ export default function SelectIssuesPage() {
 
         // Hard timeout: never block the flow waiting for suggestions
         if (Date.now() - startedAt > maxMs) {
-          setSimilarUnavailable(true);
+          setSimilarHadError(true);
+          setSimilarDisabled(false);
+          setSimilarDisabledReason(undefined);
           setSimilarStatus("ready");
           setSimilarSuggestions([]);
           return;
@@ -188,10 +193,16 @@ export default function SelectIssuesPage() {
         if (!isMounted) return;
 
         const suggestions = Array.isArray(res.suggestions) ? res.suggestions : [];
-        const disabled = res.disabled === true || (res.ok === true && suggestions.length === 0);
+        // IMPORTANT:
+        // "suggestions.length === 0" is NOT the same as "unavailable".
+        // It can simply mean there are no matches yet (or the pipeline hasn't produced embeddings).
+        // Treat availability as: disabled flag (gating/feature/config) OR error OR still processing.
+        const disabled = res.disabled === true;
 
         setSimilarSuggestions(suggestions);
-        setSimilarUnavailable(disabled);
+        setSimilarDisabled(disabled);
+        setSimilarDisabledReason(res.reason);
+        setSimilarHadError(false);
         setSimilarStatus(disabled ? "ready" : (res.status ?? "ready"));
 
         if (!disabled && res.status === "pending" && attempt < 30) {
@@ -200,14 +211,18 @@ export default function SelectIssuesPage() {
       } catch (e) {
         if (!isMounted) return;
         // Never block: fail closed to "ready" and show a non-blocking banner.
-        setSimilarUnavailable(true);
+        setSimilarHadError(true);
+        setSimilarDisabled(false);
+        setSimilarDisabledReason(undefined);
         setSimilarSuggestions([]);
         setSimilarStatus("ready");
       }
     };
 
     setSimilarStatus("loading");
-    setSimilarUnavailable(false);
+    setSimilarDisabled(false);
+    setSimilarDisabledReason(undefined);
+    setSimilarHadError(false);
     fetchSimilar(0);
 
     return () => {
@@ -257,6 +272,31 @@ export default function SelectIssuesPage() {
 
   const allIssues = [...issues, ...customIssues];
   const selectedCount = selectedIssues.size;
+
+  const suggestionsStatus: SuggestionsStatus = deriveSuggestionsStatus({
+    detectedIssuesCount: issues.length,
+    photosCount: photosTotal,
+    aiSuggestionsCount: similarSuggestions.length,
+    hasAnyAiSuggestionContent: Boolean(suggestedProblem) || similarSuggestions.length > 0,
+    isProcessing: analyzing || similarStatus === "loading" || similarStatus === "pending",
+    // Backend TODO: return a stable enum for gating/config vs "temporarily unavailable".
+    // Today `disabled` only signals embeddings feature/config state on the server.
+    isGated: similarDisabled && similarDisabledReason !== "embeddings_not_configured",
+    hasError: similarHadError || (similarDisabled && similarDisabledReason === "embeddings_not_configured"),
+  });
+
+  const shouldShowSuggestionsBanner =
+    suggestionsStatus === "insufficient_photos" ||
+    suggestionsStatus === "gated" ||
+    suggestionsStatus === "queued" ||
+    suggestionsStatus === "error";
+
+  const suggestionsBannerCopy: Record<Exclude<SuggestionsStatus, "available" | "none">, string> = {
+    insufficient_photos: "Add a wide shot + under-sink photo to unlock AI scope suggestions.",
+    gated: "AI scope suggestions are a Pro feature. Continue without them or upgrade.",
+    queued: "Generating AI scope suggestions… you can continue selecting issues.",
+    error: "We couldn’t generate AI scope suggestions this time. Continue without them.",
+  };
 
   const shouldPromptForMorePhotos =
     photosTotal > 0 &&
@@ -417,11 +457,19 @@ export default function SelectIssuesPage() {
         </div>
       )}
 
-      {/* Non-blocking banner for suggestions */}
-      {similarUnavailable && (
+      {/* Non-blocking banner for AI scope suggestions */}
+      {shouldShowSuggestionsBanner && (
         <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm flex items-center gap-2">
           <AlertCircle className="w-4 h-4 shrink-0" />
-          Suggestions unavailable — continue without them
+          {suggestionsBannerCopy[suggestionsStatus as Exclude<SuggestionsStatus, "available" | "none">]}
+        </div>
+      )}
+
+      {/* Dev-only debug label */}
+      {process.env.NODE_ENV === "development" && (
+        <div className="text-[10px] text-slate-400">
+          SuggestionsStatus: {suggestionsStatus} | photos: {photosTotal} | issues: {issues.length} | suggestions:{" "}
+          {similarSuggestions.length}
         </div>
       )}
 
@@ -468,9 +516,15 @@ export default function SelectIssuesPage() {
           <CardContent className="space-y-2">
             {similarSuggestions.length === 0 ? (
               <p className="text-sm text-slate-600">
-                {similarUnavailable
-                  ? "Suggestions unavailable right now."
-                  : "No similar-job suggestions yet. (We’ll improve as you complete more jobs.)"}
+                {suggestionsStatus === "queued"
+                  ? "Generating AI scope suggestions…"
+                  : suggestionsStatus === "insufficient_photos"
+                    ? "Add more photos to unlock AI scope suggestions."
+                    : suggestionsStatus === "gated"
+                      ? "AI scope suggestions are a Pro feature."
+                      : suggestionsStatus === "error"
+                        ? "We couldn’t generate AI scope suggestions this time."
+                        : "No similar-job suggestions yet. (We’ll improve as you complete more jobs.)"}
               </p>
             ) : (
               <div className="space-y-2">
