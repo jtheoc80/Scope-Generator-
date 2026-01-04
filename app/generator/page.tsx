@@ -39,6 +39,7 @@ import {
   FileText,
   Sparkles,
   Plus,
+  Minus,
   Trash2,
   GripVertical,
   Save,
@@ -68,6 +69,16 @@ import { apiRequest } from "@/lib/queryClient";
 import { getRegionalMultiplier } from "@/lib/regional-pricing";
 import { cn } from "@/lib/utils";
 import {
+  WINDOW_SIZE_PRESETS,
+  WINDOW_DEFAULTS,
+  getEffectiveDimensions,
+  getWindowSizeMultiplier,
+  formatWindowSpec,
+  formatWindowSpecShort,
+  isValidWindowQuantity,
+  isValidCustomDimension,
+} from "@/lib/window-spec";
+import {
   getCustomerById,
   getLastJobSetup,
   saveAddress,
@@ -85,6 +96,11 @@ interface ServiceItem {
   homeArea: string;
   footage: number | null; // Square feet or linear feet depending on trade
   options: Record<string, boolean | string>;
+  // Window-specific fields (for window-replacement job type)
+  windowQuantity: number;
+  windowSizePreset: string;
+  windowWidthIn: number | null;
+  windowHeightIn: number | null;
 }
 
 // Area-based price multipliers - different areas cost more/less
@@ -437,6 +453,11 @@ function GeneratorContent() {
       homeArea: "",
       footage: null,
       options: {},
+      // Window defaults
+      windowQuantity: 1,
+      windowSizePreset: "30x60",
+      windowWidthIn: null,
+      windowHeightIn: null,
     },
   ]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -589,6 +610,11 @@ function GeneratorContent() {
         homeArea: "",
         footage: null,
         options: {},
+        // Reset window fields
+        windowQuantity: WINDOW_DEFAULTS.quantity,
+        windowSizePreset: WINDOW_DEFAULTS.sizePreset,
+        windowWidthIn: null,
+        windowHeightIn: null,
       };
       return [first, ...prev.slice(1)];
     });
@@ -619,6 +645,11 @@ function GeneratorContent() {
         homeArea: "",
         footage: null,
         options: {},
+        // Window defaults
+        windowQuantity: WINDOW_DEFAULTS.quantity,
+        windowSizePreset: WINDOW_DEFAULTS.sizePreset,
+        windowWidthIn: null,
+        windowHeightIn: null,
       },
     ]);
   };
@@ -636,6 +667,11 @@ function GeneratorContent() {
       homeArea: "",
       footage: null,
       options: {},
+      // Reset window fields
+      windowQuantity: WINDOW_DEFAULTS.quantity,
+      windowSizePreset: WINDOW_DEFAULTS.sizePreset,
+      windowWidthIn: null,
+      windowHeightIn: null,
     });
   };
 
@@ -645,6 +681,11 @@ function GeneratorContent() {
       homeArea: "",
       footage: null,
       options: {},
+      // Reset window fields when job type changes
+      windowQuantity: WINDOW_DEFAULTS.quantity,
+      windowSizePreset: WINDOW_DEFAULTS.sizePreset,
+      windowWidthIn: null,
+      windowHeightIn: null,
     });
   };
 
@@ -700,7 +741,26 @@ function GeneratorContent() {
     let baseLowPrice: number;
     let baseHighPrice: number;
 
-    if (
+    // Special handling for window-replacement job type
+    const isWindowReplacement = service.tradeId === "windows-doors" && service.jobTypeId === "window-replacement";
+    
+    if (isWindowReplacement) {
+      // Window Replacement: Price scales with quantity and size
+      const windowQty = service.windowQuantity || WINDOW_DEFAULTS.quantity;
+      const { width: windowW, height: windowH } = getEffectiveDimensions(
+        service.windowSizePreset || WINDOW_DEFAULTS.sizePreset,
+        service.windowWidthIn ?? undefined,
+        service.windowHeightIn ?? undefined
+      );
+      const windowSizeMultiplier = getWindowSizeMultiplier(windowW, windowH);
+      
+      // Base price is per window, scale by quantity and size
+      // extraCost (from options like triple-pane) also scales with quantity
+      baseLowPrice =
+        (jobType.basePriceRange.low * windowSizeMultiplier + extraCost) * windowQty * priceModifier;
+      baseHighPrice =
+        (jobType.basePriceRange.high * windowSizeMultiplier + extraCost) * windowQty * priceModifier;
+    } else if (
       footageType &&
       service.footage &&
       service.footage > 0 &&
@@ -779,6 +839,18 @@ function GeneratorContent() {
       timelineHigh = Math.max(1, Math.floor(timelineHigh * 0.9));
     }
 
+    // Window replacement: scale timeline with quantity
+    if (isWindowReplacement) {
+      const windowQty = service.windowQuantity || WINDOW_DEFAULTS.quantity;
+      // Each additional window adds about 0.5 days (with some efficiency for batch work)
+      if (windowQty > 1) {
+        const additionalDaysLow = Math.ceil((windowQty - 1) * 0.4);
+        const additionalDaysHigh = Math.ceil((windowQty - 1) * 0.6);
+        timelineLow = timelineLow + additionalDaysLow;
+        timelineHigh = timelineHigh + additionalDaysHigh;
+      }
+    }
+
     const trade = availableTemplates.find((t) => t.id === service.tradeId);
     
     // Merge scopeAdditions into scopeSections if they exist
@@ -795,11 +867,47 @@ function GeneratorContent() {
       ];
     }
 
+    // Window replacement: inject quantity and size into scope
+    let windowEnhancedScope = finalScope;
+    let windowEnhancedJobTypeName = jobType.name;
+    if (isWindowReplacement) {
+      const windowQty = service.windowQuantity || WINDOW_DEFAULTS.quantity;
+      const preset = service.windowSizePreset || WINDOW_DEFAULTS.sizePreset;
+      const customW = service.windowWidthIn ?? undefined;
+      const customH = service.windowHeightIn ?? undefined;
+      const windowSpec = formatWindowSpec(windowQty, preset, customW, customH);
+      const windowSpecShort = formatWindowSpecShort(windowQty, preset, customW, customH);
+      
+      // Get size label for display
+      let sizeLabel: string;
+      if (preset === "custom" && customW && customH) {
+        sizeLabel = `custom size ${customW}" × ${customH}"`;
+      } else {
+        const presetInfo = WINDOW_SIZE_PRESETS.find(p => p.value === preset);
+        sizeLabel = presetInfo ? presetInfo.label : "standard size";
+      }
+      
+      // Enhance scope items with quantity and size
+      windowEnhancedScope = finalScope.map((item) => {
+        // Replace generic window references with specific quantity/size
+        if (item.toLowerCase().includes("existing window") || item.toLowerCase().includes("remove existing")) {
+          return `Remove and dispose of existing ${windowSpec}.`;
+        }
+        if (item.toLowerCase().includes("install") && item.toLowerCase().includes("window")) {
+          return `Install ${windowSpec}, set plumb/level, shim, and fasten.`;
+        }
+        return item;
+      });
+      
+      // Enhance job type name for display
+      windowEnhancedJobTypeName = `${jobType.name} — ${windowSpecShort}`;
+    }
+
     return {
       serviceId: service.id,
       tradeName: trade?.trade || "",
-      jobTypeName: jobType.name,
-      scope: enhancedScopes[service.id] || finalScope,
+      jobTypeName: isWindowReplacement ? windowEnhancedJobTypeName : jobType.name,
+      scope: enhancedScopes[service.id] || (isWindowReplacement ? windowEnhancedScope : finalScope),
       // Pass through new section-based scope fields from template, merged with option selections
       scopeSections: mergedScopeSections,
       included: jobType.included,
@@ -822,6 +930,11 @@ function GeneratorContent() {
         : null,
       footage: service.footage,
       homeArea: service.homeArea,
+      // Window-specific fields
+      windowQuantity: isWindowReplacement ? (service.windowQuantity || WINDOW_DEFAULTS.quantity) : undefined,
+      windowSizePreset: isWindowReplacement ? (service.windowSizePreset || WINDOW_DEFAULTS.sizePreset) : undefined,
+      windowWidthIn: isWindowReplacement && service.windowSizePreset === "custom" ? service.windowWidthIn : undefined,
+      windowHeightIn: isWindowReplacement && service.windowSizePreset === "custom" ? service.windowHeightIn : undefined,
     };
   };
 
@@ -1176,6 +1289,11 @@ function GeneratorContent() {
             estimatedDaysHigh: serviceData.estimatedDays.high,
             warranty: serviceData.warranty,
             exclusions: serviceData.exclusions,
+            // Window-specific fields
+            windowQuantity: serviceData.windowQuantity,
+            windowSizePreset: serviceData.windowSizePreset,
+            windowWidthIn: serviceData.windowWidthIn,
+            windowHeightIn: serviceData.windowHeightIn,
           };
         })
         .filter((item): item is NonNullable<typeof item> => item !== null);
@@ -1347,6 +1465,11 @@ function GeneratorContent() {
             estimatedDaysHigh: serviceData.estimatedDays.high,
             warranty: serviceData.warranty,
             exclusions: serviceData.exclusions,
+            // Window-specific fields
+            windowQuantity: serviceData.windowQuantity,
+            windowSizePreset: serviceData.windowSizePreset,
+            windowWidthIn: serviceData.windowWidthIn,
+            windowHeightIn: serviceData.windowHeightIn,
           };
         })
         .filter((item): item is NonNullable<typeof item> => item !== null);
@@ -1555,6 +1678,191 @@ function GeneratorContent() {
               </div>
             ) : null;
           })()}
+
+        {/* Window Quantity + Size - for window-replacement job type */}
+        {service.tradeId === "windows-doors" && service.jobTypeId === "window-replacement" && (
+          <div className="space-y-4 animate-in fade-in slide-in-from-top-2 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h4 className="text-sm font-bold text-blue-800 flex items-center gap-2">
+              <span className="w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs">
+                🪟
+              </span>
+              Window Details
+            </h4>
+            
+            {/* Quantity with Stepper */}
+            <div>
+              <label className="text-sm font-medium mb-2 block text-slate-700">
+                Number of Windows
+              </label>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center border rounded-lg bg-white overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newQty = Math.max(WINDOW_DEFAULTS.minQuantity, (service.windowQuantity || 1) - 1);
+                      updateService(service.id, { windowQuantity: newQty });
+                    }}
+                    disabled={service.windowQuantity <= WINDOW_DEFAULTS.minQuantity}
+                    className="px-3 py-2 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    data-testid={`button-window-qty-minus-${index}`}
+                  >
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <input
+                    type="number"
+                    min={WINDOW_DEFAULTS.minQuantity}
+                    max={WINDOW_DEFAULTS.maxQuantity}
+                    value={service.windowQuantity || WINDOW_DEFAULTS.quantity}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      if (!isNaN(val) && isValidWindowQuantity(val)) {
+                        updateService(service.id, { windowQuantity: val });
+                      }
+                    }}
+                    className="w-16 text-center py-2 border-x focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    data-testid={`input-window-qty-${index}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newQty = Math.min(WINDOW_DEFAULTS.maxQuantity, (service.windowQuantity || 1) + 1);
+                      updateService(service.id, { windowQuantity: newQty });
+                    }}
+                    disabled={service.windowQuantity >= WINDOW_DEFAULTS.maxQuantity}
+                    className="px-3 py-2 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    data-testid={`button-window-qty-plus-${index}`}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+                <span className="text-sm text-slate-500">
+                  {service.windowQuantity === 1 ? "window" : "windows"}
+                </span>
+              </div>
+            </div>
+
+            {/* Size Preset Dropdown */}
+            <div>
+              <label className="text-sm font-medium mb-2 block text-slate-700">
+                Window Size
+              </label>
+              <Select
+                value={service.windowSizePreset || WINDOW_DEFAULTS.sizePreset}
+                onValueChange={(val) =>
+                  updateService(service.id, { 
+                    windowSizePreset: val,
+                    // Clear custom dimensions when switching to preset
+                    windowWidthIn: val === "custom" ? service.windowWidthIn : null,
+                    windowHeightIn: val === "custom" ? service.windowHeightIn : null,
+                  })
+                }
+              >
+                <SelectTrigger className="bg-white" data-testid={`select-window-size-${index}`}>
+                  <SelectValue placeholder="Select window size" />
+                </SelectTrigger>
+                <SelectContent>
+                  {WINDOW_SIZE_PRESETS.map((preset) => (
+                    <SelectItem key={preset.value} value={preset.value}>
+                      {preset.label}
+                      {preset.value !== "custom" && (
+                        <span className="ml-2 text-xs text-slate-500">
+                          {(() => {
+                            const dims = { width: preset.width, height: preset.height };
+                            const mult = getWindowSizeMultiplier(dims.width, dims.height);
+                            if (mult < 1) return "(smaller)";
+                            if (mult > 1) return "(larger)";
+                            return "";
+                          })()}
+                        </span>
+                      )}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Custom Dimensions - only shown when "custom" selected */}
+            {service.windowSizePreset === "custom" && (
+              <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2">
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block text-slate-700">
+                    Width (inches)
+                  </label>
+                  <Input
+                    type="number"
+                    min={WINDOW_DEFAULTS.minCustomDimension}
+                    max={WINDOW_DEFAULTS.maxCustomDimension}
+                    placeholder="e.g., 36"
+                    value={service.windowWidthIn || ""}
+                    onChange={(e) => {
+                      const val = e.target.value ? parseInt(e.target.value, 10) : null;
+                      updateService(service.id, { windowWidthIn: val });
+                    }}
+                    className={cn(
+                      "bg-white",
+                      service.windowWidthIn && !isValidCustomDimension(service.windowWidthIn) && "border-red-500"
+                    )}
+                    data-testid={`input-window-width-${index}`}
+                  />
+                  {service.windowWidthIn && !isValidCustomDimension(service.windowWidthIn) && (
+                    <p className="text-xs text-red-500 mt-1">
+                      Must be {WINDOW_DEFAULTS.minCustomDimension}-{WINDOW_DEFAULTS.maxCustomDimension}"
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block text-slate-700">
+                    Height (inches)
+                  </label>
+                  <Input
+                    type="number"
+                    min={WINDOW_DEFAULTS.minCustomDimension}
+                    max={WINDOW_DEFAULTS.maxCustomDimension}
+                    placeholder="e.g., 48"
+                    value={service.windowHeightIn || ""}
+                    onChange={(e) => {
+                      const val = e.target.value ? parseInt(e.target.value, 10) : null;
+                      updateService(service.id, { windowHeightIn: val });
+                    }}
+                    className={cn(
+                      "bg-white",
+                      service.windowHeightIn && !isValidCustomDimension(service.windowHeightIn) && "border-red-500"
+                    )}
+                    data-testid={`input-window-height-${index}`}
+                  />
+                  {service.windowHeightIn && !isValidCustomDimension(service.windowHeightIn) && (
+                    <p className="text-xs text-red-500 mt-1">
+                      Must be {WINDOW_DEFAULTS.minCustomDimension}-{WINDOW_DEFAULTS.maxCustomDimension}"
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Price impact summary */}
+            <div className="text-xs text-blue-700 bg-blue-100 rounded px-3 py-2">
+              {(() => {
+                const qty = service.windowQuantity || WINDOW_DEFAULTS.quantity;
+                const preset = service.windowSizePreset || WINDOW_DEFAULTS.sizePreset;
+                const dims = getEffectiveDimensions(preset, service.windowWidthIn ?? undefined, service.windowHeightIn ?? undefined);
+                const sizeMultiplier = getWindowSizeMultiplier(dims.width, dims.height);
+                return (
+                  <span>
+                    <strong>{qty}</strong> × {preset === "custom" && service.windowWidthIn && service.windowHeightIn 
+                      ? `${service.windowWidthIn}"×${service.windowHeightIn}"`
+                      : WINDOW_SIZE_PRESETS.find(p => p.value === preset)?.label || "standard"
+                    }
+                    {sizeMultiplier !== 1.0 && (
+                      <span className={sizeMultiplier < 1 ? "text-green-700" : "text-orange-700"}>
+                        {" "}({sizeMultiplier < 1 ? "-" : "+"}{Math.round(Math.abs(sizeMultiplier - 1) * 100)}% size adjustment)
+                      </span>
+                    )}
+                  </span>
+                );
+              })()}
+            </div>
+          </div>
+        )}
 
         {/* Footage Input - for trades that use sq/linear ft pricing */}
         {service.jobTypeId && usesFootagePricing(service.tradeId) && (
