@@ -38,10 +38,19 @@ export async function checkSchemaOnStartup(): Promise<void> {
     return;
   }
 
+  const isSupabaseOrNeon =
+    databaseUrl.includes("supabase.com") || databaseUrl.includes("neon.tech");
+  const isDev = process.env.NODE_ENV === "development";
+
   const pool = new Pool({
     connectionString: databaseUrl,
-    ssl: databaseUrl.includes("supabase.com") || databaseUrl.includes("neon.tech")
-      ? { rejectUnauthorized: false }
+    // For Supabase/Neon we sometimes need to relax SSL validation in development
+    // because of how their certificates are presented. Never disable certificate
+    // validation in production to avoid man-in-the-middle vulnerabilities.
+    ssl: isSupabaseOrNeon
+      ? isDev
+        ? { rejectUnauthorized: false }
+        : { rejectUnauthorized: true }
       : false,
     connectionTimeoutMillis: 5000,
   });
