@@ -189,6 +189,7 @@ export const blogPosts: Record<string, BlogPost> = {
     tags: ["pricing", "business tips", "contractor", "profit margin"],
     metaTitle: "Contractor Pricing Guide 2025 (Updated): Markup, Margin, Break-Even + Trade Benchmarks",
     metaDescription: "Learn how to price contractor jobs profitably in 2025: markup vs margin, break-even rate, regional adjustments, pricing strategies, and trade benchmarks. Includes examples and templates.",
+    tags: ["pricing", "business", "profit", "margins"],
     heroImage: "/blog/contractor-pricing-guide-2025/hero.svg",
     ogImage: "/blog/contractor-pricing-guide-2025/og.svg",
     content: [
