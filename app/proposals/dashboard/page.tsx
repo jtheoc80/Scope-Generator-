@@ -36,7 +36,7 @@ const SAMPLE_PROPOSALS = [
 
 export default function ContractorProposalDashboard() {
   const router = useRouter();
-  const [proposals, setProposals] = useState(SAMPLE_PROPOSALS);
+  const [proposals] = useState(SAMPLE_PROPOSALS);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
