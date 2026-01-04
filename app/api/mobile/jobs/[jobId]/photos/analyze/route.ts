@@ -313,7 +313,7 @@ function getSemanticKey(text: string): string {
 
 /**
  * Deduplicate issues that are semantically similar.
- * Keeps the issue with the best description (longer, more specific).
+ * Keeps the issue with the best description (shorter, cleaner).
  */
 function deduplicateIssues(issues: DetectedIssue[]): DetectedIssue[] {
   const semanticGroups = new Map<string, DetectedIssue[]>();
