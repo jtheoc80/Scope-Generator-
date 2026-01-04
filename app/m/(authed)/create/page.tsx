@@ -29,7 +29,6 @@ import {
 } from "@/components/ui/popover";
 import {
   AlertTriangle,
-  ArrowLeft,
   ArrowRight,
   Bath,
   BriefcaseBusiness,
@@ -1201,25 +1200,15 @@ function CreateJobPageInner() {
   return (
     <div className="px-4 pt-4 pb-safe lg:px-8 lg:pt-8">
       <div className="mx-auto max-w-4xl space-y-6">
-        {/* Back button */}
-        <div className="flex items-center justify-between">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.back()}
-            className="gap-2 -ml-2 text-muted-foreground"
-            disabled={busy}
-          >
-            <ArrowLeft className="w-4 h-4" />
-            {t.mobile.back}
-          </Button>
-          {syncing && (
+        {/* Top status row (header provides back navigation) */}
+        {syncing && (
+          <div className="flex items-center justify-end">
             <div className="flex items-center gap-1 text-xs text-slate-400">
               <RefreshCw className="w-3 h-3 animate-spin" />
               {t.mobile.syncing}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Progress indicator */}
         <WizardStepper currentStep={1} t={t} />
