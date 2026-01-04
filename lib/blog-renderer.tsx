@@ -5,8 +5,11 @@ import Link from 'next/link';
  * Validate URL for safety - prevents javascript:, data:, and other dangerous protocols
  */
 function isValidUrl(url: string): boolean {
-  // Only allow http, https, and relative URLs
-  return url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/');
+  const trimmedUrl = url.trim().toLowerCase();
+  // Only allow http, https, and relative URLs (case-insensitive check)
+  return trimmedUrl.startsWith('http://') || 
+         trimmedUrl.startsWith('https://') || 
+         url.trim().startsWith('/');
 }
 
 /**
