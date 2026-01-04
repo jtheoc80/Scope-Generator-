@@ -1,11 +1,61 @@
-'use client';
-import { useEffect } from "react";
-import { useParams } from "next/navigation";
+import { Metadata } from "next";
+import { notFound } from "next/navigation";
 import Layout from "@/components/layout";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Calendar, Clock, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calendar, Clock, Zap, User, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { blogPosts } from "@/lib/blog-data";
+import { generateArticleSchema, generateBreadcrumbSchema, generateFAQSchema } from "@/lib/seo/jsonld";
+
+interface PageProps {
+  params: Promise<{ slug: string }>;
+}
+
+// Generate static paths for all blog posts
+export async function generateStaticParams() {
+  return Object.keys(blogPosts).map((slug) => ({ slug }));
+}
+
+// Generate metadata for SEO
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const post = blogPosts[slug];
+
+  if (!post) {
+    return {
+      title: "Article Not Found | ScopeGen",
+    };
+  }
+
+  return {
+    title: post.metaTitle,
+    description: post.metaDescription,
+    keywords: [
+      post.category.toLowerCase(),
+      "contractor blog",
+      "proposal tips",
+      ...post.title.toLowerCase().split(" ").filter(w => w.length > 4).slice(0, 5),
+    ],
+    authors: [{ name: post.author }],
+    alternates: {
+      canonical: `https://scopegenerator.com/blog/${post.slug}`,
+    },
+    openGraph: {
+      title: post.metaTitle,
+      description: post.metaDescription,
+      url: `https://scopegenerator.com/blog/${post.slug}`,
+      type: "article",
+      publishedTime: new Date(post.date).toISOString(),
+      authors: [post.author],
+      section: post.category,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.metaTitle,
+      description: post.metaDescription,
+    },
+  };
+}
 
 function InlineCTA() {
   return (
@@ -43,39 +93,56 @@ function getRelatedPosts(currentSlug: string, currentCategory: string) {
   return related;
 }
 
-export default function BlogPostPage() {
-  const params = useParams();
-  const slug = params?.slug as string;
+export default async function BlogPostPage({ params }: PageProps) {
+  const { slug } = await params;
   const post = blogPosts[slug];
 
-  useEffect(() => {
-    if (post) {
-      document.title = post.metaTitle;
-      const metaDesc = document.querySelector('meta[name="description"]');
-      if (metaDesc) {
-        metaDesc.setAttribute("content", post.metaDescription);
-      }
-    }
-  }, [post]);
-
   if (!post) {
-    return (
-      <Layout>
-        <div className="container mx-auto px-4 py-16 text-center">
-          <h1 className="text-2xl font-bold">Article not found</h1>
-          <Link href="/blog">
-            <Button className="mt-4">Back to Blog</Button>
-          </Link>
-        </div>
-      </Layout>
-    );
+    notFound();
   }
 
   const relatedPosts = getRelatedPosts(slug, post.category);
   const inlineCTAIndex = Math.floor(post.content.length * 0.4);
 
+  // Generate structured data
+  const articleSchema = generateArticleSchema({
+    headline: post.title,
+    description: post.metaDescription || post.excerpt,
+    url: `https://scopegenerator.com/blog/${post.slug}`,
+    datePublished: new Date(post.date).toISOString(),
+    author: post.author,
+    type: "BlogPosting",
+  });
+
+  const breadcrumbs = generateBreadcrumbSchema([
+    { name: "Home", url: "/" },
+    { name: "Blog", url: "/blog" },
+    { name: post.title, url: `/blog/${post.slug}` },
+  ]);
+
+  // Generate FAQ schema if post has FAQs
+  const faqSchema = post.faqs && post.faqs.length > 0 
+    ? generateFAQSchema(post.faqs)
+    : null;
+
   return (
     <Layout>
+      {/* Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs) }}
+      />
+      {faqSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+        />
+      )}
+
       <article>
         <header className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-16">
           <div className="container mx-auto px-4">
@@ -103,9 +170,60 @@ export default function BlogPostPage() {
                 {post.title}
               </h1>
               <p className="text-lg text-slate-300">{post.excerpt}</p>
+              
+              {/* Author Byline - E-E-A-T Signal */}
+              <div className="mt-6 pt-6 border-t border-slate-700 flex items-center gap-4">
+                <div className="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center">
+                  <User className="w-6 h-6 text-slate-400" />
+                </div>
+                <div>
+                  <p className="font-medium text-white">{post.author}</p>
+                  <p className="text-sm text-slate-400">Construction Industry Expert</p>
+                </div>
+              </div>
             </div>
           </div>
         </header>
+
+        {/* Last Updated Notice - E-E-A-T Signal */}
+        <div className="bg-slate-100 border-b">
+          <div className="container mx-auto px-4 py-3">
+            <div className="max-w-3xl mx-auto flex items-center gap-2 text-sm text-slate-600">
+              <RefreshCw className="h-4 w-4" />
+              <span>Last updated: {post.date}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Table of Contents */}
+        {post.content.filter(b => b.startsWith("## ")).length > 2 && (
+          <div className="bg-white border-b">
+            <div className="container mx-auto px-4 py-6">
+              <div className="max-w-3xl mx-auto">
+                <details className="group" open>
+                  <summary className="font-bold text-slate-900 cursor-pointer list-none flex items-center justify-between">
+                    Table of Contents
+                    <span className="text-slate-400 group-open:rotate-180 transition-transform">▼</span>
+                  </summary>
+                  <nav className="mt-4 pl-4 border-l-2 border-slate-200">
+                    <ul className="space-y-2">
+                      {post.content.filter(b => b.startsWith("## ")).map((heading, i) => (
+                        <li key={i}>
+                          <a 
+                            href={`#${heading.replace("## ", "").toLowerCase().replace(/\s+/g, "-")}`}
+                            className="text-slate-600 hover:text-orange-600 text-sm"
+                          >
+                            {heading.replace("## ", "")}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </nav>
+                </details>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="py-12 bg-white">
           <div className="container mx-auto px-4">
@@ -118,7 +236,9 @@ export default function BlogPostPage() {
                 }
                 
                 if (block.startsWith("## ")) {
-                  elements.push(<h2 key={i}>{block.replace("## ", "")}</h2>);
+                  const text = block.replace("## ", "");
+                  const id = text.toLowerCase().replace(/\s+/g, "-");
+                  elements.push(<h2 key={i} id={id}>{text}</h2>);
                 } else if (block.startsWith("### ")) {
                   elements.push(<h3 key={i}>{block.replace("### ", "")}</h3>);
                 } else if (block.startsWith("- ")) {
@@ -146,6 +266,28 @@ export default function BlogPostPage() {
             </div>
           </div>
         </div>
+
+        {/* FAQ Section if post has FAQs */}
+        {post.faqs && post.faqs.length > 0 && (
+          <div className="py-12 bg-slate-50 border-t">
+            <div className="container mx-auto px-4">
+              <div className="max-w-3xl mx-auto">
+                <h2 className="text-2xl font-bold text-slate-900 mb-6">Frequently Asked Questions</h2>
+                <div className="space-y-4">
+                  {post.faqs.map((faq, index) => (
+                    <details key={index} className="bg-white rounded-lg border p-4 group">
+                      <summary className="font-semibold text-slate-900 cursor-pointer list-none flex items-center justify-between">
+                        {faq.question}
+                        <span className="text-slate-400 group-open:rotate-180 transition-transform">▼</span>
+                      </summary>
+                      <p className="mt-3 text-slate-600">{faq.answer}</p>
+                    </details>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="py-12 bg-slate-50">
           <div className="container mx-auto px-4">

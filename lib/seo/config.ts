@@ -79,9 +79,6 @@ export const seoConfig = {
   // Verification Codes (replace with actual values)
   verification: {
     google: "your-google-verification-code",
-    bing: "",
-    yandex: "",
-    pinterest: "",
   },
 
   // SEO Audit Thresholds
@@ -110,6 +107,8 @@ export const seoConfig = {
     "/seo-dashboard",
     "/search-console",
     "/pricing-insights",  // Protected route - redirects to login
+    "/proposals/", // Individual proposal pages
+    "/m/", // Mobile app routes
   ],
 
   // High-priority pages for sitemap
@@ -117,6 +116,7 @@ export const seoConfig = {
     home: 1.0,
     app: 0.9,
     calculator: 0.9,
+    landingPages: 0.85,
     blog: 0.8,
     comparison: 0.8,
     about: 0.7,
@@ -165,14 +165,15 @@ export const pagesSeoConfig: Record<
     changeFrequency: "weekly",
   },
   "/calculator": {
-    title: "Free Remodeling Cost Calculator",
+    title: "Free Contractor Price Calculator 2025 - Instant Cost Estimates",
     description:
-      "Get instant cost estimates for your remodeling project. Calculate bathroom, kitchen, roofing, and other contractor project costs with regional pricing data.",
+      "Get instant cost estimates for bathroom remodels, kitchen renovations, roofing, HVAC, plumbing, electrical, and 15+ more trades. Free contractor price calculator with regional pricing.",
     keywords: [
+      "contractor price calculator",
       "remodeling cost calculator",
+      "construction cost estimator",
       "bathroom remodel cost",
       "kitchen remodel cost",
-      "construction cost estimator",
     ],
     priority: 0.9,
     changeFrequency: "monthly",
@@ -216,8 +217,6 @@ export const pagesSeoConfig: Record<
     priority: 0.7,
     changeFrequency: "monthly",
   },
-  // NOTE: /pricing-insights removed - it's a protected route that requires authentication
-  // Including it in the sitemap would cause "Page with redirect" issues
   "/privacy": {
     title: "Privacy Policy - ScopeGen Data Protection",
     description:
@@ -236,7 +235,7 @@ export const pagesSeoConfig: Record<
   },
   // Competitor comparison pages
   "/vs/buildertrend": {
-    title: "ScopeGen vs Buildertrend - Software Comparison",
+    title: "ScopeGen vs Buildertrend - Software Comparison 2025",
     description:
       "Compare ScopeGen vs Buildertrend for contractor proposals. See differences in pricing, features, ease of use, and find out which is right for your business.",
     keywords: [
@@ -249,7 +248,7 @@ export const pagesSeoConfig: Record<
     changeFrequency: "monthly",
   },
   "/vs/jobber": {
-    title: "ScopeGen vs Jobber - Field Service Software Comparison",
+    title: "ScopeGen vs Jobber - Field Service Software Comparison 2025",
     description:
       "Compare ScopeGen vs Jobber for contractor proposals and job management. See the key differences and find the right solution for your business.",
     keywords: [
@@ -262,7 +261,7 @@ export const pagesSeoConfig: Record<
     changeFrequency: "monthly",
   },
   "/vs/houzz-pro": {
-    title: "ScopeGen vs Houzz Pro - Contractor Software Comparison",
+    title: "ScopeGen vs Houzz Pro - Contractor Software Comparison 2025",
     description:
       "Compare ScopeGen vs Houzz Pro for contractor proposals. See pricing, features, and which software is better for your contracting business.",
     keywords: [
@@ -298,6 +297,150 @@ export const pagesSeoConfig: Record<
       "premium features",
     ],
     priority: 0.7,
+    changeFrequency: "monthly",
+  },
+  // New SEO Landing Pages
+  "/contractor-estimate-generator": {
+    title: "Free Contractor Estimate Generator | Create Estimates in 60 Seconds",
+    description:
+      "Generate professional contractor estimates instantly. Free estimate generator for bathroom, kitchen, roofing, HVAC, plumbing, electrical, and 15+ trades.",
+    keywords: [
+      "contractor estimate generator",
+      "free estimate generator",
+      "construction estimate tool",
+      "proposal generator",
+    ],
+    priority: 0.85,
+    changeFrequency: "monthly",
+  },
+  "/scope-of-work-generator": {
+    title: "Free Scope of Work Generator | Professional SOW Templates",
+    description:
+      "Create detailed scopes of work instantly. Free scope generator for construction, remodeling, and contractor projects. Professional templates with e-signature.",
+    keywords: [
+      "scope of work generator",
+      "SOW generator",
+      "construction scope template",
+      "contractor scope of work",
+    ],
+    priority: 0.85,
+    changeFrequency: "monthly",
+  },
+  "/bathroom-remodel-estimate-template": {
+    title: "Bathroom Remodel Estimate Template | Free Contractor Template 2025",
+    description:
+      "Free bathroom remodel estimate template for contractors. Professional templates for tub-to-shower conversions, full remodels, and bathroom renovations.",
+    keywords: [
+      "bathroom remodel estimate",
+      "bathroom estimate template",
+      "bathroom contractor estimate",
+      "bathroom renovation cost",
+    ],
+    priority: 0.85,
+    changeFrequency: "monthly",
+  },
+  "/kitchen-remodel-estimate-template": {
+    title: "Kitchen Remodel Estimate Template | Free Contractor Template 2025",
+    description:
+      "Free kitchen remodel estimate template for contractors. Professional templates for cabinet installation, countertops, full renovations.",
+    keywords: [
+      "kitchen remodel estimate",
+      "kitchen estimate template",
+      "kitchen contractor estimate",
+      "kitchen renovation cost",
+    ],
+    priority: 0.85,
+    changeFrequency: "monthly",
+  },
+  "/roofing-estimate-template": {
+    title: "Roofing Estimate Template | Free Contractor Template 2025",
+    description:
+      "Free roofing estimate template for contractors. Professional templates for shingle replacement, metal roofing, flat roofs, and repairs.",
+    keywords: [
+      "roofing estimate template",
+      "roof estimate",
+      "roofing contractor estimate",
+      "roof replacement cost",
+    ],
+    priority: 0.85,
+    changeFrequency: "monthly",
+  },
+  "/hvac-estimate-template": {
+    title: "HVAC Estimate Template | Free Contractor Template 2025",
+    description:
+      "Free HVAC estimate template for contractors. Professional templates for AC installation, furnace replacement, ductwork, and mini-splits.",
+    keywords: [
+      "hvac estimate template",
+      "hvac contractor estimate",
+      "ac installation cost",
+      "furnace replacement estimate",
+    ],
+    priority: 0.85,
+    changeFrequency: "monthly",
+  },
+  "/plumbing-estimate-template": {
+    title: "Plumbing Estimate Template | Free Contractor Template 2025",
+    description:
+      "Free plumbing estimate template for contractors. Professional templates for water heaters, repiping, fixture installation, and drain repairs.",
+    keywords: [
+      "plumbing estimate template",
+      "plumbing contractor estimate",
+      "water heater estimate",
+      "repipe cost estimate",
+    ],
+    priority: 0.85,
+    changeFrequency: "monthly",
+  },
+  "/electrical-estimate-template": {
+    title: "Electrical Estimate Template | Free Contractor Template 2025",
+    description:
+      "Free electrical estimate template for contractors. Professional templates for panel upgrades, rewiring, lighting, and EV charger installation.",
+    keywords: [
+      "electrical estimate template",
+      "electrician estimate",
+      "panel upgrade cost",
+      "ev charger installation cost",
+    ],
+    priority: 0.85,
+    changeFrequency: "monthly",
+  },
+  "/flooring-estimate-template": {
+    title: "Flooring Estimate Template | Free Contractor Template 2025",
+    description:
+      "Free flooring estimate template for contractors. Professional templates for hardwood, tile, LVP, and carpet installation.",
+    keywords: [
+      "flooring estimate template",
+      "flooring contractor estimate",
+      "hardwood installation cost",
+      "tile flooring estimate",
+    ],
+    priority: 0.85,
+    changeFrequency: "monthly",
+  },
+  "/painting-estimate-template": {
+    title: "Painting Estimate Template | Free Contractor Template 2025",
+    description:
+      "Free painting estimate template for contractors. Professional templates for interior, exterior, and cabinet painting.",
+    keywords: [
+      "painting estimate template",
+      "painter estimate",
+      "interior painting cost",
+      "exterior painting estimate",
+    ],
+    priority: 0.85,
+    changeFrequency: "monthly",
+  },
+  "/drywall-estimate-template": {
+    title: "Drywall Estimate Template | Free Contractor Template 2025",
+    description:
+      "Free drywall estimate template for contractors. Professional templates for new installation, repairs, and texturing.",
+    keywords: [
+      "drywall estimate template",
+      "drywall contractor estimate",
+      "drywall installation cost",
+      "drywall repair estimate",
+    ],
+    priority: 0.85,
     changeFrequency: "monthly",
   },
 };

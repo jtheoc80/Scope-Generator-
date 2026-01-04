@@ -8,11 +8,13 @@ import {
   shouldIndex 
 } from '@/lib/seo';
 import { getTradeKeys, cityKeys, tradeSupportsCities } from '@/lib/trade-data';
+import { getLandingPageSlugs } from '@/lib/landing-pages-data';
 
 /**
  * Sitemap Generation
  * Automatically generates sitemap from SEO configuration.
- * The SEO bot ensures all pages are properly configured.
+ * Includes all public pages: core pages, blog posts, trade landing pages,
+ * city-specific pages, and SEO landing pages.
  */
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = seoConfig.site.url;
@@ -59,26 +61,42 @@ export default function sitemap(): MetadataRoute.Sitemap {
     }
   }
 
+  // SEO Landing Pages (estimate templates, generators)
+  const landingPages: MetadataRoute.Sitemap = getLandingPageSlugs().map((slug) => ({
+    url: `${baseUrl}/${slug}`,
+    lastModified: currentDate,
+    changeFrequency: 'monthly' as const,
+    priority: 0.85, // High priority for landing pages
+  }));
+
   // Combine and deduplicate (prefer configured pages)
   const allPaths = new Set<string>();
   const result: MetadataRoute.Sitemap = [];
   
-  // Add configured pages first
+  // Add configured pages first (highest priority)
   for (const page of configuredPages) {
     allPaths.add(page.url);
     result.push(page);
   }
   
-  // Add blog posts (avoid duplicates)
-  for (const page of blogPostPages) {
+  // Add landing pages (high priority for SEO)
+  for (const page of landingPages) {
+    if (!allPaths.has(page.url)) {
+      allPaths.add(page.url);
+      result.push(page);
+    }
+  }
+  
+  // Add trade pages
+  for (const page of tradePages) {
     if (!allPaths.has(page.url)) {
       allPaths.add(page.url);
       result.push(page);
     }
   }
 
-  // Add trade pages
-  for (const page of tradePages) {
+  // Add blog posts (avoid duplicates)
+  for (const page of blogPostPages) {
     if (!allPaths.has(page.url)) {
       allPaths.add(page.url);
       result.push(page);

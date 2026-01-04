@@ -1,26 +1,51 @@
-'use client';
-import { useEffect } from "react";
+import { Metadata } from "next";
 import Layout from "@/components/layout";
 import Link from "next/link";
 import { ArrowRight, Calendar, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { blogPosts } from "@/lib/blog-data";
+import { generateBreadcrumbSchema } from "@/lib/seo/jsonld";
+
+export const metadata: Metadata = {
+  title: "Contractor Blog | Proposal Tips & Business Advice | ScopeGen",
+  description: "Free resources for contractors: proposal writing tips, pricing guides, scope of work templates, and business advice to help you win more jobs.",
+  keywords: [
+    "contractor blog",
+    "proposal writing tips",
+    "contractor pricing guide",
+    "scope of work templates",
+    "contractor business advice",
+    "construction proposal tips",
+  ],
+  alternates: {
+    canonical: "https://scopegenerator.com/blog",
+  },
+  openGraph: {
+    title: "Contractor Blog | Proposal Tips & Business Advice | ScopeGen",
+    description: "Free resources for contractors: proposal writing tips, pricing guides, scope of work templates, and business advice to help you win more jobs.",
+    url: "https://scopegenerator.com/blog",
+    type: "website",
+  },
+};
 
 export default function BlogIndex() {
-  useEffect(() => {
-    document.title = "Contractor Blog | Proposal Tips & Business Advice | ScopeGen";
-    const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) {
-      metaDesc.setAttribute("content", "Free resources for contractors: proposal writing tips, pricing guides, scope of work templates, and business advice to help you win more jobs.");
-    }
-  }, []);
-
   const posts = Object.values(blogPosts).sort((a, b) => 
     new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
+  const breadcrumbs = generateBreadcrumbSchema([
+    { name: "Home", url: "/" },
+    { name: "Blog", url: "/blog" },
+  ]);
+
   return (
     <Layout>
+      {/* Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs) }}
+      />
+      
       <section className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-16">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
@@ -66,6 +91,29 @@ export default function BlogIndex() {
                   </Link>
                 </article>
               ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Internal Links Section */}
+      <section className="py-12 bg-slate-50 border-t">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-2xl font-bold text-slate-900 mb-6">Related Tools & Resources</h2>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <Link href="/calculator" className="p-4 bg-white rounded-lg border hover:border-orange-300 transition-colors">
+                <h3 className="font-semibold text-slate-900">Free Cost Calculator</h3>
+                <p className="text-sm text-slate-600">Get instant project estimates</p>
+              </Link>
+              <Link href="/contractor-estimate-generator" className="p-4 bg-white rounded-lg border hover:border-orange-300 transition-colors">
+                <h3 className="font-semibold text-slate-900">Estimate Generator</h3>
+                <p className="text-sm text-slate-600">Create professional estimates</p>
+              </Link>
+              <Link href="/scope-of-work-generator" className="p-4 bg-white rounded-lg border hover:border-orange-300 transition-colors">
+                <h3 className="font-semibold text-slate-900">Scope Generator</h3>
+                <p className="text-sm text-slate-600">Build detailed scopes of work</p>
+              </Link>
             </div>
           </div>
         </div>

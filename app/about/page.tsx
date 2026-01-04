@@ -1,5 +1,6 @@
 'use client';
 import Layout from "@/components/layout";
+import Link from "next/link";
 import { Building2, MapPin, Mail, Phone, Target, Users, Award } from "lucide-react";
 
 export default function About() {
@@ -115,12 +116,12 @@ export default function About() {
           <h2 className="text-3xl font-heading font-bold text-white mb-6">
             Ready to streamline your proposals?
           </h2>
-          <a 
+          <Link 
             href="/app" 
             className="inline-block bg-secondary text-slate-900 font-bold text-lg px-8 py-4 rounded-md hover:bg-white hover:text-primary transition-colors shadow-lg"
           >
             Get Started Free
-          </a>
+          </Link>
         </div>
       </section>
     </Layout>

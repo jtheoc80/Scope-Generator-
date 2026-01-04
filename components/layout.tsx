@@ -45,6 +45,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           {/* Desktop Navigation - Alphabetical Order */}
           <nav className="hidden md:flex items-center gap-4 lg:gap-6">
             <Link
+              href="/calculator"
+              className="text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
+            >
+              Calculator
+            </Link>
+            <Link
               href="/dashboard"
               className="text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
             >
@@ -164,6 +170,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 </div>
               </Link>
               <Link 
+                href="/calculator" 
+                className="text-base font-medium text-slate-700 hover:text-primary transition-colors py-2"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Calculator
+              </Link>
+              <Link 
                 href="/dashboard" 
                 className="text-base font-medium text-slate-700 hover:text-primary transition-colors py-2"
                 onClick={() => setMobileMenuOpen(false)}
@@ -263,66 +276,119 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </main>
 
       <footer className="bg-slate-900 text-slate-400 py-12 border-t border-slate-800">
-        <div className="container mx-auto px-4 grid grid-cols-2 md:grid-cols-6 gap-8">
-          <div className="col-span-2 md:col-span-1">
-            <div className="flex items-center gap-2 mb-4">
-              <Hammer className="w-5 h-5 text-secondary" />
-              <span className="text-lg font-heading font-bold text-white uppercase">ScopeGen</span>
+        <div className="container mx-auto px-4">
+          {/* Main Footer Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-8 mb-12">
+            {/* Brand Column */}
+            <div className="col-span-2 md:col-span-1">
+              <div className="flex items-center gap-2 mb-4">
+                <Hammer className="w-5 h-5 text-secondary" />
+                <span className="text-lg font-heading font-bold text-white uppercase">ScopeGen</span>
+              </div>
+              <p className="text-sm leading-relaxed">
+                {t.footer.builtFor}
+              </p>
             </div>
-            <p className="text-sm leading-relaxed">
-              {t.footer.builtFor}
-            </p>
-          </div>
-          
-          <div>
-            <h4 className="text-white font-bold mb-4">{t.nav.product}</h4>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/#pricing" className="hover:text-white">{t.pricing.title}</Link></li>
-              <li><Link href="/app" className="hover:text-white">{t.nav.generator}</Link></li>
-            </ul>
+            
+            {/* Tools Column */}
+            <div>
+              <h4 className="text-white font-bold mb-4">Tools</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/app" className="hover:text-white transition-colors">{t.nav.generator}</Link></li>
+                <li><Link href="/calculator" className="hover:text-white transition-colors">Price Calculator</Link></li>
+                <li><Link href="/contractor-estimate-generator" className="hover:text-white transition-colors">Estimate Generator</Link></li>
+                <li><Link href="/scope-of-work-generator" className="hover:text-white transition-colors">Scope Generator</Link></li>
+              </ul>
+            </div>
+
+            {/* Templates Column */}
+            <div>
+              <h4 className="text-white font-bold mb-4">Templates</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/bathroom-remodel-estimate-template" className="hover:text-white transition-colors">Bathroom Estimate</Link></li>
+                <li><Link href="/kitchen-remodel-estimate-template" className="hover:text-white transition-colors">Kitchen Estimate</Link></li>
+                <li><Link href="/roofing-estimate-template" className="hover:text-white transition-colors">Roofing Estimate</Link></li>
+                <li><Link href="/hvac-estimate-template" className="hover:text-white transition-colors">HVAC Estimate</Link></li>
+                <li><Link href="/plumbing-estimate-template" className="hover:text-white transition-colors">Plumbing Estimate</Link></li>
+                <li><Link href="/electrical-estimate-template" className="hover:text-white transition-colors">Electrical Estimate</Link></li>
+              </ul>
+            </div>
+
+            {/* By Trade Column */}
+            <div>
+              <h4 className="text-white font-bold mb-4">By Trade</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/for/bathroom-remodeling" className="hover:text-white transition-colors">Bathroom Remodeling</Link></li>
+                <li><Link href="/for/kitchen-remodeling" className="hover:text-white transition-colors">Kitchen Remodeling</Link></li>
+                <li><Link href="/for/roofing" className="hover:text-white transition-colors">Roofing</Link></li>
+                <li><Link href="/for/hvac" className="hover:text-white transition-colors">HVAC</Link></li>
+                <li><Link href="/for/plumbing" className="hover:text-white transition-colors">Plumbing</Link></li>
+                <li><Link href="/for/electrical" className="hover:text-white transition-colors">Electrical</Link></li>
+              </ul>
+            </div>
+
+            {/* Resources Column */}
+            <div>
+              <h4 className="text-white font-bold mb-4">Resources</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/blog" className="hover:text-white transition-colors">{t.nav.blog}</Link></li>
+                <li><Link href="/blog/contractor-pricing-guide-2025" className="hover:text-white transition-colors">Pricing Guide 2025</Link></li>
+                <li><Link href="/blog/scope-of-work-template-examples" className="hover:text-white transition-colors">Scope Templates</Link></li>
+                <li><Link href="/#how-it-works" className="hover:text-white transition-colors">{t.nav.howItWorks}</Link></li>
+                <li><Link href="/#pricing" className="hover:text-white transition-colors">{t.pricing.title}</Link></li>
+              </ul>
+            </div>
+
+            {/* Compare & Legal Column */}
+            <div>
+              <h4 className="text-white font-bold mb-4">Compare</h4>
+              <ul className="space-y-2 text-sm mb-6">
+                <li><Link href="/vs/buildertrend" className="hover:text-white transition-colors">vs Buildertrend</Link></li>
+                <li><Link href="/vs/jobber" className="hover:text-white transition-colors">vs Jobber</Link></li>
+                <li><Link href="/vs/houzz-pro" className="hover:text-white transition-colors">vs Houzz Pro</Link></li>
+              </ul>
+              <h4 className="text-white font-bold mb-4">{t.footer.legal}</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/privacy" className="hover:text-white transition-colors">{t.footer.privacyPolicy}</Link></li>
+                <li><Link href="/terms" className="hover:text-white transition-colors">{t.footer.termsOfService}</Link></li>
+              </ul>
+            </div>
           </div>
 
-          <div className="col-span-2 md:col-span-1">
-            <h4 className="text-white font-bold mb-4">By Trade</h4>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/for/bathroom-remodeling" className="hover:text-white">Bathroom Remodeling</Link></li>
-              <li><Link href="/for/kitchen-remodeling" className="hover:text-white">Kitchen Remodeling</Link></li>
-              <li><Link href="/for/roofing" className="hover:text-white">Roofing</Link></li>
-              <li><Link href="/for/hvac" className="hover:text-white">HVAC</Link></li>
-              <li><Link href="/for/plumbing" className="hover:text-white">Plumbing</Link></li>
-              <li><Link href="/for/electrical" className="hover:text-white">Electrical</Link></li>
-            </ul>
+          {/* More Templates Row */}
+          <div className="border-t border-slate-800 pt-8 mb-8">
+            <h4 className="text-white font-bold mb-4">More Estimate Templates</h4>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+              <Link href="/flooring-estimate-template" className="hover:text-white transition-colors">Flooring</Link>
+              <Link href="/painting-estimate-template" className="hover:text-white transition-colors">Painting</Link>
+              <Link href="/drywall-estimate-template" className="hover:text-white transition-colors">Drywall</Link>
+              <Link href="/for/landscaping" className="hover:text-white transition-colors">Landscaping</Link>
+              <Link href="/for/flooring" className="hover:text-white transition-colors">Flooring</Link>
+              <Link href="/for/siding" className="hover:text-white transition-colors">Siding</Link>
+              <Link href="/for/drywall" className="hover:text-white transition-colors">Drywall</Link>
+              <Link href="/for/window-installation" className="hover:text-white transition-colors">Windows</Link>
+              <Link href="/for/deck-building" className="hover:text-white transition-colors">Decks</Link>
+              <Link href="/for/fence-installation" className="hover:text-white transition-colors">Fencing</Link>
+              <Link href="/for/concrete" className="hover:text-white transition-colors">Concrete</Link>
+              <Link href="/for/tile-installation" className="hover:text-white transition-colors">Tile</Link>
+            </div>
           </div>
 
-          <div>
-            <h4 className="text-white font-bold mb-4">{t.nav.company}</h4>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/#how-it-works" className="hover:text-white">{t.nav.howItWorks}</Link></li>
-              <li><Link href="/dashboard" className="hover:text-white">{t.nav.dashboard}</Link></li>
-              <li><Link href="/blog" className="hover:text-white">{t.nav.blog}</Link></li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="text-white font-bold mb-4">{t.footer.legal}</h4>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/privacy" className="hover:text-white">{t.footer.privacyPolicy}</Link></li>
-              <li><Link href="/terms" className="hover:text-white">{t.footer.termsOfService}</Link></li>
-            </ul>
-          </div>
-
-          <div className="col-span-2 md:col-span-2">
+          {/* CTA Row */}
+          <div className="border-t border-slate-800 pt-8 mb-8 text-center">
             <h4 className="text-white font-bold mb-4">{t.hero.cta}</h4>
             <Link 
               href="/app" 
-              className="inline-block bg-secondary text-slate-900 px-4 py-2 rounded font-bold text-sm hover:bg-secondary/90 transition-colors"
+              className="inline-block bg-secondary text-slate-900 px-6 py-3 rounded font-bold text-sm hover:bg-secondary/90 transition-colors"
             >
               {t.hero.cta}
             </Link>
           </div>
-        </div>
-        <div className="container mx-auto px-4 mt-12 pt-8 border-t border-slate-800 text-center text-xs">
-          © {new Date().getFullYear()} Lead Ledger LLC. {t.footer.copyright}
+
+          {/* Copyright */}
+          <div className="border-t border-slate-800 pt-8 text-center text-xs">
+            © {new Date().getFullYear()} Lead Ledger LLC. {t.footer.copyright}
+          </div>
         </div>
       </footer>
 
