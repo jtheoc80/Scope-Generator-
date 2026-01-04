@@ -63,6 +63,58 @@ npm run e2e:ui
 npm run lighthouse
 ```
 
+## Running Mobile Chrome Tests
+
+The `mobile-chrome` project emulates a Pixel 5 Android device using Chromium. This ensures tests run reliably without requiring WebKit installation.
+
+### Prerequisites
+
+Install Chromium browser (if not already installed):
+
+```bash
+npx playwright install chromium
+```
+
+### Running mobile-chrome tests
+
+```bash
+# Run all tests on mobile-chrome
+npx playwright test --project=mobile-chrome
+
+# Run a specific test file
+npx playwright test tests/e2e/data-provider-strings.spec.ts --project=mobile-chrome
+
+# Run with browser visible (headed mode)
+npx playwright test --project=mobile-chrome --headed
+
+# Run with debugging
+npx playwright test --project=mobile-chrome --debug
+
+# Run preflight check first (recommended when debugging)
+npx playwright test smoke.preflight.spec.ts --project=mobile-chrome
+```
+
+### Troubleshooting mobile-chrome
+
+1. **Tests fail instantly (4-8ms)**: This usually means the browser isn't installed. Run `npx playwright install chromium`.
+
+2. **Connection refused errors**: The dev server isn't running. Either:
+   - Run `npm run dev` in another terminal, or
+   - Let Playwright auto-start it (configured in `playwright.config.ts`)
+
+3. **Wrong viewport or user agent**: Verify you're using `--project=mobile-chrome`. The project uses Pixel 5 device settings (393x851 viewport, Android user agent).
+
+4. **Tests pass on chromium but fail on mobile-chrome**: Check for responsive design issues - mobile viewport is much narrower (393px vs ~1280px).
+
+### Device Configuration
+
+The `mobile-chrome` project uses these settings (Pixel 5):
+- Viewport: 393 x 851
+- Device Scale Factor: 2.75
+- User Agent: Android Chrome
+- Touch: enabled
+- Mobile: true
+
 ## Critical Flows Tested
 
 The QA Agent validates these flows that **must never break**:
