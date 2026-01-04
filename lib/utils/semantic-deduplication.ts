@@ -125,16 +125,16 @@ export function deduplicateItems<T extends DeduplicatableItem>(
         return getTextField(a).length - getTextField(b).length;
       })[0];
       
-      // Merge photoIds from all duplicates
+      // Merge photoIds from all duplicates into a copy of the best item
       const allPhotoIds = new Set<number>();
       for (const item of group) {
         for (const photoId of item.photoIds) {
           allPhotoIds.add(photoId);
         }
       }
-      best.photoIds = [...allPhotoIds];
       
-      deduplicated.push(best);
+      // Create a shallow copy to avoid mutating the original object
+      deduplicated.push({ ...best, photoIds: [...allPhotoIds] });
     }
   }
   
