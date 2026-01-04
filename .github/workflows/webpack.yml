@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ "main" ]
 
+env:
+  CI: true
+  # Ensure devDependencies (typescript, eslint, drizzle-kit) are installed during npm ci
+  NODE_ENV: development
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -31,6 +36,9 @@ jobs:
         node -p "require.resolve('typescript')"
         node -p "require.resolve('eslint')"
         node -p "require.resolve('drizzle-kit')"
+
+    - name: TypeScript Check
+      run: npm run typecheck
 
     - name: Lint
       run: npm run lint

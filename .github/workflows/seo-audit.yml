@@ -29,6 +29,11 @@ permissions:
   pull-requests: write
   issues: write
 
+env:
+  CI: true
+  # Ensure devDependencies (tsx) are installed during npm ci
+  NODE_ENV: development
+
 jobs:
   seo-audit:
     name: SEO Metadata Audit
