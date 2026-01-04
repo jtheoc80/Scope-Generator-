@@ -244,6 +244,9 @@ export const companiesRelations = relations(companies, ({ one, many }) => ({
   }),
   members: many(companyMembers),
   invites: many(invites),
+  analyticsSnapshots: many(companyAnalyticsSnapshots),
+  memberActivities: many(memberActivity),
+  activityFeed: many(companyActivityFeed),
 }));
 
 export const companyMembersRelations = relations(companyMembers, ({ one }) => ({
@@ -267,6 +270,221 @@ export const invitesRelations = relations(invites, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+// ==========================================
+// Crew Page Analytics & Member Activity
+// ==========================================
+
+/**
+ * Company-level analytics snapshots
+ * Aggregated metrics for the entire team/company
+ */
+export const companyAnalyticsSnapshots = pgTable("company_analytics_snapshots", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  // Time period
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  periodType: varchar("period_type", { length: 20 }).notNull(), // 'daily', 'weekly', 'monthly'
+  // Aggregate proposal metrics
+  totalProposals: integer("total_proposals").notNull().default(0),
+  sentCount: integer("sent_count").notNull().default(0),
+  viewedCount: integer("viewed_count").notNull().default(0),
+  acceptedCount: integer("accepted_count").notNull().default(0),
+  wonCount: integer("won_count").notNull().default(0),
+  lostCount: integer("lost_count").notNull().default(0),
+  // Value metrics (in cents)
+  totalValueLow: integer("total_value_low").notNull().default(0),
+  totalValueHigh: integer("total_value_high").notNull().default(0),
+  wonValueLow: integer("won_value_low").notNull().default(0),
+  wonValueHigh: integer("won_value_high").notNull().default(0),
+  avgPriceLow: integer("avg_price_low"),
+  avgPriceHigh: integer("avg_price_high"),
+  // Engagement metrics
+  totalViews: integer("total_views").notNull().default(0),
+  uniqueViewers: integer("unique_viewers").notNull().default(0),
+  // Per-member breakdown (jsonb for flexibility, keyed by odUserId)
+  memberBreakdown: jsonb("member_breakdown").$type<Record<string, {
+    userName: string;
+    proposals: number;
+    sent: number;
+    won: number;
+    lost: number;
+    valueLow: number;
+    valueHigh: number;
+  }>>(),
+  // Trade breakdown
+  tradeBreakdown: jsonb("trade_breakdown").$type<Record<string, { count: number; value: number }>>(),
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  companyPeriodIdx: index("idx_company_analytics_company_period").on(table.companyId, table.periodStart, table.periodType),
+}));
+
+/**
+ * Member activity tracking
+ * Tracks individual member stats and activity within a company
+ */
+export const memberActivity = pgTable("member_activity", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  // Lifetime proposal stats
+  proposalsCreated: integer("proposals_created").notNull().default(0),
+  proposalsSent: integer("proposals_sent").notNull().default(0),
+  proposalsWon: integer("proposals_won").notNull().default(0),
+  proposalsLost: integer("proposals_lost").notNull().default(0),
+  proposalsAccepted: integer("proposals_accepted").notNull().default(0),
+  // Value metrics (in cents)
+  totalValueCreated: integer("total_value_created").notNull().default(0),
+  totalValueWon: integer("total_value_won").notNull().default(0),
+  // Win rate (calculated, stored for quick access)
+  winRate: integer("win_rate"), // percentage 0-100
+  // Activity timestamps
+  lastActiveAt: timestamp("last_active_at"),
+  lastProposalCreatedAt: timestamp("last_proposal_created_at"),
+  lastProposalSentAt: timestamp("last_proposal_sent_at"),
+  lastProposalWonAt: timestamp("last_proposal_won_at"),
+  // Current period stats (reset monthly/weekly)
+  currentPeriodProposals: integer("current_period_proposals").notNull().default(0),
+  currentPeriodWon: integer("current_period_won").notNull().default(0),
+  currentPeriodValue: integer("current_period_value").notNull().default(0),
+  periodResetAt: timestamp("period_reset_at"),
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyUserIdx: index("idx_member_activity_company_user").on(table.companyId, table.userId),
+  userIdx: index("idx_member_activity_user").on(table.userId),
+  lastActiveIdx: index("idx_member_activity_last_active").on(table.companyId, table.lastActiveAt),
+}));
+
+/**
+ * Company activity feed
+ * Recent actions by team members for the crew dashboard
+ */
+export const companyActivityFeed = pgTable("company_activity_feed", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  // Activity type
+  activityType: varchar("activity_type", { length: 50 }).notNull(),
+  // Types: 'proposal_created', 'proposal_sent', 'proposal_viewed', 'proposal_accepted',
+  //        'proposal_won', 'proposal_lost', 'member_joined', 'member_invited'
+  // Related entity
+  proposalId: integer("proposal_id").references(() => proposals.id, { onDelete: "set null" }),
+  // Activity metadata
+  metadata: jsonb("metadata").$type<{
+    clientName?: string;
+    proposalValue?: number;
+    jobType?: string;
+    memberEmail?: string;
+    memberName?: string;
+  }>(),
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  companyCreatedIdx: index("idx_company_activity_feed_company_created").on(table.companyId, table.createdAt),
+  userCreatedIdx: index("idx_company_activity_feed_user_created").on(table.userId, table.createdAt),
+}));
+
+// Company analytics relations
+export const companyAnalyticsSnapshotsRelations = relations(companyAnalyticsSnapshots, ({ one }) => ({
+  company: one(companies, {
+    fields: [companyAnalyticsSnapshots.companyId],
+    references: [companies.id],
+  }),
+}));
+
+export const memberActivityRelations = relations(memberActivity, ({ one }) => ({
+  company: one(companies, {
+    fields: [memberActivity.companyId],
+    references: [companies.id],
+  }),
+  user: one(users, {
+    fields: [memberActivity.userId],
+    references: [users.id],
+  }),
+}));
+
+export const companyActivityFeedRelations = relations(companyActivityFeed, ({ one }) => ({
+  company: one(companies, {
+    fields: [companyActivityFeed.companyId],
+    references: [companies.id],
+  }),
+  user: one(users, {
+    fields: [companyActivityFeed.userId],
+    references: [users.id],
+  }),
+  proposal: one(proposals, {
+    fields: [companyActivityFeed.proposalId],
+    references: [proposals.id],
+  }),
+}));
+
+// Types for Crew analytics
+export type CompanyAnalyticsSnapshot = typeof companyAnalyticsSnapshots.$inferSelect;
+export type InsertCompanyAnalyticsSnapshot = typeof companyAnalyticsSnapshots.$inferInsert;
+export type MemberActivity = typeof memberActivity.$inferSelect;
+export type InsertMemberActivity = typeof memberActivity.$inferInsert;
+export type CompanyActivityFeed = typeof companyActivityFeed.$inferSelect;
+export type InsertCompanyActivityFeed = typeof companyActivityFeed.$inferInsert;
+
+// Activity types for company feed
+export const companyActivityTypes = [
+  'proposal_created',
+  'proposal_sent',
+  'proposal_viewed',
+  'proposal_accepted',
+  'proposal_won',
+  'proposal_lost',
+  'member_joined',
+  'member_invited',
+  'member_removed',
+] as const;
+
+export type CompanyActivityType = typeof companyActivityTypes[number];
+
+// Zod schemas for Crew analytics
+export const memberBreakdownSchema = z.record(z.string(), z.object({
+  userName: z.string(),
+  proposals: z.number(),
+  sent: z.number(),
+  won: z.number(),
+  lost: z.number(),
+  valueLow: z.number(),
+  valueHigh: z.number(),
+}));
+
+export const insertCompanyAnalyticsSnapshotSchema = createInsertSchema(companyAnalyticsSnapshots).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  memberBreakdown: memberBreakdownSchema.optional(),
+  tradeBreakdown: z.record(z.string(), z.object({ count: z.number(), value: z.number() })).optional(),
+});
+
+export const insertMemberActivitySchema = createInsertSchema(memberActivity).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const activityMetadataSchema = z.object({
+  clientName: z.string().optional(),
+  proposalValue: z.number().optional(),
+  jobType: z.string().optional(),
+  memberEmail: z.string().optional(),
+  memberName: z.string().optional(),
+});
+
+export const insertCompanyActivityFeedSchema = createInsertSchema(companyActivityFeed).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  activityType: z.enum(companyActivityTypes),
+  metadata: activityMetadataSchema.optional(),
+});
 
 // Cancellation feedback table
 export const cancellationFeedback = pgTable("cancellation_feedback", {
