@@ -85,9 +85,12 @@ function getSemanticKey(text: string): string {
  * @param getTextField - Function to extract the text field from an item (e.g., item.label or item.issue)
  * @returns Deduplicated array of items
  */
-export function deduplicateItems<T extends DeduplicatableItem>(
+export function deduplicateItems<
+  T extends DeduplicatableItem,
+  TText extends string = string
+>(
   items: T[],
-  getTextField: (item: T) => string
+  getTextField: (item: T) => TText
 ): T[] {
   const semanticGroups = new Map<string, T[]>();
   
