@@ -114,8 +114,8 @@ export const proposals = pgTable("proposals", {
   jobTypeName: varchar("job_type_name").notNull(),
   jobSize: integer("job_size").notNull().default(2),
   scope: text("scope").array().notNull(),
-  // Optional structured scope sections (preferred for display when present)
-  scopeSections: jsonb("scope_sections").$type<ScopeSection[]>(),
+  // Structured scope sections (grouped display). Defaults to empty array for new proposals.
+  scopeSections: jsonb("scope_sections").$type<ScopeSection[]>().notNull().default(sql`'[]'::jsonb`),
   options: jsonb("options").notNull().default({}),
   priceLow: integer("price_low").notNull(),
   priceHigh: integer("price_high").notNull(),

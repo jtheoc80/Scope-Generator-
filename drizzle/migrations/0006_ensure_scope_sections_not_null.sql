@@ -1,0 +1,29 @@
+-- Migration: Ensure scope_sections column exists with NOT NULL constraint
+-- Description: This migration ensures the scope_sections column exists on proposals
+-- and sets a default of empty array. This fixes schema drift where the column
+-- may have been added without proper constraints.
+--
+-- This migration is idempotent - safe to run multiple times.
+
+-- Step 1: Add column if it doesn't exist (idempotent)
+ALTER TABLE "proposals"
+ADD COLUMN IF NOT EXISTS "scope_sections" jsonb;
+
+-- Step 2: Update any existing NULL values to empty array
+-- We are intentionally normalizing data here because the schema is being
+-- migrated from a potentially nullable column to a NOT NULL column where
+-- NULL is not a meaningful state. Any existing NULL values (including those
+-- created by earlier partial migrations) are treated as equivalent to an
+-- empty array and are therefore safely converted to '[]'.
+UPDATE "proposals" 
+SET "scope_sections" = '[]'::jsonb 
+WHERE "scope_sections" IS NULL;
+
+-- Step 3: Set default for future inserts
+ALTER TABLE "proposals" 
+ALTER COLUMN "scope_sections" SET DEFAULT '[]'::jsonb;
+
+-- Step 4: Add NOT NULL constraint (requires all existing values to be non-null)
+-- Note: This is safe because we just set all NULLs to []
+ALTER TABLE "proposals"
+ALTER COLUMN "scope_sections" SET NOT NULL;

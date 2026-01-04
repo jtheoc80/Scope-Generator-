@@ -8,6 +8,28 @@ import { db } from "@/server/db";
 import { sql } from "drizzle-orm";
 import { createHash } from "crypto";
 
+// Log DB connection info on module load (masked for security)
+const logDbInfo = () => {
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) {
+    console.warn("[mobile/submit] DATABASE_URL not set!");
+    return;
+  }
+  try {
+    const parsed = new URL(dbUrl);
+    const hostParts = parsed.host.split(".");
+    const projectRef = hostParts.length >= 3 && parsed.host.includes("supabase") 
+      ? hostParts[1] 
+      : null;
+    console.log(`[mobile/submit] DB: ${parsed.host}, project: ${projectRef || "N/A"}`);
+  } catch {
+    console.log("[mobile/submit] DB URL configured (parsing failed)");
+  }
+};
+if (process.env.NODE_ENV === "development") {
+  logDbInfo();
+}
+
 const submitBodySchema = z.object({
   package: z.enum(["GOOD", "BETTER", "BEST"]).optional(),
 });
@@ -60,6 +82,9 @@ export async function POST(
       return jsonError(requestId, 400, "FAILED_PRECONDITION", "Draft payload is missing line items");
     }
 
+    // Ensure scopeSections is always an array (never undefined) to avoid NOT NULL constraint violations
+    const scopeSectionsData = Array.isArray(lineItem.scopeSections) ? lineItem.scopeSections : [];
+    
     const validation = insertProposalSchema.safeParse({
       userId: authResult.userId,
       clientName: job.clientName,
@@ -69,8 +94,8 @@ export async function POST(
       jobTypeName: job.jobTypeName,
       jobSize: job.jobSize,
       scope: Array.isArray(lineItem.scope) ? lineItem.scope : [],
-      // Include structured scope sections if present in draft (mobile draft generator may provide these)
-      scopeSections: Array.isArray(lineItem.scopeSections) ? lineItem.scopeSections : undefined,
+      // Always provide scopeSections (default to empty array) to satisfy NOT NULL constraint
+      scopeSections: scopeSectionsData,
       options: {
         ...(lineItem.options ?? {}),
         __mobile: {
@@ -86,6 +111,12 @@ export async function POST(
       estimatedDaysHigh: lineItem.estimatedDaysHigh,
       source: 'mobile', // Track proposal origin for analytics
     });
+    
+    // Log keys being inserted for debugging schema drift
+    if (validation.success) {
+      const keys = Object.keys(validation.data).filter(k => validation.data[k as keyof typeof validation.data] !== undefined);
+      logEvent("mobile.submit.proposal_keys", { requestId, keys: keys.join(",") });
+    }
 
     if (!validation.success) {
       return jsonError(

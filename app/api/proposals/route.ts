@@ -50,9 +50,12 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     
+    // Ensure scopeSections defaults to empty array (never undefined)
     const validationResult = insertProposalSchema.safeParse({
       ...body,
       userId,
+      // Default scopeSections to [] if not provided
+      scopeSections: body.scopeSections ?? [],
     });
 
     if (!validationResult.success) {
@@ -66,7 +69,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Log basic insert metadata for debugging without exposing field names
+    const fieldCount = Object.keys(validationResult.data).length;
+    console.log('[proposals/POST] Validated proposal payload with', fieldCount, 'fields');
+
     const proposal = await storage.createProposal(validationResult.data);
+    return NextResponse.json(proposal);
+  } catch (error) {
     return NextResponse.json(proposal);
   } catch (error) {
     console.error('Error creating proposal:', error);

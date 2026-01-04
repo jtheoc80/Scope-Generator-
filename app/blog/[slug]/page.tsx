@@ -283,7 +283,11 @@ export default async function BlogPostPage({ params }: PageProps) {
     author: post.author.name,
     image: post.heroImage || post.ogImage,
     type: "BlogPosting",
-    image: post.heroImage ? `https://scopegenerator.com${post.heroImage}` : undefined,
+    image: post.heroImage
+      ? `https://scopegenerator.com${post.heroImage}`
+      : post.ogImage
+        ? `https://scopegenerator.com${post.ogImage}`
+        : undefined,
   });
 
   const breadcrumbs = generateBreadcrumbSchema([

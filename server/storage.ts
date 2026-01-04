@@ -220,12 +220,21 @@ export class DatabaseStorage implements IStorage {
 
   // Proposal operations
   async createProposal(proposal: InsertProposal): Promise<Proposal> {
-    const { options, ...rest } = proposal;
+    const { options, scopeSections, ...rest } = proposal;
+    
+    // Debug logging for schema migration: only log in non-production when scopeSections is missing
+    if (process.env.NODE_ENV !== "production" && scopeSections == null) {
+      const insertKeys = Object.keys({ ...rest, options, scopeSections });
+      console.debug("[createProposal] Insert keys (scopeSections missing):", insertKeys.join(", "));
+    }
+    
     const [newProposal] = await db
       .insert(proposals)
       .values({
         ...rest,
         options: options ?? {},
+        // Ensure scopeSections is never undefined - use empty array as fallback
+        scopeSections: scopeSections ?? [],
       } as typeof proposals.$inferInsert)
       .returning();
     return newProposal;
