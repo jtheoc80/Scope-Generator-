@@ -2,7 +2,8 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Layout from "@/components/layout";
 import Link from "next/link";
-import { ArrowRight, RefreshCw } from "lucide-react";
+import Image from "next/image";
+import { ArrowLeft, ArrowRight, Calendar, Clock, Zap, User, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { blogPosts, getRelatedPosts } from "@/lib/blog-data";
 import { generateArticleSchema, generateBreadcrumbSchema, generateFAQSchema } from "@/lib/seo/jsonld";
@@ -282,6 +283,7 @@ export default async function BlogPostPage({ params }: PageProps) {
     author: post.author.name,
     image: post.heroImage || post.ogImage,
     type: "BlogPosting",
+    image: post.heroImage ? `https://scopegenerator.com${post.heroImage}` : undefined,
   });
 
   const breadcrumbs = generateBreadcrumbSchema([
@@ -313,19 +315,79 @@ export default async function BlogPostPage({ params }: PageProps) {
       )}
 
       <article>
-        {/* Hero Section */}
-        <BlogHero
-          title={post.title}
-          excerpt={post.excerpt}
-          category={post.category}
-          tags={post.tags}
-          author={post.author}
-          datePublished={post.datePublished}
-          dateModified={post.dateModified}
-          readTime={post.readTime}
-          heroImage={post.heroImage}
-          heroImageAlt={post.heroImageAlt}
-        />
+        <header className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-16">
+          <div className="container mx-auto px-4">
+            <div className="max-w-3xl mx-auto">
+              <Link href="/blog">
+                <Button variant="ghost" className="text-slate-300 hover:text-white mb-6 -ml-4" data-testid="blog-back">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Blog
+                </Button>
+              </Link>
+              <div className="flex items-center gap-4 text-sm text-slate-400 mb-4">
+                <span className="bg-orange-500/20 text-orange-300 px-3 py-1 rounded-full">
+                  {post.category}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Calendar className="h-4 w-4" />
+                  {post.date}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Clock className="h-4 w-4" />
+                  {post.readTime}
+                </span>
+              </div>
+              <h1 className="text-3xl md:text-4xl font-display font-bold mb-4" data-testid="blog-post-title">
+                {post.title}
+              </h1>
+              <p className="text-lg text-slate-300">{post.excerpt}</p>
+              
+              {/* Author Byline - E-E-A-T Signal */}
+              <div className="mt-6 pt-6 border-t border-slate-700 flex items-center gap-4">
+                <div className="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center">
+                  <User className="w-6 h-6 text-slate-400" />
+                </div>
+                <div>
+                  <p className="font-medium text-white">{post.author}</p>
+                  <p className="text-sm text-slate-400">Construction Industry Expert</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Hero Image */}
+        {post.heroImage && (
+          <div className="bg-slate-100">
+            <div className="container mx-auto px-4">
+              <div className="max-w-4xl mx-auto -mt-8 relative">
+                <div className="rounded-xl overflow-hidden shadow-2xl">
+                  <Image
+                    src={post.heroImage}
+                    alt={post.title}
+                    width={1200}
+                    height={630}
+                    priority
+                    className="w-full h-auto"
+                  />
+                </div>
+                <p className="text-center text-sm text-slate-500 mt-3 italic">
+                  Pricing confidence comes from knowing your numbers and presenting them clearly.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Last Updated Notice - E-E-A-T Signal */}
+        <div className="bg-slate-100 border-b">
+          <div className="container mx-auto px-4 py-3">
+            <div className="max-w-3xl mx-auto flex items-center gap-2 text-sm text-slate-600">
+              <RefreshCw className="h-4 w-4" />
+              <span>Last updated: {post.date}</span>
+            </div>
+          </div>
+        </div>
 
         {/* Last Updated Notice */}
         {post.dateModified !== post.datePublished && (

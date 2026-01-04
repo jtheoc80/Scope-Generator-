@@ -27,6 +27,8 @@ export interface BlogPost {
   canonical?: string;
   content: string[];
   faqs?: BlogPostFAQ[];
+  heroImage?: string;
+  ogImage?: string;
 }
 
 // Category hero image defaults
@@ -176,180 +178,93 @@ export const blogPosts: Record<string, BlogPost> = {
 
   "contractor-pricing-guide-2025": {
     slug: "contractor-pricing-guide-2025",
-    title: "Contractor Pricing Guide 2026: What to Charge Without Leaving Money on the Table",
-    excerpt: "Most contractors underprice by 20-30%. Here's the math I use to set rates that cover true costs, hit profit targets, and still win competitive bids.",
-    author: {
-      name: "Dave Morrison",
-      credentials: "Owner, Morrison Construction | $2.4M annual revenue",
-    },
-    datePublished: "January 2, 2026",
-    dateModified: "January 3, 2026",
-    readTime: "14 min read",
+    title: "Contractor Pricing Guide 2025: How to Price Your Services Profitably",
+    excerpt: "If you want a price that wins jobs and protects profit, you need your real job cost, a target profit margin, and a clean way to present the price so clients trust it.",
+    author: "ScopeGen Team",
+    date: "January 2, 2026",
+    readTime: "12 min read",
     category: "Business Tips",
-    tags: ["pricing strategy", "profit margin", "hourly rates", "contractor business"],
-    metaTitle: "Contractor Pricing Guide 2026 | How to Price Jobs & Stay Profitable",
-    metaDescription: "Calculate what to charge as a contractor in 2026. Covers markup vs margin, overhead recovery, regional adjustments, and pricing strategies that actually work.",
-    heroImage: "/images/blog/pricing-guide/hero.jpg",
-    heroImageAlt: "Contractor reviewing estimate documents on jobsite",
+    metaTitle: "Contractor Pricing Guide 2025 (Updated): Markup, Margin, Break-Even + Trade Benchmarks",
+    metaDescription: "Learn how to price contractor jobs profitably in 2025: markup vs margin, break-even rate, regional adjustments, pricing strategies, and trade benchmarks. Includes examples and templates.",
+    heroImage: "/blog/contractor-pricing-guide-2025/hero.svg",
+    ogImage: "/blog/contractor-pricing-guide-2025/og.svg",
     content: [
-      "Three years ago I was billing $65/hour for finish carpentry. I was busy all the time, exhausted, and barely clearing $50K after expenses. Then I did the math—really did it—and realized I was working for about $18/hour once you factored in everything.",
-      
-      "That wake-up call changed my business. Today I charge $125/hour and I'm *less* busy but making 3x the profit. Here's everything I learned about pricing.",
-      
-      "## The Brutal Truth About Markup vs. Margin",
-      
-      "This trips up almost every contractor I talk to. Let's clear it up:",
-      
-      "**Markup** = percentage added to cost\n**Margin** = percentage of selling price that's profit",
-      
-      "If a job costs you $1,000 and you add 50% markup, your price is $1,500. But your margin? Only 33% ($500 ÷ $1,500).",
-      
-      "Here's the conversion table I keep on my desk:",
-      
-      "| Markup | Actual Margin |\n|--------|---------------|\n| 20% | 16.7% |\n| 30% | 23.1% |\n| 40% | 28.6% |\n| 50% | 33.3% |\n| 75% | 42.9% |\n| 100% | 50.0% |",
-      
-      "If you're targeting 25% profit margin, you need a 33% markup, not 25%. Get this wrong and you're leaving thousands on the table every year.",
-      
-      "## What You're Actually Spending (The Overhead Reality)",
-      
-      "Here's where pricing goes off the rails. Most guys calculate: Materials + Labor + \"something for profit\" = Price.",
-      
-      "That misses all of this:",
-      
-      "**Fixed monthly costs:**\n- Vehicle payment + insurance + gas: $800\n- Tool maintenance/replacement: $200\n- Phone + internet: $150\n- Accounting/bookkeeping: $200\n- Liability insurance: $400\n- Software (estimating, scheduling): $150\n- Marketing (website, ads): $300\n- License renewals/CE: $50\n\n**Monthly overhead: $2,250**\n**Annual overhead: $27,000**",
-      
-      "That's before you pay yourself a dime. And I'm being conservative—many contractors have $40-50K in overhead.",
-      
-      "## Calculating Your Break-Even Hourly Rate",
-      
-      "Here's the formula that changed my business:",
-      
-      "**Step 1:** Annual overhead = $27,000\n\n**Step 2:** Billable hours per year\n- 50 weeks × 40 hours = 2,000 hours total\n- But you're not billing 40 hours/week\n- Subtract: estimates (6 hrs/wk), driving (5 hrs), admin (4 hrs), callbacks (2 hrs)\n- That's 17 non-billable hours per week\n- Actual billable: 23 hours × 50 weeks = **1,150 hours**\n\n**Step 3:** Break-even rate = $27,000 ÷ 1,150 = **$23.48/hour**",
-      
-      "This is just to cover overhead. Add your labor cost ($25-45/hr depending on your market) and you're at $48-68/hour *before any profit*.",
-      
-      "If you're charging $50/hour, you're barely breaking even on good weeks.",
-      
-      "## What Should Your Target Margin Be?",
-      
-      "Typical ranges we see in the industry:",
-      
-      "| Contractor Type | Target Net Margin |\n|-----------------|-------------------|\n| Solo handyman | 15-25% |\n| Small remodel crew (2-4) | 12-18% |\n| Specialty trade (HVAC, plumbing) | 10-15% |\n| General contractor (subs out) | 8-12% |\n| Large commercial | 5-10% |",
-      
-      "The smaller your operation, the higher your margin needs to be because you have less volume to absorb overhead.",
-      
-      "## Regional Pricing Adjustments (2026 Data)",
-      
-      "National averages mean nothing if you're in San Francisco vs. rural Ohio. Here's what we're seeing for typical remodeling rates:",
-      
-      "**Premium markets (adjust +25-40%):**\n- San Francisco Bay Area\n- NYC metro\n- Seattle\n- Boston\n- Los Angeles\n\n**Above average (+10-20%):**\n- Denver\n- Austin\n- Miami\n- Phoenix\n- Portland\n\n**At or near average:**\n- Dallas\n- Atlanta\n- Chicago suburbs\n- Charlotte\n- Nashville\n\n**Below average (-10-20%):**\n- Midwest rural areas\n- Smaller Southern cities\n- Inland Northwest",
-      
-      "**Real example:** If average bathroom labor is $75/hour nationally, a San Francisco contractor should be at $95-105/hour. Rural Iowa? Maybe $60-65/hour.",
-      
-      "## The Three Pricing Strategies That Work",
-      
-      "### 1. Cost-Plus (Simple, Safe)",
-      
-      "Add a fixed percentage to every job. Works best when you can accurately estimate costs.",
-      
-      "- Materials: cost + 25-35%\n- Labor: your hourly × hours + 15-25%\n- Subcontractors: their bid + 10-15%",
-      
-      "**Pros:** Easy to calculate, easy to explain\n**Cons:** Leaves money on the table on jobs you're really efficient at",
-      
-      "### 2. Value-Based (Harder, More Profitable)",
-      
-      "Price based on the value to the customer, not just your costs. A $300 repair that prevents $5,000 in water damage is *worth* more than $300.",
-      
-      "This works best for:\n- Emergency/urgent work\n- Specialized skills (historic restoration, high-end finishes)\n- Solving expensive problems",
-      
-      "I charge $185/hour for emergency calls vs. $125 for scheduled work. Nobody blinks at 4am when their basement is flooding.",
-      
-      "### 3. Good-Better-Best (My Favorite)",
-      
-      "Offer three options at different price points. Psychology is on your side: most people pick the middle.",
-      
-      "**Example for a deck build:**",
-      
-      "- **Good ($8,500):** Pressure-treated lumber, basic railing, single level\n- **Better ($14,200):** Composite decking, aluminum railing, built-in bench\n- **Best ($22,000):** Premium composite, cable railing, multi-level with lighting",
-      
-      "80% of my customers pick \"Better.\" Without the option, most would've asked for the cheapest.",
-      
-      "## The Pricing Mistakes Killing Your Profit",
-      
-      "### Mistake #1: Racing to the Bottom",
-      
-      "\"I'll just be the cheapest and make it up on volume.\"",
-      
-      "No you won't. Cheap customers are the most demanding, most likely to complain, least likely to refer. I'd rather do 20 jobs at $5,000 profit than 40 jobs at $2,000 profit. Same money, half the headaches.",
-      
-      "### Mistake #2: Not Pricing for Callbacks",
-      
-      "Everything you build will need some warranty work. Budget 3-5% of revenue for callbacks. If you're not, you're subsidizing warranty work with profit from other jobs.",
-      
-      "### Mistake #3: Forgetting Slow Season",
-      
-      "January-March is brutal in most of the country. Your busy-season pricing needs to carry you through 2-3 slow months. I price assuming I'll only work 10 months at full capacity.",
-      
-      "### Mistake #4: Matching Competitor Prices",
-      
-      "You don't know their costs. A guy with a paid-off truck, works from home, and has no employees can charge less than you. That doesn't mean you should match him—it means your overhead is different.",
-      
-      "## What to Charge by Trade (2026 Benchmarks)",
-      
-      "These are typical ranges for experienced contractors in average-cost markets. Adjust for your region.",
-      
-      "**Hourly rates:**\n- General carpentry: $65-95/hour\n- Finish carpentry: $85-125/hour\n- Plumbing: $95-150/hour\n- Electrical: $85-130/hour\n- HVAC: $100-175/hour\n- Painting: $55-85/hour\n- Tile setting: $70-110/hour\n\n**Per-unit rates:**\n- Bathroom remodel: $250-450/sf (full gut)\n- Kitchen remodel: $300-500/sf (full gut)\n- Roofing (asphalt): $400-700/square\n- Flooring install: $8-15/sf (labor only)\n- Interior painting: $3.50-6/sf (walls + ceiling)",
-      
-      "These are labor rates or labor + overhead. Materials are additional.",
-      
-      "## How to Raise Your Prices (Without Losing Everyone)",
-      
-      "If you're underpriced, you need to raise rates. Here's how:",
-      
-      "**1. Do it gradually:** 10-15% per year is digestible. 50% overnight loses customers.\n\n**2. Announce it in advance:** \"Starting March 1, my hourly rate is increasing to $X.\" Give 30-60 days notice.\n\n**3. Add value with the increase:** \"I've also added a 2-year warranty\" or \"Now includes project photos and walkthrough video.\"\n\n**4. Don't apologize:** You're not doing anything wrong. Costs go up. This is business.\n\n**5. Accept you'll lose some people:** The ones who leave over 10%? You don't want them anyway.",
-      
-      "## Tools That Help With Pricing",
-      
-      "I used to price everything in Excel. Now I use:",
-      
-      "- **[ScopeGen](/calculator)** for quick estimates with regional pricing data\n- **Buildertrend** for job costing and tracking actual vs. estimated\n- **QuickBooks** to see what jobs were actually profitable",
-      
-      "The key insight: you need to track actuals. If you quoted a job at $8,000 and it actually cost you $7,200 in labor/materials, great—you know your estimate was accurate. If it cost $9,100, you need to figure out why and adjust.",
-      
-      "## My Pricing Process (Step by Step)",
-      
-      "1. **Site visit:** Measure everything, take photos, understand the full scope\n2. **Material takeoff:** List every material with current prices\n3. **Labor estimate:** Hours per task based on my production rates\n4. **Overhead allocation:** Add 15-20% for overhead recovery\n5. **Profit margin:** Add 15-20% for profit\n6. **Reality check:** Is this competitive for my market? Would I pay this?\n7. **Create options:** Good/better/best when possible\n8. **Present in person:** Walk through the proposal, answer questions",
-      
-      "## The Bottom Line",
-      
-      "Pricing is the single biggest lever in your business. A 10% price increase on $500K revenue is $50,000—probably more than you'd make working 200 extra hours.",
-      
-      "Do the math on your real costs. Set your target margin. Price accordingly. Let the guys who \"need the work\" race to the bottom without you.",
+      "**If you want a price that wins jobs *and* protects profit, you need 3 things:** 1) your real job cost (labor + materials + overhead), 2) a target profit margin, 3) a clean way to present the price so clients trust it.",
+      "This guide gives you a simple pricing system you can repeat on every job—whether you do bathrooms, roofing, HVAC, plumbing, or electrical.",
+      "## Quick definitions (this mistake costs contractors a lot)",
+      "Most pricing confusion starts with one mix-up: **markup vs margin**.",
+      "### Markup vs margin (not the same)",
+      "- **Markup** = what you add to cost to get price\n- **Margin** = profit as a % of the selling price",
+      "**Example:** Job cost: $10,000 → Price: $15,000 → Profit: $5,000",
+      "Markup = $5,000 ÷ $10,000 = **50%**. Margin = $5,000 ÷ $15,000 = **33%**.",
+      "**Rule of thumb:** If you want a 30% margin, you usually need a markup higher than 30%.",
+      "## Step 1: Know the true cost of a job (most people undercount)",
+      "To price correctly, you need **direct costs** *and* **indirect costs**.",
+      "### Direct costs (job-specific)",
+      "- Materials and freight\n- Labor (including payroll taxes, burden, OT risk)\n- Subs\n- Permits / disposal / rentals",
+      "### Indirect costs (overhead you must recover)",
+      "- Vehicles, fuel, insurance, tools, maintenance\n- Office/admin, software, bookkeeping\n- Marketing (leads aren't free)\n- Unbillable time (estimates, driving, callbacks)",
+      "**Pro tip:** If your price only covers materials + labor, overhead eats your profit.",
+      "## Step 2: Calculate your break-even rate (your pricing floor)",
+      "This is the number that prevents \"busy but broke.\"",
+      "### Break-even hourly rate formula",
+      "**Annual overhead ÷ realistic billable hours = overhead per billable hour**",
+      "**Example:** Annual overhead: $60,000. Work hours: 2,000/year. Realistic billable hours after admin/drive/estimates: 1,400.",
+      "$60,000 ÷ 1,400 = **$43/hr** (overhead recovery). That's *before* wages and profit.",
+      "**Your floor price = labor wage + labor burden + overhead/hr + materials + subs.** Everything above that is profit (and contingency).",
+      "## Step 3: Adjust for your market (region + job type)",
+      "Pricing varies by cost of living and labor rates, permit complexity and inspections, material availability and delivery costs, competition and specialization level.",
+      "### Simple regional adjustment starting points",
+      "Use these as a starting dial, then refine with your own close rates:",
+      "- **California**: +25–35%\n- **NY/NJ**: +20–30%\n- **Texas major metros**: +5–15%\n- **Florida**: +10–20%\n- **Midwest**: −5–10%\n- **Rural areas**: −10–20%",
+      "If you consistently win 70%+ of bids, you're probably underpriced.",
+      "## Step 4: Pick a pricing strategy that matches the job",
+      "### 1) Cost-plus (best when you track costs well)",
+      "Price = (labor + materials + subs) + markup. Works well for remodels with predictable scope.",
+      "### 2) Fixed price (best for defined scopes)",
+      "Client wants certainty. Your proposal must clearly define what's included/excluded.",
+      "### 3) Value-based (best for premium work)",
+      "If you sell speed (fast turnaround), cleanliness/protection of home, design help, strong warranty, or high-end finish quality…you can charge more **because you reduce risk for the homeowner.**",
+      "## Step 5: Present pricing so clients trust it (and stop negotiating)",
+      "Homeowners don't just buy price—they buy **clarity**.",
+      "A proposal should include: scope (what you will do), materials/allowances (what's selected vs placeholder), timeline, payment schedule, warranty/standards, exclusions and change-order rules.",
+      "### The \"Good / Better / Best\" structure wins",
+      "Offer 3 options:",
+      "- **Good:** functional, value materials\n- **Better:** upgraded materials/features (most chosen)\n- **Best:** premium finishes + add-ons + strongest warranty",
+      "This increases close rate while protecting margin.",
+      "## Common pricing mistakes (and the fix)",
+      "### Mistake: Underpricing to win",
+      "Fix: Set a minimum margin. If the job can't hit it, walk away.",
+      "### Mistake: Forgetting callbacks",
+      "Fix: Bake in **3–5%** for warranty/callback time (or include a clear service policy).",
+      "### Mistake: Copying competitor pricing",
+      "Fix: Your overhead and crew efficiency are different. Price off *your* numbers.",
+      "### Mistake: Ignoring slow seasons",
+      "Fix: Price for a 12-month business, not a \"good month.\"",
+      "## Pricing by trade: practical 2025 benchmarks (starting points)",
+      "These ranges vary widely by market and scope. Use them as sanity checks—not gospel.",
+      "- **Bathroom remodel**: $200–$450 / sq ft\n- **Kitchen remodel**: $250–$500 / sq ft\n- **Roofing**: $350–$800 per square (100 sq ft)\n- **HVAC install**: $75–$150/hr + equipment\n- **Plumbing**: $85–$150/hr\n- **Electrical**: $75–$125/hr\n- **Interior painting**: $3–$7 / sq ft\n- **Flooring install**: $6–$15 / sq ft",
+      "## Use technology to price faster and more accurately",
+      "The contractors who grow fastest do two things: 1) **track job costing** (estimated vs actual), 2) **standardize proposals** so every estimate looks professional.",
+      "If you want, you can use the ScopeGen calculator to sanity-check pricing and produce a clean proposal format in minutes.",
+      "**Try the calculator →** [/calculator](/calculator)",
     ],
     faqs: [
       {
-        question: "What profit margin should contractors aim for?",
-        answer: "For solo operators and small crews, target 15-20% net profit margin after ALL expenses including your salary. If you're netting less than 10%, you're working too hard for too little. Track actual job costs to know your real numbers."
+        question: "What net profit margin should contractors aim for?",
+        answer: "Many healthy contractors target 8–15% net profit after all expenses (including owner pay). Your target depends on risk, warranty exposure, and how much admin burden you carry."
       },
       {
-        question: "Should I charge by the hour or by the job?",
-        answer: "Hourly for service/repair work where scope is uncertain. Fixed price for defined projects like remodels. I use hourly for anything under $500 and fixed price for larger jobs. Fixed pricing rewards efficiency—if you get faster, you make more per hour."
+        question: "Should I charge hourly or by the job?",
+        answer: "Hourly works when scope is uncertain (service/repair). Fixed price works when scope is defined (remodel/replace). Many contractors use both depending on job type."
       },
       {
-        question: "How do I justify higher prices to customers?",
-        answer: "Don't justify—explain your value. Licensed, insured, warranted work. No subs, I do it myself. 15 years experience. Clean job sites. On-time completion. The homeowner who's been burned by a cheap contractor will pay more for reliability."
+        question: "How do I raise prices without losing customers?",
+        answer: "Raise gradually (5–10%), improve your proposal clarity, and communicate value (warranty, process, materials, professionalism)."
       },
       {
         question: "How do I compete with lowball contractors?",
-        answer: "You don't compete—you differentiate. Target customers who value quality over price. Those customers exist in every market. Build a reputation for quality and let referrals bring you work. I haven't advertised in 5 years."
-      },
-      {
-        question: "Should I give free estimates?",
-        answer: "For standard work, yes—it's expected. For complex projects requiring plans or detailed specs, charge a design fee ($150-500) refundable if they hire you. This filters serious buyers from tire-kickers and values your time."
-      },
-      {
-        question: "What do I do when customers say I'm too expensive?",
-        answer: "Ask questions first: 'Compared to what?' Often they're comparing apples to oranges. If budget is the real issue, offer alternatives—can we phase the project? Use different materials? But never just drop your price—that signals your first price was inflated."
+        answer: "Don't race to the bottom. Compete on trust: clear scope, strong warranty, clean communication, photos of work, and a professional proposal."
       }
     ]
   },

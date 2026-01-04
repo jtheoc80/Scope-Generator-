@@ -17,7 +17,12 @@ export async function generateMetadata({ params }: BlogPostLayoutProps): Promise
     };
   }
 
-  const ogImageUrl = post.ogImage || post.heroImage || "/opengraph.jpg";
+  // Use post-specific OG image if available, otherwise default
+  const ogImage = post.ogImage 
+    ? `https://scopegenerator.com${post.ogImage}`
+    : post.heroImage 
+      ? `https://scopegenerator.com${post.heroImage}`
+      : "https://scopegenerator.com/opengraph.jpg";
 
   return {
     title: `${post.metaTitle} | ScopeGenerator`,
@@ -42,7 +47,7 @@ export async function generateMetadata({ params }: BlogPostLayoutProps): Promise
       tags: post.tags,
       images: [
         {
-          url: ogImageUrl,
+          url: ogImage,
           width: 1200,
           height: 630,
           alt: post.heroImageAlt || post.title,
@@ -53,7 +58,7 @@ export async function generateMetadata({ params }: BlogPostLayoutProps): Promise
       card: "summary_large_image",
       title: post.metaTitle,
       description: post.metaDescription,
-      images: [ogImageUrl],
+      images: [ogImage],
     },
     alternates: {
       canonical: post.canonical || `https://scopegenerator.com/blog/${post.slug}`,
