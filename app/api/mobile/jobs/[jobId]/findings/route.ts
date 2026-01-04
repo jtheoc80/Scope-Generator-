@@ -168,6 +168,131 @@ export async function GET(
 }
 
 /**
+ * Extract normalized keywords from issue text for semantic deduplication.
+ * Returns a sorted, unique set of meaningful words.
+ */
+function extractFindingKeywords(text: string): string[] {
+  const lower = text.toLowerCase();
+  // Remove common filler words and punctuation
+  const stopWords = new Set([
+    "a", "an", "the", "is", "are", "was", "were", "be", "been", "being",
+    "have", "has", "had", "do", "does", "did", "will", "would", "could",
+    "should", "may", "might", "must", "shall", "can", "need", "needs",
+    "to", "of", "in", "for", "on", "with", "at", "by", "from", "or", "and",
+    "possibly", "maybe", "likely", "detected", "issue", "damage", "problem",
+    "some", "this", "that", "it", "its", "there", "here", "very", "just"
+  ]);
+  
+  const words = lower
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter(w => w.length > 2 && !stopWords.has(w));
+  
+  return [...new Set(words)].sort();
+}
+
+/**
+ * Generate a semantic key for deduplication based on object + problem keywords.
+ * This groups findings that refer to the same object with the same problem.
+ */
+function getFindingSemanticKey(text: string): string {
+  const keywords = extractFindingKeywords(text);
+  
+  // Common object keywords (what the issue is about)
+  const objectKeywords = [
+    "faucet", "sink", "toilet", "tub", "shower", "bathtub", "drain", "pipe",
+    "wall", "ceiling", "floor", "door", "window", "cabinet", "counter",
+    "light", "outlet", "switch", "fixture", "handle", "knob", "hinge",
+    "trim", "baseboard", "molding", "tile", "grout", "caulk", "paint"
+  ];
+  
+  // Problem keywords (what's wrong)
+  const problemKeywords = [
+    "leak", "leaking", "leaky", "drip", "dripping",
+    "stain", "stained", "staining", "discolor", "discolored",
+    "crack", "cracked", "broken", "damage", "damaged",
+    "peel", "peeling", "chip", "chipped", "worn", "wear",
+    "rust", "rusty", "corrode", "corroded", "corrosion",
+    "mold", "mildew", "rot", "rotted", "rotting",
+    "loose", "missing", "dated", "old", "outdated",
+    "replace", "replacement", "repair", "fix", "upgrade",
+    "clean", "cleaning", "refinish", "refinishing"
+  ];
+  
+  const foundObjects = keywords.filter(k => objectKeywords.some(ok => k.includes(ok) || ok.includes(k)));
+  const foundProblems = keywords.filter(k => problemKeywords.some(pk => k.includes(pk) || pk.includes(k)));
+  
+  // Create a semantic key from object + problem
+  const objectKey = foundObjects.length > 0 ? foundObjects.sort().join("+") : "general";
+  const problemKey = foundProblems.length > 0 ? foundProblems.sort().join("+") : "issue";
+  
+  return `${objectKey}:${problemKey}`;
+}
+
+/**
+ * Deduplicate findings that are semantically similar.
+ * Keeps the finding with the best description (shorter, more specific).
+ */
+function deduplicateFindings(findings: Finding[]): Finding[] {
+  const semanticGroups = new Map<string, Finding[]>();
+
+  // Group findings by their semantic key
+  for (const finding of findings) {
+    const key = getFindingSemanticKey(finding.issue);
+    const existingGroup = semanticGroups.get(key);
+    if (existingGroup) {
+      existingGroup.push(finding);
+    } else {
+      semanticGroups.set(key, [finding]);
+    }
+  }
+
+  const deduplicated: Finding[] = [];
+
+  const selectBestRepresentative = (group: Finding[]): Finding => {
+    // Pick the best representative from the group:
+    // 1. Prefer "damage" category (more specific/actionable)
+    // 2. Then prefer higher confidence
+    // 3. Then prefer shorter, cleaner labels (less verbose)
+    return [...group].sort((a, b) => {
+      // Prefer damage category
+      const aIsDamage = a.category === "damage" ? 1 : 0;
+      const bIsDamage = b.category === "damage" ? 1 : 0;
+      if (aIsDamage !== bIsDamage) return bIsDamage - aIsDamage;
+
+      // Prefer higher confidence
+      if (Math.abs(a.confidence - b.confidence) > 0.1) {
+        return b.confidence - a.confidence;
+      }
+
+      // Prefer shorter labels (usually cleaner/more specific)
+      return a.issue.length - b.issue.length;
+    })[0];
+  };
+
+  const mergePhotoIdsInto = (group: Finding[], target: Finding): void => {
+    const allPhotoIds = new Set<number>(target.photoIds);
+    for (const item of group) {
+      for (const photoId of item.photoIds) {
+        allPhotoIds.add(photoId);
+      }
+    }
+    target.photoIds = [...allPhotoIds];
+  };
+
+  for (const group of semanticGroups.values()) {
+    if (group.length === 1) {
+      deduplicated.push(group[0]);
+    } else {
+      const best = selectBestRepresentative(group);
+      mergePhotoIdsInto(group, best);
+      deduplicated.push(best);
+    }
+  }
+  return deduplicated;
+}
+
+/**
  * Aggregate findings from all analyzed photos into a unified summary.
  */
 function aggregateFindings(photos: Array<typeof mobileJobPhotos.$inferSelect>) {
@@ -334,10 +459,12 @@ function aggregateFindings(photos: Array<typeof mobileJobPhotos.$inferSelect>) {
     }
   }
 
-  // Check for painting in findings
+  // Deduplicate semantically similar findings, then check for painting
   const allFindings = Array.from(findingsMap.values());
+  const deduplicatedFindings = deduplicateFindings(allFindings);
+  
   if (!isPaintingJob) {
-    isPaintingJob = detectPaintingJob(allFindings);
+    isPaintingJob = detectPaintingJob(deduplicatedFindings);
   }
 
   // Build unknowns array
@@ -365,20 +492,20 @@ function aggregateFindings(photos: Array<typeof mobileJobPhotos.$inferSelect>) {
   }
 
   // Generate suggested problem statement
-  const damageFindings = allFindings.filter(f => f.category === "damage");
-  const paintFindings = allFindings.filter(f => f.category === "painting");
+  const damageFindings = deduplicatedFindings.filter(f => f.category === "damage");
+  const paintFindings = deduplicatedFindings.filter(f => f.category === "painting");
   
   let suggestedProblem: string | undefined;
   if (paintFindings.length > 0) {
     suggestedProblem = `Address painting issues: ${paintFindings.slice(0, 2).map(f => f.issue).join(", ")}`;
   } else if (damageFindings.length > 0) {
     suggestedProblem = `Repair damage: ${damageFindings.slice(0, 2).map(f => f.issue).join(", ")}`;
-  } else if (allFindings.length > 0) {
-    suggestedProblem = `Address: ${allFindings[0].issue}`;
+  } else if (deduplicatedFindings.length > 0) {
+    suggestedProblem = `Address: ${deduplicatedFindings[0].issue}`;
   }
 
   return {
-    findings: allFindings.sort((a, b) => b.confidence - a.confidence).slice(0, 15),
+    findings: deduplicatedFindings.sort((a, b) => b.confidence - a.confidence).slice(0, 15),
     unknowns,
     detectedTrade: detectedTrade || (isPaintingJob ? "painting" : undefined),
     isPaintingJob,
