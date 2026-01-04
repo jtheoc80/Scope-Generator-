@@ -15,8 +15,9 @@ import {
   Callout,
   Checklist,
   RelatedPosts,
-  extractTOC
 } from "@/components/blog";
+import { parseInlineFormatting, parseTableCell } from "@/lib/blog-renderer";
+import { extractTOC } from "@/lib/blog-utils";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -159,12 +160,9 @@ function renderContent(content: string[], inlineCTAIndex: number) {
                     <td
                       key={cellIndex}
                       className="border border-slate-200 px-4 py-2 text-slate-600"
-                      dangerouslySetInnerHTML={{
-                        __html: cell
-                          .trim()
-                          .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>"),
-                      }}
-                    />
+                    >
+                      {parseTableCell(cell)}
+                    </td>
                   ))}
                 </tr>
               ))}
@@ -180,17 +178,14 @@ function renderContent(content: string[], inlineCTAIndex: number) {
       const items = block.split("\n").filter((line) => line.match(/^[-*] /));
       elements.push(
         <ul key={i}>
-          {items.map((line, j) => (
-            <li
-              key={j}
-              dangerouslySetInnerHTML={{
-                __html: line
-                  .replace(/^[-*] /, "")
-                  .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-                  .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>'),
-              }}
-            />
-          ))}
+          {items.map((line, j) => {
+            const text = line.replace(/^[-*] /, "");
+            return (
+              <li key={j}>
+                {parseInlineFormatting(text)}
+              </li>
+            );
+          })}
         </ul>
       );
       continue;
@@ -246,15 +241,9 @@ function renderContent(content: string[], inlineCTAIndex: number) {
 
     // Regular paragraphs
     elements.push(
-      <p
-        key={i}
-        dangerouslySetInnerHTML={{
-          __html: block
-            .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-            .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
-            .replace(/`([^`]+)`/g, '<code class="bg-slate-100 px-1.5 py-0.5 rounded text-sm">$1</code>'),
-        }}
-      />
+      <p key={i}>
+        {parseInlineFormatting(block)}
+      </p>
     );
   }
 
@@ -281,9 +270,8 @@ export default async function BlogPostPage({ params }: PageProps) {
     datePublished: new Date(post.datePublished).toISOString(),
     dateModified: new Date(post.dateModified).toISOString(),
     author: post.author.name,
-    image: post.heroImage || post.ogImage,
+    image: post.heroImage ? `https://scopegenerator.com${post.heroImage}` : post.ogImage,
     type: "BlogPosting",
-    image: post.heroImage ? `https://scopegenerator.com${post.heroImage}` : undefined,
   });
 
   const breadcrumbs = generateBreadcrumbSchema([
@@ -330,7 +318,7 @@ export default async function BlogPostPage({ params }: PageProps) {
                 </span>
                 <span className="flex items-center gap-1">
                   <Calendar className="h-4 w-4" />
-                  {post.date}
+                  {post.datePublished}
                 </span>
                 <span className="flex items-center gap-1">
                   <Clock className="h-4 w-4" />
@@ -348,7 +336,7 @@ export default async function BlogPostPage({ params }: PageProps) {
                   <User className="w-6 h-6 text-slate-400" />
                 </div>
                 <div>
-                  <p className="font-medium text-white">{post.author}</p>
+                  <p className="font-medium text-white">{post.author.name}</p>
                   <p className="text-sm text-slate-400">Construction Industry Expert</p>
                 </div>
               </div>
@@ -384,7 +372,7 @@ export default async function BlogPostPage({ params }: PageProps) {
           <div className="container mx-auto px-4 py-3">
             <div className="max-w-3xl mx-auto flex items-center gap-2 text-sm text-slate-600">
               <RefreshCw className="h-4 w-4" />
-              <span>Last updated: {post.date}</span>
+              <span>Last updated: {post.dateModified}</span>
             </div>
           </div>
         </div>

@@ -178,8 +178,12 @@ export const blogPosts: Record<string, BlogPost> = {
     slug: "contractor-pricing-guide-2025",
     title: "Contractor Pricing Guide 2025: How to Price Your Services Profitably",
     excerpt: "If you want a price that wins jobs and protects profit, you need your real job cost, a target profit margin, and a clean way to present the price so clients trust it.",
-    author: "ScopeGen Team",
-    date: "January 2, 2026",
+    author: {
+      name: "ScopeGen Team",
+      credentials: "Construction Business Experts",
+    },
+    datePublished: "January 2, 2026",
+    dateModified: "January 2, 2026",
     readTime: "12 min read",
     category: "Business Tips",
     metaTitle: "Contractor Pricing Guide 2025 (Updated): Markup, Margin, Break-Even + Trade Benchmarks",
@@ -247,6 +251,7 @@ export const blogPosts: Record<string, BlogPost> = {
       "If you want, you can use the ScopeGen calculator to sanity-check pricing and produce a clean proposal format in minutes.",
       "**Try the calculator →** [/calculator](/calculator)",
     ],
+    tags: ["pricing", "profit margins", "estimating", "business growth"],
     faqs: [
       {
         question: "What net profit margin should contractors aim for?",
