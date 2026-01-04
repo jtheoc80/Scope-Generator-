@@ -25,6 +25,8 @@ import {
   DraftStatus,
   DetectedIssue,
   AnalyzeResponse,
+  hasRemedyOptions,
+  RemedyType,
 } from "@/app/m/lib/api";
 import { deriveSuggestionsStatus, SuggestionsStatus } from "@/src/lib/mobile/suggestions-status";
 
@@ -76,6 +78,36 @@ export default function SelectIssuesPage() {
   const [error, setError] = useState<string | null>(null);
   const [generatingDraft, setGeneratingDraft] = useState(false);
   const hasAutoSelected = useRef(false);
+  
+  // Remedy selections: Map of issueId -> selected remedy type
+  const [remedySelections, setRemedySelections] = useState<Map<string, RemedyType>>(new Map());
+  
+  // Initialize remedy selections from recommended values when issues load
+  useEffect(() => {
+    // Use functional update to avoid dependency on remedySelections
+    setRemedySelections(prev => {
+      const merged = new Map(prev);
+      let hasChanges = false;
+      
+      for (const issue of issues) {
+        if (issue.remedies && !merged.has(issue.id)) {
+          merged.set(issue.id, issue.remedies.selectedRemedy ?? issue.remedies.recommended);
+          hasChanges = true;
+        }
+      }
+      
+      return hasChanges ? merged : prev;
+    });
+  }, [issues]);
+  
+  // Handler to update remedy selection for an issue
+  const setRemedyForIssue = (issueId: string, remedy: RemedyType) => {
+    setRemedySelections(prev => {
+      const newMap = new Map(prev);
+      newMap.set(issueId, remedy);
+      return newMap;
+    });
+  };
 
   // Fetch analysis results
   const fetchAnalysis = useCallback(async (trigger = false): Promise<string> => {
@@ -318,16 +350,27 @@ export default function SelectIssuesPage() {
       const selectedIssueLabels = allSelectedIssues.map((i) => i.label).join("; ");
       const problemStatement = selectedIssueLabels || suggestedProblem || "";
       
-      // Start draft generation with selected issues context
+      // Build issues with remedy selections
+      const issuesWithRemedies = allSelectedIssues.map((i) => {
+        const selectedRemedy = remedySelections.get(i.id) ?? 
+          (i.remedies?.selectedRemedy ?? i.remedies?.recommended ?? "repair");
+        return {
+          id: i.id,
+          label: i.label,
+          category: i.category,
+          issueType: i.issueType,
+          tags: i.tags,
+          remedies: i.remedies,
+          selectedRemedy,
+        };
+      });
+      
+      // Start draft generation with selected issues context and remedy selections
       await mobileApiFetch<{ status: string }>(`/api/mobile/jobs/${jobId}/draft`, {
         method: "POST",
         headers: { "Idempotency-Key": newIdempotencyKey() },
         body: JSON.stringify({ 
-          selectedIssues: allSelectedIssues.map((i) => ({
-            id: i.id,
-            label: i.label,
-            category: i.category,
-          })),
+          selectedIssues: issuesWithRemedies,
           problemStatement,
         }),
       });
@@ -621,56 +664,126 @@ export default function SelectIssuesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {allIssues.map((issue) => (
-              <button
-                key={issue.id}
-                onClick={() => toggleIssue(issue.id)}
-                disabled={generatingDraft}
-                className={`
-                  w-full p-3 rounded-lg border-2 transition-all text-left
-                  ${selectedIssues.has(issue.id)
-                    ? "border-primary bg-primary/5"
-                    : "border-slate-200 hover:border-slate-300"}
-                  ${generatingDraft ? "opacity-50" : ""}
-                `}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5">
-                    <Checkbox
-                      checked={selectedIssues.has(issue.id)}
-                      className="pointer-events-none"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      {categoryIcons[issue.category]}
-                      <span className="font-medium text-sm">{issue.label}</span>
+            {allIssues.map((issue) => {
+              const hasRemedy = hasRemedyOptions(issue);
+              const currentRemedy = remedySelections.get(issue.id) ?? 
+                (issue.remedies?.selectedRemedy ?? issue.remedies?.recommended ?? "repair");
+              const isSelected = selectedIssues.has(issue.id);
+              
+              return (
+                <div
+                  key={issue.id}
+                  className={`
+                    w-full p-3 rounded-lg border-2 transition-all text-left
+                    ${isSelected
+                      ? "border-primary bg-primary/5"
+                      : "border-slate-200"}
+                    ${generatingDraft ? "opacity-50" : ""}
+                  `}
+                >
+                  {/* Main issue row - clickable to toggle selection */}
+                  <button
+                    onClick={() => toggleIssue(issue.id)}
+                    disabled={generatingDraft}
+                    className="w-full text-left"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5">
+                        <Checkbox
+                          checked={isSelected}
+                          className="pointer-events-none"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          {categoryIcons[issue.category]}
+                          <span className="font-medium text-sm">{issue.label}</span>
+                        </div>
+                        {issue.description && (
+                          <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                            {issue.description}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-2 mt-2 flex-wrap">
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                            {categoryLabels[issue.category]}
+                          </span>
+                          {issue.confidence >= 0.8 && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 flex items-center gap-1">
+                              <CheckCircle className="w-3 h-3" />
+                              High confidence
+                            </span>
+                          )}
+                          {issue.photoIds.length > 0 && (
+                            <span className="text-xs text-slate-500">
+                              {issue.photoIds.length} photo{issue.photoIds.length > 1 ? "s" : ""}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    {issue.description && (
-                      <p className="text-xs text-slate-500 mt-1 line-clamp-2">
-                        {issue.description}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                        {categoryLabels[issue.category]}
-                      </span>
-                      {issue.confidence >= 0.8 && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 flex items-center gap-1">
-                          <CheckCircle className="w-3 h-3" />
-                          High confidence
-                        </span>
-                      )}
-                      {issue.photoIds.length > 0 && (
-                        <span className="text-xs text-slate-500">
-                          {issue.photoIds.length} photo{issue.photoIds.length > 1 ? "s" : ""}
-                        </span>
+                  </button>
+                  
+                  {/* Remedy toggle - only shown when issue is selected and has remedy options */}
+                  {isSelected && hasRemedy && (
+                    <div className="mt-3 pt-3 border-t border-slate-200">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-slate-700">Action:</span>
+                        <div className="flex gap-1">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRemedyForIssue(issue.id, "repair");
+                            }}
+                            disabled={generatingDraft || !issue.remedies?.repair?.available}
+                            className={`
+                              px-3 py-1.5 text-xs font-medium rounded-l-md border transition-colors
+                              ${currentRemedy === "repair"
+                                ? "bg-blue-600 text-white border-blue-600"
+                                : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"}
+                              ${(!issue.remedies?.repair?.available || generatingDraft) ? "opacity-50 cursor-not-allowed" : ""}
+                            `}
+                          >
+                            Repair
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRemedyForIssue(issue.id, "replace");
+                            }}
+                            disabled={generatingDraft || !issue.remedies?.replace?.available}
+                            className={`
+                              px-3 py-1.5 text-xs font-medium rounded-r-md border-y border-r transition-colors
+                              ${currentRemedy === "replace"
+                                ? "bg-blue-600 text-white border-blue-600"
+                                : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"}
+                              ${(!issue.remedies?.replace?.available || generatingDraft) ? "opacity-50 cursor-not-allowed" : ""}
+                            `}
+                          >
+                            Replace
+                          </button>
+                        </div>
+                      </div>
+                      
+                      {/* Show AI rationale if available */}
+                      {issue.remedies?.rationale && issue.remedies.rationale.length > 0 && (
+                        <div className="mt-2 text-xs text-slate-500 bg-slate-50 rounded p-2">
+                          <span className="font-medium text-slate-600">AI recommendation: </span>
+                          {issue.remedies.rationale[0]}
+                          {currentRemedy !== issue.remedies.recommended && (
+                            <span className="block mt-1 text-amber-600">
+                              (You selected {currentRemedy} instead of AI-recommended {issue.remedies.recommended})
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
-                  </div>
+                  )}
                 </div>
-              </button>
-            ))}
+              );
+            })}
           </CardContent>
         </Card>
       ) : (

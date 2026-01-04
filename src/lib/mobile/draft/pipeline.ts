@@ -2,6 +2,7 @@ import { aiService } from "@/lib/services/aiService";
 import type { ProposalLineItem, ProposalTemplate, User } from "@shared/schema";
 import { computePriceRange } from "./pricebook";
 import { extractZip, getOneBuildTradePricingBestEffort, marketMultiplierFromOneBuild } from "./marketPricing";
+import { getRemedyScopeItems, type RemedyType } from "@/src/lib/mobile/remedy";
 
 export type MobileJobInput = {
   id: number;
@@ -130,6 +131,60 @@ function extractVisionContext(photos: Array<{ findings?: unknown }>): {
   };
 }
 
+/**
+ * Parse remedy selections from job notes
+ * Returns map of issue types to selected remedies
+ */
+function parseRemedySelectionsFromNotes(notes: string): Map<string, RemedyType> {
+  const remedyMap = new Map<string, RemedyType>();
+  
+  // Look for ACTION: REPAIR or ACTION: REPLACE markers in the notes
+  const actionMatches = notes.matchAll(/([^;,]+?)\s*\(ACTION:\s*(REPAIR|REPLACE)\)/gi);
+  for (const match of actionMatches) {
+    const label = match[1].trim().toLowerCase();
+    const remedy = match[2].toLowerCase() as RemedyType;
+    
+    // Try to determine issue type from label
+    if (label.includes("faucet") || label.includes("tap")) {
+      remedyMap.set("leaking_faucet", remedy);
+    }
+    // Future: add more issue type detection
+  }
+  
+  return remedyMap;
+}
+
+/**
+ * Generate remedy-specific scope sections
+ * Returns scope items to prepend based on remedy selections
+ */
+function generateRemedyScopeItems(remedySelections: Map<string, RemedyType>): {
+  scopeItems: string[];
+  scopeSections: Array<{ title: string; items: string[]; remedy: RemedyType }>;
+} {
+  const scopeItems: string[] = [];
+  const scopeSections: Array<{ title: string; items: string[]; remedy: RemedyType }> = [];
+  
+  for (const [issueType, remedy] of remedySelections) {
+    const items = getRemedyScopeItems(issueType, remedy);
+    
+    if (items.length > 0) {
+      // Add to flat list
+      scopeItems.push(...items);
+      
+      // Add as section with title
+      let title = "Work Scope";
+      if (issueType === "leaking_faucet" || issueType === "faucet_issue") {
+        title = remedy === "replace" ? "Faucet Replacement" : "Faucet Repair";
+      }
+      
+      scopeSections.push({ title, items, remedy });
+    }
+  }
+  
+  return { scopeItems, scopeSections };
+}
+
 // Build comprehensive job notes from vision analysis
 function buildVisionNotes(visionContext: ReturnType<typeof extractVisionContext>, userNotes?: string | null): string {
   const parts: string[] = [];
@@ -231,10 +286,41 @@ export async function generateMobileDraft(params: {
   // Build comprehensive notes from vision + user input
   const comprehensiveNotes = buildVisionNotes(visionContext, job.jobNotes);
 
+  // Parse remedy selections from job notes (if any)
+  const remedySelections = parseRemedySelectionsFromNotes(job.jobNotes ?? "");
+  const { scopeItems: remedyScopeItems, scopeSections: remedyScopeSections } = generateRemedyScopeItems(remedySelections);
+  
+  console.log("draft.remedySelections", {
+    jobId: job.id,
+    selectionsCount: remedySelections.size,
+    remedyScopeItemsCount: remedyScopeItems.length,
+  });
+
+  // Determine base scope: if we have remedy-specific scope, use that as base
+  // Otherwise fall back to template base scope
+  let baseScope = template.baseScope;
+  if (remedyScopeItems.length > 0) {
+    // Prepend remedy-specific scope items to the base scope
+    baseScope = [...remedyScopeItems, ...template.baseScope.filter(item => {
+      // Filter out generic items that conflict with specific remedy items
+      const itemLower = item.toLowerCase();
+      const hasReplacementRemedy = Array.from(remedySelections.values()).includes("replace");
+      const hasRepairRemedy = Array.from(remedySelections.values()).includes("repair");
+      
+      // Don't include generic "repair" items if we're doing a replacement
+      if (hasReplacementRemedy && !hasRepairRemedy) {
+        if (itemLower.includes("repair") || itemLower.includes("cartridge") || itemLower.includes("washer")) {
+          return false;
+        }
+      }
+      return true;
+    })];
+  }
+
   // Use the comprehensive vision-derived notes for scope enhancement
   const enhance = await aiService.enhanceScope({
     jobTypeName: template.jobTypeName,
-    baseScope: template.baseScope,
+    baseScope,
     clientName: job.clientName,
     address: job.address,
     jobNotes: comprehensiveNotes || undefined,
@@ -256,6 +342,28 @@ export async function generateMobileDraft(params: {
 
   const { priceLow, priceHigh } = computePriceRange(pricingInputs);
 
+  // Build scope sections for structured display (if remedy selections present)
+  const scopeSections: Array<{ title: string; items: string[]; remedy?: "repair" | "replace" | "either" }> = [];
+  if (remedyScopeSections.length > 0) {
+    // Add remedy-specific sections
+    for (const section of remedyScopeSections) {
+      scopeSections.push({
+        title: section.title,
+        items: section.items,
+        remedy: section.remedy,
+      });
+    }
+    // Add remaining scope as "Additional Work" section if any
+    const remedyItemsSet = new Set(remedyScopeItems.map(i => i.toLowerCase()));
+    const additionalItems = scope.filter(item => !remedyItemsSet.has(item.toLowerCase()));
+    if (additionalItems.length > 0) {
+      scopeSections.push({
+        title: "Additional Work",
+        items: additionalItems,
+      });
+    }
+  }
+
   const lineItem: ProposalLineItem = {
     id: crypto.randomUUID(),
     tradeId: template.tradeId,
@@ -264,6 +372,8 @@ export async function generateMobileDraft(params: {
     jobTypeName: template.jobTypeName,
     jobSize: job.jobSize,
     scope,
+    // Include structured scope sections if available
+    ...(scopeSections.length > 0 && { scopeSections }),
     options: {},
     priceLow,
     priceHigh,

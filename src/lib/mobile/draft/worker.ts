@@ -18,10 +18,17 @@ function backoffSeconds(attempts: number) {
   return table[Math.min(attempts, table.length - 1)] ?? 60;
 }
 
+import type { RemedyType, Remedy } from "@/src/lib/mobile/remedy";
+
 export type SelectedIssue = {
   id: string;
   label: string;
   category: string;
+  // Remedy fields (repair vs replace)
+  issueType?: string;
+  tags?: string[];
+  remedies?: Remedy;
+  selectedRemedy?: RemedyType;
 };
 
 // Scope selection from FindingsSummary screen
@@ -68,6 +75,19 @@ export async function enqueueDraft(params: {
 
   // Build questions array with scope context
   const questions: string[] = params.selectedIssues?.map(i => i.label) ?? [];
+  
+  // Add remedy selections for each issue
+  if (params.selectedIssues) {
+    for (const issue of params.selectedIssues) {
+      if (issue.selectedRemedy) {
+        questions.push(`REMEDY:${issue.id}=${issue.selectedRemedy}`);
+      }
+      // Also add issue type for scope generation
+      if (issue.issueType) {
+        questions.push(`ISSUE_TYPE:${issue.id}=${issue.issueType}`);
+      }
+    }
+  }
   
   // Add scope selection context to questions for the draft generator
   if (params.scopeSelection) {
@@ -244,9 +264,41 @@ async function runDraft(draft: typeof mobileJobDrafts.$inferSelect) {
     // Build enhanced job notes
     let enhancedJobNotes = job.jobNotes ?? "";
     
-    // Add selected issues
+    // Add selected issues with remedy information
     if (issueLabels.length > 0) {
-      enhancedJobNotes += `\n\nSelected issues to address: ${issueLabels.join("; ")}`;
+      // Parse any remedy data that was stored in the questions
+      const remedyData: Record<string, string> = {};
+      for (const item of questionsData) {
+        if (item.startsWith("REMEDY:")) {
+          const [issueId, remedy] = item.replace("REMEDY:", "").split("=");
+          if (issueId && remedy) remedyData[issueId] = remedy;
+        }
+      }
+      
+      // Build issue descriptions with remedy info
+      const issueDescriptions = issueLabels.map((label, idx) => {
+        // Try to find remedy for this issue by index (issues are stored in order)
+        const remedyKeys = Object.keys(remedyData);
+        const remedy = remedyKeys[idx] ? remedyData[remedyKeys[idx]] : null;
+        if (remedy) {
+          return `${label} (ACTION: ${remedy.toUpperCase()})`;
+        }
+        return label;
+      });
+      
+      enhancedJobNotes += `\n\nSelected issues to address: ${issueDescriptions.join("; ")}`;
+      
+      // Add explicit remedy instructions if any are specified
+      const hasReplacementItems = Object.values(remedyData).some(r => r === "replace");
+      const hasRepairItems = Object.values(remedyData).some(r => r === "repair");
+      
+      if (hasReplacementItems || hasRepairItems) {
+        enhancedJobNotes += `\n\nIMPORTANT: Scope ONLY includes`;
+        const parts: string[] = [];
+        if (hasRepairItems) parts.push("REPAIR work for items marked as repair");
+        if (hasReplacementItems) parts.push("REPLACEMENT work for items marked as replace");
+        enhancedJobNotes += ` ${parts.join(" and ")}. Generate appropriate scope items for each action type.`;
+      }
     }
     
     // Add scope context (critical for accurate pricing)

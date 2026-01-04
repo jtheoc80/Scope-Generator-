@@ -7,11 +7,18 @@ import { and, eq, desc } from "drizzle-orm";
 import { enqueueDraft, ensureDraftWorker } from "@/src/lib/mobile/draft/worker";
 import { getRequestId, jsonError, logEvent, withRequestId } from "@/src/lib/mobile/observability";
 
-// Selected issue from client
+import type { RemedyType, Remedy } from "@/src/lib/mobile/remedy";
+
+// Selected issue from client (with remedy support)
 type SelectedIssue = {
   id: string;
   label: string;
   category: string;
+  // Remedy fields (repair vs replace)
+  issueType?: string;
+  tags?: string[];
+  remedies?: Remedy;
+  selectedRemedy?: RemedyType;
 };
 
 // Scope selection from FindingsSummary screen

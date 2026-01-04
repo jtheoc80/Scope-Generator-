@@ -7,6 +7,7 @@ import { and, desc, eq, isNull, lte, or } from "drizzle-orm";
 import { getRequestId, jsonError, logEvent, withRequestId } from "@/src/lib/mobile/observability";
 import { ensureVisionWorker } from "@/src/lib/mobile/vision/worker";
 import { runVisionForPhoto } from "@/src/lib/mobile/vision/runner";
+import { enrichIssuesWithRemedies, type DetectedIssueWithRemedy, type Remedy } from "@/src/lib/mobile/remedy";
 
 // IMPORTANT: Use Node.js runtime for AWS SDK compatibility and Buffer support.
 // Edge runtime causes issues with AWS SDK and image buffer operations.
@@ -19,6 +20,10 @@ export type DetectedIssue = {
   confidence: number;
   category: "damage" | "repair" | "maintenance" | "upgrade" | "inspection" | "other";
   photoIds: number[];
+  // Remedy support (repair vs replace)
+  issueType?: string;
+  tags?: string[];
+  remedies?: Remedy;
 };
 
 export type AnalyzeResponse = {
@@ -528,9 +533,15 @@ function extractIssuesFromFindings(
   const allIssues = Array.from(issueMap.values());
   const deduplicated = deduplicateIssues(allIssues);
   
-  return deduplicated
+  // Sort by confidence and limit
+  const sortedIssues = deduplicated
     .sort((a, b) => b.confidence - a.confidence)
     .slice(0, 10);
+  
+  // Enrich with remedy heuristics (repair vs replace recommendations)
+  const enrichedIssues = enrichIssuesWithRemedies(sortedIssues);
+  
+  return enrichedIssues;
 }
 
 function extractNeedsMorePhotos(
