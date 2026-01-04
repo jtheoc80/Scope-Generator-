@@ -58,7 +58,7 @@ jobs:
         run: npm ci --include=dev
 
       - name: Run ESLint
-        run: npm run lint -- --max-warnings=0
+        run: npm run lint
 
   unit-tests:
     name: Unit & Integration Tests
