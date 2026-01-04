@@ -90,6 +90,7 @@ export default function CapturePhotosPage() {
   
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const generateId = () => `photo-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
@@ -186,6 +187,37 @@ export default function CapturePhotosPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId]);
+
+  // Drag and drop handlers
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only set dragging to false if we're leaving the drop zone entirely
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    setIsDragging(false);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleFiles(files);
+    }
+  }, [handleFiles]);
 
   const removePhoto = (id: string) => {
     setError(null); // Clear any previous error
@@ -412,73 +444,111 @@ export default function CapturePhotosPage() {
 
       {/* Photo grid */}
       {photos.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-4">
-          {photos.map((photo, index) => (
-            <Card key={photo.id} className="overflow-hidden">
-              <div className="relative aspect-square bg-slate-100">
-                {/* Use native img for blob URLs - more reliable on mobile browsers */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={photo.localUrl}
-                  alt={`Photo ${index + 1}`}
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-
-                {/* Status overlay */}
-                {photo.status === "uploading" && (
-                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                    <Loader2 className="w-8 h-8 text-white animate-spin" />
-                  </div>
-                )}
-
-                {photo.status === "uploaded" && (
-                  <div className="absolute top-2 left-2">
-                    <CheckCircle className="w-5 h-5 text-green-500 drop-shadow" />
-                  </div>
-                )}
-
-                {photo.status === "error" && (
-                  <div className="absolute inset-0 bg-red-500/80 flex flex-col items-center justify-center p-2 text-white text-center">
-                    <AlertCircle className="w-6 h-6 mb-1" />
-                    <p className="text-xs">{photo.error}</p>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="mt-2 h-7 text-xs"
-                      onClick={() => retryPhoto(photo.id)}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                )}
-
-                {/* Delete button */}
-                {photo.status !== "uploading" && photo.status !== "error" && (
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    className="absolute top-2 right-2 h-7 w-7"
-                    onClick={() => removePhoto(photo.id)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                )}
-
-                {/* Photo number */}
-                <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
-                  #{index + 1}
-                </div>
+        <div 
+          className={`relative rounded-lg transition-colors ${
+            isDragging ? "ring-2 ring-primary ring-offset-2" : ""
+          }`}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+        >
+          {/* Drop overlay when dragging */}
+          {isDragging && (
+            <div className="absolute inset-0 bg-primary/10 border-2 border-dashed border-primary rounded-lg z-10 flex items-center justify-center">
+              <div className="text-center">
+                <ImagePlus className="w-12 h-12 text-primary mx-auto mb-2" />
+                <p className="text-primary font-medium">Drop to add more photos</p>
               </div>
-            </Card>
-          ))}
+            </div>
+          )}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-4">
+            {photos.map((photo, index) => (
+              <Card key={photo.id} className="overflow-hidden">
+                <div className="relative aspect-square bg-slate-100">
+                  {/* Use native img for blob URLs - more reliable on mobile browsers */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={photo.localUrl}
+                    alt={`Photo ${index + 1}`}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+
+                  {/* Status overlay */}
+                  {photo.status === "uploading" && (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                      <Loader2 className="w-8 h-8 text-white animate-spin" />
+                    </div>
+                  )}
+
+                  {photo.status === "uploaded" && (
+                    <div className="absolute top-2 left-2">
+                      <CheckCircle className="w-5 h-5 text-green-500 drop-shadow" />
+                    </div>
+                  )}
+
+                  {photo.status === "error" && (
+                    <div className="absolute inset-0 bg-red-500/80 flex flex-col items-center justify-center p-2 text-white text-center">
+                      <AlertCircle className="w-6 h-6 mb-1" />
+                      <p className="text-xs">{photo.error}</p>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="mt-2 h-7 text-xs"
+                        onClick={() => retryPhoto(photo.id)}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Delete button */}
+                  {photo.status !== "uploading" && photo.status !== "error" && (
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2 h-7 w-7"
+                      onClick={() => removePhoto(photo.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
+
+                  {/* Photo number */}
+                  <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                    #{index + 1}
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
         </div>
       ) : (
-        <Card className="border-dashed border-2 border-slate-300">
+        <Card 
+          className={`border-dashed border-2 transition-colors cursor-pointer ${
+            isDragging 
+              ? "border-primary bg-primary/5" 
+              : "border-slate-300 hover:border-slate-400"
+          }`}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          onClick={() => galleryInputRef.current?.click()}
+        >
           <CardContent className="p-8 lg:p-12 text-center">
-            <Camera className="w-12 h-12 lg:w-16 lg:h-16 text-slate-400 mx-auto mb-3" />
-            <p className="text-slate-600 font-medium lg:text-lg">No photos yet</p>
+            <Camera className={`w-12 h-12 lg:w-16 lg:h-16 mx-auto mb-3 transition-colors ${
+              isDragging ? "text-primary" : "text-slate-400"
+            }`} />
+            <p className={`font-medium lg:text-lg transition-colors ${
+              isDragging ? "text-primary" : "text-slate-600"
+            }`}>
+              {isDragging ? "Drop photos here" : "No photos yet"}
+            </p>
             <p className="text-sm lg:text-base text-slate-500 mt-1">
-              Use the buttons above to capture or select photos
+              {isDragging 
+                ? "Release to upload your photos" 
+                : "Drag & drop photos here, or use the buttons above"}
             </p>
           </CardContent>
         </Card>
