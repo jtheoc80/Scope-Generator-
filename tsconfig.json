@@ -62,6 +62,8 @@
     // E2E tests are handled by Playwright's own TS compilation
     "tests/**",
     "qa/**",
+    // drizzle-kit CLI config file (compiled separately by drizzle-kit)
+    "drizzle.config.ts",
     // Legacy src/ directory (not used by Next.js app router)
     "src/**"
   ]
