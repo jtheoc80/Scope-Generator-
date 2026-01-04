@@ -4,12 +4,7 @@ import * as React from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { User, Calendar, RefreshCw, Clock } from "lucide-react";
-
-interface AuthorInfo {
-  name: string;
-  credentials?: string;
-  avatar?: string;
-}
+import { AuthorInfo } from "@/lib/blog-data";
 
 interface AuthorCardProps {
   author: AuthorInfo;

@@ -5,7 +5,7 @@ export interface BlogPostFAQ {
 
 export interface AuthorInfo {
   name: string;
-  credentials: string;
+  credentials?: string;
   avatar?: string;
 }
 
