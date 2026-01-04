@@ -1,45 +1,35 @@
 // Email service using Resend integration
 import { Resend } from 'resend';
 
-let connectionSettings: any;
+// Cache the Resend client
+let resendClient: Resend | null = null;
 
-async function getCredentials() {
-  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
-  const xReplitToken = process.env.REPL_IDENTITY 
-    ? 'repl ' + process.env.REPL_IDENTITY 
-    : process.env.WEB_REPL_RENEWAL 
-    ? 'depl ' + process.env.WEB_REPL_RENEWAL 
-    : null;
+/**
+ * Get email credentials from environment variables.
+ * Required env vars:
+ *   - RESEND_API_KEY: Your Resend API key
+ *   - FROM_EMAIL: The email address to send from (e.g., proposals@scopegenerator.com)
+ */
+function getCredentials(): { apiKey: string; fromEmail: string } {
+  const apiKey = process.env.RESEND_API_KEY;
+  const fromEmail = process.env.FROM_EMAIL || 'onboarding@resend.dev';
 
-  if (!xReplitToken) {
-    throw new Error('X_REPLIT_TOKEN not found for repl/depl');
+  if (!apiKey) {
+    console.error('[EmailService] RESEND_API_KEY environment variable is not set');
+    throw new Error('Email service not configured');
   }
 
-  connectionSettings = await fetch(
-    'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=resend',
-    {
-      headers: {
-        'Accept': 'application/json',
-        'X_REPLIT_TOKEN': xReplitToken
-      }
-    }
-  ).then(res => res.json()).then(data => data.items?.[0]);
-
-  if (!connectionSettings || (!connectionSettings.settings.api_key)) {
-    throw new Error('Resend not connected');
-  }
-  return {
-    apiKey: connectionSettings.settings.api_key, 
-    fromEmail: connectionSettings.settings.from_email
-  };
+  return { apiKey, fromEmail };
 }
 
-async function getResendClient() {
-  const { apiKey } = await getCredentials();
-  return {
-    client: new Resend(apiKey),
-    fromEmail: connectionSettings.settings.from_email
-  };
+function getResendClient(): { client: Resend; fromEmail: string } {
+  const { apiKey, fromEmail } = getCredentials();
+  
+  if (!resendClient) {
+    resendClient = new Resend(apiKey);
+  }
+  
+  return { client: resendClient, fromEmail };
 }
 
 interface EmailOptions {
@@ -52,8 +42,8 @@ interface EmailOptions {
 
 export async function sendEmail(options: EmailOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
-    const { client, fromEmail } = await getResendClient();
-    const emailAddress = fromEmail || 'onboarding@resend.dev';
+    const { client, fromEmail } = getResendClient();
+    const emailAddress = fromEmail;
     const defaultFrom = `ScopeGen <${emailAddress}>`;
     
     const result = await client.emails.send({
@@ -65,26 +55,42 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
     });
 
     if (result.error) {
-      return { success: false, error: result.error.message };
+      console.error('[EmailService] Resend API error:', {
+        code: result.error.name,
+        message: result.error.message,
+        to: options.to,
+      });
+      return { success: false, error: 'Failed to send email' };
     }
+
+    console.log('[EmailService] Email sent successfully:', {
+      messageId: result.data?.id,
+      to: options.to,
+      subject: options.subject,
+    });
 
     return { success: true, messageId: result.data?.id };
   } catch (error: any) {
-    console.error('Resend error:', error);
-    return { success: false, error: error.message || 'Failed to send email' };
+    console.error('[EmailService] Email sending failed:', {
+      error: error.message,
+      stack: error.stack,
+      to: options.to,
+    });
+    return { success: false, error: 'Failed to send email' };
   }
 }
 
 export async function testConnection(): Promise<{ success: boolean; fromEmail?: string; error?: string }> {
   try {
-    const { fromEmail } = await getCredentials();
+    const { fromEmail } = getCredentials();
+    console.log('[EmailService] Connection test successful, fromEmail:', fromEmail);
     return { 
       success: true, 
       fromEmail 
     };
   } catch (error: any) {
-    console.error('Resend connection test failed:', error);
-    return { success: false, error: error.message || 'Connection test failed' };
+    console.error('[EmailService] Connection test failed:', error.message);
+    return { success: false, error: 'Email service not configured' };
   }
 }
 
@@ -194,11 +200,17 @@ ${data.senderCompany || ''}
 `.trim();
 
   try {
-    const { fromEmail } = await getCredentials();
-    const emailAddress = fromEmail || 'onboarding@resend.dev';
+    const { fromEmail } = getCredentials();
+    const emailAddress = fromEmail;
     const fromAddress = data.senderName 
       ? `${data.senderName} via ScopeGen <${emailAddress}>` 
       : `ScopeGen <${emailAddress}>`;
+      
+    console.log('[EmailService] Sending proposal email:', {
+      to: data.recipientEmail,
+      project: data.proposalTitle,
+      client: data.clientName,
+    });
       
     return sendEmail({
       to: data.recipientEmail,
@@ -208,7 +220,8 @@ ${data.senderCompany || ''}
       from: fromAddress
     });
   } catch (error: any) {
-    return { success: false, error: error.message };
+    console.error('[EmailService] Failed to send proposal email:', error.message);
+    return { success: false, error: 'Failed to send email' };
   }
 }
 
@@ -580,11 +593,17 @@ ${data.contractorCompany || data.contractorName || 'Your Contractor'}
 `.trim();
 
   try {
-    const { fromEmail } = await getCredentials();
-    const emailAddress = fromEmail || 'onboarding@resend.dev';
+    const { fromEmail } = getCredentials();
+    const emailAddress = fromEmail;
     const fromAddress = data.contractorName 
       ? `${data.contractorName} via ScopeGen <${emailAddress}>` 
       : `ScopeGen <${emailAddress}>`;
+    
+    console.log('[EmailService] Sending completed proposal email:', {
+      to: data.clientEmail,
+      project: data.projectTitle,
+      client: data.clientName,
+    });
       
     return sendEmail({
       to: data.clientEmail,
@@ -594,7 +613,8 @@ ${data.contractorCompany || data.contractorName || 'Your Contractor'}
       from: fromAddress
     });
   } catch (error: any) {
-    return { success: false, error: error.message };
+    console.error('[EmailService] Failed to send completed proposal email:', error.message);
+    return { success: false, error: 'Failed to send email' };
   }
 }
 
