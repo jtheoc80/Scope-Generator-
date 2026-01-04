@@ -42,6 +42,12 @@ jobs:
       - name: Install dependencies
         run: npm ci --include=dev
 
+      - name: Verify tooling exists
+        run: |
+          node -p "require.resolve('typescript')"
+          node -p "require.resolve('eslint')"
+          node -p "require.resolve('drizzle-kit')"
+
       - name: Run TypeScript compiler
         run: npm run typecheck
 
@@ -63,6 +69,12 @@ jobs:
 
       - name: Install dependencies
         run: npm ci --include=dev
+
+      - name: Verify tooling exists
+        run: |
+          node -p "require.resolve('typescript')"
+          node -p "require.resolve('eslint')"
+          node -p "require.resolve('drizzle-kit')"
 
       - name: Run ESLint
         run: npm run lint -- --max-warnings=0

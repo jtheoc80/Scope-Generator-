@@ -26,6 +26,12 @@ jobs:
     - name: Install
       run: npm ci
 
+    - name: Verify tooling exists
+      run: |
+        node -p "require.resolve('typescript')"
+        node -p "require.resolve('eslint')"
+        node -p "require.resolve('drizzle-kit')"
+
     - name: Lint
       run: npm run lint
 
