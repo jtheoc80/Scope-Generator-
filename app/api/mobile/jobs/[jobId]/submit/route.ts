@@ -26,7 +26,9 @@ const logDbInfo = () => {
     console.log("[mobile/submit] DB URL configured (parsing failed)");
   }
 };
-logDbInfo();
+if (process.env.NODE_ENV === "development") {
+  logDbInfo();
+}
 
 const submitBodySchema = z.object({
   package: z.enum(["GOOD", "BETTER", "BEST"]).optional(),
