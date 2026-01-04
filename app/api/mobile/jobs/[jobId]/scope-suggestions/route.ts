@@ -66,8 +66,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const k = Math.max(1, Math.min(10, Number(new URL(request.url).searchParams.get("k") || 5)));
 
     // 1) Load current job embedding
-    const je = await db.execute<{ embedding: string; model: string }>(
-      sql`SELECT embedding::text as embedding, model FROM job_embeddings WHERE job_id = ${id} LIMIT 1`
+    // NOTE: Some environments may have an older `job_embeddings` schema without a `model` column.
+    // We only need the embedding vector here, so avoid selecting `model` to stay backward-compatible.
+    const je = await db.execute<{ embedding: string }>(
+      sql`SELECT embedding::text as embedding FROM job_embeddings WHERE job_id = ${id} LIMIT 1`
     );
     const row = je.rows[0];
     if (!row?.embedding) {
