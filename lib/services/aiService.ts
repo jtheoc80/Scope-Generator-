@@ -74,6 +74,17 @@ ${jobNotes ? `\nCONTRACTOR'S NOTES FROM SITE VISIT:\n${jobNotes}\n\nUse these no
 CURRENT SCOPE:
 ${baseScope.map((item, i) => `${i + 1}. ${item}`).join('\n')}
 
+SCOPE CONTROL RULES (CRITICAL):
+1. Do NOT guess the room/area (e.g., "kitchen" vs "bathroom") unless the notes explicitly state it.
+   - If uncertain, use neutral wording like "faucet/fixture", "sink basin", "work area", "existing conditions".
+2. Do NOT introduce new scope items (repairs, upgrades, cleaning, restoration, staining removal, replacements) unless:
+   - The item is already implied by the CURRENT SCOPE, OR
+   - It is explicitly requested/confirmed in the CONTRACTOR'S NOTES (e.g., "Selected issues to address", "CONFIRMED ...").
+3. If notes indicate an explicit selection/confirmation (e.g., "Selected issues to address:" or "CONFIRMED ..."),
+   ONLY include work that directly supports those selections plus the base scope sequence. Do not add extras.
+4. Avoid scope creep language such as adding adjacent repairs, cosmetic restoration, or "as discovered" upgrades
+   unless specifically requested in notes.
+
 ENHANCEMENT REQUIREMENTS:
 
 1. PROFESSIONAL LANGUAGE

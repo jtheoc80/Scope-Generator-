@@ -138,6 +138,29 @@ function buildVisionNotes(visionContext: ReturnType<typeof extractVisionContext>
     parts.push(`CONTRACTOR NOTES: ${userNotes.trim()}`);
   }
 
+  /**
+   * If the contractor/user has explicitly confirmed scope (tier/answers) or selected
+   * specific issues to address, we must NOT leak additional AI-detected issues into
+   * the enhancement prompt. Otherwise the enhancer can "helpfully" add unselected
+   * items (e.g., sink/staining) and create scope creep.
+   */
+  const hasExplicitScopeSelection = (() => {
+    const t = userNotes?.toLowerCase() || "";
+    return (
+      t.includes("selected issues to address:") ||
+      t.includes("confirmed scope tier:") ||
+      t.includes("confirmed painting scope:") ||
+      t.includes("important: price only for the confirmed scope") ||
+      t.includes("important: scope only includes")
+    );
+  })();
+
+  if (hasExplicitScopeSelection) {
+    // Only pass through the contractor-confirmed notes. Do not add any additional
+    // scope signals from vision that could conflict with explicit selections.
+    return parts.join("\n\n");
+  }
+
   if (visionContext.damage.length > 0) {
     parts.push(`DAMAGE DETECTED: ${visionContext.damage.join("; ")}`);
   }
