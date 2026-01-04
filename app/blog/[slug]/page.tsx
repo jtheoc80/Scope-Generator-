@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { blogPosts, getRelatedPosts } from "@/lib/blog-data";
 import { extractTOC } from "@/lib/blog-utils";
 import { generateArticleSchema, generateBreadcrumbSchema, generateFAQSchema } from "@/lib/seo/jsonld";
-import { extractTOC } from "@/lib/blog-utils";
 import { 
   TableOfContents, 
   AuthorCard,
