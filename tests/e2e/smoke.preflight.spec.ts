@@ -159,7 +159,7 @@ test.describe('Preflight Checks', () => {
       expect(userAgent.toLowerCase()).toContain('mobile');
     }
     
-    // Verify we can make basic API requests from the page
+    // Verify JavaScript is executing correctly in the page context
     await page.goto('/');
     
     // Test that JavaScript is working
