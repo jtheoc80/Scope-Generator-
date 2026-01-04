@@ -87,6 +87,7 @@ export default function CapturePhotosPage() {
   const [phoneUploadOpen, setPhoneUploadOpen] = useState(false);
   const [similarStatus, setSimilarStatus] = useState<"idle" | "loading" | "pending" | "ready">("idle");
   const [similarCount, setSimilarCount] = useState(0);
+  const [similarUnavailable, setSimilarUnavailable] = useState(false);
   
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -270,31 +271,58 @@ export default function CapturePhotosPage() {
     let pollTimeout: ReturnType<typeof setTimeout> | null = null;
     let isMounted = true;
 
+    const startedAt = Date.now();
+    const maxMs = 60_000;
     const poll = async (attempt = 0) => {
       if (!isMounted) return;
       try {
+        if (Date.now() - startedAt > maxMs) {
+          setSimilarUnavailable(true);
+          setSimilarStatus("ready");
+          setSimilarCount(0);
+          return;
+        }
+
         setSimilarStatus((prev) => (prev === "ready" ? "ready" : "loading"));
-        const res = await mobileApiFetch<{ status: "pending" | "ready"; suggestions: unknown[] }>(
+        const res = await mobileApiFetch<{
+          ok: boolean;
+          status?: "pending" | "ready";
+          suggestions?: unknown[];
+          disabled?: boolean;
+          reason?: string;
+        }>(
           `/api/mobile/jobs/${jobId}/scope-suggestions?k=5`,
           { method: "GET" }
         );
         if (!isMounted) return;
-        setSimilarCount(Array.isArray(res.suggestions) ? res.suggestions.length : 0);
-        setSimilarStatus(res.status);
-        if (res.status === "pending" && attempt < 10) {
+
+        const suggestions = Array.isArray(res.suggestions) ? res.suggestions : [];
+        const disabled = res.disabled === true || (res.ok === true && suggestions.length === 0);
+
+        setSimilarCount(suggestions.length);
+        setSimilarStatus(disabled ? "ready" : (res.status ?? "ready"));
+        setSimilarUnavailable(disabled);
+
+        // Continue polling only while pending AND within limits.
+        if (!disabled && res.status === "pending" && attempt < 30) {
           pollTimeout = setTimeout(() => poll(attempt + 1), 2000);
         }
-      } catch {
-        // ignore
+      } catch (e) {
+        // Never leave UI stuck in "Generating…"
+        setSimilarUnavailable(true);
+        setSimilarStatus("ready");
+        setSimilarCount(0);
       }
     };
 
     if (uploadedCount > 0 || uploadingCount > 0) {
       setSimilarStatus("loading");
+      setSimilarUnavailable(false);
       poll(0);
     } else {
       setSimilarStatus("idle");
       setSimilarCount(0);
+      setSimilarUnavailable(false);
     }
 
     return () => {
@@ -437,7 +465,9 @@ export default function CapturePhotosPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="text-xs text-slate-600">
-            Suggestions show up on the next step so nothing slows down uploads.
+            {similarUnavailable
+              ? "Suggestions unavailable — continue without them."
+              : "Suggestions show up on the next step so nothing slows down uploads."}
           </CardContent>
         </Card>
       )}

@@ -65,6 +65,7 @@ export default function SelectIssuesPage() {
   const [customIssues, setCustomIssues] = useState<DetectedIssue[]>([]);
   const [similarStatus, setSimilarStatus] = useState<"idle" | "loading" | "pending" | "ready" | "error">("idle");
   const [similarSuggestions, setSimilarSuggestions] = useState<SimilarScopeSuggestion[]>([]);
+  const [similarUnavailable, setSimilarUnavailable] = useState(false);
   const [suggestedProblem, setSuggestedProblem] = useState<string | undefined>();
   const [needsMorePhotos, setNeedsMorePhotos] = useState<string[]>([]);
   const [photosAnalyzed, setPhotosAnalyzed] = useState(0);
@@ -158,29 +159,55 @@ export default function SelectIssuesPage() {
     let pollTimeout: ReturnType<typeof setTimeout> | null = null;
     let isMounted = true;
 
+    const startedAt = Date.now();
+    const maxMs = 60_000;
     const fetchSimilar = async (attempt = 0) => {
       try {
         if (!isMounted) return;
+
+        // Hard timeout: never block the flow waiting for suggestions
+        if (Date.now() - startedAt > maxMs) {
+          setSimilarUnavailable(true);
+          setSimilarStatus("ready");
+          setSimilarSuggestions([]);
+          return;
+        }
+
         setSimilarStatus((prev) => (prev === "ready" ? "ready" : "loading"));
-        const res = await mobileApiFetch<{ status: "pending" | "ready"; suggestions: SimilarScopeSuggestion[] }>(
+        const res = await mobileApiFetch<{
+          ok: boolean;
+          status?: "pending" | "ready";
+          suggestions?: SimilarScopeSuggestion[];
+          disabled?: boolean;
+          reason?: string;
+        }>(
           `/api/mobile/jobs/${jobId}/scope-suggestions?k=5`,
           { method: "GET" }
         );
 
         if (!isMounted) return;
-        setSimilarSuggestions(res.suggestions || []);
-        setSimilarStatus(res.status);
 
-        if (res.status === "pending" && attempt < 12) {
+        const suggestions = Array.isArray(res.suggestions) ? res.suggestions : [];
+        const disabled = res.disabled === true || (res.ok === true && suggestions.length === 0);
+
+        setSimilarSuggestions(suggestions);
+        setSimilarUnavailable(disabled);
+        setSimilarStatus(disabled ? "ready" : (res.status ?? "ready"));
+
+        if (!disabled && res.status === "pending" && attempt < 30) {
           pollTimeout = setTimeout(() => fetchSimilar(attempt + 1), 2000);
         }
-      } catch {
+      } catch (e) {
         if (!isMounted) return;
-        setSimilarStatus("error");
+        // Never block: fail closed to "ready" and show a non-blocking banner.
+        setSimilarUnavailable(true);
+        setSimilarSuggestions([]);
+        setSimilarStatus("ready");
       }
     };
 
     setSimilarStatus("loading");
+    setSimilarUnavailable(false);
     fetchSimilar(0);
 
     return () => {
@@ -390,6 +417,14 @@ export default function SelectIssuesPage() {
         </div>
       )}
 
+      {/* Non-blocking banner for suggestions */}
+      {similarUnavailable && (
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          Suggestions unavailable — continue without them
+        </div>
+      )}
+
       {/* Error message */}
       {error && (
         <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-start gap-2">
@@ -433,7 +468,7 @@ export default function SelectIssuesPage() {
           <CardContent className="space-y-2">
             {similarSuggestions.length === 0 ? (
               <p className="text-sm text-slate-600">
-                {similarStatus === "error"
+                {similarUnavailable
                   ? "Suggestions unavailable right now."
                   : "No similar-job suggestions yet. (We’ll improve as you complete more jobs.)"}
               </p>
