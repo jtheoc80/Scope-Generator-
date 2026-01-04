@@ -27,8 +27,6 @@ export interface BlogPost {
   canonical?: string;
   content: string[];
   faqs?: BlogPostFAQ[];
-  heroImage?: string;
-  ogImage?: string;
 }
 
 // Category hero image defaults

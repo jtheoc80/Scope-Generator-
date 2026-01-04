@@ -281,6 +281,7 @@ export default async function BlogPostPage({ params }: PageProps) {
     datePublished: new Date(post.datePublished).toISOString(),
     dateModified: new Date(post.dateModified).toISOString(),
     author: post.author.name,
+    image: post.heroImage || post.ogImage,
     type: "BlogPosting",
     image: post.heroImage
       ? `https://scopegenerator.com${post.heroImage}`

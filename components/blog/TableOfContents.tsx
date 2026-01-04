@@ -24,6 +24,11 @@ export function TableOfContents({ items, className, variant = 'inline' }: TableO
   React.useEffect(() => {
     if (variant !== 'sidebar') return;
 
+    // Check for IntersectionObserver support to gracefully degrade in older browsers
+    if (typeof window === 'undefined' || !('IntersectionObserver' in window)) {
+      return;
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
