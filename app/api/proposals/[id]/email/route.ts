@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
 import { storage } from '@/lib/services/storage';
 import { sendProposalEmail } from '@/lib/services/emailService';
 import { db } from '@/server/db';
 import { mobileJobDrafts } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
+import { getRequestUserId } from '@/lib/services/requestUserId';
+import { buildProposalPdf } from '@/lib/services/proposalPdf';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId } = await auth();
+    const userId = await getRequestUserId(request);
     
     if (!userId) {
       return NextResponse.json(
@@ -25,7 +26,7 @@ export async function POST(
     const proposalId = parseInt(id);
     const body = await request.json();
     
-    const { recipientEmail, recipientName, message } = body;
+    const { recipientEmail, recipientName, message, runId } = body;
     
     if (!recipientEmail) {
       return NextResponse.json(
@@ -70,7 +71,22 @@ export async function POST(
     // Calculate total price (average of range)
     const totalPrice = Math.round((proposal.priceLow + proposal.priceHigh) / 2);
 
-    // Send the email
+    // Generate deterministic PDF attachment from the canonical proposal id.
+    const companyInfo = user
+      ? {
+          companyName: user.companyName,
+          companyAddress: user.companyAddress,
+          companyPhone: user.companyPhone,
+          licenseNumber: user.licenseNumber,
+        }
+      : null;
+
+    const { pdfBytes, filename } = buildProposalPdf({
+      proposal: proposal as any,
+      companyInfo,
+    });
+
+    // Send the email (EMAIL_MODE=test writes to DB outbox instead of external provider)
     const result = await sendProposalEmail({
       recipientEmail,
       recipientName: recipientName || proposal.clientName,
@@ -83,6 +99,15 @@ export async function POST(
       senderCompany: user?.companyName || undefined,
       customMessage: message,
       proposalUrl,
+      proposalId,
+      runId,
+      attachments: [
+        {
+          filename,
+          contentType: "application/pdf",
+          content: Buffer.from(pdfBytes),
+        },
+      ],
     });
 
     if (!result.success) {
@@ -127,10 +152,11 @@ export async function POST(
       });
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       messageId: result.messageId,
-      publicUrl: proposalUrl 
+      publicUrl: proposalUrl,
+      sentAt: new Date().toISOString(),
     });
   } catch (error) {
     console.error('[API] Error in proposal email route:', {

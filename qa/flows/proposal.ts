@@ -197,7 +197,7 @@ export async function sendProposalEmail(
   }
   
   // Send
-  const sendButton = page.locator('[data-testid="button-send-email"]');
+  const sendButton = page.locator('[data-testid="email-pdf"]');
   await sendButton.click();
   
   // Wait for success (toast or modal close)

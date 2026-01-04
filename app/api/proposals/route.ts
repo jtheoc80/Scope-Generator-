@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
 import { storage } from '@/lib/services/storage';
 import { insertProposalSchema } from '@shared/schema';
+import { getRequestUserId } from '@/lib/services/requestUserId';
 
 export async function GET() {
   try {
+    // NOTE: No NextRequest available here; this endpoint is not used by QA cookie auth.
+    // It remains Clerk-only for now.
+    const { auth } = await import('@clerk/nextjs/server');
     const { userId } = await auth();
     
     if (!userId) {
@@ -39,7 +42,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth();
+    const userId = await getRequestUserId(request);
     
     if (!userId) {
       return NextResponse.json(

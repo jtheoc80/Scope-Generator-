@@ -1,5 +1,7 @@
 // Email service using Resend integration
 import { Resend } from 'resend';
+import { db } from '@/server/db';
+import { emailOutbox, type EmailOutboxAttachment } from '@shared/schema';
 
 // Cache the Resend client
 let resendClient: Resend | null = null;
@@ -10,9 +12,13 @@ let resendClient: Resend | null = null;
  *   - RESEND_API_KEY: Your Resend API key
  *   - FROM_EMAIL: The email address to send from (e.g., proposals@scopegenerator.com)
  */
+function getFromEmail(): string {
+  return process.env.FROM_EMAIL || 'onboarding@resend.dev';
+}
+
 function getCredentials(): { apiKey: string; fromEmail: string } {
   const apiKey = process.env.RESEND_API_KEY;
-  const fromEmail = process.env.FROM_EMAIL || 'onboarding@resend.dev';
+  const fromEmail = getFromEmail();
 
   if (!apiKey) {
     console.error('[EmailService] RESEND_API_KEY environment variable is not set');
@@ -38,10 +44,62 @@ interface EmailOptions {
   text: string;
   html?: string;
   from?: string;
+  attachments?: Array<{
+    filename: string;
+    contentType: string;
+    content: Buffer | Uint8Array | ArrayBuffer | string;
+  }>;
+  /**
+   * Optional metadata to help deterministic testing (EMAIL_MODE=test).
+   */
+  proposalId?: number;
+  runId?: string;
 }
 
 export async function sendEmail(options: EmailOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
+    const mode = process.env.EMAIL_MODE === 'test' ? 'test' : 'prod';
+
+    // Deterministic test/dev mode: write emails to DB outbox (no external provider dependency).
+    if (mode === 'test') {
+      const attachments: EmailOutboxAttachment[] = (options.attachments || []).map((a) => {
+        let buf: Buffer;
+        if (typeof a.content === 'string') {
+          // Treat as raw string payload; store base64 of UTF-8 to preserve bytes deterministically.
+          buf = Buffer.from(a.content, 'utf8');
+        } else if (a.content instanceof ArrayBuffer) {
+          buf = Buffer.from(a.content);
+        } else if (a.content instanceof Uint8Array) {
+          buf = Buffer.from(a.content);
+        } else {
+          buf = Buffer.from(a.content);
+        }
+        return {
+          filename: a.filename,
+          contentType: a.contentType,
+          contentBase64: buf.toString('base64'),
+          byteLength: buf.byteLength,
+        };
+      });
+
+      const [row] = await db
+        .insert(emailOutbox)
+        .values({
+          mode: 'test',
+          to: options.to,
+          from: options.from || null,
+          subject: options.subject,
+          textBody: options.text,
+          htmlBody: options.html || null,
+          proposalId: options.proposalId ?? null,
+          runId: options.runId ?? null,
+          attachments,
+        })
+        .returning();
+
+      return { success: true, messageId: `outbox:${row.id}` };
+    }
+
     const { client, fromEmail } = getResendClient();
     const emailAddress = fromEmail;
     const defaultFrom = `ScopeGen <${emailAddress}>`;
@@ -52,6 +110,10 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
       subject: options.subject,
       text: options.text,
       html: options.html,
+      attachments: options.attachments?.map((a) => ({
+        filename: a.filename,
+        content: typeof a.content === 'string' ? a.content : Buffer.from(a.content as any),
+      })),
     });
 
     if (result.error) {
@@ -82,6 +144,10 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
 
 export async function testConnection(): Promise<{ success: boolean; fromEmail?: string; error?: string }> {
   try {
+    if (process.env.EMAIL_MODE === 'test') {
+      return { success: true, fromEmail: getFromEmail() };
+    }
+
     const { fromEmail } = getCredentials();
     console.log('[EmailService] Connection test successful, fromEmail:', fromEmail);
     return { 
@@ -104,6 +170,9 @@ interface ProposalEmailData {
   senderCompany?: string;
   customMessage?: string;
   proposalUrl?: string;
+  proposalId?: number;
+  attachments?: EmailOptions['attachments'];
+  runId?: string;
 }
 
 export async function sendProposalEmail(data: ProposalEmailData): Promise<{ success: boolean; messageId?: string; error?: string }> {
@@ -200,8 +269,7 @@ ${data.senderCompany || ''}
 `.trim();
 
   try {
-    const { fromEmail } = getCredentials();
-    const emailAddress = fromEmail;
+    const emailAddress = process.env.EMAIL_MODE === 'test' ? getFromEmail() : getCredentials().fromEmail;
     const fromAddress = data.senderName 
       ? `${data.senderName} via ScopeGen <${emailAddress}>` 
       : `ScopeGen <${emailAddress}>`;
@@ -217,7 +285,10 @@ ${data.senderCompany || ''}
       subject,
       text,
       html,
-      from: fromAddress
+      from: fromAddress,
+      attachments: data.attachments,
+      proposalId: data.proposalId,
+      runId: data.runId,
     });
   } catch (error: any) {
     console.error('[EmailService] Failed to send proposal email:', error.message);
@@ -593,8 +664,7 @@ ${data.contractorCompany || data.contractorName || 'Your Contractor'}
 `.trim();
 
   try {
-    const { fromEmail } = getCredentials();
-    const emailAddress = fromEmail;
+    const emailAddress = process.env.EMAIL_MODE === 'test' ? getFromEmail() : getCredentials().fromEmail;
     const fromAddress = data.contractorName 
       ? `${data.contractorName} via ScopeGen <${emailAddress}>` 
       : `ScopeGen <${emailAddress}>`;

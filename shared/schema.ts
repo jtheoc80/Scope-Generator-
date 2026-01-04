@@ -157,6 +157,48 @@ export const proposals = pgTable("proposals", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// ==========================================
+// Email Outbox (Test/Dev deterministic sending)
+// ==========================================
+
+export type EmailOutboxAttachment = {
+  filename: string;
+  contentType: string;
+  /**
+   * Base64-encoded bytes (preferred for EMAIL_MODE=test).
+   * In production we may omit bytes and store only metadata.
+   */
+  contentBase64?: string;
+  byteLength?: number;
+};
+
+export const emailOutbox = pgTable(
+  "email_outbox",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    // test | prod (or provider name). Stored for audit/debug.
+    mode: varchar("mode", { length: 20 }).notNull().default("test"),
+    to: varchar("to", { length: 255 }).notNull(),
+    from: text("from"),
+    subject: text("subject").notNull(),
+    textBody: text("text_body"),
+    htmlBody: text("html_body"),
+    proposalId: integer("proposal_id").references(() => proposals.id, { onDelete: "set null" }),
+    // Optional: attach to a QA run for filtering
+    runId: varchar("run_id", { length: 80 }),
+    attachments: jsonb("attachments")
+      .$type<EmailOutboxAttachment[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => ({
+    proposalIdx: index("idx_email_outbox_proposal").on(table.proposalId),
+    toIdx: index("idx_email_outbox_to").on(table.to),
+    createdAtIdx: index("idx_email_outbox_created_at").on(table.createdAt),
+  }),
+);
+
 // Proposal Photos table - stores photos associated with proposals
 export const proposalPhotos = pgTable("proposal_photos", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),

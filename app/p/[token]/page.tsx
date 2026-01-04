@@ -8,8 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Download, Loader2, FileWarning, CheckCircle2, FileSignature } from "lucide-react";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
 import { useLanguage } from "@/hooks/useLanguage";
 
 interface PublicProposalResponse {
@@ -97,28 +95,35 @@ export default function PublicProposal() {
   });
 
   const handleDownloadPDF = async () => {
-    if (!previewRef.current || !data) return;
+    if (!data) return;
 
     setIsDownloading(true);
     try {
-      const canvas = await html2canvas(previewRef.current, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff",
+      const res = await fetch(`/api/proposals/${data.proposal.id}/pdf?token=${encodeURIComponent(token)}`, {
+        method: "GET",
       });
 
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "px",
-        format: [canvas.width, canvas.height],
-      });
+      if (!res.ok) {
+        throw new Error("Failed to generate PDF");
+      }
 
-      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
-      
-      const filename = `proposal-${data.proposal.clientName.replace(/\s+/g, "-").toLowerCase()}.pdf`;
-      pdf.save(filename);
+      const contentDisposition = res.headers.get("content-disposition") || "";
+      const filenameMatch =
+        /filename\*=(?:UTF-8'')?([^;]+)|filename=\"?([^\";]+)\"?/i.exec(contentDisposition);
+      const rawFilename = filenameMatch?.[1] || filenameMatch?.[2];
+      const filename = rawFilename ? decodeURIComponent(rawFilename) : `proposal-${data.proposal.id}.pdf`;
+
+      const bytes = await res.arrayBuffer();
+      const blob = new Blob([bytes], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
     } catch (err) {
       console.error("Error generating PDF:", err);
     } finally {

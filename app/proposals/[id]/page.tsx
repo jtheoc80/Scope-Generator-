@@ -5,6 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import ProposalPreview from "@/components/proposal-preview";
 import { Button } from "@/components/ui/button";
+import EmailProposalModal from "@/components/email-proposal-modal";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Download, 
   Loader2, 
@@ -12,9 +14,8 @@ import {
   ArrowLeft,
   Home,
   Edit,
+  Mail,
 } from "lucide-react";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
 
 interface Proposal {
   id: number;
@@ -30,6 +31,7 @@ interface Proposal {
   options: Record<string, boolean>;
   status?: string;
   isUnlocked?: boolean;
+  publicToken?: string | null;
   lineItems?: Array<{
     id: string;
     tradeName: string;
@@ -49,6 +51,11 @@ export default function ProposalViewPage() {
   const proposalId = params?.id as string;
   const previewRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [pdfStatus, setPdfStatus] = useState<"idle" | "generating" | "ready" | "sent" | "error">("idle");
+  const [pdfError, setPdfError] = useState<string | null>(null);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [lastSentAt, setLastSentAt] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const { data: proposal, isLoading, error } = useQuery<Proposal>({
     queryKey: ["/api/proposals", proposalId],
@@ -63,31 +70,54 @@ export default function ProposalViewPage() {
     enabled: !!proposalId,
   });
 
-  const handleDownloadPDF = async () => {
-    if (!previewRef.current || !proposal) return;
-
+  const handleExportPDF = async () => {
+    if (!proposalId) return;
     setIsDownloading(true);
+    setPdfStatus("generating");
+    setPdfError(null);
     try {
-      const canvas = await html2canvas(previewRef.current, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff",
+      const res = await fetch(`/api/proposals/${proposalId}/pdf`, {
+        method: "GET",
+        credentials: "include",
       });
 
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "px",
-        format: [canvas.width, canvas.height],
-      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Failed to generate PDF");
+      }
 
-      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
-      
-      const filename = `proposal-${proposal.clientName.replace(/\s+/g, "-").toLowerCase()}.pdf`;
-      pdf.save(filename);
+      const contentDisposition = res.headers.get("content-disposition") || "";
+      const filenameMatch =
+        /filename\*=(?:UTF-8'')?([^;]+)|filename=\"?([^\";]+)\"?/i.exec(contentDisposition);
+      const rawFilename = filenameMatch?.[1] || filenameMatch?.[2];
+      const filename = rawFilename ? decodeURIComponent(rawFilename) : `proposal-${proposalId}.pdf`;
+
+      const bytes = await res.arrayBuffer();
+      const blob = new Blob([bytes], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      setPdfStatus(lastSentAt ? "sent" : "ready");
+      toast({
+        title: "PDF ready",
+        description: "Your PDF download has started.",
+      });
     } catch (err) {
-      console.error("Error generating PDF:", err);
+      const msg = err instanceof Error ? err.message : "Failed to generate PDF";
+      setPdfStatus("error");
+      setPdfError(msg);
+      toast({
+        title: "PDF generation failed",
+        description: msg,
+        variant: "destructive",
+      });
     } finally {
       setIsDownloading(false);
     }
@@ -190,8 +220,19 @@ export default function ProposalViewPage() {
               Edit in App
             </Button>
             <Button
-              onClick={handleDownloadPDF}
+              onClick={() => setIsEmailModalOpen(true)}
+              variant="outline"
               disabled={isDownloading}
+              title={!proposal ? "Proposal is still loading" : undefined}
+            >
+              <Mail className="w-4 h-4 mr-2" />
+              Email PDF
+            </Button>
+            <Button
+              onClick={handleExportPDF}
+              disabled={isDownloading}
+              data-testid="export-pdf"
+              title={pdfError || undefined}
             >
               {isDownloading ? (
                 <>
@@ -201,11 +242,28 @@ export default function ProposalViewPage() {
               ) : (
                 <>
                   <Download className="w-4 h-4 mr-2" />
-                  Download PDF
+                  {pdfStatus === "sent" ? "Sent" : pdfStatus === "ready" ? "Ready" : "Export PDF"}
                 </>
               )}
             </Button>
           </div>
+        </div>
+        <div className="max-w-[900px] mx-auto px-4 pb-3">
+          <div className="text-xs text-slate-500 flex items-center justify-between">
+            <span data-testid="pdf-generation-status">
+              {pdfStatus === "idle" && "PDF: Idle"}
+              {pdfStatus === "generating" && "PDF: Generating…"}
+              {pdfStatus === "ready" && "PDF: Ready"}
+              {pdfStatus === "sent" && "PDF: Sent"}
+              {pdfStatus === "error" && "PDF: Failed (retry)"}
+            </span>
+            <span className="text-xs text-slate-500">
+              {lastSentAt ? `Last sent: ${new Date(lastSentAt).toLocaleString("en-US")}` : "Not emailed yet"}
+            </span>
+          </div>
+          {pdfStatus === "error" && pdfError ? (
+            <div className="mt-2 text-xs text-red-600">{pdfError}</div>
+          ) : null}
         </div>
       </div>
 
@@ -221,6 +279,20 @@ export default function ProposalViewPage() {
       <div className="text-center py-8 text-slate-500 text-sm">
         Powered by <span className="font-semibold">ScopeGen</span>
       </div>
+
+      {proposal && (
+        <EmailProposalModal
+          isOpen={isEmailModalOpen}
+          onClose={() => setIsEmailModalOpen(false)}
+          proposalId={proposal.id}
+          clientName={proposal.clientName}
+          publicToken={(proposal as any).publicToken}
+          onSent={(info) => {
+            setLastSentAt(info.sentAt);
+            setPdfStatus("sent");
+          }}
+        />
+      )}
     </div>
   );
 }
