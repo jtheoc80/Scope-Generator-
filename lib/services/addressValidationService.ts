@@ -252,7 +252,7 @@ export async function validateJobAddress(
   const result = await validateAddress(payload);
 
   if (!result.success || !result.validation) {
-    // If validation fails, still mark as validated but with warning
+    // If validation fails, still mark as validated but silently
     // This allows the user to proceed while logging the issue
     console.warn('Address validation failed:', result.error);
     return {
@@ -262,13 +262,12 @@ export async function validateJobAddress(
         validation: {
           verdict: 'VALIDATION_UNAVAILABLE',
         },
-        warnings: ['Address validation service unavailable'],
         updatedAt: Date.now(),
       },
       needsCorrection: false,
-      hasWarnings: true,
+      hasWarnings: false,
       isLowQuality: false,
-      warnings: ['Address validation service unavailable'],
+      warnings: [],
       error: result.error?.message,
     };
   }
