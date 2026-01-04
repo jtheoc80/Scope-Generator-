@@ -208,7 +208,7 @@ export default function SelectIssuesPage() {
         if (!disabled && res.status === "pending" && attempt < 30) {
           pollTimeout = setTimeout(() => fetchSimilar(attempt + 1), 2000);
         }
-      } catch (e) {
+      } catch {
         if (!isMounted) return;
         // Never block: fail closed to "ready" and show a non-blocking banner.
         setSimilarHadError(true);
