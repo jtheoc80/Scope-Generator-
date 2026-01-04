@@ -37,7 +37,7 @@ function testAuthHandler(req: NextRequest) {
     }
 
     // Valid test session - allow the request to proceed
-    console.log(`[QA] Test session validated for user: ${session.userId}`);
+    console.log('[QA] Test session validated for protected route');
   }
 
   return NextResponse.next();

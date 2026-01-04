@@ -36,19 +36,28 @@ export function validateTestSession(cookieValue: string | undefined): TestSessio
   try {
     const sessionData = JSON.parse(
       Buffer.from(cookieValue, 'base64').toString('utf-8')
-    ) as TestSessionData;
+    );
+
+    // Validate structure - ensure all required fields are present and have correct types
+    if (
+      typeof sessionData !== 'object' ||
+      sessionData === null ||
+      typeof sessionData.userId !== 'string' ||
+      typeof sessionData.email !== 'string' ||
+      typeof sessionData.createdAt !== 'number' ||
+      typeof sessionData.expiresAt !== 'number'
+    ) {
+      console.error('Invalid test session structure');
+      return null;
+    }
 
     // Check if session is expired
     if (sessionData.expiresAt < Date.now()) {
       return null;
     }
 
-    // Validate required fields
-    if (!sessionData.userId || !sessionData.email) {
-      return null;
-    }
-
-    return sessionData;
+    // Return validated session data
+    return sessionData as TestSessionData;
   } catch (error) {
     console.error('Error validating test session:', error);
     return null;
