@@ -59,7 +59,7 @@ Generate proposals for 17+ contractor trades:
 
 | Category | Technology |
 |----------|------------|
-| **Framework** | Next.js 15 (App Router) |
+| **Framework** | Next.js 15.5.9 (App Router) |
 | **Language** | TypeScript |
 | **Frontend** | React 19, Tailwind CSS 4 |
 | **UI Components** | Radix UI, Lucide Icons |
