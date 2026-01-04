@@ -26,6 +26,9 @@ jobs:
     name: TypeScript Check
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      # Ensure devDependencies (typescript, drizzle-kit, eslint) are installed during npm ci
+      NODE_ENV: development
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,7 +40,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --include=dev
 
       - name: Run TypeScript compiler
         run: npm run typecheck
@@ -46,6 +49,8 @@ jobs:
     name: ESLint
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      NODE_ENV: development
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -57,7 +62,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --include=dev
 
       - name: Run ESLint
         run: npm run lint -- --max-warnings=0
@@ -66,6 +71,8 @@ jobs:
     name: Unit & Integration Tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      NODE_ENV: development
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -77,7 +84,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --include=dev
 
       - name: Run unit tests
         run: npm run test:ci || echo "No unit tests configured yet"
