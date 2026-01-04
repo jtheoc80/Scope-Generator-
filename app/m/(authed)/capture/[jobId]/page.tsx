@@ -309,7 +309,7 @@ export default function CapturePhotosPage() {
         if (!disabled && res.status === "pending" && attempt < 30) {
           pollTimeout = setTimeout(() => poll(attempt + 1), 2000);
         }
-      } catch (e) {
+      } catch {
         // Never leave UI stuck in "Generating…"
         setSimilarUnavailable(true);
         setSimilarStatus("ready");
