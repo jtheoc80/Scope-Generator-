@@ -5,8 +5,18 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, ArrowRight, Calendar, Clock, Zap, User, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { blogPosts } from "@/lib/blog-data";
+import { blogPosts, getRelatedPosts } from "@/lib/blog-data";
 import { generateArticleSchema, generateBreadcrumbSchema, generateFAQSchema } from "@/lib/seo/jsonld";
+import { 
+  BlogHero, 
+  TableOfContents, 
+  AuthorCard,
+  InlineCTA,
+  Callout,
+  Checklist,
+  RelatedPosts,
+  extractTOC
+} from "@/components/blog";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -24,74 +34,231 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!post) {
     return {
-      title: "Article Not Found | ScopeGen",
+      title: "Article Not Found | ScopeGenerator",
     };
   }
 
+  const ogImageUrl = post.ogImage || post.heroImage || "/opengraph.jpg";
+
   return {
-    title: post.metaTitle,
+    title: `${post.metaTitle} | ScopeGenerator`,
     description: post.metaDescription,
     keywords: [
       post.category.toLowerCase(),
-      "contractor blog",
-      "proposal tips",
-      ...post.title.toLowerCase().split(" ").filter(w => w.length > 4).slice(0, 5),
+      ...post.tags,
+      "contractor",
+      "proposal",
     ],
-    authors: [{ name: post.author }],
+    authors: [{ name: post.author.name }],
     alternates: {
-      canonical: `https://scopegenerator.com/blog/${post.slug}`,
+      canonical: post.canonical || `https://scopegenerator.com/blog/${post.slug}`,
     },
     openGraph: {
       title: post.metaTitle,
       description: post.metaDescription,
       url: `https://scopegenerator.com/blog/${post.slug}`,
       type: "article",
-      publishedTime: new Date(post.date).toISOString(),
-      authors: [post.author],
+      publishedTime: new Date(post.datePublished).toISOString(),
+      modifiedTime: new Date(post.dateModified).toISOString(),
+      authors: [post.author.name],
       section: post.category,
+      tags: post.tags,
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: post.heroImageAlt || post.title,
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
       title: post.metaTitle,
       description: post.metaDescription,
+      images: [ogImageUrl],
     },
   };
 }
 
-function InlineCTA() {
-  return (
-    <div className="my-8 p-6 bg-gradient-to-r from-primary/10 to-secondary/10 border-l-4 border-secondary rounded-r-lg">
-      <div className="flex items-start gap-4">
-        <div className="bg-secondary p-2 rounded-full flex-shrink-0">
-          <Zap className="h-5 w-5 text-primary" />
-        </div>
-        <div>
-          <p className="font-bold text-slate-900 mb-1">Skip the writing. Generate this proposal automatically.</p>
-          <p className="text-slate-600 text-sm mb-3">ScopeGen creates professional contractor proposals in about 60 seconds.</p>
-          <Link href="/app">
-            <Button size="sm" className="bg-secondary text-slate-900 hover:bg-secondary/90" data-testid="inline-cta">
-              Try It Free <ArrowRight className="h-4 w-4 ml-1" />
-            </Button>
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-}
+// Content renderer that handles markdown-like syntax
+function renderContent(content: string[], inlineCTAIndex: number) {
+  const elements: React.ReactNode[] = [];
+  let ctaInserted = false;
 
-function getRelatedPosts(currentSlug: string, currentCategory: string) {
-  const allPosts = Object.values(blogPosts);
-  
-  const sameCategoryPosts = allPosts.filter(
-    p => p.slug !== currentSlug && p.category === currentCategory
-  );
-  
-  const otherPosts = allPosts.filter(
-    p => p.slug !== currentSlug && p.category !== currentCategory
-  );
-  
-  const related = [...sameCategoryPosts, ...otherPosts].slice(0, 3);
-  return related;
+  for (let i = 0; i < content.length; i++) {
+    const block = content[i];
+
+    // Insert inline CTA roughly 40% through the content
+    if (!ctaInserted && i >= inlineCTAIndex) {
+      elements.push(<InlineCTA key={`cta-${i}`} />);
+      ctaInserted = true;
+    }
+
+    // Headings
+    if (block.startsWith("## ")) {
+      const text = block.replace("## ", "");
+      const id = text.toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+      elements.push(
+        <h2 key={i} id={id} className="scroll-mt-24">
+          {text}
+        </h2>
+      );
+      continue;
+    }
+
+    if (block.startsWith("### ")) {
+      const text = block.replace("### ", "");
+      const id = text.toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+      elements.push(
+        <h3 key={i} id={id} className="scroll-mt-24">
+          {text}
+        </h3>
+      );
+      continue;
+    }
+
+    // Code blocks
+    if (block.startsWith("```")) {
+      const codeContent = block.replace(/^```\w*\n?/, "").replace(/```$/, "");
+      elements.push(
+        <pre key={i} className="bg-slate-900 text-slate-100 rounded-lg p-4 overflow-x-auto text-sm">
+          <code>{codeContent}</code>
+        </pre>
+      );
+      continue;
+    }
+
+    // Tables
+    if (block.includes("|") && block.includes("\n")) {
+      const lines = block.trim().split("\n");
+      const headerRow = lines[0].split("|").filter((cell) => cell.trim());
+      const dataRows = lines.slice(2).map((line) =>
+        line.split("|").filter((cell) => cell.trim())
+      );
+
+      elements.push(
+        <div key={i} className="my-6 overflow-x-auto">
+          <table className="min-w-full border-collapse border border-slate-200 text-sm">
+            <thead>
+              <tr className="bg-slate-50">
+                {headerRow.map((cell, j) => (
+                  <th
+                    key={j}
+                    className="border border-slate-200 px-4 py-2 text-left font-semibold text-slate-700"
+                  >
+                    {cell.trim()}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {dataRows.map((row, rowIndex) => (
+                <tr key={rowIndex} className="even:bg-slate-50">
+                  {row.map((cell, cellIndex) => (
+                    <td
+                      key={cellIndex}
+                      className="border border-slate-200 px-4 py-2 text-slate-600"
+                      dangerouslySetInnerHTML={{
+                        __html: cell
+                          .trim()
+                          .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>"),
+                      }}
+                    />
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+      continue;
+    }
+
+    // Unordered lists
+    if (block.startsWith("- ") || block.startsWith("* ")) {
+      const items = block.split("\n").filter((line) => line.match(/^[-*] /));
+      elements.push(
+        <ul key={i}>
+          {items.map((line, j) => (
+            <li
+              key={j}
+              dangerouslySetInnerHTML={{
+                __html: line
+                  .replace(/^[-*] /, "")
+                  .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                  .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>'),
+              }}
+            />
+          ))}
+        </ul>
+      );
+      continue;
+    }
+
+    // Checkbox lists (special rendering)
+    if (block.includes("- [ ]") || block.includes("- [x]")) {
+      const items = block.split("\n").filter((line) => line.match(/^- \[[x ]\]/));
+      elements.push(
+        <div key={i} className="my-6 p-5 bg-slate-50 rounded-lg border">
+          <ul className="space-y-2">
+            {items.map((line, j) => {
+              const isChecked = line.includes("[x]");
+              const text = line.replace(/^- \[[x ]\] /, "");
+              return (
+                <li key={j} className="flex items-start gap-3">
+                  <span
+                    className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center mt-0.5 ${
+                      isChecked
+                        ? "bg-green-500 border-green-500"
+                        : "border-slate-300 bg-white"
+                    }`}
+                  >
+                    {isChecked && (
+                      <svg
+                        className="w-3 h-3 text-white"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    )}
+                  </span>
+                  <span className="text-slate-700">{text}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      );
+      continue;
+    }
+
+    // Horizontal rule
+    if (block === "---") {
+      elements.push(<hr key={i} />);
+      continue;
+    }
+
+    // Regular paragraphs
+    elements.push(
+      <p
+        key={i}
+        dangerouslySetInnerHTML={{
+          __html: block
+            .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+            .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+            .replace(/`([^`]+)`/g, '<code class="bg-slate-100 px-1.5 py-0.5 rounded text-sm">$1</code>'),
+        }}
+      />
+    );
+  }
+
+  return elements;
 }
 
 export default async function BlogPostPage({ params }: PageProps) {
@@ -102,18 +269,24 @@ export default async function BlogPostPage({ params }: PageProps) {
     notFound();
   }
 
-  const relatedPosts = getRelatedPosts(slug, post.category);
+  const relatedPosts = getRelatedPosts(slug, 3);
   const inlineCTAIndex = Math.floor(post.content.length * 0.4);
+  const tocItems = extractTOC(post.content);
 
   // Generate structured data
   const articleSchema = generateArticleSchema({
     headline: post.title,
     description: post.metaDescription || post.excerpt,
     url: `https://scopegenerator.com/blog/${post.slug}`,
-    datePublished: new Date(post.date).toISOString(),
-    author: post.author,
+    datePublished: new Date(post.datePublished).toISOString(),
+    dateModified: new Date(post.dateModified).toISOString(),
+    author: post.author.name,
     type: "BlogPosting",
-    image: post.heroImage ? `https://scopegenerator.com${post.heroImage}` : undefined,
+    image: post.heroImage
+      ? `https://scopegenerator.com${post.heroImage}`
+      : post.ogImage
+        ? `https://scopegenerator.com${post.ogImage}`
+        : undefined,
   });
 
   const breadcrumbs = generateBreadcrumbSchema([
@@ -123,9 +296,8 @@ export default async function BlogPostPage({ params }: PageProps) {
   ]);
 
   // Generate FAQ schema if post has FAQs
-  const faqSchema = post.faqs && post.faqs.length > 0 
-    ? generateFAQSchema(post.faqs)
-    : null;
+  const faqSchema =
+    post.faqs && post.faqs.length > 0 ? generateFAQSchema(post.faqs) : null;
 
   return (
     <Layout>
@@ -220,90 +392,119 @@ export default async function BlogPostPage({ params }: PageProps) {
           </div>
         </div>
 
-        {/* Table of Contents */}
-        {post.content.filter(b => b.startsWith("## ")).length > 2 && (
-          <div className="bg-white border-b">
-            <div className="container mx-auto px-4 py-6">
-              <div className="max-w-3xl mx-auto">
-                <details className="group" open>
-                  <summary className="font-bold text-slate-900 cursor-pointer list-none flex items-center justify-between">
-                    Table of Contents
-                    <span className="text-slate-400 group-open:rotate-180 transition-transform">▼</span>
-                  </summary>
-                  <nav className="mt-4 pl-4 border-l-2 border-slate-200">
-                    <ul className="space-y-2">
-                      {post.content.filter(b => b.startsWith("## ")).map((heading, i) => (
-                        <li key={i}>
-                          <a 
-                            href={`#${heading.replace("## ", "").toLowerCase().replace(/\s+/g, "-")}`}
-                            className="text-slate-600 hover:text-orange-600 text-sm"
-                          >
-                            {heading.replace("## ", "")}
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  </nav>
-                </details>
+        {/* Last Updated Notice */}
+        {post.dateModified !== post.datePublished && (
+          <div className="bg-slate-100 border-b">
+            <div className="container mx-auto px-4 py-3">
+              <div className="max-w-3xl mx-auto flex items-center gap-2 text-sm text-slate-600">
+                <RefreshCw className="h-4 w-4" />
+                <span>Last updated: {post.dateModified}</span>
               </div>
             </div>
           </div>
         )}
 
-        <div className="py-12 bg-white">
-          <div className="container mx-auto px-4">
-            <div className="max-w-3xl mx-auto prose prose-lg prose-slate prose-headings:font-display prose-headings:font-bold prose-h2:text-2xl prose-h3:text-xl prose-a:text-orange-600" data-testid="blog-post-content">
-              {post.content.map((block, i) => {
-                const elements = [];
-                
-                if (i === inlineCTAIndex) {
-                  elements.push(<InlineCTA key={`cta-${i}`} />);
-                }
-                
-                if (block.startsWith("## ")) {
-                  const text = block.replace("## ", "");
-                  const id = text.toLowerCase().replace(/\s+/g, "-");
-                  elements.push(<h2 key={i} id={id}>{text}</h2>);
-                } else if (block.startsWith("### ")) {
-                  elements.push(<h3 key={i}>{block.replace("### ", "")}</h3>);
-                } else if (block.startsWith("- ")) {
-                  elements.push(
-                    <ul key={i}>
-                      {block.split("\n").filter(line => line.startsWith("- ")).map((line, j) => (
-                        <li key={j}>{line.replace("- ", "").replace(/\*\*(.*?)\*\*/g, (_, text) => text)}</li>
-                      ))}
-                    </ul>
-                  );
-                } else if (block === "---") {
-                  elements.push(<hr key={i} />);
-                } else {
-                  elements.push(
-                    <p key={i} dangerouslySetInnerHTML={{ 
-                      __html: block
-                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
-                    }} />
-                  );
-                }
-                
-                return elements;
-              })}
+        {/* Main Content Area */}
+        <div className="bg-white">
+          <div className="container mx-auto px-4 py-12">
+            <div className="max-w-7xl mx-auto">
+              <div className="lg:grid lg:grid-cols-[1fr_280px] lg:gap-12">
+                {/* Article Content */}
+                <div className="max-w-3xl">
+                  {/* Mobile TOC */}
+                  {tocItems.length >= 3 && (
+                    <div className="lg:hidden mb-8">
+                      <TableOfContents items={tocItems} variant="inline" />
+                    </div>
+                  )}
+
+                  {/* Prose Content */}
+                  <div
+                    className="prose prose-lg prose-slate max-w-none
+                      prose-headings:font-display prose-headings:font-bold
+                      prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-4
+                      prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-3
+                      prose-p:text-slate-600 prose-p:leading-relaxed
+                      prose-a:text-orange-600 prose-a:no-underline hover:prose-a:underline
+                      prose-strong:text-slate-900
+                      prose-li:text-slate-600
+                      prose-code:text-slate-800 prose-code:bg-slate-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded
+                      prose-pre:bg-slate-900 prose-pre:text-slate-100
+                      prose-table:border-collapse
+                      prose-th:bg-slate-50 prose-th:border prose-th:border-slate-200 prose-th:px-4 prose-th:py-2
+                      prose-td:border prose-td:border-slate-200 prose-td:px-4 prose-td:py-2"
+                    data-testid="blog-post-content"
+                  >
+                    {renderContent(post.content, inlineCTAIndex)}
+                  </div>
+
+                  {/* Author Card (Footer) */}
+                  <div className="mt-12 pt-8 border-t">
+                    <AuthorCard
+                      author={post.author}
+                      datePublished={post.datePublished}
+                      dateModified={post.dateModified}
+                      readTime={post.readTime}
+                      variant="footer"
+                    />
+                  </div>
+                </div>
+
+                {/* Desktop Sidebar with TOC */}
+                {tocItems.length >= 3 && (
+                  <aside className="hidden lg:block">
+                    <TableOfContents
+                      items={tocItems}
+                      variant="sidebar"
+                      className="sticky top-24"
+                    />
+
+                    {/* Sidebar CTA */}
+                    <div className="mt-8 p-4 bg-gradient-to-br from-orange-50 to-amber-50 rounded-lg border border-orange-100">
+                      <p className="font-semibold text-slate-900 text-sm mb-2">
+                        Create proposals faster
+                      </p>
+                      <p className="text-xs text-slate-600 mb-3">
+                        Generate professional contractor proposals in minutes.
+                      </p>
+                      <Link href="/app">
+                        <Button
+                          size="sm"
+                          className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+                        >
+                          Try Free <ArrowRight className="h-3 w-3 ml-1" />
+                        </Button>
+                      </Link>
+                    </div>
+                  </aside>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* FAQ Section if post has FAQs */}
+        {/* FAQ Section */}
         {post.faqs && post.faqs.length > 0 && (
           <div className="py-12 bg-slate-50 border-t">
             <div className="container mx-auto px-4">
               <div className="max-w-3xl mx-auto">
-                <h2 className="text-2xl font-bold text-slate-900 mb-6">Frequently Asked Questions</h2>
+                <h2 className="text-2xl font-bold text-slate-900 mb-6">
+                  Frequently Asked Questions
+                </h2>
                 <div className="space-y-4">
                   {post.faqs.map((faq, index) => (
-                    <details key={index} className="bg-white rounded-lg border p-4 group">
-                      <summary className="font-semibold text-slate-900 cursor-pointer list-none flex items-center justify-between">
+                    <details
+                      key={index}
+                      className="bg-white rounded-lg border p-4 group"
+                    >
+                      <summary 
+                        className="font-semibold text-slate-900 cursor-pointer list-none flex items-center justify-between"
+                        aria-label="Toggle FAQ answer"
+                      >
                         {faq.question}
-                        <span className="text-slate-400 group-open:rotate-180 transition-transform">▼</span>
+                        <span className="text-slate-400 group-open:rotate-180 transition-transform">
+                          ▼
+                        </span>
                       </summary>
                       <p className="mt-3 text-slate-600">{faq.answer}</p>
                     </details>
@@ -314,16 +515,24 @@ export default async function BlogPostPage({ params }: PageProps) {
           </div>
         )}
 
+        {/* Bottom CTA */}
         <div className="py-12 bg-slate-50">
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto">
               <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-8 text-white text-center">
-                <h2 className="text-2xl font-bold mb-3">Create Professional Proposals in Minutes</h2>
+                <h2 className="text-2xl font-bold mb-3">
+                  Create Professional Proposals in Minutes
+                </h2>
                 <p className="text-orange-100 mb-6">
-                  Stop spending hours writing proposals. ScopeGen has trade-specific templates ready to go.
+                  Stop spending hours writing proposals. ScopeGen has
+                  trade-specific templates ready to go.
                 </p>
                 <Link href="/app">
-                  <Button size="lg" className="bg-white text-orange-600 hover:bg-orange-50" data-testid="blog-post-cta">
+                  <Button
+                    size="lg"
+                    className="bg-white text-orange-600 hover:bg-orange-50"
+                    data-testid="blog-post-cta"
+                  >
                     Try ScopeGen Free <ArrowRight className="h-5 w-5 ml-2" />
                   </Button>
                 </Link>
@@ -332,39 +541,18 @@ export default async function BlogPostPage({ params }: PageProps) {
           </div>
         </div>
 
+        {/* Related Posts */}
         {relatedPosts.length > 0 && (
-          <div className="py-12 bg-white border-t">
-            <div className="container mx-auto px-4">
-              <div className="max-w-3xl mx-auto">
-                <h3 className="text-xl font-bold text-slate-900 mb-6">Related Articles</h3>
-                <div className="grid gap-4">
-                  {relatedPosts.map((relatedPost) => (
-                    <Link key={relatedPost.slug} href={`/blog/${relatedPost.slug}`}>
-                      <div className="p-4 border rounded-lg hover:border-orange-300 hover:bg-orange-50/50 transition-all cursor-pointer group">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">
-                            {relatedPost.category}
-                          </span>
-                          <span className="text-xs text-slate-400">{relatedPost.readTime}</span>
-                        </div>
-                        <h4 className="font-semibold text-slate-900 group-hover:text-orange-600 transition-colors">
-                          {relatedPost.title}
-                        </h4>
-                        <p className="text-sm text-slate-600 mt-1 line-clamp-2">{relatedPost.excerpt}</p>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-                <div className="mt-6 text-center">
-                  <Link href="/blog">
-                    <Button variant="outline" data-testid="view-all-posts">
-                      View All Articles <ArrowRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
+          <RelatedPosts
+            posts={relatedPosts.map((p) => ({
+              slug: p.slug,
+              title: p.title,
+              excerpt: p.excerpt,
+              category: p.category,
+              readTime: p.readTime,
+              heroImage: p.heroImage,
+            }))}
+          />
         )}
       </article>
     </Layout>
