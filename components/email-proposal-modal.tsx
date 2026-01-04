@@ -94,7 +94,7 @@ export default function EmailProposalModal({
       });
       onSuccess?.();
       onClose();
-    } catch (error: any) {
+    } catch {
       setSendError(true);
       toast({
         title: "Couldn't send email",
@@ -190,7 +190,7 @@ export default function EmailProposalModal({
               <Link2 className="w-5 h-5 text-amber-600 mt-0.5" />
               <div className="flex-1">
                 <p className="text-sm font-medium text-amber-800">
-                  Email couldn't be sent
+                  Email couldn&apos;t be sent
                 </p>
                 <p className="text-sm text-amber-600 mt-1">
                   You can copy the share link and send it manually.
