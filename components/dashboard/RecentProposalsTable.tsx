@@ -242,7 +242,7 @@ export function RecentProposalsTable({
                   const isDraft = normalizeStatus(p.status) === "draft";
 
                   return (
-                    <tr key={p.id} className="bg-white">
+                    <tr key={p.id} className="bg-white" data-testid={`row-proposal-${p.id}`}>
                       <td className="hidden px-6 py-4 md:table-cell">
                         {p.thumbnailUrl ? (
                           <ProposalThumbnail
@@ -295,18 +295,18 @@ export function RecentProposalsTable({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-56">
-                            <DropdownMenuItem onClick={() => onEdit(p)}>
+                            <DropdownMenuItem onClick={() => onEdit(p)} data-testid={`action-edit-${p.id}`}>
                               <Edit className="mr-2 h-4 w-4" />
                               Edit proposal
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => onView(p)}>
+                            <DropdownMenuItem onClick={() => onView(p)} data-testid={`action-download-${p.id}`}>
                               <Download className="mr-2 h-4 w-4" />
                               Download PDF
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => onAdjustPrice(p)}>
+                            <DropdownMenuItem onClick={() => onAdjustPrice(p)} data-testid={`action-price-${p.id}`}>
                               Adjust price
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => onEmail(p)}>
+                            <DropdownMenuItem onClick={() => onEmail(p)} data-testid={`button-email-proposal-${p.id}`}>
                               <Mail className="mr-2 h-4 w-4" />
                               Send via email
                             </DropdownMenuItem>

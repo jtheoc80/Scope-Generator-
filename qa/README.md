@@ -2,6 +2,51 @@
 
 This directory contains the QA Agent infrastructure for end-to-end testing and continuous validation of critical flows.
 
+## Daily QA Pipeline
+
+The Daily Quality Pipeline runs automatically every day at **6 AM UTC** to catch logic bugs before they reach production.
+
+### What it Checks
+
+| Check | Description | Blocking |
+|-------|-------------|----------|
+| **TypeScript** | `tsc --noEmit` - Type errors | ✅ Yes |
+| **ESLint** | Linting with `--max-warnings=0` | ✅ Yes |
+| **Unit Tests** | Unit/integration tests | ⚠️ No (placeholder) |
+| **E2E Smoke** | Critical flow smoke tests | ✅ Yes |
+| **E2E Full** | Full E2E suite (daily only) | ⚠️ No |
+
+### Required GitHub Secrets
+
+| Secret | Description | Required |
+|--------|-------------|----------|
+| `E2E_BASE_URL` | Base URL for staging/production E2E tests | Yes |
+| `QA_TEST_SECRET` | Secret for QA-only API endpoints | Optional |
+
+### Manual Trigger
+
+You can manually trigger the pipeline from GitHub Actions:
+
+1. Go to **Actions** → **Daily Quality Pipeline**
+2. Click **Run workflow**
+3. Optionally set a custom `base_url` for testing against different environments
+
+### Adding the Pipeline
+
+The workflow file is at `.github/workflows/daily-quality.yml`.
+
+### Smoke Test Tags
+
+Tests tagged with `@smoke` are included in the daily smoke run:
+
+```typescript
+test('my critical test @smoke', async ({ page }) => {
+  // ...
+});
+```
+
+---
+
 ## Quick Start
 
 ```bash

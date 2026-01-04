@@ -8,7 +8,7 @@ import { getCheckoutMode } from '../../qa/flows/checkout';
  * Tests the subscription/purchase checkout flow.
  */
 
-test.describe('Checkout Flow', () => {
+test.describe('Checkout Flow @smoke', () => {
   test('dashboard should have upgrade/purchase button', async ({ page }) => {
     await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');

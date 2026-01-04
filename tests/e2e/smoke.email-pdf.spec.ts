@@ -7,7 +7,7 @@ import { test, expect } from '@playwright/test';
  * Tests emailing proposals with PDF attachments.
  */
 
-test.describe('Email PDF Flow', () => {
+test.describe('Email PDF Flow @smoke', () => {
   test('dashboard should have email buttons for proposals', async ({ page }) => {
     await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');

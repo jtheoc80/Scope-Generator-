@@ -9,7 +9,7 @@ import * as path from 'path';
  * Tests photo upload and management for proposals.
  */
 
-test.describe('Proposal Photos Flow', () => {
+test.describe('Proposal Photos Flow @smoke', () => {
   // Ensure test fixture images exist
   test.beforeAll(async () => {
     const fixturesDir = path.join(process.cwd(), 'tests', 'fixtures', 'images');

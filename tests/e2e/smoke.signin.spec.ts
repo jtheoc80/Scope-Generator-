@@ -8,7 +8,7 @@ import { captureConsoleErrors } from '../../qa/flows/auth';
  * Tests user authentication through Clerk.
  */
 
-test.describe('Sign In Flow', () => {
+test.describe('Sign In Flow @smoke', () => {
   test('should display sign in page with required elements', async ({ page }) => {
     await page.goto('/sign-in');
     await page.waitForLoadState('networkidle');
