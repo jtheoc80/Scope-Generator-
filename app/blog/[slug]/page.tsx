@@ -367,16 +367,6 @@ export default async function BlogPostPage({ params }: PageProps) {
           </div>
         )}
 
-        {/* Last Updated Notice - E-E-A-T Signal */}
-        <div className="bg-slate-100 border-b">
-          <div className="container mx-auto px-4 py-3">
-            <div className="max-w-3xl mx-auto flex items-center gap-2 text-sm text-slate-600">
-              <RefreshCw className="h-4 w-4" />
-              <span>Last updated: {post.dateModified}</span>
-            </div>
-          </div>
-        </div>
-
         {/* Last Updated Notice */}
         {post.dateModified !== post.datePublished && (
           <div className="bg-slate-100 border-b">

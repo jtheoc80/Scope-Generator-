@@ -10,23 +10,6 @@ function isValidUrl(url: string): boolean {
 }
 
 /**
- * Parse bold text safely without backtracking
- */
-function parseBold(text: string, key: number): React.ReactNode[] {
-  const result: React.ReactNode[] = [];
-  // Use non-greedy match with specific character classes to prevent ReDoS
-  const boldMatch = text.match(/^([^*]*)\*\*([^*]+)\*\*/);
-  if (boldMatch && boldMatch[1] !== undefined && boldMatch[2] !== undefined) {
-    if (boldMatch[1]) {
-      result.push(<span key={`${key}-pre`}>{boldMatch[1]}</span>);
-    }
-    result.push(<strong key={`${key}-bold`}>{boldMatch[2]}</strong>);
-    return result;
-  }
-  return [];
-}
-
-/**
  * Safely parse and render inline formatting (bold, links, inline code) without dangerouslySetInnerHTML.
  * This function parses a string and returns an array of React elements.
  */
