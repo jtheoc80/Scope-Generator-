@@ -156,14 +156,30 @@ async function runJob(jobId: number, jobEmbeddingJobId: number, attempts: number
     const avg = averageVectors(vectors);
     const avgLiteral = pgVectorLiteral(avg);
 
-    await db.execute(
-      sql`
-        INSERT INTO job_embeddings (job_id, embedding, model, updated_at)
-        VALUES (${jobId}, ${avgLiteral}::vector, ${model}, NOW())
-        ON CONFLICT (job_id)
-        DO UPDATE SET embedding = EXCLUDED.embedding, model = EXCLUDED.model, updated_at = NOW()
-      `
-    );
+    // Backward-compat: some DBs may have an older `job_embeddings` schema without a `model` column.
+    // Prefer writing `model` when available, but fall back to a minimal upsert when it's not.
+    try {
+      await db.execute(
+        sql`
+          INSERT INTO job_embeddings (job_id, embedding, model, updated_at)
+          VALUES (${jobId}, ${avgLiteral}::vector, ${model}, NOW())
+          ON CONFLICT (job_id)
+          DO UPDATE SET embedding = EXCLUDED.embedding, model = EXCLUDED.model, updated_at = NOW()
+        `
+      );
+    } catch (e) {
+      const err = e as { code?: string; message?: string };
+      // Postgres: 42703 = undefined_column
+      if (err?.code !== "42703") throw e;
+      await db.execute(
+        sql`
+          INSERT INTO job_embeddings (job_id, embedding, updated_at)
+          VALUES (${jobId}, ${avgLiteral}::vector, NOW())
+          ON CONFLICT (job_id)
+          DO UPDATE SET embedding = EXCLUDED.embedding, updated_at = NOW()
+        `
+      );
+    }
 
     // 4) Mark done
     await db.execute(
