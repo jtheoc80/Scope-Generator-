@@ -6,6 +6,7 @@ import { mobileJobPhotos } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { getRequestId, jsonError, logEvent, withRequestId } from "@/src/lib/mobile/observability";
 import { ensureVisionWorker } from "@/src/lib/mobile/vision/worker";
+import { deduplicateItems } from "@/lib/utils/semantic-deduplication";
 import {
   type Finding,
   type Unknown,
@@ -461,7 +462,7 @@ function aggregateFindings(photos: Array<typeof mobileJobPhotos.$inferSelect>) {
 
   // Deduplicate semantically similar findings, then check for painting
   const allFindings = Array.from(findingsMap.values());
-  const deduplicatedFindings = deduplicateFindings(allFindings);
+  const deduplicatedFindings = deduplicateItems(allFindings, (finding) => finding.issue);
   
   if (!isPaintingJob) {
     isPaintingJob = detectPaintingJob(deduplicatedFindings);

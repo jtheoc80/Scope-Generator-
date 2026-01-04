@@ -7,6 +7,7 @@ import { and, desc, eq, isNull, lte, or } from "drizzle-orm";
 import { getRequestId, jsonError, logEvent, withRequestId } from "@/src/lib/mobile/observability";
 import { ensureVisionWorker } from "@/src/lib/mobile/vision/worker";
 import { runVisionForPhoto } from "@/src/lib/mobile/vision/runner";
+import { deduplicateItems } from "@/lib/utils/semantic-deduplication";
 
 // IMPORTANT: Use Node.js runtime for AWS SDK compatibility and Buffer support.
 // Edge runtime causes issues with AWS SDK and image buffer operations.
@@ -249,124 +250,6 @@ async function advanceAnalysis(params: { jobId: number; requestId: string; maxTo
   return { processed, criticalError };
 }
 
-/**
- * Extract normalized keywords from issue text for semantic deduplication.
- * Returns a sorted, unique set of meaningful words.
- */
-function extractIssueKeywords(text: string): string[] {
-  const lower = text.toLowerCase();
-  // Remove common filler words and punctuation
-  const stopWords = new Set([
-    "a", "an", "the", "is", "are", "was", "were", "be", "been", "being",
-    "have", "has", "had", "do", "does", "did", "will", "would", "could",
-    "should", "may", "might", "must", "shall", "can", "need", "needs",
-    "to", "of", "in", "for", "on", "with", "at", "by", "from", "or", "and",
-    "possibly", "maybe", "likely", "detected", "issue", "damage", "problem",
-    "some", "this", "that", "it", "its", "there", "here", "very", "just"
-  ]);
-  
-  const words = lower
-    .replace(/[^a-z0-9\s]/g, " ")
-    .split(/\s+/)
-    .filter(w => w.length > 2 && !stopWords.has(w));
-  
-  return [...new Set(words)].sort();
-}
-
-/**
- * Generate a semantic key for deduplication based on object + problem keywords.
- * This groups issues that refer to the same object with the same problem.
- */
-function getSemanticKey(text: string): string {
-  const keywords = extractIssueKeywords(text);
-  
-  // Common object keywords (what the issue is about)
-  const objectKeywords = [
-    "faucet", "sink", "toilet", "tub", "shower", "bathtub", "drain", "pipe",
-    "wall", "ceiling", "floor", "door", "window", "cabinet", "counter",
-    "light", "outlet", "switch", "fixture", "handle", "knob", "hinge",
-    "trim", "baseboard", "molding", "tile", "grout", "caulk", "paint"
-  ];
-  
-  // Problem keywords (what's wrong)
-  const problemKeywords = [
-    "leak", "leaking", "leaky", "drip", "dripping",
-    "stain", "stained", "staining", "discolor", "discolored",
-    "crack", "cracked", "broken", "damage", "damaged",
-    "peel", "peeling", "chip", "chipped", "worn", "wear",
-    "rust", "rusty", "corrode", "corroded", "corrosion",
-    "mold", "mildew", "rot", "rotted", "rotting",
-    "loose", "missing", "dated", "old", "outdated",
-    "replace", "replacement", "repair", "fix", "upgrade",
-    "clean", "cleaning", "refinish", "refinishing"
-  ];
-  
-  const foundObjects = keywords.filter(k => objectKeywords.some(ok => k.includes(ok) || ok.includes(k)));
-  const foundProblems = keywords.filter(k => problemKeywords.some(pk => k.includes(pk) || pk.includes(k)));
-  
-  // Create a semantic key from object + problem
-  const objectKey = foundObjects.length > 0 ? foundObjects.sort().join("+") : "general";
-  const problemKey = foundProblems.length > 0 ? foundProblems.sort().join("+") : "issue";
-  
-  return `${objectKey}:${problemKey}`;
-}
-
-/**
- * Deduplicate issues that are semantically similar.
- * Keeps the issue with the best description (shorter, cleaner).
- */
-function deduplicateIssues(issues: DetectedIssue[]): DetectedIssue[] {
-  const semanticGroups = new Map<string, DetectedIssue[]>();
-  
-  for (const issue of issues) {
-    const key = getSemanticKey(issue.label);
-    if (!semanticGroups.has(key)) {
-      semanticGroups.set(key, []);
-    }
-    semanticGroups.get(key)!.push(issue);
-  }
-  
-  const deduplicated: DetectedIssue[] = [];
-  
-  for (const [, group] of semanticGroups) {
-    if (group.length === 1) {
-      deduplicated.push(group[0]);
-    } else {
-      // Pick the best representative from the group:
-      // 1. Prefer "damage" category (more specific/actionable)
-      // 2. Then prefer higher confidence
-      // 3. Then prefer shorter, cleaner labels (less verbose)
-      const best = group.sort((a, b) => {
-        // Prefer damage category
-        const aIsDamage = a.category === "damage" ? 1 : 0;
-        const bIsDamage = b.category === "damage" ? 1 : 0;
-        if (aIsDamage !== bIsDamage) return bIsDamage - aIsDamage;
-        
-        // Prefer higher confidence
-        if (Math.abs(a.confidence - b.confidence) > 0.1) {
-          return b.confidence - a.confidence;
-        }
-        
-        // Prefer shorter labels (usually cleaner/more specific)
-        return a.label.length - b.label.length;
-      })[0];
-      
-      // Merge photoIds from all duplicates
-      const allPhotoIds = new Set<number>();
-      for (const issue of group) {
-        for (const photoId of issue.photoIds) {
-          allPhotoIds.add(photoId);
-        }
-      }
-      best.photoIds = [...allPhotoIds];
-      
-      deduplicated.push(best);
-    }
-  }
-  
-  return deduplicated;
-}
-
 // Helper to extract issues from vision findings
 function extractIssuesFromFindings(
   photos: Array<typeof mobileJobPhotos.$inferSelect>
@@ -526,7 +409,7 @@ function extractIssuesFromFindings(
 
   // Deduplicate semantically similar issues, then sort by confidence
   const allIssues = Array.from(issueMap.values());
-  const deduplicated = deduplicateIssues(allIssues);
+  const deduplicated = deduplicateItems(allIssues, (issue) => issue.label);
   
   return deduplicated
     .sort((a, b) => b.confidence - a.confidence)
