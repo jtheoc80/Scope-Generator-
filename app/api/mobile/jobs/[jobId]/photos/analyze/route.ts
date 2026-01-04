@@ -7,7 +7,7 @@ import { and, desc, eq, isNull, lte, or } from "drizzle-orm";
 import { getRequestId, jsonError, logEvent, withRequestId } from "@/src/lib/mobile/observability";
 import { ensureVisionWorker } from "@/src/lib/mobile/vision/worker";
 import { runVisionForPhoto } from "@/src/lib/mobile/vision/runner";
-import { enrichIssuesWithRemedies, type DetectedIssueWithRemedy, type Remedy } from "@/src/lib/mobile/remedy";
+import { enrichIssuesWithRemedies, type Remedy } from "@/src/lib/mobile/remedy";
 
 // IMPORTANT: Use Node.js runtime for AWS SDK compatibility and Buffer support.
 // Edge runtime causes issues with AWS SDK and image buffer operations.

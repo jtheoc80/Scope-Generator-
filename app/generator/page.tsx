@@ -878,15 +878,6 @@ function GeneratorContent() {
       const windowSpec = formatWindowSpec(windowQty, preset, customW, customH);
       const windowSpecShort = formatWindowSpecShort(windowQty, preset, customW, customH);
       
-      // Get size label for display
-      let sizeLabel: string;
-      if (preset === "custom" && customW && customH) {
-        sizeLabel = `custom size ${customW}" × ${customH}"`;
-      } else {
-        const presetInfo = WINDOW_SIZE_PRESETS.find(p => p.value === preset);
-        sizeLabel = presetInfo ? presetInfo.label : "standard size";
-      }
-      
       // Enhance scope items with quantity and size
       windowEnhancedScope = finalScope.map((item) => {
         // Replace generic window references with specific quantity/size
@@ -1806,7 +1797,7 @@ function GeneratorContent() {
                   />
                   {service.windowWidthIn && !isValidCustomDimension(service.windowWidthIn) && (
                     <p className="text-xs text-red-500 mt-1">
-                      Must be {WINDOW_DEFAULTS.minCustomDimension}-{WINDOW_DEFAULTS.maxCustomDimension}"
+                      Must be {WINDOW_DEFAULTS.minCustomDimension}-{WINDOW_DEFAULTS.maxCustomDimension}&quot;
                     </p>
                   )}
                 </div>
@@ -1832,7 +1823,7 @@ function GeneratorContent() {
                   />
                   {service.windowHeightIn && !isValidCustomDimension(service.windowHeightIn) && (
                     <p className="text-xs text-red-500 mt-1">
-                      Must be {WINDOW_DEFAULTS.minCustomDimension}-{WINDOW_DEFAULTS.maxCustomDimension}"
+                      Must be {WINDOW_DEFAULTS.minCustomDimension}-{WINDOW_DEFAULTS.maxCustomDimension}&quot;
                     </p>
                   )}
                 </div>
