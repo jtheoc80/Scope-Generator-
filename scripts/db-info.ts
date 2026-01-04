@@ -92,10 +92,21 @@ async function main() {
   console.log();
 
   // Connect to database
+  // NOTE: For Supabase/Neon we enable SSL. In development/test we allow
+  // `rejectUnauthorized: false` for convenience, but in all other
+  // environments we use secure SSL with certificate verification.
+  // Do not run this script against production databases from untrusted networks.
+  const isManagedHostedDb =
+    databaseUrl.includes("supabase.com") || databaseUrl.includes("neon.tech");
+  const isDevLikeEnv =
+    process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test";
+
   const pool = new Pool({
     connectionString: databaseUrl,
-    ssl: databaseUrl.includes("supabase.com") || databaseUrl.includes("neon.tech")
-      ? { rejectUnauthorized: false }
+    ssl: isManagedHostedDb
+      ? (isDevLikeEnv
+          ? { rejectUnauthorized: false }
+          : true)
       : false,
     connectionTimeoutMillis: 10000,
   });
