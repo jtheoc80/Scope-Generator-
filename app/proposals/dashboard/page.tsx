@@ -1,473 +1,577 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useMemo } from 'react';
+import Link from 'next/link';
+import { cn } from '@/lib/utils';
+
+// Types
+interface Proposal {
+  id: number;
+  customerName: string;
+  address: string;
+  trade: string;
+  amount: number;
+  status: 'draft' | 'sent' | 'viewed' | 'accepted' | 'won' | 'lost';
+  createdAt: string;
+  lastActivity: string;
+  daysAgo: number;
+}
 
 // Sample data - in production this would come from API
-const SAMPLE_PROPOSALS = [
+const SAMPLE_PROPOSALS: Proposal[] = [
   {
     id: 1,
-    customer: 'Anderson Construction',
-    trade: 'Roofing',
-    amount: 15500,
+    customerName: 'Cassie',
+    address: '2214 Cedar',
+    trade: 'Interior/Exterior',
+    amount: 4225,
     status: 'draft',
-    created: '2024-01-02',
+    createdAt: 'Dec 28, 2024',
     lastActivity: 'Not sent yet',
+    daysAgo: 6,
   },
   {
     id: 2,
-    customer: 'Miller Home Services',
-    trade: 'HVAC',
-    amount: 8200,
+    customerName: 'Johnson Residence',
+    address: '4587 Maple Ave',
+    trade: 'Roofing',
+    amount: 4225,
     status: 'draft',
-    created: '2024-01-01',
+    createdAt: 'Dec 30, 2024',
     lastActivity: 'Not sent yet',
-  },
-  {
-    id: 3,
-    customer: 'Johnson Renovations',
-    trade: 'Kitchen Remodel',
-    amount: 24000,
-    status: 'viewed',
-    created: '2023-12-28',
-    lastActivity: '2 days ago',
+    daysAgo: 4,
   },
 ];
 
-export default function ContractorProposalDashboard() {
-  const router = useRouter();
-  const [proposals] = useState(SAMPLE_PROPOSALS);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+// Utility functions
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
 
-  // Calculate metrics
-  const pendingCount = proposals.filter(p => p.status === 'draft').length;
-  const pipelineValue = proposals.reduce((sum, p) => sum + p.amount, 0);
-  const totalProposals = proposals.length;
-  const wonProposals = proposals.filter(p => p.status === 'won').length;
-  const winRate = totalProposals > 0 ? Math.round((wonProposals / totalProposals) * 100) : 0;
+// Components
+function MetricIcon({ 
+  children, 
+  bgColor = 'bg-slate-100',
+  textColor = 'text-slate-700'
+}: { 
+  children: React.ReactNode;
+  bgColor?: string;
+  textColor?: string;
+}) {
+  return (
+    <div className={cn(
+      'w-9 h-9 rounded-md flex items-center justify-center text-base font-semibold',
+      bgColor,
+      textColor
+    )}>
+      {children}
+    </div>
+  );
+}
 
-  // Funnel counts
-  const draftCount = proposals.filter(p => p.status === 'draft').length;
-  const sentCount = proposals.filter(p => p.status === 'sent').length;
-  const viewedCount = proposals.filter(p => p.status === 'viewed').length;
-  const acceptedCount = proposals.filter(p => p.status === 'accepted').length;
-  const wonCount = proposals.filter(p => p.status === 'won').length;
-
-  const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case 'draft':
-        return 'bg-gray-100 text-gray-700 border-gray-300';
-      case 'sent':
-        return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'viewed':
-        return 'bg-purple-50 text-purple-700 border-purple-200';
-      case 'accepted':
-        return 'bg-green-50 text-green-700 border-green-200';
-      case 'won':
-        return 'bg-green-100 text-green-800 border-green-300';
-      default:
-        return 'bg-gray-100 text-gray-700 border-gray-300';
-    }
+function TrendBadge({ 
+  trend, 
+  children 
+}: { 
+  trend: 'up' | 'down' | 'neutral';
+  children: React.ReactNode;
+}) {
+  const styles = {
+    up: 'bg-green-50 text-green-700 border-green-200',
+    down: 'bg-red-50 text-red-700 border-red-200',
+    neutral: 'bg-slate-50 text-slate-600 border-slate-200',
   };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  const filteredProposals = proposals.filter(p => {
-    const matchesSearch = p.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         p.trade.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
 
   return (
-    <div className="min-h-screen bg-[#f5f6f8]">
+    <span className={cn(
+      'inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold border',
+      styles[trend]
+    )}>
+      {children}
+    </span>
+  );
+}
+
+function PriorityBadge({ 
+  priority 
+}: { 
+  priority: 'high' | 'medium' | 'low';
+}) {
+  const styles = {
+    high: 'bg-red-50 text-red-700',
+    medium: 'bg-amber-50 text-amber-700',
+    low: 'bg-slate-50 text-slate-600 border border-slate-200',
+  };
+
+  const labels = {
+    high: 'High Priority',
+    medium: 'Recommended',
+    low: 'Optional',
+  };
+
+  return (
+    <span className={cn(
+      'inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold',
+      styles[priority]
+    )}>
+      {labels[priority]}
+    </span>
+  );
+}
+
+function StatusBadge({ status }: { status: Proposal['status'] }) {
+  const styles = {
+    draft: 'bg-slate-50 text-slate-600 border-slate-200',
+    sent: 'bg-blue-50 text-blue-700 border-blue-200',
+    viewed: 'bg-purple-50 text-purple-700 border-purple-200',
+    accepted: 'bg-amber-50 text-amber-700 border-amber-200',
+    won: 'bg-green-50 text-green-700 border-green-200',
+    lost: 'bg-red-50 text-red-700 border-red-200',
+  };
+
+  const labels = {
+    draft: 'Draft',
+    sent: 'Sent',
+    viewed: 'Viewed',
+    accepted: 'Accepted',
+    won: 'Won',
+    lost: 'Lost',
+  };
+
+  return (
+    <span className={cn(
+      'inline-block px-2.5 py-1 rounded text-xs font-semibold border',
+      styles[status]
+    )}>
+      {labels[status]}
+    </span>
+  );
+}
+
+function FunnelStage({ 
+  label, 
+  value, 
+  variant = 'default' 
+}: { 
+  label: string;
+  value: number;
+  variant?: 'default' | 'active' | 'success';
+}) {
+  const styles = {
+    default: 'bg-slate-50 border-slate-200',
+    active: 'bg-amber-50 border-amber-400',
+    success: 'bg-green-50 border-green-300',
+  };
+
+  return (
+    <div className={cn(
+      'flex-1 text-center p-5 rounded-md border-2',
+      styles[variant]
+    )}>
+      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
+        {label}
+      </div>
+      <div className="text-2xl font-semibold text-slate-900">
+        {value}
+      </div>
+    </div>
+  );
+}
+
+export default function ContractorProposalDashboard() {
+  const [proposals] = useState<Proposal[]>(SAMPLE_PROPOSALS);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [tradeFilter, setTradeFilter] = useState<string>('all');
+
+  // Calculate metrics
+  const metrics = useMemo(() => {
+    const draftCount = proposals.filter(p => p.status === 'draft').length;
+    const sentCount = proposals.filter(p => p.status === 'sent').length;
+    const viewedCount = proposals.filter(p => p.status === 'viewed').length;
+    const acceptedCount = proposals.filter(p => p.status === 'accepted').length;
+    const wonCount = proposals.filter(p => p.status === 'won').length;
+    const totalPending = proposals.filter(p => ['draft', 'sent'].includes(p.status)).length;
+    const pipelineValue = proposals
+      .filter(p => ['draft', 'sent', 'viewed', 'accepted'].includes(p.status))
+      .reduce((sum, p) => sum + p.amount, 0);
+    const totalProposals = proposals.length;
+    const winRate = totalProposals > 0 ? Math.round((wonCount / totalProposals) * 100) : 0;
+
+    return {
+      draftCount,
+      sentCount,
+      viewedCount,
+      acceptedCount,
+      wonCount,
+      totalPending,
+      pipelineValue,
+      winRate,
+    };
+  }, [proposals]);
+
+  // Filter proposals
+  const filteredProposals = useMemo(() => {
+    return proposals.filter(p => {
+      const matchesSearch = 
+        searchQuery.length === 0 ||
+        p.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.trade.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
+      const matchesTrade = tradeFilter === 'all' || p.trade === tradeFilter;
+      return matchesSearch && matchesStatus && matchesTrade;
+    });
+  }, [proposals, searchQuery, statusFilter, tradeFilter]);
+
+  // Get unique trades for filter
+  const uniqueTrades = useMemo(() => {
+    return [...new Set(proposals.map(p => p.trade))];
+  }, [proposals]);
+
+  return (
+    <div className="min-h-screen bg-[#f5f6f8] p-5">
+      {/* Header */}
+      <header className="flex justify-between items-center mb-8 bg-white px-8 py-5 rounded-lg shadow-sm border border-slate-200">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-slate-800 rounded-md flex items-center justify-center text-white text-lg font-bold">
+            SG
+          </div>
+          <span className="text-xl font-semibold text-slate-900">SCOPEGEN</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/settings"
+            className="px-5 py-2.5 bg-white text-slate-600 border border-slate-300 rounded-md text-sm font-medium hover:border-slate-400 hover:bg-slate-50 transition-all duration-200"
+          >
+            View Templates
+          </Link>
+          <Link
+            href="/app"
+            className="px-5 py-2.5 bg-slate-800 text-white rounded-md text-sm font-medium hover:bg-slate-900 transition-all duration-200"
+          >
+            Create Proposal (60s)
+          </Link>
+        </div>
+      </header>
+
       {/* Alert Banner */}
-      {pendingCount > 0 && (
-        <div className="bg-white border-l-[3px] border-[#d69e2e]">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#fef5e7] flex items-center justify-center">
-                <span className="text-[#d69e2e] font-semibold text-sm">!</span>
-              </div>
-              <div className="flex-1">
-                <h3 className="text-sm font-semibold text-[#d69e2e] mb-1">
-                  Action Required
-                </h3>
-                <p className="text-sm text-[#b7791f]">
-                  You have {pendingCount} draft proposal{pendingCount > 1 ? 's' : ''} waiting to be sent. Send them now to move deals forward.
-                </p>
-              </div>
+      {metrics.draftCount > 0 && (
+        <div className="bg-white border-l-[3px] border-amber-500 rounded-md shadow-sm border-t border-r border-b border-slate-200 mb-6 flex items-center gap-4 px-6 py-4">
+          <div className="w-10 h-10 bg-amber-50 rounded-full flex items-center justify-center flex-shrink-0">
+            <span className="text-xl font-bold text-amber-500">!</span>
+          </div>
+          <div className="flex-1">
+            <div className="font-semibold text-amber-800 mb-1 text-sm">
+              {metrics.draftCount} Proposal{metrics.draftCount > 1 ? 's' : ''} Need Your Attention
+            </div>
+            <div className="text-amber-700 text-sm">
+              You have {metrics.draftCount} draft proposal{metrics.draftCount > 1 ? 's' : ''} ready to send. Send them now to get faster responses.
             </div>
           </div>
+          <button className="px-4 py-2 bg-slate-800 text-white rounded-md text-sm font-medium hover:bg-slate-900 transition-all duration-200">
+            Review Drafts
+          </button>
         </div>
       )}
 
-      {/* Header */}
-      <div className="bg-white border-b border-[#e2e8f0]">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold text-[#1a202c]">Proposal Dashboard</h1>
-              <p className="text-sm text-[#718096] mt-1">Manage and track your contractor proposals</p>
-            </div>
-            <button
-              onClick={() => router.push('/generator')}
-              className="px-5 py-2.5 bg-[#2d3748] text-white text-sm font-medium rounded-md hover:bg-[#1a202c] transition-colors duration-200"
-            >
-              New Proposal
-            </button>
+      {/* Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
+        {/* Pending Proposals - Highlighted */}
+        <div className="bg-white p-6 rounded-lg shadow-sm border-2 border-amber-500 relative">
+          <span className="absolute top-2 right-2 bg-amber-500 text-white px-2 py-0.5 text-[9px] font-bold rounded tracking-wider">
+            ACTION NEEDED
+          </span>
+          <div className="flex justify-between items-start mb-4">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Pending Proposals
+            </span>
+            <MetricIcon bgColor="bg-amber-50" textColor="text-amber-700">
+              {metrics.draftCount}
+            </MetricIcon>
+          </div>
+          <div className="text-3xl font-semibold text-slate-900 mb-2">
+            {metrics.draftCount}
+          </div>
+          <div className="text-sm text-slate-500">
+            Awaiting customer response
+          </div>
+        </div>
+
+        {/* Pipeline Value */}
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+          <div className="flex justify-between items-start mb-4">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Pipeline Value
+            </span>
+            <MetricIcon bgColor="bg-green-50" textColor="text-green-700">
+              $
+            </MetricIcon>
+          </div>
+          <div className="text-3xl font-semibold text-slate-900 mb-2">
+            {formatCurrency(metrics.pipelineValue)}
+          </div>
+          <div className="text-sm text-slate-500 flex items-center gap-2">
+            Total pending + draft value
+            <TrendBadge trend="up">+33% vs last month</TrendBadge>
+          </div>
+        </div>
+
+        {/* Win Rate */}
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+          <div className="flex justify-between items-start mb-4">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Win Rate (30d)
+            </span>
+            <MetricIcon bgColor="bg-blue-50" textColor="text-blue-700">
+              %
+            </MetricIcon>
+          </div>
+          <div className="text-3xl font-semibold text-slate-900 mb-2">
+            {metrics.winRate}%
+          </div>
+          <div className="text-sm text-slate-500 flex items-center gap-2">
+            Target: 30%
+            <TrendBadge trend="neutral">Getting started</TrendBadge>
+          </div>
+        </div>
+
+        {/* Avg Response Time */}
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+          <div className="flex justify-between items-start mb-4">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Avg Response Time
+            </span>
+            <MetricIcon bgColor="bg-purple-50" textColor="text-purple-700">
+              —
+            </MetricIcon>
+          </div>
+          <div className="text-3xl font-semibold text-slate-900 mb-2">
+            —
+          </div>
+          <div className="text-sm text-slate-500">
+            Not enough data yet
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-6 space-y-6">
-        {/* Metric Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          {/* Pending Proposals */}
-          <div className="bg-white border-2 border-[#d69e2e] rounded-lg shadow-sm p-6 relative">
-            <div className="absolute top-4 right-4 px-2 py-1 bg-[#fef5e7] border border-[#d69e2e] rounded text-[10px] font-semibold text-[#d69e2e] uppercase tracking-wide">
-              Action Needed
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 bg-[#fef5e7] rounded-lg flex items-center justify-center">
-                <span className="text-[#d69e2e] text-xl font-bold">{pendingCount}</span>
-              </div>
-              <div className="flex-1">
-                <div className="text-xs font-semibold uppercase tracking-wide text-[#718096] mb-2">
-                  Pending Proposals
-                </div>
-                <div className="text-2xl font-semibold text-[#1a202c]">
-                  {pendingCount}
-                </div>
-                <div className="text-xs text-[#718096] mt-1">
-                  Awaiting action
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* Conversion Funnel */}
+      <div className="bg-white p-8 rounded-lg shadow-sm border border-slate-200 mb-8">
+        <h2 className="text-base font-semibold text-slate-900 mb-6">
+          Proposal Conversion Funnel
+        </h2>
+        <div className="flex items-center gap-3 mb-6">
+          <FunnelStage label="Draft" value={metrics.draftCount} variant="active" />
+          <span className="text-xl text-slate-300">→</span>
+          <FunnelStage label="Sent" value={metrics.sentCount} />
+          <span className="text-xl text-slate-300">→</span>
+          <FunnelStage label="Viewed" value={metrics.viewedCount} />
+          <span className="text-xl text-slate-300">→</span>
+          <FunnelStage label="Accepted" value={metrics.acceptedCount} />
+          <span className="text-xl text-slate-300">→</span>
+          <FunnelStage label="Won" value={metrics.wonCount} variant="success" />
+        </div>
+        <div className="bg-slate-50 border-l-[3px] border-slate-500 rounded-md p-4 text-sm text-slate-700">
+          <strong className="text-slate-900">Insight:</strong> Your biggest bottleneck is getting proposals sent. Draft proposals don&apos;t generate revenue. Send them today to start your conversion funnel.
+        </div>
+      </div>
 
-          {/* Pipeline Value */}
-          <div className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm p-6">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 bg-[#f7fafc] rounded-lg flex items-center justify-center">
-                <span className="text-[#2d3748] text-xl font-bold">$</span>
-              </div>
-              <div className="flex-1">
-                <div className="text-xs font-semibold uppercase tracking-wide text-[#718096] mb-2">
-                  Pipeline Value
-                </div>
-                <div className="text-2xl font-semibold text-[#1a202c]">
-                  {formatCurrency(pipelineValue)}
-                </div>
-                <div className="text-xs text-[#15803d] mt-1">
-                  +33% vs last month
-                </div>
-              </div>
+      {/* Insights Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-8">
+        {/* Performance Benchmarks */}
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-4">
+            Performance Benchmarks
+          </h3>
+          <div className="space-y-0">
+            <div className="flex justify-between items-center py-3 border-b border-slate-100">
+              <span className="text-sm text-slate-600">Industry Avg Win Rate</span>
+              <span className="text-sm font-semibold text-slate-900">27-35%</span>
             </div>
-          </div>
-
-          {/* Win Rate */}
-          <div className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm p-6">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 bg-[#f7fafc] rounded-lg flex items-center justify-center">
-                <span className="text-[#2d3748] text-xl font-bold">%</span>
-              </div>
-              <div className="flex-1">
-                <div className="text-xs font-semibold uppercase tracking-wide text-[#718096] mb-2">
-                  Win Rate
-                </div>
-                <div className="text-2xl font-semibold text-[#1a202c]">
-                  {winRate}%
-                </div>
-                <div className="text-xs text-[#718096] mt-1">
-                  Target: 30%
-                </div>
-              </div>
+            <div className="flex justify-between items-center py-3 border-b border-slate-100">
+              <span className="text-sm text-slate-600">Your Current Win Rate</span>
+              <span className={cn(
+                'text-sm font-semibold',
+                metrics.winRate === 0 ? 'text-red-600' : 'text-slate-900'
+              )}>
+                {metrics.winRate}%
+              </span>
             </div>
-          </div>
-
-          {/* Avg Response Time */}
-          <div className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm p-6">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 bg-[#f7fafc] rounded-lg flex items-center justify-center">
-                <span className="text-[#2d3748] text-xl font-bold">—</span>
-              </div>
-              <div className="flex-1">
-                <div className="text-xs font-semibold uppercase tracking-wide text-[#718096] mb-2">
-                  Avg Response Time
-                </div>
-                <div className="text-2xl font-semibold text-[#1a202c]">
-                  —
-                </div>
-                <div className="text-xs text-[#718096] mt-1">
-                  No data yet
-                </div>
-              </div>
+            <div className="flex justify-between items-center py-3 border-b border-slate-100">
+              <span className="text-sm text-slate-600">Proposals Needed (30% win)</span>
+              <span className="text-sm font-semibold text-slate-900">7-10/month</span>
+            </div>
+            <div className="flex justify-between items-center py-3">
+              <span className="text-sm text-slate-600">Avg Time to First View</span>
+              <span className="text-sm font-semibold text-slate-900">2.3 days</span>
             </div>
           </div>
         </div>
 
-        {/* Conversion Funnel */}
-        <div className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm p-6">
-          <div className="text-xs font-semibold uppercase tracking-wide text-[#718096] mb-4">
-            Conversion Funnel
-          </div>
-          
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Draft */}
-            <div className="flex-1 min-w-[100px]">
-              <div className="bg-[#fef5e7] border border-[#d69e2e] rounded-md p-4">
-                <div className="text-xs font-medium text-[#718096] mb-1">Draft</div>
-                <div className="text-2xl font-semibold text-[#1a202c]">{draftCount}</div>
-              </div>
+        {/* Recommended Actions */}
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-4">
+            Recommended Actions
+          </h3>
+          <div className="space-y-0">
+            <div className="flex justify-between items-center py-3 border-b border-slate-100">
+              <span className="text-sm text-slate-600">Send your {metrics.draftCount} draft proposals</span>
+              <PriorityBadge priority="high" />
             </div>
-
-            <span className="text-[#cbd5e0] text-lg flex-shrink-0">→</span>
-
-            {/* Sent */}
-            <div className="flex-1 min-w-[100px]">
-              <div className="bg-[#f7fafc] border border-[#e2e8f0] rounded-md p-4">
-                <div className="text-xs font-medium text-[#718096] mb-1">Sent</div>
-                <div className="text-2xl font-semibold text-[#1a202c]">{sentCount}</div>
-              </div>
+            <div className="flex justify-between items-center py-3 border-b border-slate-100">
+              <span className="text-sm text-slate-600">Set up follow-up reminders</span>
+              <PriorityBadge priority="medium" />
             </div>
-
-            <span className="text-[#cbd5e0] text-lg flex-shrink-0">→</span>
-
-            {/* Viewed */}
-            <div className="flex-1 min-w-[100px]">
-              <div className="bg-[#f7fafc] border border-[#e2e8f0] rounded-md p-4">
-                <div className="text-xs font-medium text-[#718096] mb-1">Viewed</div>
-                <div className="text-2xl font-semibold text-[#1a202c]">{viewedCount}</div>
-              </div>
+            <div className="flex justify-between items-center py-3 border-b border-slate-100">
+              <span className="text-sm text-slate-600">Review pricing strategy</span>
+              <PriorityBadge priority="low" />
             </div>
-
-            <span className="text-[#cbd5e0] text-lg flex-shrink-0">→</span>
-
-            {/* Accepted */}
-            <div className="flex-1 min-w-[100px]">
-              <div className="bg-[#f7fafc] border border-[#e2e8f0] rounded-md p-4">
-                <div className="text-xs font-medium text-[#718096] mb-1">Accepted</div>
-                <div className="text-2xl font-semibold text-[#1a202c]">{acceptedCount}</div>
-              </div>
-            </div>
-
-            <span className="text-[#cbd5e0] text-lg flex-shrink-0">→</span>
-
-            {/* Won */}
-            <div className="flex-1 min-w-[100px]">
-              <div className="bg-[#f0fdf4] border border-[#86efac] rounded-md p-4">
-                <div className="text-xs font-medium text-[#718096] mb-1">Won</div>
-                <div className="text-2xl font-semibold text-[#1a202c]">{wonCount}</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Insight Box */}
-          <div className="mt-4 bg-[#f7fafc] border-l-[3px] border-[#718096] rounded-md p-4">
-            <p className="text-sm text-[#1a202c]">
-              <span className="font-semibold">Insight:</span> {draftCount} proposals are in draft status. 
-              Sending them could increase your pipeline by {formatCurrency(proposals.filter(p => p.status === 'draft').reduce((sum, p) => sum + p.amount, 0))}.
-            </p>
-          </div>
-        </div>
-
-        {/* Insights Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Performance Benchmarks */}
-          <div className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm p-6">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#718096] mb-4">
-              Performance Benchmarks
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between py-2 border-b border-[#e2e8f0]">
-                <span className="text-sm text-[#1a202c]">Industry avg win rate</span>
-                <span className="text-sm font-semibold text-[#718096]">27-35%</span>
-              </div>
-              <div className="flex items-center justify-between py-2 border-b border-[#e2e8f0]">
-                <span className="text-sm text-[#1a202c]">Your current win rate</span>
-                <span className="text-sm font-semibold text-[#dc2626]">{winRate}%</span>
-              </div>
-              <div className="flex items-center justify-between py-2 border-b border-[#e2e8f0]">
-                <span className="text-sm text-[#1a202c]">Proposals needed for 30% win rate</span>
-                <span className="text-sm font-semibold text-[#718096]">
-                  {wonCount > 0 ? Math.ceil(wonCount / 0.3) : '10+'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between py-2">
-                <span className="text-sm text-[#1a202c]">Avg time to first view</span>
-                <span className="text-sm font-semibold text-[#718096]">—</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Recommended Actions */}
-          <div className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm p-6">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#718096] mb-4">
-              Recommended Actions
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-start gap-3">
-                <div className="flex-1">
-                  <div className="text-sm text-[#1a202c] mb-1">Send draft proposals</div>
-                  <span className="inline-block px-2 py-1 bg-[#fee2e2] text-[#dc2626] text-xs font-medium rounded">
-                    High Priority
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 pt-3 border-t border-[#e2e8f0]">
-                <div className="flex-1">
-                  <div className="text-sm text-[#1a202c] mb-1">Set up follow-up reminders</div>
-                  <span className="inline-block px-2 py-1 bg-[#fef5e7] text-[#d69e2e] text-xs font-medium rounded">
-                    Recommended
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 pt-3 border-t border-[#e2e8f0]">
-                <div className="flex-1">
-                  <div className="text-sm text-[#1a202c] mb-1">Review pricing strategy</div>
-                  <span className="inline-block px-2 py-1 bg-[#f7fafc] text-[#718096] text-xs font-medium rounded border border-[#e2e8f0]">
-                    Optional
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 pt-3 border-t border-[#e2e8f0]">
-                <div className="flex-1">
-                  <div className="text-sm text-[#1a202c] mb-1">Customize templates</div>
-                  <span className="inline-block px-2 py-1 bg-[#f7fafc] text-[#718096] text-xs font-medium rounded border border-[#e2e8f0]">
-                    Optional
-                  </span>
-                </div>
-              </div>
+            <div className="flex justify-between items-center py-3">
+              <span className="text-sm text-slate-600">Customize proposal templates</span>
+              <PriorityBadge priority="low" />
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Proposals Table */}
-        <div className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm">
-          {/* Table Header */}
-          <div className="px-6 py-4 border-b border-[#e2e8f0]">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <h2 className="text-base font-semibold text-[#1a202c]">Recent Proposals</h2>
-              <div className="flex items-center gap-3">
-                <input
-                  type="text"
-                  placeholder="Search proposals..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="px-3 py-2 text-sm border border-[#e2e8f0] rounded-md focus:outline-none focus:ring-2 focus:ring-[#2d3748] focus:border-transparent"
-                />
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-3 py-2 text-sm border border-[#e2e8f0] rounded-md focus:outline-none focus:ring-2 focus:ring-[#2d3748] focus:border-transparent"
+      {/* Proposals Table */}
+      <div className="bg-white rounded-lg shadow-sm border border-slate-200">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-8 py-5 border-b border-slate-200">
+          <h2 className="text-base font-semibold text-slate-900">
+            Recent Proposals ({filteredProposals.length})
+          </h2>
+          <div className="flex items-center gap-3">
+            <input
+              type="text"
+              placeholder="Search proposals..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="px-4 py-2 border border-slate-300 rounded-md text-sm w-64 focus:outline-none focus:border-slate-800"
+            />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-4 py-2 border border-slate-300 rounded-md text-sm bg-white cursor-pointer hover:border-slate-400 hover:bg-slate-50 transition-all duration-200"
+            >
+              <option value="all">Status: All</option>
+              <option value="draft">Draft</option>
+              <option value="sent">Sent</option>
+              <option value="viewed">Viewed</option>
+              <option value="accepted">Accepted</option>
+              <option value="won">Won</option>
+              <option value="lost">Lost</option>
+            </select>
+            <select
+              value={tradeFilter}
+              onChange={(e) => setTradeFilter(e.target.value)}
+              className="px-4 py-2 border border-slate-300 rounded-md text-sm bg-white cursor-pointer hover:border-slate-400 hover:bg-slate-50 transition-all duration-200"
+            >
+              <option value="all">Trade: All</option>
+              {uniqueTrades.map(trade => (
+                <option key={trade} value={trade}>{trade}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b-2 border-slate-200">
+                <th className="text-left px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Customer
+                </th>
+                <th className="text-left px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Trade
+                </th>
+                <th className="text-left px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Amount
+                </th>
+                <th className="text-left px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Status
+                </th>
+                <th className="text-left px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Created
+                </th>
+                <th className="text-left px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Last Activity
+                </th>
+                <th className="text-left px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredProposals.map((proposal) => (
+                <tr 
+                  key={proposal.id} 
+                  className="border-b border-slate-100 hover:bg-slate-50 transition-colors duration-200"
                 >
-                  <option value="all">All Status</option>
-                  <option value="draft">Draft</option>
-                  <option value="sent">Sent</option>
-                  <option value="viewed">Viewed</option>
-                  <option value="accepted">Accepted</option>
-                  <option value="won">Won</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-[#f7fafc] border-b border-[#e2e8f0]">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[#718096]">
-                    Customer
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[#718096]">
-                    Trade
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-[#718096]">
-                    Amount
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[#718096]">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[#718096]">
-                    Created
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[#718096]">
-                    Last Activity
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-[#718096]">
-                    Actions
-                  </th>
+                  <td className="px-3 py-4">
+                    <div className="font-semibold text-slate-900 text-sm">
+                      {proposal.customerName}
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      {proposal.address}
+                    </div>
+                  </td>
+                  <td className="px-3 py-4 text-sm text-slate-700">
+                    {proposal.trade}
+                  </td>
+                  <td className="px-3 py-4 text-sm font-semibold text-slate-900">
+                    {formatCurrency(proposal.amount)}
+                  </td>
+                  <td className="px-3 py-4">
+                    <StatusBadge status={proposal.status} />
+                  </td>
+                  <td className="px-3 py-4 text-sm text-slate-700">
+                    {proposal.createdAt}
+                  </td>
+                  <td className="px-3 py-4">
+                    {proposal.status === 'draft' ? (
+                      <>
+                        <span className="text-red-600 font-medium text-sm">Not sent yet</span>
+                        <br />
+                        <span className="text-xs text-slate-500">{proposal.daysAgo} days ago</span>
+                      </>
+                    ) : (
+                      <span className="text-sm text-slate-700">{proposal.lastActivity}</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-4">
+                    <div className="flex items-center gap-1.5">
+                      {proposal.status === 'draft' ? (
+                        <button className="px-3 py-1.5 bg-slate-800 text-white rounded text-xs font-medium hover:bg-slate-900 transition-all duration-200">
+                          Send Now
+                        </button>
+                      ) : null}
+                      <button className="px-3 py-1.5 bg-white border border-slate-300 text-slate-700 rounded text-xs font-medium hover:bg-slate-50 hover:border-slate-400 transition-all duration-200">
+                        Edit
+                      </button>
+                      <button className="px-2 py-1.5 bg-white border border-slate-300 text-slate-700 rounded text-xs font-medium hover:bg-slate-50 hover:border-slate-400 transition-all duration-200">
+                        ...
+                      </button>
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-[#e2e8f0]">
-                {filteredProposals.map((proposal) => (
-                  <tr key={proposal.id} className="hover:bg-[#f7fafc] transition-colors duration-200">
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-[#1a202c]">{proposal.customer}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-[#718096]">{proposal.trade}</div>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="text-sm font-medium text-[#1a202c]">{formatCurrency(proposal.amount)}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium border ${getStatusBadgeClass(proposal.status)}`}>
-                        {proposal.status.charAt(0).toUpperCase() + proposal.status.slice(1)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-[#718096]">{proposal.created}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-[#718096]">
-                        {proposal.status === 'draft' ? (
-                          <span className="text-[#dc2626]">Not sent yet</span>
-                        ) : (
-                          proposal.lastActivity
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {proposal.status === 'draft' ? (
-                          <button className="px-3 py-1.5 bg-[#2d3748] text-white text-xs font-medium rounded-md hover:bg-[#1a202c] transition-colors duration-200">
-                            Send Now
-                          </button>
-                        ) : (
-                          <>
-                            <button className="px-3 py-1.5 bg-white border border-[#e2e8f0] text-[#718096] text-xs font-medium rounded-md hover:bg-[#f7fafc] transition-colors duration-200">
-                              View
-                            </button>
-                            <button className="px-3 py-1.5 bg-white border border-[#e2e8f0] text-[#718096] text-xs font-medium rounded-md hover:bg-[#f7fafc] transition-colors duration-200">
-                              Edit
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Empty State */}
-          {filteredProposals.length === 0 && (
-            <div className="px-6 py-12 text-center">
-              <p className="text-sm text-[#718096]">No proposals found matching your criteria.</p>
-            </div>
-          )}
+              ))}
+            </tbody>
+          </table>
         </div>
+
+        {/* Empty State */}
+        {filteredProposals.length === 0 && (
+          <div className="px-8 py-12 text-center">
+            <div className="text-sm font-semibold text-slate-900 mb-1">No proposals found</div>
+            <div className="text-sm text-slate-500">
+              Try adjusting your search or filter criteria.
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
