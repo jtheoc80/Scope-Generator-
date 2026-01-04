@@ -1,161 +1,112 @@
 'use client';
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Layout from "@/components/layout";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { CheckCircle, Coins, DollarSign, FileText, Loader2, Users, XCircle } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import DeleteDraftDialog from "@/components/delete-draft-dialog";
+import { Loader2 } from "lucide-react";
 import EmailProposalModal from "@/components/email-proposal-modal";
-import EditPriceModal from "@/components/edit-price-modal";
-import CountersignModal from "@/components/countersign-modal";
-import PaymentLinkModal from "@/components/payment-link-modal";
 import { useAuth } from "@/hooks/useAuth";
-import { useLanguage } from "@/hooks/useLanguage";
-import { DashboardPageHeader, type DashboardDateRange } from "@/components/dashboard/PageHeader";
-import { InsightsPanel, type InsightsData } from "@/components/dashboard/InsightsPanel";
-import { PipelineBar } from "@/components/dashboard/PipelineBar";
-import { RecentProposalsTable } from "@/components/dashboard/RecentProposalsTable";
-import { StatCard } from "@/components/dashboard/StatCard";
 
 interface Proposal {
   id: number;
   clientName: string;
   address: string;
-  jobTypeName: string;
+  tradeId: string;
+  jobTypeName: string; // kept for compatibility with existing data
   priceLow: number;
   priceHigh: number;
   status: string;
   createdAt: string;
-  photoCount?: number | null;
-  thumbnailUrl?: string | null;
   publicToken?: string | null;
-  contractorSignature?: string | null;
-  contractorSignedAt?: string | null;
-  paymentLinkUrl?: string | null;
-  depositPercentage?: number | null;
-  depositAmount?: number | null;
-  paymentStatus?: string | null;
-  paidAmount?: number | null;
   viewCount?: number | null;
   lastViewedAt?: string | null;
 }
 
+type FunnelStage = "draft" | "sent" | "viewed" | "accepted" | "won" | "lost";
+
+function toTitleCase(input: string) {
+  return input
+    .replace(/[_-]+/g, " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w[0]!.toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(Math.round(amount));
+}
+
+function formatShortDate(dateString: string) {
+  const d = new Date(dateString);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function daysAgo(dateString: string) {
+  const d = new Date(dateString);
+  const t = d.getTime();
+  if (Number.isNaN(t)) return null;
+  const diffMs = Date.now() - t;
+  const days = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+  if (days === 0) return "Today";
+  if (days === 1) return "1 day ago";
+  return `${days} days ago`;
+}
+
+function deriveStage(p: Proposal): FunnelStage {
+  const raw = (p.status || "").toLowerCase().trim();
+  if (raw === "won") return "won";
+  if (raw === "lost") return "lost";
+  if (raw === "accepted") return "accepted";
+  if (raw === "viewed") return "viewed";
+  if (raw === "sent") {
+    // If the system didn't explicitly mark as viewed, infer it from viewCount.
+    return (p.viewCount ?? 0) > 0 ? "viewed" : "sent";
+  }
+  // Default (including unknowns) to draft.
+  return "draft";
+}
+
+function statusLabel(stage: FunnelStage) {
+  if (stage === "draft") return "Draft";
+  if (stage === "sent") return "Sent";
+  if (stage === "viewed") return "Viewed";
+  if (stage === "accepted") return "Accepted";
+  if (stage === "won") return "Won";
+  return "Lost";
+}
+
+function statusBadgeClasses(stage: FunnelStage) {
+  // Minimal color, subtle borders. Reserve strong color for critical states.
+  if (stage === "won") return "bg-[#f0fdf4] text-[#15803d] border-[#86efac]";
+  if (stage === "accepted") return "bg-[#f0fdf4] text-[#15803d] border-[#86efac]";
+  if (stage === "lost") return "bg-[#fef2f2] text-[#dc2626] border-[#fecaca]";
+  if (stage === "draft") return "bg-[#f7fafc] text-[#4a5568] border-[#cbd5e0]";
+  return "bg-[#f7fafc] text-[#4a5568] border-[#e2e8f0]";
+}
+
+function trendBadgeClasses(kind: "up" | "down" | "neutral") {
+  if (kind === "up") return "bg-[#f0fdf4] text-[#15803d] border-[#86efac]";
+  if (kind === "down") return "bg-[#fef2f2] text-[#dc2626] border-[#fecaca]";
+  return "bg-[#f7fafc] text-[#4a5568] border-[#cbd5e0]";
+}
+
 export default function Dashboard() {
   const { user, isLoading: authLoading, error: authError } = useAuth();
-  const { t, language } = useLanguage();
   const router = useRouter();
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(true);
-  const [insights, setInsights] = useState<InsightsData | null>(null);
-  const [insightsLoading, setInsightsLoading] = useState(false);
-  const [insightsError, setInsightsError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [isSuccess, setIsSuccess] = useState<boolean>(true);
   const [emailModalData, setEmailModalData] = useState<{ id: number; clientName: string } | null>(null);
-  const [priceModalData, setPriceModalData] = useState<{ 
-    id: number; 
-    clientName: string; 
-    priceLow: number; 
-    priceHigh: number; 
-  } | null>(null);
-  const [countersignModalData, setCountersignModalData] = useState<{
-    id: number;
-    clientName: string;
-  } | null>(null);
-  const [paymentModalData, setPaymentModalData] = useState<{
-    id: number;
-    clientName: string;
-    priceLow: number;
-    priceHigh: number;
-    paymentLinkUrl?: string | null;
-    depositPercentage?: number | null;
-  } | null>(null);
-  const [deleteModalData, setDeleteModalData] = useState<{
-    id: number;
-    clientName: string;
-  } | null>(null);
-  const [dateRange, setDateRange] = useState<DashboardDateRange>("30d");
-  const { toast } = useToast();
 
-  // Proposal actions are handled inline where used to keep callbacks lightweight.
-
-  // Handle checkout redirect after sign-up
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const checkoutPlan = urlParams.get('checkout');
-    
-    if (checkoutPlan && user) {
-      // Clear the URL parameter
-      window.history.replaceState({}, '', '/dashboard');
-      
-      // Trigger checkout for the selected plan
-      const handleCheckout = async () => {
-        try {
-          const response = await fetch('/api/stripe/checkout', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ productType: checkoutPlan }),
-          });
-          
-          const data = await response.json();
-          
-          if (data.url) {
-            window.location.href = data.url;
-          } else if (data.message) {
-            setSuccessMessage(data.message);
-            setIsSuccess(false);
-          }
-        } catch (error) {
-          console.error('Checkout error:', error);
-          setSuccessMessage('Something went wrong. Please try subscribing from the pricing page.');
-          setIsSuccess(false);
-        }
-      };
-      
-      handleCheckout();
-    }
-  }, [user]);
-
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('success') === 'true') {
-      const sessionId = urlParams.get('session_id');
-      if (sessionId) {
-        fetch('/api/stripe/verify-session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ sessionId }),
-        })
-          .then(res => res.json())
-          .then((data) => {
-            if (data.creditsAdded) {
-              setSuccessMessage(`${t.dashboard.paymentSuccessful} ${data.creditsAdded} ${t.dashboard.paymentSuccessCredits}`);
-              setIsSuccess(true);
-              window.location.reload();
-            } else {
-              setSuccessMessage(t.dashboard.paymentSuccessful);
-              setIsSuccess(true);
-            }
-          })
-          .catch(() => {
-            setSuccessMessage(t.dashboard.paymentReceived);
-            setIsSuccess(true);
-          });
-      } else {
-        setSuccessMessage(t.dashboard.paymentSuccessful);
-        setIsSuccess(true);
-      }
-      window.history.replaceState({}, '', '/dashboard');
-    } else if (urlParams.get('canceled') === 'true') {
-      setSuccessMessage(t.dashboard.paymentCanceled);
-      setIsSuccess(false);
-      window.history.replaceState({}, '', '/dashboard');
-    }
-  }, [t]);
+  // Table controls (must be declared before any early returns)
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | FunnelStage>("all");
+  const [tradeFilter, setTradeFilter] = useState<string>("all");
 
   useEffect(() => {
     if (user) {
@@ -171,153 +122,119 @@ export default function Dashboard() {
     }
   }, [user, authLoading]);
 
-  const fetchInsights = useCallback(async () => {
-    setInsightsLoading(true);
-    setInsightsError(null);
-    try {
-      const response = await fetch("/api/analytics/insights", { credentials: "include" });
-      if (!response.ok) throw new Error("Failed to fetch insights");
-      const data = (await response.json()) as InsightsData;
-      setInsights(data);
-    } catch (err) {
-      setInsightsError(err instanceof Error ? err.message : "Failed to fetch insights");
-    } finally {
-      setInsightsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!user) return;
-    fetchInsights();
-  }, [user, fetchInsights]);
-
-  const creditsExpired = user?.creditsExpireAt && new Date(user.creditsExpireAt) < new Date();
-  const availableCredits = creditsExpired ? 0 : (user?.proposalCredits || 0);
-
-  const updateProposalStatus = async (proposalId: number, status: string) => {
-    try {
-      const response = await fetch(`/api/proposals/${proposalId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ status }),
-      });
-      
-      if (response.ok) {
-        setProposals(prev => 
-          prev.map(p => p.id === proposalId ? { ...p, status } : p)
-        );
-      }
-    } catch (error) {
-      console.error('Error updating proposal status:', error);
-    }
-  };
-
-  const handleDeleteSuccess = (proposalId: number) => {
-    // Optimistic UI update - remove the proposal from the list
-    setProposals(prev => prev.filter(p => p.id !== proposalId));
-    toast({
-      title: t.dashboard.draftDeleted,
-      description: t.dashboard.draftDeletedDescription,
-    });
-  };
-
-  const handleDeleteError = (message: string) => {
-    toast({
-      title: "Error",
-      description: message,
-      variant: "destructive",
-    });
-  };
-  
-  const locale = language === "es" ? "es-ES" : "en-US";
-
-  const proposalsInRange = useMemo(() => {
-    if (dateRange === "all") return proposals;
-    const days = dateRange === "7d" ? 7 : dateRange === "90d" ? 90 : 30;
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - days);
-    return proposals.filter((p) => {
-      const createdAtDate = new Date(p.createdAt);
-      const createdAtTime = createdAtDate.getTime();
-      if (Number.isNaN(createdAtTime)) {
-        console.error("Invalid proposal createdAt date encountered during range filter", {
-          proposalId: p.id,
-          createdAt: p.createdAt,
-        });
-        return false;
-      }
-      return createdAtDate >= cutoff;
-    });
-  }, [proposals, dateRange]);
-
+  // Derived metrics (declared before early returns to satisfy hook rules)
   const sortedProposals = useMemo(() => {
-    const getCreatedAtTime = (proposal: Proposal): number => {
-      const date = new Date(proposal.createdAt);
-      const time = date.getTime();
-      if (Number.isNaN(time)) {
-        console.error("Invalid proposal createdAt date encountered during sort", {
-          proposalId: proposal.id,
-          createdAt: proposal.createdAt,
-        });
-        // Place proposals with invalid dates at the beginning of the array
-        // by returning 0; they can then be handled or surfaced in the UI if needed.
-        return 0;
-      }
-      return time;
+    return [...proposals].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [proposals]);
+
+  const funnelCounts = useMemo(() => {
+    const init: Record<FunnelStage, number> = {
+      draft: 0,
+      sent: 0,
+      viewed: 0,
+      accepted: 0,
+      won: 0,
+      lost: 0,
     };
+    for (const p of proposals) init[deriveStage(p)] += 1;
+    return init;
+  }, [proposals]);
 
-    return [...proposalsInRange].sort(
-      (a, b) => getCreatedAtTime(b) - getCreatedAtTime(a),
-    );
-  }, [proposalsInRange]);
+  const draftCount = funnelCounts.draft;
 
-  const pipelineCounts = useMemo(() => {
-    const init = { draft: 0, sent: 0, viewed: 0, accepted: 0, won: 0, lost: 0 };
-    for (const p of proposalsInRange) {
-      const s = p.status.toLowerCase();
-      if (s in init) (init as any)[s] += 1;
-    }
-    return init as { draft: number; sent: number; viewed: number; accepted: number; won: number; lost: number };
-  }, [proposalsInRange]);
-
-  const revenueWon = useMemo(() => {
-    const total = proposalsInRange
-      .filter((p) => p.status.toLowerCase() === "won")
+  const pipelineValue = useMemo(() => {
+    // Pipeline excludes won/lost; includes draft/sent/viewed/accepted.
+    return proposals
+      .filter((p) => {
+        const s = deriveStage(p);
+        return s === "draft" || s === "sent" || s === "viewed" || s === "accepted";
+      })
       .reduce((sum, p) => sum + (p.priceLow + p.priceHigh) / 2, 0);
-    return new Intl.NumberFormat(locale, {
-      style: "currency",
-      currency: "USD",
-      maximumFractionDigits: 0,
-    }).format(total);
-  }, [proposalsInRange, locale]);
+  }, [proposals]);
 
-  const pendingCount = useMemo(() => {
-    return proposalsInRange.filter((p) => {
-      const s = p.status.toLowerCase();
-      return s === "sent" || s === "draft";
-    }).length;
-  }, [proposalsInRange]);
+  const pipelineTrend = useMemo(() => {
+    // Compare pipeline value for last 30 days vs previous 30 days.
+    const now = Date.now();
+    const dayMs = 24 * 60 * 60 * 1000;
+    const start0 = now - 30 * dayMs;
+    const start1 = now - 60 * dayMs;
 
-  const rangeHelper = (() => {
-    if (dateRange === "all") return t.dashboard.allTime;
-    const es = language === "es";
-    if (dateRange === "7d") return es ? "Últimos 7 días" : "Last 7 days";
-    if (dateRange === "90d") return es ? "Últimos 90 días" : "Last 90 days";
-    return es ? "Últimos 30 días" : "Last 30 days";
-  })();
+    const sumForRange = (from: number, to: number) =>
+      proposals
+        .filter((p) => {
+          const t = new Date(p.createdAt).getTime();
+          if (Number.isNaN(t) || t < from || t >= to) return false;
+          const s = deriveStage(p);
+          return s === "draft" || s === "sent" || s === "viewed" || s === "accepted";
+        })
+        .reduce((sum, p) => sum + (p.priceLow + p.priceHigh) / 2, 0);
 
-  const avgTimeLabel = (hours: number | null) => {
-    if (hours == null) return "—";
-    if (hours < 24) return `${hours}h`;
-    return `${Math.round(hours / 24)}d`;
+    const current = sumForRange(start0, now);
+    const previous = sumForRange(start1, start0);
+    if (previous <= 0 || current <= 0) return { kind: "neutral" as const, text: "Getting started" };
+    const pct = Math.round(((current - previous) / previous) * 100);
+    if (pct > 0) return { kind: "up" as const, text: `+${pct}% vs last month` };
+    if (pct < 0) return { kind: "down" as const, text: `${pct}% vs last month` };
+    return { kind: "neutral" as const, text: "0% vs last month" };
+  }, [proposals]);
+
+  const winRate = useMemo(() => {
+    // Win rate based on closed outcomes (won/lost).
+    const won = proposals.filter((p) => deriveStage(p) === "won").length;
+    const lost = proposals.filter((p) => deriveStage(p) === "lost").length;
+    const total = won + lost;
+    if (total === 0) return { value: 0, hasData: false };
+    return { value: Math.round((won / total) * 100), hasData: true };
+  }, [proposals]);
+
+  const avgTimeToFirstViewDays = useMemo(() => {
+    const samples = proposals
+      .filter((p) => p.lastViewedAt)
+      .map((p) => {
+        const start = new Date(p.createdAt).getTime();
+        const end = new Date(p.lastViewedAt as string).getTime();
+        if (Number.isNaN(start) || Number.isNaN(end) || end < start) return null;
+        return (end - start) / (1000 * 60 * 60 * 24);
+      })
+      .filter((v): v is number => typeof v === "number");
+    if (samples.length === 0) return null;
+    const avg = samples.reduce((a, b) => a + b, 0) / samples.length;
+    return Math.round(avg * 10) / 10;
+  }, [proposals]);
+
+  const tradeOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of proposals) if (p.tradeId) set.add(p.tradeId);
+    return Array.from(set).sort();
+  }, [proposals]);
+
+  const filteredProposals = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return sortedProposals.filter((p) => {
+      const stage = deriveStage(p);
+      const matchesStatus = statusFilter === "all" || stage === statusFilter;
+      const matchesTrade = tradeFilter === "all" || p.tradeId === tradeFilter;
+      const matchesQuery =
+        q.length === 0 ||
+        p.clientName.toLowerCase().includes(q) ||
+        p.address.toLowerCase().includes(q) ||
+        p.jobTypeName.toLowerCase().includes(q) ||
+        (p.tradeId || "").toLowerCase().includes(q);
+      return matchesStatus && matchesTrade && matchesQuery;
+    });
+  }, [sortedProposals, searchQuery, statusFilter, tradeFilter]);
+
+  const handleReviewDrafts = () => {
+    setStatusFilter("draft");
+    const el = document.getElementById("proposals-table");
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   if (authLoading || loading) {
     return (
       <Layout>
         <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <Loader2 className="w-8 h-8 animate-spin text-[#2d3748]" />
         </div>
       </Layout>
     );
@@ -327,19 +244,24 @@ export default function Dashboard() {
     return (
       <Layout>
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-          <h2 className="text-2xl font-bold mb-4 text-red-600">Authentication Error</h2>
+          <h2 className="text-2xl font-semibold mb-4 text-[#dc2626]">Authentication Error</h2>
           <p className="text-muted-foreground mb-6">
             We couldn&apos;t verify your session. This might be due to a connection issue.
           </p>
-          <Button onClick={() => window.location.reload()} variant="outline" className="mr-2">
-            Retry
-          </Button>
-          <Link
-            href="/sign-in"
-            className="bg-primary text-white px-6 py-2.5 rounded-md font-semibold hover:bg-primary/90"
-          >
-            Sign In Again
-          </Link>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 rounded-md border border-[#cbd5e0] bg-white text-[14px] font-medium text-[#4a5568] hover:bg-[#f7fafc] hover:border-[#a0aec0] transition-colors duration-200"
+            >
+              Retry
+            </button>
+            <Link
+              href="/sign-in"
+              className="px-4 py-2 rounded-md bg-[#2d3748] text-white text-[14px] font-medium hover:bg-[#1a202c] transition-colors duration-200"
+            >
+              Sign In Again
+            </Link>
+          </div>
         </div>
       </Layout>
     );
@@ -349,13 +271,13 @@ export default function Dashboard() {
     return (
       <Layout>
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-          <h2 className="text-2xl font-bold mb-4">{t.settings.signInRequired}</h2>
-          <p className="text-muted-foreground mb-6">{t.dashboard.subtitle}</p>
+          <h2 className="text-2xl font-semibold mb-4">Sign in required</h2>
+          <p className="text-[#718096] mb-6">Sign in to view your proposals and pipeline.</p>
           <Link
             href="/sign-in?redirect_url=%2Fdashboard"
-            className="bg-primary text-white px-6 py-3 rounded-md font-semibold"
+            className="px-6 py-3 rounded-md bg-[#2d3748] text-white text-[14px] font-medium hover:bg-[#1a202c] transition-colors duration-200"
           >
-            {t.settings.signInWithReplit}
+            Sign In
           </Link>
         </div>
       </Layout>
@@ -364,161 +286,387 @@ export default function Dashboard() {
 
   return (
     <Layout>
-      <div className="bg-slate-50 min-h-screen pb-12">
-        {successMessage && (
-          <div className={`py-3 px-4 text-center text-sm font-medium ${
-            isSuccess 
-              ? 'bg-green-100 text-green-800' 
-              : 'bg-yellow-100 text-yellow-800'
-          }`}>
-            <div className="flex items-center justify-center gap-2">
-              {isSuccess ? (
-                <CheckCircle className="w-4 h-4" />
-              ) : (
-                <XCircle className="w-4 h-4" />
-              )}
-              {successMessage}
+      <div className="min-h-screen bg-[#f5f6f8] text-[#2d3748] pb-12">
+        <div className="container mx-auto px-4 py-6 md:py-8 space-y-6 md:space-y-8">
+          {/* Header */}
+          <div className="bg-white border border-[#e2e8f0] shadow-sm rounded-lg px-6 py-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-md bg-[#2d3748] text-white flex items-center justify-center font-semibold text-[14px]">
+                SG
+              </div>
+              <div>
+                <div className="text-[16px] font-semibold text-[#1a202c]">Proposal Dashboard</div>
+                <div className="text-[12px] text-[#718096]">Clean pipeline tracking for professional contractors</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/app"
+                className="px-4 py-2 rounded-md border border-[#cbd5e0] bg-white text-[14px] font-medium text-[#4a5568] hover:bg-[#f7fafc] hover:border-[#a0aec0] transition-colors duration-200"
+              >
+                View Templates
+              </Link>
+              <Link
+                href="/app"
+                className="px-4 py-2 rounded-md bg-[#2d3748] text-white text-[14px] font-medium hover:bg-[#1a202c] transition-colors duration-200"
+              >
+                Create Proposal (60s)
+              </Link>
             </div>
           </div>
-        )}
-        <DashboardPageHeader
-          title={t.dashboard.dashboardTitle}
-          subtitle={`${t.dashboard.welcomeBack}, ${user.firstName || t.dashboard.contractor}`}
-          isPro={user.isPro}
-          dateRange={dateRange}
-          onDateRangeChange={setDateRange}
-          language={language}
-          newProposalLabel={t.dashboard.newProposal}
-          scopeScanLabel="ScopeScan"
-          manageTemplatesLabel={t.dashboard.manageTemplates}
-        />
 
-        <div className="container mx-auto space-y-6 px-4 py-6 md:space-y-8 md:py-8">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard
-              label={t.dashboard.proposalCredits}
-              value={availableCredits.toString()}
-              helper={
-                user?.creditsExpireAt && !creditsExpired
-                  ? `${t.dashboard.expires} ${new Date(user.creditsExpireAt).toLocaleDateString(locale)}`
-                  : t.dashboard.availableToUse
-              }
-              icon={Coins}
-              iconTone="orange"
-            />
-            <StatCard
-              label={t.dashboard.totalProposals}
-              value={proposalsInRange.length.toString()}
-              helper={rangeHelper}
-              icon={FileText}
-              iconTone="slate"
-            />
-            <StatCard
-              label={t.dashboard.revenueWon}
-              value={revenueWon}
-              helper={rangeHelper}
-              icon={DollarSign}
-              iconTone="green"
-            />
-            <StatCard
-              label={t.dashboard.pending}
-              value={pendingCount.toString()}
-              helper={t.dashboard.awaitingResponse}
-              icon={Users}
-              iconTone="blue"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-            <div className="space-y-6 lg:col-span-8">
-              <div className="space-y-4">
-                <PipelineBar
-                  title="Pipeline"
-                  counts={pipelineCounts}
-                />
-
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
-                    <CardHeader className="px-6 py-4">
-                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Avg time to first view
-                      </div>
-                      <div className="mt-2 text-2xl font-semibold text-slate-900">
-                        {avgTimeLabel(insights?.avgTimeToView ?? null)}
-                      </div>
-                    </CardHeader>
-                  </Card>
-                  <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
-                    <CardHeader className="px-6 py-4">
-                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Avg time to accept
-                      </div>
-                      <div className="mt-2 text-2xl font-semibold text-slate-900">
-                        {avgTimeLabel(insights?.avgTimeToAccept ?? null)}
-                      </div>
-                    </CardHeader>
-                  </Card>
+          {/* Alert Banner */}
+          {draftCount > 0 && (
+            <div className="bg-white border border-[#e2e8f0] shadow-sm rounded-md border-l-[3px] border-l-[#d69e2e] px-6 py-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="h-10 w-10 rounded-full bg-[#fef5e7] flex items-center justify-center flex-shrink-0">
+                  <span className="text-[#d69e2e] font-semibold text-[16px]">!</span>
+                </div>
+                <div>
+                  <div className="text-[15px] font-semibold text-[#d69e2e]">
+                    {draftCount} Proposal{draftCount === 1 ? "" : "s"} Need Your Attention
+                  </div>
+                  <div className="text-[13px] text-[#975a16] mt-1">
+                    You have {draftCount} draft proposal{draftCount === 1 ? "" : "s"} ready to send. Send them now to get faster responses.
+                  </div>
                 </div>
               </div>
+              <button
+                type="button"
+                onClick={handleReviewDrafts}
+                className="self-start sm:self-auto px-4 py-2 rounded-md bg-[#2d3748] text-white text-[13px] font-medium hover:bg-[#1a202c] transition-colors duration-200"
+              >
+                Review Drafts
+              </button>
+            </div>
+          )}
 
-              <RecentProposalsTable
-                title={t.dashboard.recentProposals}
-                proposals={sortedProposals}
-                locale={locale}
-                showPaymentLink={!!user?.userStripeEnabled}
-                onEdit={(p) => router.push(`/app?edit=${p.id}`)}
-                onView={(p) => {
-                  if (p.publicToken) window.open(`/p/${p.publicToken}`, "_blank");
-                }}
-                onEmail={(p) => setEmailModalData({ id: p.id, clientName: p.clientName })}
-                onAdjustPrice={(p) =>
-                  setPriceModalData({
-                    id: p.id,
-                    clientName: p.clientName,
-                    priceLow: p.priceLow,
-                    priceHigh: p.priceHigh,
-                  })
-                }
-                onCountersign={(p) => setCountersignModalData({ id: p.id, clientName: p.clientName })}
-                onPayment={(p) =>
-                  setPaymentModalData({
-                    id: p.id,
-                    clientName: p.clientName,
-                    priceLow: p.priceLow,
-                    priceHigh: p.priceHigh,
-                    paymentLinkUrl: p.paymentLinkUrl,
-                    depositPercentage: p.depositPercentage,
-                  })
-                }
-                onMarkStatus={(p, status) => updateProposalStatus(p.id, status)}
-                onDeleteDraft={(p) => setDeleteModalData({ id: p.id, clientName: p.clientName })}
-              />
+          {/* Metrics */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+            {/* Pending Proposals */}
+            <div className="bg-white border-[2px] border-[#d69e2e] shadow-sm rounded-lg p-6 relative">
+              <div className="absolute top-2 right-2 bg-[#d69e2e] text-white text-[9px] font-semibold tracking-wide uppercase px-2 py-1 rounded">
+                Action Needed
+              </div>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-[13px] font-semibold uppercase tracking-wide text-[#718096]">Pending Proposals</div>
+                  <div className="mt-3 text-[32px] font-semibold text-[#1a202c]">{draftCount}</div>
+                  <div className="mt-2 text-[13px] text-[#718096]">Awaiting customer response</div>
+                </div>
+                <div className="h-9 w-9 rounded-md bg-[#fef5e7] text-[#975a16] flex items-center justify-center font-semibold text-[16px]">
+                  2
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-6 lg:col-span-4">
-              {insightsLoading ? (
-                <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
-                  <CardContent className="flex items-center gap-2 p-6 text-sm text-slate-600">
-                    <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
-                    {t.dashboard.loadingInsights}
-                  </CardContent>
-                </Card>
-              ) : insightsError ? (
-                <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
-                  <CardContent className="space-y-3 p-6">
-                    <div className="text-sm font-semibold text-slate-900">
-                      {t.dashboard.insightsUnavailable}
-                    </div>
-                    <div className="text-sm text-slate-500">{insightsError}</div>
-                    <Button variant="outline" onClick={fetchInsights}>
-                      {t.dashboard.retry}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ) : insights ? (
-                <InsightsPanel insights={insights} locale={locale} />
-              ) : null}
+            {/* Pipeline Value */}
+            <div className="bg-white border border-[#e2e8f0] shadow-sm rounded-lg p-6">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-[13px] font-semibold uppercase tracking-wide text-[#718096]">Pipeline Value</div>
+                  <div className="mt-3 text-[32px] font-semibold text-[#1a202c]">{formatCurrency(pipelineValue)}</div>
+                  <div className="mt-2 text-[13px] text-[#718096] flex items-center gap-2 flex-wrap">
+                    <span>Total pending + draft value</span>
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${trendBadgeClasses(
+                        pipelineTrend.kind
+                      )}`}
+                    >
+                      {pipelineTrend.text}
+                    </span>
+                  </div>
+                </div>
+                <div className="h-9 w-9 rounded-md bg-[#f0fdf4] text-[#15803d] flex items-center justify-center font-semibold text-[16px]">
+                  $
+                </div>
+              </div>
             </div>
+
+            {/* Win Rate */}
+            <div className="bg-white border border-[#e2e8f0] shadow-sm rounded-lg p-6">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-[13px] font-semibold uppercase tracking-wide text-[#718096]">Win Rate (30d)</div>
+                  <div className="mt-3 text-[32px] font-semibold text-[#1a202c]">{winRate.value}%</div>
+                  <div className="mt-2 text-[13px] text-[#718096] flex items-center gap-2 flex-wrap">
+                    <span>Target: 30%</span>
+                    {!winRate.hasData && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border bg-[#f7fafc] text-[#4a5568] border-[#cbd5e0]">
+                        Getting started
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="h-9 w-9 rounded-md bg-[#f7fafc] text-[#2d3748] flex items-center justify-center font-semibold text-[16px]">
+                  %
+                </div>
+              </div>
+            </div>
+
+            {/* Avg Response Time */}
+            <div className="bg-white border border-[#e2e8f0] shadow-sm rounded-lg p-6">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-[13px] font-semibold uppercase tracking-wide text-[#718096]">Avg Response Time</div>
+                  <div className="mt-3 text-[32px] font-semibold text-[#1a202c]">—</div>
+                  <div className="mt-2 text-[13px] text-[#718096]">Not enough data yet</div>
+                </div>
+                <div className="h-9 w-9 rounded-md bg-[#f7fafc] text-[#2d3748] flex items-center justify-center font-semibold text-[16px]">
+                  —
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Funnel */}
+          <div className="bg-white border border-[#e2e8f0] shadow-sm rounded-lg p-6 md:p-7">
+            <div className="text-[16px] font-semibold text-[#1a202c] mb-5">Proposal Conversion Funnel</div>
+
+            <div className="flex items-center gap-3 flex-wrap">
+              {(
+                [
+                  { key: "draft" as const, label: "Draft", bg: "bg-[#fef5e7]", border: "border-[#d69e2e]" },
+                  { key: "sent" as const, label: "Sent", bg: "bg-[#f7fafc]", border: "border-[#e2e8f0]" },
+                  { key: "viewed" as const, label: "Viewed", bg: "bg-[#f7fafc]", border: "border-[#e2e8f0]" },
+                  { key: "accepted" as const, label: "Accepted", bg: "bg-[#f7fafc]", border: "border-[#e2e8f0]" },
+                  { key: "won" as const, label: "Won", bg: "bg-[#f0fdf4]", border: "border-[#86efac]" },
+                ] as const
+              ).map((stage, idx) => (
+                <div key={stage.key} className="flex items-center gap-3 flex-1 min-w-[120px]">
+                  <div className={`w-full border rounded-md ${stage.bg} ${stage.border} p-4`}>
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-[#718096]">{stage.label}</div>
+                    <div className="mt-2 text-[24px] font-semibold text-[#1a202c]">{funnelCounts[stage.key]}</div>
+                  </div>
+                  {idx < 4 && <div className="text-[20px] text-[#cbd5e0] flex-shrink-0">→</div>}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-5 bg-[#f7fafc] border-l-[3px] border-l-[#2d3748] rounded-md p-4 text-[14px] text-[#2d3748]">
+              <span className="font-semibold text-[#1a202c]">Insight:</span>{" "}
+              {draftCount > 0
+                ? "Your biggest bottleneck is getting proposals sent. Draft proposals do not generate revenue. Send them today to start your conversion funnel."
+                : "Keep your funnel moving by sending proposals promptly and following up consistently."}
+            </div>
+          </div>
+
+          {/* Insights */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div className="bg-white border border-[#e2e8f0] shadow-sm rounded-lg p-6 md:p-7">
+              <div className="text-[13px] font-semibold uppercase tracking-wide text-[#4a5568] mb-4">
+                Performance Benchmarks
+              </div>
+              <div className="divide-y divide-[#f7fafc]">
+                <div className="py-3 flex items-center justify-between gap-4">
+                  <div className="text-[14px] text-[#4a5568]">Industry avg win rate</div>
+                  <div className="text-[14px] font-semibold text-[#1a202c]">27-35%</div>
+                </div>
+                <div className="py-3 flex items-center justify-between gap-4">
+                  <div className="text-[14px] text-[#4a5568]">Your current win rate</div>
+                  <div className={`text-[14px] font-semibold ${winRate.value === 0 ? "text-[#dc2626]" : "text-[#1a202c]"}`}>
+                    {winRate.value}%
+                  </div>
+                </div>
+                <div className="py-3 flex items-center justify-between gap-4">
+                  <div className="text-[14px] text-[#4a5568]">Proposals needed for 30% win rate</div>
+                  <div className="text-[14px] font-semibold text-[#1a202c]">7-10/month</div>
+                </div>
+                <div className="py-3 flex items-center justify-between gap-4">
+                  <div className="text-[14px] text-[#4a5568]">Avg time to first view</div>
+                  <div className="text-[14px] font-semibold text-[#1a202c]">
+                    {avgTimeToFirstViewDays == null ? "—" : `${avgTimeToFirstViewDays} days`}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white border border-[#e2e8f0] shadow-sm rounded-lg p-6 md:p-7">
+              <div className="text-[13px] font-semibold uppercase tracking-wide text-[#4a5568] mb-4">
+                Recommended Actions
+              </div>
+              <div className="divide-y divide-[#f7fafc]">
+                <div className="py-3 flex items-center justify-between gap-4">
+                  <div className="text-[14px] text-[#4a5568]">Send draft proposals</div>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-[#fef2f2] text-[#dc2626] border border-[#fecaca]">
+                    High Priority
+                  </span>
+                </div>
+                <div className="py-3 flex items-center justify-between gap-4">
+                  <div className="text-[14px] text-[#4a5568]">Set up follow-up reminders</div>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-[#fef5e7] text-[#d69e2e] border border-[#f4d88d]">
+                    Recommended
+                  </span>
+                </div>
+                <div className="py-3 flex items-center justify-between gap-4">
+                  <div className="text-[14px] text-[#4a5568]">Review pricing strategy</div>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-[#f7fafc] text-[#4a5568] border border-[#e2e8f0]">
+                    Optional
+                  </span>
+                </div>
+                <div className="py-3 flex items-center justify-between gap-4">
+                  <div className="text-[14px] text-[#4a5568]">Customize templates</div>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-[#f7fafc] text-[#4a5568] border border-[#e2e8f0]">
+                    Optional
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Proposals Table */}
+          <div id="proposals-table" className="bg-white border border-[#e2e8f0] shadow-sm rounded-lg overflow-hidden">
+            <div className="px-6 py-4 border-b border-[#e2e8f0] flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <div className="text-[16px] font-semibold text-[#1a202c]">Recent Proposals ({sortedProposals.length})</div>
+                <div className="text-[12px] text-[#718096] mt-1">Search and take action without leaving the dashboard.</div>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search proposals..."
+                  className="h-9 w-full sm:w-[260px] px-3 rounded-md border border-[#cbd5e0] bg-white text-[14px] text-[#1a202c] placeholder:text-[#718096] focus:outline-none focus:ring-2 focus:ring-[#2d3748] focus:ring-offset-0"
+                  aria-label="Search proposals"
+                />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as any)}
+                  className="h-9 px-3 rounded-md border border-[#cbd5e0] bg-white text-[14px] text-[#4a5568] focus:outline-none focus:ring-2 focus:ring-[#2d3748]"
+                  aria-label="Filter by status"
+                >
+                  <option value="all">Status: All</option>
+                  <option value="draft">Draft</option>
+                  <option value="sent">Sent</option>
+                  <option value="viewed">Viewed</option>
+                  <option value="accepted">Accepted</option>
+                  <option value="won">Won</option>
+                  <option value="lost">Lost</option>
+                </select>
+                <select
+                  value={tradeFilter}
+                  onChange={(e) => setTradeFilter(e.target.value)}
+                  className="h-9 px-3 rounded-md border border-[#cbd5e0] bg-white text-[14px] text-[#4a5568] focus:outline-none focus:ring-2 focus:ring-[#2d3748]"
+                  aria-label="Filter by trade"
+                >
+                  <option value="all">Trade: All</option>
+                  {tradeOptions.map((t) => (
+                    <option key={t} value={t}>
+                      {toTitleCase(t)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-[#f7fafc]">
+                    {["Customer", "Trade", "Amount", "Status", "Created", "Last Activity", "Actions"].map((h) => (
+                      <th
+                        key={h}
+                        className="text-left px-6 py-3 text-[11px] font-semibold uppercase tracking-wide text-[#718096] border-b border-[#e2e8f0]"
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredProposals.map((p) => {
+                    const stage = deriveStage(p);
+                    const amount = (p.priceLow + p.priceHigh) / 2;
+                    const lastActivity = p.lastViewedAt || p.createdAt;
+                    const lastAgo = daysAgo(lastActivity);
+                    const isDraft = stage === "draft";
+                    return (
+                      <tr key={p.id} className="hover:bg-[#f7fafc] transition-colors duration-200">
+                        <td className="px-6 py-4 border-b border-[#f7fafc]">
+                          <div className="text-[14px] font-semibold text-[#1a202c]">{p.clientName}</div>
+                          <div className="text-[12px] text-[#718096] mt-1">{p.address}</div>
+                        </td>
+                        <td className="px-6 py-4 border-b border-[#f7fafc] text-[14px] text-[#4a5568]">
+                          {toTitleCase(p.tradeId || "General")}
+                        </td>
+                        <td className="px-6 py-4 border-b border-[#f7fafc] text-[14px] font-semibold text-[#1a202c]">
+                          {formatCurrency(amount)}
+                        </td>
+                        <td className="px-6 py-4 border-b border-[#f7fafc]">
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded text-[11px] font-semibold border ${statusBadgeClasses(stage)}`}>
+                            {statusLabel(stage)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 border-b border-[#f7fafc] text-[14px] text-[#718096]">
+                          {formatShortDate(p.createdAt)}
+                        </td>
+                        <td className="px-6 py-4 border-b border-[#f7fafc]">
+                          {isDraft ? (
+                            <>
+                              <div className="text-[14px] font-medium text-[#dc2626]">Not sent yet</div>
+                              <div className="text-[12px] text-[#718096] mt-1">{daysAgo(p.createdAt) ?? "—"}</div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="text-[14px] font-medium text-[#4a5568]">
+                                {p.lastViewedAt ? "Viewed" : "Created"}
+                              </div>
+                              <div className="text-[12px] text-[#718096] mt-1">{lastAgo ?? "—"}</div>
+                            </>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 border-b border-[#f7fafc]">
+                          <div className="flex items-center gap-2 justify-end">
+                            {isDraft ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => setEmailModalData({ id: p.id, clientName: p.clientName })}
+                                  className="px-3 py-2 rounded-md bg-[#2d3748] text-white text-[12px] font-medium hover:bg-[#1a202c] transition-colors duration-200"
+                                >
+                                  Send Now
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => router.push(`/app?edit=${p.id}`)}
+                                  className="px-3 py-2 rounded-md border border-[#cbd5e0] bg-white text-[12px] font-medium text-[#4a5568] hover:bg-[#f7fafc] hover:border-[#a0aec0] transition-colors duration-200"
+                                >
+                                  Edit
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => router.push(`/proposals/${p.id}`)}
+                                  className="px-3 py-2 rounded-md border border-[#cbd5e0] bg-white text-[12px] font-medium text-[#4a5568] hover:bg-[#f7fafc] hover:border-[#a0aec0] transition-colors duration-200"
+                                >
+                                  View
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => router.push(`/app?edit=${p.id}`)}
+                                  className="px-3 py-2 rounded-md border border-[#cbd5e0] bg-white text-[12px] font-medium text-[#4a5568] hover:bg-[#f7fafc] hover:border-[#a0aec0] transition-colors duration-200"
+                                >
+                                  Edit
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {filteredProposals.length === 0 && (
+              <div className="px-6 py-12 text-center">
+                <div className="text-[14px] text-[#718096]">No proposals found matching your filters.</div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -535,72 +683,6 @@ export default function Dashboard() {
               .then(data => setProposals(Array.isArray(data) ? data : []))
               .catch(console.error);
           }}
-        />
-      )}
-
-      {priceModalData && (
-        <EditPriceModal
-          isOpen={true}
-          onClose={() => setPriceModalData(null)}
-          proposalId={priceModalData.id}
-          clientName={priceModalData.clientName}
-          currentPriceLow={priceModalData.priceLow}
-          currentPriceHigh={priceModalData.priceHigh}
-          onUpdated={() => {
-            fetch('/api/proposals', { credentials: 'include' })
-              .then(res => res.json())
-              .then(data => setProposals(Array.isArray(data) ? data : []))
-              .catch(console.error);
-          }}
-        />
-      )}
-
-      {countersignModalData && (
-        <CountersignModal
-          isOpen={true}
-          onClose={() => setCountersignModalData(null)}
-          proposalId={countersignModalData.id}
-          clientName={countersignModalData.clientName}
-          onSuccess={() => {
-            setSuccessMessage(t.dashboard.proposalCountersigned);
-            setIsSuccess(true);
-            fetch('/api/proposals', { credentials: 'include' })
-              .then(res => res.json())
-              .then(data => setProposals(Array.isArray(data) ? data : []))
-              .catch(console.error);
-          }}
-        />
-      )}
-
-      {paymentModalData && (
-        <PaymentLinkModal
-          isOpen={true}
-          onClose={() => setPaymentModalData(null)}
-          proposalId={paymentModalData.id}
-          clientName={paymentModalData.clientName}
-          priceLow={paymentModalData.priceLow}
-          priceHigh={paymentModalData.priceHigh}
-          existingPaymentLink={paymentModalData.paymentLinkUrl}
-          existingDepositPercentage={paymentModalData.depositPercentage}
-          onSuccess={() => {
-            setSuccessMessage(t.dashboard.paymentLinkCreatedSuccess);
-            setIsSuccess(true);
-            fetch('/api/proposals', { credentials: 'include' })
-              .then(res => res.json())
-              .then(data => setProposals(Array.isArray(data) ? data : []))
-              .catch(console.error);
-          }}
-        />
-      )}
-
-      {deleteModalData && (
-        <DeleteDraftDialog
-          isOpen={true}
-          onClose={() => setDeleteModalData(null)}
-          proposalId={deleteModalData.id}
-          clientName={deleteModalData.clientName}
-          onSuccess={() => handleDeleteSuccess(deleteModalData.id)}
-          onError={handleDeleteError}
         />
       )}
     </Layout>

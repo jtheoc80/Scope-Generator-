@@ -159,14 +159,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               {/* ScopeScan - Featured prominently */}
               <Link 
                 href="/m/create" 
-                className="flex items-center gap-3 text-base font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-3 py-3 hover:bg-orange-100 transition-colors"
+                className="flex items-center gap-3 text-base font-medium text-[#1a202c] bg-[#fef5e7] border border-[#d69e2e] rounded-lg px-3 py-3 hover:bg-[#f7fafc] transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
                 data-testid="nav-photo-capture-mobile"
               >
                 <Camera className="w-5 h-5" />
                 <div>
-                  <span className="block">📷 ScopeScan™</span>
-                  <span className="text-xs text-orange-600 font-normal">Snap a few photos → we generate a scope + estimate</span>
+                  <span className="block">ScopeScan</span>
+                  <span className="text-xs text-[#718096] font-normal">Snap a few photos → we generate a scope + estimate</span>
                 </div>
               </Link>
               <Link 
