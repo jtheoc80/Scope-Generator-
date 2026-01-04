@@ -184,6 +184,12 @@ NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=
 └── scripts/              # Build and utility scripts
 ```
 
+### Numeric Folders (00–ff)
+
+The repository contains 248 hexadecimal-named folders (`00/`, `01/`, ... `ff/`) which are **Git object database backup folders**. These contain compressed Git history objects and should not be modified or deleted.
+
+📁 **See [FOLDERS.md](./FOLDERS.md) for complete folder documentation.**
+
 ## Scripts
 
 ### Development
