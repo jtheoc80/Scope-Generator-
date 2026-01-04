@@ -8,3 +8,4 @@
 export * from './auth';
 export * from './proposal';
 export * from './checkout';
+export * from './test-helpers';

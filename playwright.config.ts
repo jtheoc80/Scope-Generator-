@@ -6,14 +6,14 @@ import { defineConfig, devices } from '@playwright/test';
  * Environment variables:
  * - QA_BASE_URL: Base URL for tests (default: http://localhost:3000)
  * - CI: Set automatically by GitHub Actions
+ * - AUTH_MODE: Set to 'test' for predictable test authentication (no real Clerk)
+ * - NEXT_PUBLIC_AUTH_MODE: Client-side auth mode flag
  * 
- * Projects:
- * - chromium: Desktop Chrome browser
- * - mobile-chrome: Mobile Chrome emulation using Pixel 5 (Android device)
+ * Test Auth Mode:
+ * When AUTH_MODE=test is set, the app will render test-friendly auth forms
+ * instead of Clerk components, allowing for deterministic e2e testing.
  * 
- * Running mobile-chrome locally:
- *   npx playwright test --project=mobile-chrome
- *   npx playwright test --project=mobile-chrome --headed
+ * IMPORTANT: networkidle is NOT used - we use domcontentloaded + explicit waits.
  */
 
 const baseURL = process.env.QA_BASE_URL || 'http://localhost:3000';
@@ -27,8 +27,8 @@ export default defineConfig({
   /* Fail the build on CI if you accidentally left test.only in the source code */
   forbidOnly: !!process.env.CI,
   
-  /* Retry on CI for flaky test stability - 3 retries for smoke tests */
-  retries: process.env.CI ? 3 : 0,
+  /* Retry on CI for flaky test stability - reduced from 3 to 2 since tests are more reliable now */
+  retries: process.env.CI ? 2 : 0,
   
   /* Opt out of parallel tests on CI for stability */
   workers: process.env.CI ? 1 : undefined,
@@ -54,19 +54,19 @@ export default defineConfig({
     /* Video on failure */
     video: 'retain-on-failure',
     
-    /* Timeout for each action */
-    actionTimeout: 15000,
+    /* Timeout for each action - reduced from 15s to 5s for faster feedback */
+    actionTimeout: 5000,
     
-    /* Navigation timeout */
-    navigationTimeout: 30000,
+    /* Navigation timeout - reduced from 30s to 10s (no networkidle) */
+    navigationTimeout: 10000,
   },
 
-  /* Global timeout for each test */
-  timeout: 60000,
+  /* Global timeout for each test - reduced from 60s to 30s */
+  timeout: 30000,
   
-  /* Expect timeout */
+  /* Expect timeout - reduced from 10s to 5s */
   expect: {
-    timeout: 10000,
+    timeout: 5000,
   },
 
   /* Configure projects for major browsers */
@@ -108,6 +108,7 @@ export default defineConfig({
   /* Directory for test artifacts */
   outputDir: 'qa/reports/test-results',
 
+  /*
    * Web server configuration for Playwright tests.
    * - In CI, the server is started separately in the workflow; this will reuse it.
    * - Locally, this will start the dev server if it's not already running.
@@ -117,5 +118,10 @@ export default defineConfig({
     url: baseURL,
     reuseExistingServer: true,
     timeout: 120000,
+    /* Pass test auth mode env variables to dev server */
+    env: {
+      AUTH_MODE: process.env.AUTH_MODE || '',
+      NEXT_PUBLIC_AUTH_MODE: process.env.NEXT_PUBLIC_AUTH_MODE || '',
+    },
   },
 });

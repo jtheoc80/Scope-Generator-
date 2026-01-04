@@ -1,9 +1,20 @@
 import { Page, expect } from '@playwright/test';
+import { 
+  goToSignIn, 
+  goToSignUp, 
+  getEmailInputSelector,
+  getPasswordInputSelector,
+  getSubmitButtonSelector,
+  AUTH_OPERATION_TIMEOUT,
+  DEFAULT_ELEMENT_TIMEOUT,
+} from './test-helpers';
 
 /**
  * Authentication flow helpers for QA tests.
  * 
  * Handles sign-up and sign-in flows with test user management.
+ * 
+ * UPDATED: Now uses domcontentloaded + explicit waits instead of networkidle.
  */
 
 export interface TestUser {
@@ -31,115 +42,112 @@ export function generateTestUser(runId?: string): TestUser {
 
 /**
  * Sign up a new user through the UI.
- * Handles Clerk's authentication flow.
+ * Handles Clerk's authentication flow or test auth mode.
  */
 export async function signUp(page: Page, user: TestUser): Promise<void> {
-  await page.goto('/sign-up');
+  // Navigate to sign-up using improved helper (no networkidle)
+  await goToSignUp(page, { timeout: AUTH_OPERATION_TIMEOUT });
   
-  // Wait for Clerk to load
-  await page.waitForLoadState('networkidle');
-  
-  // Clerk's sign-up form uses specific selectors
-  // Try to find the email input in Clerk's form
-  const emailInput = page.locator('input[name="emailAddress"], input[type="email"]').first();
-  await expect(emailInput).toBeVisible({ timeout: 10000 });
-  
+  // Find and fill email input (works for both test mode and Clerk)
+  const emailInput = page.locator(getEmailInputSelector()).first();
+  await expect(emailInput).toBeVisible({ timeout: DEFAULT_ELEMENT_TIMEOUT });
   await emailInput.fill(user.email);
   
   // Look for password input
-  const passwordInput = page.locator('input[name="password"], input[type="password"]').first();
-  if (await passwordInput.isVisible()) {
+  const passwordInput = page.locator(getPasswordInputSelector()).first();
+  if (await passwordInput.isVisible({ timeout: 1000 }).catch(() => false)) {
     await passwordInput.fill(user.password);
   }
   
-  // Fill name fields if visible
-  const firstNameInput = page.locator('input[name="firstName"]');
-  if (await firstNameInput.isVisible()) {
+  // Fill name fields if visible (test mode has these)
+  const firstNameInput = page.locator('[data-testid="signup-firstname"], input[name="firstName"]').first();
+  if (await firstNameInput.isVisible({ timeout: 500 }).catch(() => false)) {
     await firstNameInput.fill(user.firstName || 'QA');
   }
   
-  const lastNameInput = page.locator('input[name="lastName"]');
-  if (await lastNameInput.isVisible()) {
+  const lastNameInput = page.locator('[data-testid="signup-lastname"], input[name="lastName"]').first();
+  if (await lastNameInput.isVisible({ timeout: 500 }).catch(() => false)) {
     await lastNameInput.fill(user.lastName || 'Test');
   }
   
   // Submit the form
-  const submitButton = page.locator('button[type="submit"]').first();
+  const submitButton = page.locator(getSubmitButtonSelector()).first();
   await submitButton.click();
   
-  // Wait for redirect or next step
-  // Clerk might show email verification step
-  await page.waitForTimeout(2000);
+  // Wait for navigation to complete - use explicit URL check instead of arbitrary timeout
+  // Either we go to dashboard, verification, or stay on sign-up with error
+  await page.waitForURL(/\/(dashboard|generator|app|sign-up)/, { timeout: AUTH_OPERATION_TIMEOUT });
   
-  // Check if we need to handle email verification
+  // Check if we need to handle email verification (Clerk flow)
   const verificationCode = page.locator('input[name="code"]');
-  if (await verificationCode.isVisible()) {
-    // In QA mode, we might have auto-verification enabled
-    // Or use test-only bypass endpoint
+  if (await verificationCode.isVisible({ timeout: 1000 }).catch(() => false)) {
     const qaSecret = process.env.QA_TEST_SECRET;
     if (qaSecret) {
-      // Call test-only verification bypass
       await page.request.post('/api/qa/verify-user', {
         data: { email: user.email, secret: qaSecret },
       });
-      // Refresh the page to continue
-      await page.reload();
+      await page.reload({ waitUntil: 'domcontentloaded' });
     }
   }
   
-  // Wait for dashboard or success state
-  await expect(page).toHaveURL(/\/(dashboard|generator|app)/, { timeout: 30000 });
+  // Final check: should be on dashboard or similar
+  await expect(page).toHaveURL(/\/(dashboard|generator|app)/, { timeout: AUTH_OPERATION_TIMEOUT });
 }
 
 /**
  * Sign in an existing user through the UI.
+ * Works with both test auth mode and Clerk.
  */
 export async function signIn(page: Page, user: TestUser): Promise<void> {
-  await page.goto('/sign-in');
-  
-  // Wait for Clerk to load
-  await page.waitForLoadState('networkidle');
+  // Navigate to sign-in using improved helper (no networkidle)
+  await goToSignIn(page, { timeout: AUTH_OPERATION_TIMEOUT });
   
   // Find and fill email
-  const emailInput = page.locator('input[name="identifier"], input[type="email"]').first();
-  await expect(emailInput).toBeVisible({ timeout: 10000 });
+  const emailInput = page.locator(getEmailInputSelector()).first();
+  await expect(emailInput).toBeVisible({ timeout: DEFAULT_ELEMENT_TIMEOUT });
   await emailInput.fill(user.email);
   
-  // Clerk might have a continue button before password
+  // Clerk might have a continue button before password (two-step flow)
   const continueButton = page.locator('button:has-text("Continue")');
-  if (await continueButton.isVisible()) {
+  if (await continueButton.isVisible({ timeout: 500 }).catch(() => false)) {
     await continueButton.click();
-    await page.waitForTimeout(1000);
+    // Wait for password field to appear
+    await page.locator(getPasswordInputSelector()).first().waitFor({ 
+      state: 'visible', 
+      timeout: DEFAULT_ELEMENT_TIMEOUT 
+    });
   }
   
   // Fill password
-  const passwordInput = page.locator('input[name="password"], input[type="password"]').first();
-  await expect(passwordInput).toBeVisible({ timeout: 5000 });
+  const passwordInput = page.locator(getPasswordInputSelector()).first();
+  await expect(passwordInput).toBeVisible({ timeout: DEFAULT_ELEMENT_TIMEOUT });
   await passwordInput.fill(user.password);
   
   // Submit
-  const submitButton = page.locator('button[type="submit"]').first();
+  const submitButton = page.locator(getSubmitButtonSelector()).first();
   await submitButton.click();
   
-  // Wait for dashboard
-  await expect(page).toHaveURL(/\/(dashboard|generator|app)/, { timeout: 30000 });
+  // Wait for navigation - should redirect to dashboard or stay on sign-in with error
+  await page.waitForURL(/\/(dashboard|generator|app|sign-in)/, { timeout: AUTH_OPERATION_TIMEOUT });
+  
+  // Final check: should be on dashboard
+  await expect(page).toHaveURL(/\/(dashboard|generator|app)/, { timeout: AUTH_OPERATION_TIMEOUT });
 }
 
 /**
  * Sign out the current user.
  */
 export async function signOut(page: Page): Promise<void> {
-  await page.goto('/sign-out');
-  await page.waitForLoadState('networkidle');
+  await page.goto('/sign-out', { waitUntil: 'domcontentloaded' });
   
   // Confirm sign out if needed
   const signOutButton = page.locator('button:has-text("Sign out")');
-  if (await signOutButton.isVisible()) {
+  if (await signOutButton.isVisible({ timeout: 1000 }).catch(() => false)) {
     await signOutButton.click();
   }
   
-  // Wait for redirect to home
-  await expect(page).toHaveURL(/^\/$|\/sign-in/, { timeout: 10000 });
+  // Wait for redirect to home or sign-in
+  await expect(page).toHaveURL(/^\/$|\/sign-in/, { timeout: AUTH_OPERATION_TIMEOUT });
 }
 
 /**
@@ -175,6 +183,8 @@ export async function createTestUserViaAPI(page: Page, user: TestUser): Promise<
 
 /**
  * Capture console errors during a test.
+ * 
+ * Enhanced version that also captures page errors and provides filtering.
  */
 export function captureConsoleErrors(page: Page): string[] {
   const errors: string[] = [];
@@ -191,3 +201,13 @@ export function captureConsoleErrors(page: Page): string[] {
   
   return errors;
 }
+
+/**
+ * Enhanced error capture with categorization.
+ * Use with setupDiagnostics from test-helpers for comprehensive diagnostics.
+ */
+export { 
+  setupDiagnostics, 
+  printDiagnostics, 
+  filterAcceptableErrors 
+} from './test-helpers';
