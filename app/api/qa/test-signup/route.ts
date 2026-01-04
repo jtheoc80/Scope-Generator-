@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { storage } from '@/lib/services/storage';
+import {
+  isTestAuthMode,
+  TEST_SESSION_COOKIE,
+  TEST_SESSION_MAX_AGE,
+  type TestSessionData
+} from '@/lib/test-auth';
 
 /**
  * QA Test Sign Up - For E2E tests to create accounts without Clerk.
@@ -10,13 +16,6 @@ import { storage } from '@/lib/services/storage';
  * 
  * MUST NOT be available in production.
  */
-
-const TEST_SESSION_COOKIE = 'qa_test_session';
-const TEST_SESSION_MAX_AGE = 3600; // 1 hour
-
-function isTestAuthMode(): boolean {
-  return process.env.AUTH_MODE === 'test' || process.env.NEXT_PUBLIC_AUTH_MODE === 'test';
-}
 
 export async function POST(request: NextRequest) {
   // Guard: Only available in test auth mode
@@ -79,7 +78,7 @@ export async function POST(request: NextRequest) {
     await storage.addProposalCredits(userId, 10, expiresAt);
 
     // Create test session token
-    const sessionData = {
+    const sessionData: TestSessionData = {
       userId,
       email,
       createdAt: Date.now(),
