@@ -166,7 +166,7 @@ export default function ProposalViewPage() {
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={() => router.back()}
+              onClick={() => router.push("/dashboard")}
               className="gap-2"
             >
               <ArrowLeft className="w-4 h-4" />
