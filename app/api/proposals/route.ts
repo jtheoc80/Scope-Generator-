@@ -50,9 +50,12 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     
+    // Ensure scopeSections defaults to empty array (never undefined)
     const validationResult = insertProposalSchema.safeParse({
       ...body,
       userId,
+      // Default scopeSections to [] if not provided
+      scopeSections: body.scopeSections ?? [],
     });
 
     if (!validationResult.success) {
@@ -65,6 +68,12 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Log insert keys for debugging (no PII)
+    const insertKeys = Object.keys(validationResult.data).filter(
+      k => validationResult.data[k as keyof typeof validationResult.data] !== undefined
+    );
+    console.log('[proposals/POST] Insert keys:', insertKeys.join(', '));
 
     const proposal = await storage.createProposal(validationResult.data);
     return NextResponse.json(proposal);

@@ -220,12 +220,19 @@ export class DatabaseStorage implements IStorage {
 
   // Proposal operations
   async createProposal(proposal: InsertProposal): Promise<Proposal> {
-    const { options, ...rest } = proposal;
+    const { options, scopeSections, ...rest } = proposal;
+    
+    // Log insert keys for debugging (no PII - just column names)
+    const insertKeys = Object.keys({ ...rest, options, scopeSections });
+    console.log("[createProposal] Insert keys:", insertKeys.join(", "));
+    
     const [newProposal] = await db
       .insert(proposals)
       .values({
         ...rest,
         options: options ?? {},
+        // Ensure scopeSections is never undefined - use empty array as fallback
+        scopeSections: scopeSections ?? [],
       } as typeof proposals.$inferInsert)
       .returning();
     return newProposal;
