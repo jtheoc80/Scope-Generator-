@@ -330,6 +330,7 @@ const getAreaOptionsForTrade = (
       return toOptions(roofingAreaValues);
     case "concrete":
     case "landscape":
+    case "landscaping":
       return toOptions(exteriorAreaValues);
     case "plumbing":
       // Plumbing only in areas with water fixtures: bathrooms, kitchens, laundry, basement, garage
