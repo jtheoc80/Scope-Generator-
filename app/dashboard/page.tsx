@@ -54,7 +54,7 @@ export default function Dashboard() {
   const [insightsError, setInsightsError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState<boolean>(true);
-  const [emailModalData, setEmailModalData] = useState<{ id: number; clientName: string } | null>(null);
+  const [emailModalData, setEmailModalData] = useState<{ id: number; clientName: string; publicToken?: string } | null>(null);
   const [priceModalData, setPriceModalData] = useState<{ 
     id: number; 
     clientName: string; 
@@ -470,7 +470,7 @@ export default function Dashboard() {
                 onView={(p) => {
                   if (p.publicToken) window.open(`/p/${p.publicToken}`, "_blank");
                 }}
-                onEmail={(p) => setEmailModalData({ id: p.id, clientName: p.clientName })}
+                onEmail={(p) => setEmailModalData({ id: p.id, clientName: p.clientName, publicToken: p.publicToken ?? undefined })}
                 onAdjustPrice={(p) =>
                   setPriceModalData({
                     id: p.id,
@@ -529,6 +529,7 @@ export default function Dashboard() {
           onClose={() => setEmailModalData(null)}
           proposalId={emailModalData.id}
           clientName={emailModalData.clientName}
+          publicToken={emailModalData.publicToken}
           onSuccess={() => {
             fetch('/api/proposals', { credentials: 'include' })
               .then(res => res.json())

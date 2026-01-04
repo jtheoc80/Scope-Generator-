@@ -86,8 +86,16 @@ export async function POST(
     });
 
     if (!result.success) {
+      console.error('[API] Proposal email send failed:', {
+        proposalId,
+        recipientEmail,
+        error: result.error,
+      });
       return NextResponse.json(
-        { message: result.error || 'Failed to send email' },
+        { 
+          message: "Couldn't send email. Please try again.",
+          publicUrl: proposalUrl 
+        },
         { status: 500 }
       );
     }
@@ -125,9 +133,12 @@ export async function POST(
       publicUrl: proposalUrl 
     });
   } catch (error) {
-    console.error('Error sending proposal email:', error);
+    console.error('[API] Error in proposal email route:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return NextResponse.json(
-      { message: 'Failed to send email' },
+      { message: "Couldn't send email. Please try again." },
       { status: 500 }
     );
   }

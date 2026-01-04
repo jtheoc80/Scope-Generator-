@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Mail, Send } from "lucide-react";
+import { Loader2, Mail, Send, Copy, Check, Link2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface EmailProposalModalProps {
@@ -20,6 +20,7 @@ interface EmailProposalModalProps {
   onClose: () => void;
   proposalId: number;
   clientName: string;
+  publicToken?: string;
   onSuccess?: () => void;
 }
 
@@ -28,6 +29,7 @@ export default function EmailProposalModal({
   onClose,
   proposalId,
   clientName,
+  publicToken,
   onSuccess,
 }: EmailProposalModalProps) {
   const [recipientEmail, setRecipientEmail] = useState("");
@@ -36,6 +38,9 @@ export default function EmailProposalModal({
     `Hi ${clientName},\n\nPlease find attached the proposal for your project. Let me know if you have any questions.\n\nBest regards`
   );
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
   const handleSend = async () => {
@@ -49,6 +54,7 @@ export default function EmailProposalModal({
     }
 
     setSending(true);
+    setSendError(false);
     try {
       const res = await fetch(`/api/proposals/${proposalId}/email`, {
         method: "POST",
@@ -61,9 +67,25 @@ export default function EmailProposalModal({
         }),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Failed to send email");
+        // Store the share URL if provided for fallback
+        if (data.publicUrl) {
+          setShareUrl(data.publicUrl);
+        }
+        setSendError(true);
+        toast({
+          title: "Couldn't send email",
+          description: "Please try again or copy the share link below.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Capture the public URL from successful response
+      if (data.publicUrl) {
+        setShareUrl(data.publicUrl);
       }
 
       toast({
@@ -73,13 +95,42 @@ export default function EmailProposalModal({
       onSuccess?.();
       onClose();
     } catch (error: any) {
+      setSendError(true);
       toast({
-        title: "Error sending email",
-        description: error.message || "Please try again.",
+        title: "Couldn't send email",
+        description: "Please try again or copy the share link below.",
         variant: "destructive",
       });
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    const url = shareUrl || (publicToken ? `${window.location.origin}/p/${publicToken}` : null);
+    if (!url) {
+      toast({
+        title: "No share link available",
+        description: "Please try sending the email first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      toast({
+        title: "Link copied!",
+        description: "Share this link with your client.",
+      });
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast({
+        title: "Failed to copy",
+        description: "Please copy the link manually.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -133,6 +184,41 @@ export default function EmailProposalModal({
           </div>
         </div>
 
+        {sendError && (shareUrl || publicToken) && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+            <div className="flex items-start gap-3">
+              <Link2 className="w-5 h-5 text-amber-600 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-amber-800">
+                  Email couldn't be sent
+                </p>
+                <p className="text-sm text-amber-600 mt-1">
+                  You can copy the share link and send it manually.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={handleCopyLink}
+                  data-testid="button-copy-share-link"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="w-4 h-4 mr-2" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4 mr-2" />
+                      Copy share link
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={sending}>
             Cancel
@@ -146,7 +232,7 @@ export default function EmailProposalModal({
             ) : (
               <>
                 <Send className="w-4 h-4 mr-2" />
-                Send Proposal
+                {sendError ? 'Try Again' : 'Send Proposal'}
               </>
             )}
           </Button>

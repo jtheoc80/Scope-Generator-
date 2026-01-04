@@ -436,7 +436,7 @@ export default function Dashboard() {
   const [showPaywall, setShowPaywall] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState<boolean>(true);
-  const [emailModalData, setEmailModalData] = useState<{ id: number; clientName: string } | null>(null);
+  const [emailModalData, setEmailModalData] = useState<{ id: number; clientName: string; publicToken?: string } | null>(null);
   const [priceModalData, setPriceModalData] = useState<{ 
     id: number; 
     clientName: string; 
@@ -778,7 +778,8 @@ export default function Dashboard() {
                               className="h-9 w-9 text-slate-400 hover:text-blue-600"
                               onClick={() => setEmailModalData({ 
                                 id: proposal.id, 
-                                clientName: proposal.clientName 
+                                clientName: proposal.clientName,
+                                publicToken: proposal.publicToken 
                               })}
                               title={t.dashboard.quickSend}
                               data-testid={`button-quick-send-mobile-${proposal.id}`}
@@ -790,7 +791,7 @@ export default function Dashboard() {
                               t={t}
                               onEdit={() => handleEditProposal(proposal)}
                               onView={() => handleViewProposal(proposal)}
-                              onEmail={() => setEmailModalData({ id: proposal.id, clientName: proposal.clientName })}
+                              onEmail={() => setEmailModalData({ id: proposal.id, clientName: proposal.clientName, publicToken: proposal.publicToken })}
                               onPrice={() => setPriceModalData({ id: proposal.id, clientName: proposal.clientName, priceLow: proposal.priceLow, priceHigh: proposal.priceHigh })}
                               onCountersign={() => setCountersignModalData({ id: proposal.id, clientName: proposal.clientName })}
                               onPayment={() => setPaymentModalData({ 
@@ -879,7 +880,8 @@ export default function Dashboard() {
                                   className="h-8 w-8 text-slate-400 hover:text-blue-600"
                                   onClick={() => setEmailModalData({ 
                                     id: proposal.id, 
-                                    clientName: proposal.clientName 
+                                    clientName: proposal.clientName,
+                                    publicToken: proposal.publicToken 
                                   })}
                                   title={t.dashboard.quickSend}
                                   data-testid={`button-quick-send-${proposal.id}`}
@@ -924,7 +926,8 @@ export default function Dashboard() {
                                 <DropdownMenuItem 
                                   onClick={() => setEmailModalData({ 
                                     id: proposal.id, 
-                                    clientName: proposal.clientName 
+                                    clientName: proposal.clientName,
+                                    publicToken: proposal.publicToken 
                                   })}
                                   data-testid={`button-email-proposal-${proposal.id}`}
                                 >
@@ -1041,6 +1044,7 @@ export default function Dashboard() {
           onClose={() => setEmailModalData(null)}
           proposalId={emailModalData.id}
           clientName={emailModalData.clientName}
+          publicToken={emailModalData.publicToken}
           onSuccess={() => {
             fetch('/api/proposals', { credentials: 'include' })
               .then(res => res.json())

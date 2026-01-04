@@ -684,9 +684,13 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       });
 
       if (!emailResult.success) {
+        console.error('[API] Proposal email send failed:', {
+          proposalId,
+          recipientEmail,
+          error: emailResult.error,
+        });
         return res.status(500).json({ 
-          message: "Failed to send email", 
-          error: emailResult.error 
+          message: "Couldn't send email. Please try again."
         });
       }
 
