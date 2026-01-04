@@ -69,13 +69,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Log insert keys for debugging (no PII)
-    const insertKeys = Object.keys(validationResult.data).filter(
-      k => validationResult.data[k as keyof typeof validationResult.data] !== undefined
-    );
-    console.log('[proposals/POST] Insert keys:', insertKeys.join(', '));
+    // Log basic insert metadata for debugging without exposing field names
+    const fieldCount = Object.keys(validationResult.data).length;
+    console.log('[proposals/POST] Validated proposal payload with', fieldCount, 'fields');
 
     const proposal = await storage.createProposal(validationResult.data);
+    return NextResponse.json(proposal);
+  } catch (error) {
     return NextResponse.json(proposal);
   } catch (error) {
     console.error('Error creating proposal:', error);
