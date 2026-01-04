@@ -2,6 +2,14 @@ import { SignUp } from "@clerk/nextjs";
 import Link from "next/link";
 import { isClerkConfigured } from "@/lib/authUtils";
 import { Hammer, CheckCircle2 } from "lucide-react";
+import { TestSignUpForm } from "./test-signup-form";
+
+/**
+ * Check if we're in test auth mode (for e2e testing without real Clerk)
+ */
+function isTestAuthMode(): boolean {
+  return process.env.AUTH_MODE === 'test' || process.env.NEXT_PUBLIC_AUTH_MODE === 'test';
+}
 
 export default async function SignUpPage({
   searchParams,
@@ -11,11 +19,50 @@ export default async function SignUpPage({
   const params = await searchParams;
   const redirectUrl = params?.redirect_url || "/dashboard";
   const selectedPlan = params?.plan;
+  const testMode = isTestAuthMode();
+
+  // In test mode, render a predictable test-friendly form
+  if (testMode) {
+    return (
+      <div 
+        className="min-h-screen flex items-center justify-center bg-slate-50 px-6"
+        data-testid="signup-page"
+      >
+        <div 
+          className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-sm"
+          data-testid="signup-form"
+        >
+          <h1 className="text-xl font-semibold text-slate-900 mb-4">Create account</h1>
+          <p className="text-sm text-slate-600 mb-6">
+            Test authentication mode is active.
+          </p>
+          <TestSignUpForm redirectUrl={redirectUrl} />
+          <div className="mt-6 text-center">
+            <p className="text-sm text-slate-600">
+              Already have an account?{" "}
+              <Link 
+                href="/sign-in"
+                className="text-orange-600 hover:text-orange-700 font-semibold"
+              >
+                Sign in
+              </Link>
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!isClerkConfigured()) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-6">
-        <div className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+      <div 
+        className="min-h-screen flex items-center justify-center bg-slate-50 px-6"
+        data-testid="signup-page"
+      >
+        <div 
+          className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-sm"
+          data-testid="signup-form"
+        >
           <h1 className="text-xl font-semibold text-slate-900">Create account</h1>
           <p className="mt-2 text-sm text-slate-600">
             Sign up isn&apos;t available right now because authentication isn&apos;t configured.
@@ -44,7 +91,7 @@ export default async function SignUpPage({
   }
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
+    <div className="min-h-screen flex flex-col lg:flex-row" data-testid="signup-page">
       {/* Left side - Branding and benefits */}
       <div className="hidden lg:flex lg:w-1/2 bg-slate-900 text-white p-12 flex-col justify-between">
         <div>
@@ -123,21 +170,23 @@ export default async function SignUpPage({
             </p>
           </div>
           
-          <SignUp 
-            appearance={{
-              elements: {
-                rootBox: "w-full",
-                card: "shadow-xl border border-slate-200 rounded-xl",
-                headerTitle: "hidden",
-                headerSubtitle: "hidden",
-                socialButtonsBlockButton: "border border-slate-300 hover:bg-slate-50",
-                formButtonPrimary: "bg-orange-500 hover:bg-orange-600",
-                footerActionLink: "text-orange-600 hover:text-orange-700",
-              },
-            }}
-            fallbackRedirectUrl={redirectUrl}
-            signInUrl={`/sign-in${selectedPlan ? `?plan=${selectedPlan}` : ''}`}
-          />
+          <div data-testid="signup-form">
+            <SignUp 
+              appearance={{
+                elements: {
+                  rootBox: "w-full",
+                  card: "shadow-xl border border-slate-200 rounded-xl",
+                  headerTitle: "hidden",
+                  headerSubtitle: "hidden",
+                  socialButtonsBlockButton: "border border-slate-300 hover:bg-slate-50",
+                  formButtonPrimary: "bg-orange-500 hover:bg-orange-600",
+                  footerActionLink: "text-orange-600 hover:text-orange-700",
+                },
+              }}
+              fallbackRedirectUrl={redirectUrl}
+              signInUrl={`/sign-in${selectedPlan ? `?plan=${selectedPlan}` : ''}`}
+            />
+          </div>
           
           <div className="mt-6 text-center">
             <p className="text-sm text-slate-600">
