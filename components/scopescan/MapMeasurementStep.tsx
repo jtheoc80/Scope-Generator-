@@ -296,7 +296,6 @@ export default function MapMeasurementStep({
   // State
   const [measurements, setMeasurements] = useState<Measurements | null>(null);
   const [thickness, setThickness] = useState<number>(DEFAULT_THICKNESS);
-  const [isInitialized, setIsInitialized] = useState(false);
 
   // Determine if shape is valid
   const isFence = trade === "fence";
@@ -603,7 +602,6 @@ export default function MapMeasurementStep({
         }
       }
 
-      setIsInitialized(true);
     },
     [
       isFence,

@@ -3,17 +3,14 @@ import { notFound } from "next/navigation";
 import Layout from "@/components/layout";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, ArrowRight, Calendar, Clock, Zap, User, RefreshCw } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calendar, Clock, User, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { blogPosts, getRelatedPosts } from "@/lib/blog-data";
 import { generateArticleSchema, generateBreadcrumbSchema, generateFAQSchema } from "@/lib/seo/jsonld";
 import { 
-  BlogHero, 
   TableOfContents, 
   AuthorCard,
   InlineCTA,
-  Callout,
-  Checklist,
   RelatedPosts,
   extractTOC
 } from "@/components/blog";
