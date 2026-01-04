@@ -6,6 +6,7 @@ import Image from "next/image";
 import { ArrowLeft, ArrowRight, Calendar, Clock, Zap, User, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { blogPosts, getRelatedPosts } from "@/lib/blog-data";
+import { extractTOC } from "@/lib/blog-utils";
 import { generateArticleSchema, generateBreadcrumbSchema, generateFAQSchema } from "@/lib/seo/jsonld";
 import { 
   BlogHero, 
@@ -15,7 +16,6 @@ import {
   Callout,
   Checklist,
   RelatedPosts,
-  extractTOC
 } from "@/components/blog";
 
 interface PageProps {
@@ -281,9 +281,8 @@ export default async function BlogPostPage({ params }: PageProps) {
     datePublished: new Date(post.datePublished).toISOString(),
     dateModified: new Date(post.dateModified).toISOString(),
     author: post.author.name,
-    image: post.heroImage || post.ogImage,
     type: "BlogPosting",
-    image: post.heroImage ? `https://scopegenerator.com${post.heroImage}` : undefined,
+    image: post.heroImage ? `https://scopegenerator.com${post.heroImage}` : (post.ogImage || undefined),
   });
 
   const breadcrumbs = generateBreadcrumbSchema([
@@ -330,7 +329,7 @@ export default async function BlogPostPage({ params }: PageProps) {
                 </span>
                 <span className="flex items-center gap-1">
                   <Calendar className="h-4 w-4" />
-                  {post.date}
+                  {post.datePublished}
                 </span>
                 <span className="flex items-center gap-1">
                   <Clock className="h-4 w-4" />
@@ -348,8 +347,8 @@ export default async function BlogPostPage({ params }: PageProps) {
                   <User className="w-6 h-6 text-slate-400" />
                 </div>
                 <div>
-                  <p className="font-medium text-white">{post.author}</p>
-                  <p className="text-sm text-slate-400">Construction Industry Expert</p>
+                  <p className="font-medium text-white">{post.author.name}</p>
+                  <p className="text-sm text-slate-400">{post.author.credentials || 'Construction Industry Expert'}</p>
                 </div>
               </div>
             </div>
@@ -384,7 +383,7 @@ export default async function BlogPostPage({ params }: PageProps) {
           <div className="container mx-auto px-4 py-3">
             <div className="max-w-3xl mx-auto flex items-center gap-2 text-sm text-slate-600">
               <RefreshCw className="h-4 w-4" />
-              <span>Last updated: {post.date}</span>
+              <span>Last updated: {post.dateModified || post.datePublished}</span>
             </div>
           </div>
         </div>

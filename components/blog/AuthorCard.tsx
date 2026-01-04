@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from "react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { User, Calendar, RefreshCw, Clock } from "lucide-react";
 
@@ -36,11 +37,13 @@ export function AuthorCard({
         className
       )}>
         <div className="flex items-start gap-4">
-          <div className="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center flex-shrink-0">
+          <div className="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
             {author.avatar ? (
-              <img 
+              <Image 
                 src={author.avatar} 
                 alt={author.name}
+                width={64}
+                height={64}
                 className="w-full h-full rounded-full object-cover"
               />
             ) : (
@@ -74,11 +77,13 @@ export function AuthorCard({
   // Header variant (compact)
   return (
     <div className={cn("flex items-center gap-4", className)}>
-      <div className="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center flex-shrink-0">
+      <div className="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
         {author.avatar ? (
-          <img 
+          <Image 
             src={author.avatar} 
             alt={author.name}
+            width={48}
+            height={48}
             className="w-full h-full rounded-full object-cover"
           />
         ) : (
