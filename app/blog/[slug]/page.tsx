@@ -494,7 +494,10 @@ export default async function BlogPostPage({ params }: PageProps) {
                       key={index}
                       className="bg-white rounded-lg border p-4 group"
                     >
-                      <summary className="font-semibold text-slate-900 cursor-pointer list-none flex items-center justify-between">
+                      <summary 
+                        className="font-semibold text-slate-900 cursor-pointer list-none flex items-center justify-between"
+                        aria-label="Toggle FAQ answer"
+                      >
                         {faq.question}
                         <span className="text-slate-400 group-open:rotate-180 transition-transform">
                           ▼
