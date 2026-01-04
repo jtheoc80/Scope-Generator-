@@ -21,6 +21,7 @@ import {
   MapPin,
 } from "lucide-react";
 import { mobileApiFetch, newIdempotencyKey, SubmitResponse, MobileJob } from "@/app/m/lib/api";
+import JobAddressField from "@/components/job-address-field";
 import { EagleViewRoofMeasurements } from "@/components/eagleview-roof-measurements";
 import type { RoofingMeasurements } from "@/hooks/useEagleViewOrder";
 
@@ -388,18 +389,17 @@ export default function PreviewPage() {
                     <MapPin className="w-3 h-3" />
                     Job Address
                   </Label>
-                  <Input
-                    id="address"
-                    placeholder="Enter job address"
+                  <JobAddressField
                     value={address}
-                    onChange={(e) => {
-                      setAddress(e.target.value);
+                    onChange={(val) => {
+                      setAddress(val);
                       if (clientDetailsErrors.address) {
                         setClientDetailsErrors(prev => ({ ...prev, address: undefined }));
                       }
                     }}
+                    placeholder="Start typing an address..."
                     disabled={savingClientDetails}
-                    className={clientDetailsErrors.address ? "border-red-500" : ""}
+                    className={clientDetailsErrors.address ? "[&_input]:border-red-500" : ""}
                     data-testid="input-address"
                   />
                   {clientDetailsErrors.address && (
