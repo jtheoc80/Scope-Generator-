@@ -110,7 +110,7 @@ export function deduplicateItems<T extends DeduplicatableItem>(
       // 1. Prefer "damage" category (more specific/actionable)
       // 2. Then prefer higher confidence
       // 3. Then prefer shorter, cleaner labels (less verbose)
-      const best = group.sort((a, b) => {
+      const best = [...group].sort((a, b) => {
         // Prefer damage category
         const aIsDamage = a.category === "damage" ? 1 : 0;
         const bIsDamage = b.category === "damage" ? 1 : 0;
