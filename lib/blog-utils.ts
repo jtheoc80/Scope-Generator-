@@ -1,7 +1,7 @@
 // Utility functions for blog content processing
 // These are server-side utilities that don't require 'use client'
 
-interface TOCItem {
+export interface TOCItem {
   id: string;
   text: string;
   level: number;

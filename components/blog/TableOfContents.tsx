@@ -3,12 +3,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { List, ChevronDown, ChevronUp } from "lucide-react";
-
-interface TOCItem {
-  id: string;
-  text: string;
-  level: number;
-}
+import type { TOCItem } from "@/lib/blog-utils";
 
 interface TableOfContentsProps {
   items: TOCItem[];
@@ -121,18 +116,6 @@ export function TableOfContents({ items, className, variant = 'inline' }: TableO
       )}
     </div>
   );
-}
-
-// Helper to extract TOC from content
-export function extractTOC(content: string[]): TOCItem[] {
-  return content
-    .filter(block => block.startsWith('## ') || block.startsWith('### '))
-    .map(heading => {
-      const level = heading.startsWith('### ') ? 3 : 2;
-      const text = heading.replace(/^#{2,3}\s/, '');
-      const id = text.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
-      return { id, text, level };
-    });
 }
 
 export default TableOfContents;

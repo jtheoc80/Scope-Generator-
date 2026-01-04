@@ -204,24 +204,46 @@ function renderContent(content: string[], inlineCTAIndex: number) {
   const elements: React.ReactNode[] = [];
   let ctaInserted = false;
 
+  // Group content blocks and render markdown more efficiently
+  let currentGroup: string[] = [];
+  
   for (let i = 0; i < content.length; i++) {
     const block = content[i];
 
     // Insert inline CTA roughly 40% through the content
     if (!ctaInserted && i >= inlineCTAIndex) {
+      // Render accumulated blocks before CTA
+      if (currentGroup.length > 0) {
+        elements.push(
+          <ReactMarkdown
+            key={`md-group-${elements.length}`}
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeSanitize]}
+            components={markdownComponents}
+          >
+            {currentGroup.join('\n\n')}
+          </ReactMarkdown>
+        );
+        currentGroup = [];
+      }
+      
       elements.push(<InlineCTA key={`cta-${i}`} />);
       ctaInserted = true;
     }
 
-    // Render each block as markdown using ReactMarkdown
+    currentGroup.push(block);
+  }
+  
+  // Render remaining blocks
+  if (currentGroup.length > 0) {
     elements.push(
       <ReactMarkdown
-        key={`md-${i}`}
+        key={`md-group-${elements.length}`}
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeSanitize]}
         components={markdownComponents}
       >
-        {block}
+        {currentGroup.join('\n\n')}
       </ReactMarkdown>
     );
   }
@@ -250,7 +272,11 @@ export default async function BlogPostPage({ params }: PageProps) {
     dateModified: new Date(post.dateModified).toISOString(),
     author: post.author.name,
     type: "BlogPosting",
-    image: post.heroImage ? `https://scopegenerator.com${post.heroImage}` : post.ogImage,
+    image: post.heroImage 
+      ? `https://scopegenerator.com${post.heroImage}` 
+      : post.ogImage 
+        ? `https://scopegenerator.com${post.ogImage}`
+        : undefined,
   });
 
   const breadcrumbs = generateBreadcrumbSchema([
