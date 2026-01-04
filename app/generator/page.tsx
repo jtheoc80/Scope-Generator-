@@ -1031,12 +1031,24 @@ function GeneratorContent() {
   };
 
   // Check if finalize fields are filled (for UI state)
-  const hasFinalizeFields = Boolean(
+  const hasClientName = Boolean(
     watchedValues.clientName &&
-    watchedValues.clientName.trim().length >= 2 &&
+    watchedValues.clientName.trim().length >= 2,
+  );
+  const hasAddress = Boolean(
     watchedValues.address &&
     watchedValues.address.trim().length >= 5,
   );
+  const hasFinalizeFields = hasClientName && hasAddress;
+
+  // Generate tooltip message for export buttons when fields are missing
+  const getExportTooltip = (): string | undefined => {
+    if (hasFinalizeFields) return undefined;
+    const missing: string[] = [];
+    if (!hasClientName) missing.push("client name");
+    if (!hasAddress) missing.push("job address");
+    return `Add ${missing.join(" and ")} to export`;
+  };
 
   // Clear finalize errors when fields change
   const clearFinalizeErrors = () => {
@@ -2121,6 +2133,7 @@ function GeneratorContent() {
                     <form
                       onSubmit={form.handleSubmit(onSubmit)}
                       className="space-y-6"
+                      data-testid="proposal-form"
                     >
                       {/* Client Info - Draft-first: These are optional for generating drafts */}
                       <div className="space-y-4">
@@ -2166,7 +2179,9 @@ function GeneratorContent() {
                                     t.generator.clientNamePlaceholder
                                   }
                                   {...field}
+                                  id="client-name"
                                   data-testid="input-client-name"
+                                  data-test="client-name"
                                   className={cn(
                                     finalizeErrors.clientName &&
                                       "border-red-500 focus-visible:ring-red-500",
@@ -2201,7 +2216,7 @@ function GeneratorContent() {
                           control={form.control}
                           name="address"
                           render={({ field }) => (
-                            <FormItem>
+                            <FormItem data-test="job-address">
                               <FormLabel>{t.generator.jobAddress}</FormLabel>
                               <FormControl>
                                 <JobAddressField
@@ -2347,6 +2362,7 @@ function GeneratorContent() {
                         className="w-full bg-primary hover:bg-primary/90 text-white font-bold h-12 text-lg"
                         disabled={isGenerating || !hasValidServices}
                         data-testid="button-generate-proposal"
+                        data-test="generate-draft"
                       >
                         {isGenerating ? (
                           <>
@@ -2463,11 +2479,8 @@ function GeneratorContent() {
                           onClick={handleDownload}
                           disabled={isDownloading}
                           data-testid="button-download-pdf"
-                          title={
-                            !hasFinalizeFields
-                              ? "Add client name and address to download"
-                              : undefined
-                          }
+                          data-test="export-pdf"
+                          title={getExportTooltip()}
                         >
                           {isDownloading ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
@@ -2491,11 +2504,7 @@ function GeneratorContent() {
                           onClick={handleEmailClick}
                           disabled={isSavingForEmail}
                           data-testid="button-email-proposal"
-                          title={
-                            !hasFinalizeFields
-                              ? "Add client name and address to send"
-                              : undefined
-                          }
+                          title={getExportTooltip()}
                         >
                           {isSavingForEmail ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
@@ -2582,6 +2591,7 @@ function GeneratorContent() {
                             onClick={handleDownload}
                             disabled={isDownloading}
                             data-testid="button-download-pdf"
+                            data-test="export-pdf"
                             title={
                               !hasFinalizeFields
                                 ? "Add client name and address to download"
@@ -2641,7 +2651,7 @@ function GeneratorContent() {
                     )}
 
                     {/* The Document - Desktop */}
-                    <div data-testid="proposal-preview-container">
+                    <div data-testid="proposal-preview-container" id="proposal-preview">
                       <ProposalPreview
                         ref={previewRef}
                         data={previewData}

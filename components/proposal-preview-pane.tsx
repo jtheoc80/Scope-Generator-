@@ -14,8 +14,70 @@ import {
 } from '@/components/ui/drawer';
 import ProposalPreview from '@/components/proposal-preview';
 import { type ProposalPhoto } from '@/components/proposal-photos';
-import { Eye, EyeOff, X, FileText, ChevronUp } from 'lucide-react';
+import { Eye, EyeOff, X, FileText, ChevronUp, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+/**
+ * Premium loading skeleton for the proposal preview
+ * Mimics the structure of the actual proposal for smooth transitions
+ */
+function ProposalSkeleton() {
+  return (
+    <div className="bg-white shadow-xl min-h-[600px] w-full max-w-[800px] mx-auto p-8 md:p-12 animate-pulse">
+      {/* Header skeleton */}
+      <div className="flex justify-between items-start border-b-2 border-slate-100 pb-6 mb-8">
+        <div>
+          <div className="h-8 w-32 bg-slate-200 rounded mb-2" />
+          <div className="h-4 w-16 bg-slate-100 rounded" />
+        </div>
+        <div className="text-right">
+          <div className="h-6 w-40 bg-slate-200 rounded mb-2 ml-auto" />
+          <div className="h-3 w-32 bg-slate-100 rounded ml-auto" />
+        </div>
+      </div>
+
+      {/* Client info skeleton */}
+      <div className="grid grid-cols-2 gap-8 mb-8">
+        <div>
+          <div className="h-3 w-20 bg-slate-100 rounded mb-2" />
+          <div className="h-5 w-28 bg-slate-200 rounded mb-1" />
+          <div className="h-4 w-36 bg-slate-100 rounded" />
+        </div>
+        <div className="text-right">
+          <div className="h-3 w-12 bg-slate-100 rounded mb-2 ml-auto" />
+          <div className="h-4 w-24 bg-slate-200 rounded ml-auto" />
+        </div>
+      </div>
+
+      {/* Timeline skeleton */}
+      <div className="mb-6 h-12 bg-blue-50 border border-blue-100 rounded-lg" />
+
+      {/* Scope section skeleton */}
+      <div className="mb-8">
+        <div className="h-6 w-32 bg-slate-800 rounded mb-4" />
+        <div className="space-y-3">
+          <div className="h-4 w-full bg-slate-100 rounded" />
+          <div className="h-4 w-5/6 bg-slate-100 rounded" />
+          <div className="h-4 w-4/5 bg-slate-100 rounded" />
+          <div className="h-4 w-full bg-slate-100 rounded" />
+          <div className="h-4 w-3/4 bg-slate-100 rounded" />
+        </div>
+      </div>
+
+      {/* Pricing skeleton */}
+      <div className="mb-8">
+        <div className="h-6 w-24 bg-slate-800 rounded mb-4" />
+        <div className="border border-slate-100 rounded-lg p-6 bg-slate-50">
+          <div className="flex justify-between items-end mb-2">
+            <div className="h-4 w-32 bg-slate-200 rounded" />
+            <div className="h-8 w-24 bg-slate-300 rounded" />
+          </div>
+          <div className="h-3 w-48 bg-slate-100 rounded" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface CompanyInfo {
   companyName?: string | null;
@@ -94,6 +156,8 @@ interface ProposalPreviewPaneProps {
   drawerLabel?: string;
   /** Whether form has valid services to preview */
   hasValidServices?: boolean;
+  /** Whether the preview is loading/generating */
+  isLoading?: boolean;
   /** Placeholder text when no services */
   emptyStateTitle?: string;
   /** Placeholder description when no services */
@@ -132,6 +196,7 @@ const ProposalPreviewPane = forwardRef<ProposalPreviewPaneHandle, ProposalPrevie
       visible = true,
       drawerLabel = 'Preview Proposal',
       hasValidServices = false,
+      isLoading = false,
       emptyStateTitle = 'Ready to Start',
       emptyStateDescription = 'Fill in the form details to see a live preview of your proposal.',
       className,
@@ -153,22 +218,28 @@ const ProposalPreviewPane = forwardRef<ProposalPreviewPaneHandle, ProposalPrevie
     );
 
     // Memoize preview data with placeholders for empty fields
+    // These placeholders match what the preview component expects for testing
     const previewDataWithPlaceholders = useMemo(() => {
       return {
         ...data,
         clientName: data.clientName?.trim() || 'Client Name',
+        address: data.address?.trim() || '123 Client Street',
       };
     }, [data]);
 
-    // Empty state component
+    // Empty state component - Premium design with helpful guidance
     const EmptyState = useCallback(
       () => (
-        <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50 p-8 text-center">
-          <div className="bg-white p-4 rounded-full shadow-sm mb-4">
-            <FileText className="w-8 h-8 text-slate-300" />
+        <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed border-slate-200 rounded-xl bg-gradient-to-br from-slate-50 to-white p-8 text-center">
+          <div className="bg-white p-5 rounded-full shadow-md mb-5 ring-4 ring-slate-100">
+            <FileText className="w-10 h-10 text-slate-400" />
           </div>
-          <h3 className="text-lg font-medium text-slate-900">{emptyStateTitle}</h3>
-          <p className="max-w-xs mx-auto mt-2">{emptyStateDescription}</p>
+          <h3 className="text-xl font-semibold text-slate-900 mb-2">{emptyStateTitle}</h3>
+          <p className="max-w-xs mx-auto text-slate-500 mb-6">{emptyStateDescription}</p>
+          <div className="flex items-center gap-2 text-xs text-slate-400">
+            <Sparkles className="w-4 h-4" />
+            <span>Preview updates in real-time as you type</span>
+          </div>
         </div>
       ),
       [emptyStateTitle, emptyStateDescription]
@@ -177,6 +248,12 @@ const ProposalPreviewPane = forwardRef<ProposalPreviewPaneHandle, ProposalPrevie
     // Preview content component (shared between desktop and mobile)
     const PreviewContent = useCallback(
       ({ inDrawer = false }: { inDrawer?: boolean }) => {
+        // Show skeleton while loading
+        if (isLoading) {
+          return <ProposalSkeleton />;
+        }
+
+        // Show empty state when no valid services
         if (!hasValidServices) {
           return <EmptyState />;
         }
@@ -193,7 +270,7 @@ const ProposalPreviewPane = forwardRef<ProposalPreviewPaneHandle, ProposalPrevie
           </div>
         );
       },
-      [hasValidServices, previewDataWithPlaceholders, companyInfo, photos, showPhotos, EmptyState]
+      [isLoading, hasValidServices, previewDataWithPlaceholders, companyInfo, photos, showPhotos, EmptyState]
     );
 
     // Don't render anything if not visible

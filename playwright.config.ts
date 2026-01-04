@@ -15,6 +15,9 @@ import { defineConfig, devices } from '@playwright/test';
  * 
  * IMPORTANT: networkidle is NOT used - we use domcontentloaded + explicit waits.
  */
+
+const baseURL = process.env.QA_BASE_URL || 'http://localhost:3000';
+
 export default defineConfig({
   testDir: './tests/e2e',
   
@@ -37,13 +40,13 @@ export default defineConfig({
     ['list'],
   ],
   
-  /* Shared settings for all projects */
+  /* Shared settings for all projects - baseURL applies globally */
   use: {
     /* Base URL to use in actions like `await page.goto('/')` */
-    baseURL: process.env.QA_BASE_URL || 'http://localhost:3000',
+    baseURL,
     
-    /* Collect trace when retrying the failed test */
-    trace: 'on-first-retry',
+    /* Collect trace on first retry in CI for debugging flaky tests */
+    trace: process.env.CI ? 'on-first-retry' : 'off',
     
     /* Screenshot on failure */
     screenshot: 'only-on-failure',
@@ -70,13 +73,24 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: { 
+        ...devices['Desktop Chrome'],
+      },
     },
     {
       name: 'mobile-chrome',
-      use: { ...devices['iPhone 12'] },
+      /* 
+       * Uses Pixel 5 device emulation - an Android device that runs Chromium.
+       * This ensures tests run with the chromium browser that's already installed,
+       * unlike iPhone devices which require WebKit.
+       * 
+       * Device specs: 393x851 viewport, touch enabled, mobile user agent
+       */
+      use: { 
+        ...devices['Pixel 5'],
+      },
     },
-    // Uncomment for multi-browser testing
+    // Uncomment for multi-browser testing (requires additional browser installs)
     // {
     //   name: 'firefox',
     //   use: { ...devices['Desktop Firefox'] },
@@ -85,15 +99,22 @@ export default defineConfig({
     //   name: 'webkit',
     //   use: { ...devices['Desktop Safari'] },
     // },
+    // {
+    //   name: 'mobile-safari',
+    //   use: { ...devices['iPhone 12'] },
+    // },
   ],
 
   /* Directory for test artifacts */
   outputDir: 'qa/reports/test-results',
 
-  /* Run your local dev server before starting the tests */
-  webServer: process.env.CI ? undefined : {
+   * Web server configuration for Playwright tests.
+   * - In CI, the server is started separately in the workflow; this will reuse it.
+   * - Locally, this will start the dev server if it's not already running.
+   */
+  webServer: {
     command: 'npm run dev',
-    url: 'http://localhost:3000',
+    url: baseURL,
     reuseExistingServer: true,
     timeout: 120000,
     /* Pass test auth mode env variables to dev server */
