@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="750" viewBox="0 0 1200 750">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f8fafc"/>
+      <stop offset="100%" style="stop-color:#f1f5f9"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="750" fill="url(#bg)"/>
+  
+  <!-- Title -->
+  <text x="600" y="50" font-family="system-ui, sans-serif" font-size="32" font-weight="bold" fill="#1e293b" text-anchor="middle">True Job Cost Stack</text>
+  <text x="600" y="80" font-family="system-ui, sans-serif" font-size="16" fill="#64748b" text-anchor="middle">Every cost layer you must recover in your price</text>
+  
+  <!-- Stacked Bar Chart -->
+  <!-- Materials -->
+  <rect x="300" y="120" width="300" height="100" fill="#3b82f6" rx="4"/>
+  <text x="450" y="175" font-family="system-ui, sans-serif" font-size="18" font-weight="bold" fill="white" text-anchor="middle">MATERIALS</text>
+  <text x="650" y="170" font-family="system-ui, sans-serif" font-size="14" fill="#64748b" text-anchor="start">Fixtures, supplies, freight</text>
+  
+  <!-- Labor -->
+  <rect x="300" y="220" width="300" height="120" fill="#8b5cf6" rx="4"/>
+  <text x="450" y="285" font-family="system-ui, sans-serif" font-size="18" font-weight="bold" fill="white" text-anchor="middle">LABOR</text>
+  <text x="650" y="280" font-family="system-ui, sans-serif" font-size="14" fill="#64748b" text-anchor="start">Wages + payroll taxes + burden</text>
+  
+  <!-- Subs -->
+  <rect x="300" y="340" width="300" height="60" fill="#ec4899" rx="4"/>
+  <text x="450" y="375" font-family="system-ui, sans-serif" font-size="18" font-weight="bold" fill="white" text-anchor="middle">SUBS</text>
+  <text x="650" y="375" font-family="system-ui, sans-serif" font-size="14" fill="#64748b" text-anchor="start">Specialty trade contractors</text>
+  
+  <!-- Overhead Allocation -->
+  <rect x="300" y="400" width="300" height="100" fill="#f97316" rx="4"/>
+  <text x="450" y="455" font-family="system-ui, sans-serif" font-size="18" font-weight="bold" fill="white" text-anchor="middle">OVERHEAD</text>
+  <text x="650" y="440" font-family="system-ui, sans-serif" font-size="14" fill="#64748b" text-anchor="start">Insurance, vehicles, office,</text>
+  <text x="650" y="460" font-family="system-ui, sans-serif" font-size="14" fill="#64748b" text-anchor="start">tools, marketing, admin</text>
+  
+  <!-- Profit -->
+  <rect x="300" y="500" width="300" height="80" fill="#22c55e" rx="4"/>
+  <text x="450" y="545" font-family="system-ui, sans-serif" font-size="18" font-weight="bold" fill="white" text-anchor="middle">PROFIT</text>
+  <text x="650" y="545" font-family="system-ui, sans-serif" font-size="14" fill="#64748b" text-anchor="start">Your margin (8-15% net target)</text>
+  
+  <!-- Arrow showing total price -->
+  <line x1="620" y1="120" x2="620" y2="580" stroke="#1e293b" stroke-width="3" stroke-dasharray="5,5"/>
+  <polygon points="620,590 610,570 630,570" fill="#1e293b"/>
+  <text x="620" y="620" font-family="system-ui, sans-serif" font-size="20" font-weight="bold" fill="#1e293b" text-anchor="middle">= YOUR PRICE</text>
+  
+  <!-- Warning Box -->
+  <rect x="150" y="650" width="900" height="60" rx="8" fill="#fef2f2" stroke="#fecaca" stroke-width="2"/>
+  <text x="600" y="685" font-family="system-ui, sans-serif" font-size="16" fill="#dc2626" text-anchor="middle">  If you only price materials + labor, overhead eats your profit!</text>
+  
+  <!-- Labels on left -->
+  <text x="280" y="170" font-family="system-ui, sans-serif" font-size="14" fill="#64748b" text-anchor="end">Direct</text>
+  <text x="280" y="280" font-family="system-ui, sans-serif" font-size="14" fill="#64748b" text-anchor="end">Direct</text>
+  <text x="280" y="375" font-family="system-ui, sans-serif" font-size="14" fill="#64748b" text-anchor="end">Direct</text>
+  <text x="280" y="455" font-family="system-ui, sans-serif" font-size="14" fill="#64748b" text-anchor="end">Indirect</text>
+  <text x="280" y="545" font-family="system-ui, sans-serif" font-size="14" fill="#64748b" text-anchor="end">Target</text>
+</svg>
