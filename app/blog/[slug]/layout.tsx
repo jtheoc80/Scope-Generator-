@@ -12,29 +12,40 @@ export async function generateMetadata({ params }: BlogPostLayoutProps): Promise
   
   if (!post) {
     return {
-      title: "Article Not Found",
+      title: "Article Not Found | ScopeGenerator",
       description: "The requested blog article could not be found.",
     };
   }
 
+  const ogImageUrl = post.ogImage || post.heroImage || "/opengraph.jpg";
+
   return {
-    title: post.metaTitle,
+    title: `${post.metaTitle} | ScopeGenerator`,
     description: post.metaDescription,
-    keywords: [post.category, "contractor proposal", "scope of work", post.title.split(" ").slice(0, 3).join(" ")],
-    authors: [{ name: post.author }],
+    keywords: [
+      post.category.toLowerCase(),
+      ...post.tags,
+      "contractor",
+      "proposal",
+      "scope of work",
+    ],
+    authors: [{ name: post.author.name }],
     openGraph: {
       title: post.metaTitle,
       description: post.metaDescription,
       url: `https://scopegenerator.com/blog/${post.slug}`,
       type: "article",
-      publishedTime: post.date,
-      authors: [post.author],
+      publishedTime: new Date(post.datePublished).toISOString(),
+      modifiedTime: new Date(post.dateModified).toISOString(),
+      authors: [post.author.name],
+      section: post.category,
+      tags: post.tags,
       images: [
         {
-          url: "/opengraph.jpg",
+          url: ogImageUrl,
           width: 1200,
           height: 630,
-          alt: post.title,
+          alt: post.heroImageAlt || post.title,
         },
       ],
     },
@@ -42,10 +53,10 @@ export async function generateMetadata({ params }: BlogPostLayoutProps): Promise
       card: "summary_large_image",
       title: post.metaTitle,
       description: post.metaDescription,
-      images: ["/opengraph.jpg"],
+      images: [ogImageUrl],
     },
     alternates: {
-      canonical: `https://scopegenerator.com/blog/${post.slug}`,
+      canonical: post.canonical || `https://scopegenerator.com/blog/${post.slug}`,
     },
   };
 }
