@@ -157,8 +157,8 @@ NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=
 │   ├── marketing/        # Marketing components
 │   └── pricing/          # Pricing components
 ├── hooks/                 # Custom React hooks
-├── lib/                   # Utility functions and configs
-├── drizzle/              # Database schema and migrations
+├── lib/                   # Utility functions and configs (including schema.ts)
+├── drizzle/              # Database migrations (drizzle/migrations/)
 ├── src/lib/              # Core business logic
 │   ├── learning/         # AI learning systems
 │   ├── mobile/           # Mobile-specific logic
