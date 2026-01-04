@@ -18,8 +18,9 @@ test.describe('Checkout Flow @smoke', () => {
     
     // Either upgrade button exists or user is already pro
     const hasUpgrade = await upgradeButton.isVisible();
-    const proBadge = page.locator('[data-testid="pro-badge"], text="PRO"');
-    const isPro = await proBadge.isVisible();
+    // Use separate locators and combine with .or() for valid selector syntax
+    const proBadge = page.locator('[data-testid="pro-badge"]').or(page.getByText('PRO', { exact: true }));
+    const isPro = await proBadge.first().isVisible().catch(() => false);
 
     // One should be true
     expect(hasUpgrade || isPro).toBeTruthy();
