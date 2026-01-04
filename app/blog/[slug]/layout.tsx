@@ -17,6 +17,13 @@ export async function generateMetadata({ params }: BlogPostLayoutProps): Promise
     };
   }
 
+  // Use post-specific OG image if available, otherwise default
+  const ogImage = post.ogImage 
+    ? `https://scopegenerator.com${post.ogImage}`
+    : post.heroImage 
+      ? `https://scopegenerator.com${post.heroImage}`
+      : "https://scopegenerator.com/opengraph.jpg";
+
   return {
     title: post.metaTitle,
     description: post.metaDescription,
@@ -31,7 +38,7 @@ export async function generateMetadata({ params }: BlogPostLayoutProps): Promise
       authors: [post.author],
       images: [
         {
-          url: "/opengraph.jpg",
+          url: ogImage,
           width: 1200,
           height: 630,
           alt: post.title,
@@ -42,7 +49,7 @@ export async function generateMetadata({ params }: BlogPostLayoutProps): Promise
       card: "summary_large_image",
       title: post.metaTitle,
       description: post.metaDescription,
-      images: ["/opengraph.jpg"],
+      images: [ogImage],
     },
     alternates: {
       canonical: `https://scopegenerator.com/blog/${post.slug}`,
