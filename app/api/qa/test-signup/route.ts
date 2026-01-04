@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Additional guard: Never in production
-  if (process.env.NODE_ENV === 'production' && !process.env.ALLOW_TEST_AUTH_IN_PROD) {
+  if (process.env.NODE_ENV === 'production') {
     return NextResponse.json(
       { error: 'Test signup not available in production' },
       { status: 403 }
