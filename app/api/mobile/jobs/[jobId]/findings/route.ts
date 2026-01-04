@@ -235,53 +235,60 @@ function getFindingSemanticKey(text: string): string {
  */
 function deduplicateFindings(findings: Finding[]): Finding[] {
   const semanticGroups = new Map<string, Finding[]>();
-  
+
+  // Group findings by their semantic key
   for (const finding of findings) {
     const key = getFindingSemanticKey(finding.issue);
-    if (!semanticGroups.has(key)) {
-      semanticGroups.set(key, []);
+    const existingGroup = semanticGroups.get(key);
+    if (existingGroup) {
+      existingGroup.push(finding);
+    } else {
+      semanticGroups.set(key, [finding]);
     }
-    semanticGroups.get(key)!.push(finding);
   }
-  
+
   const deduplicated: Finding[] = [];
-  
-  for (const [, group] of semanticGroups) {
+
+  const selectBestRepresentative = (group: Finding[]): Finding => {
+    // Pick the best representative from the group:
+    // 1. Prefer "damage" category (more specific/actionable)
+    // 2. Then prefer higher confidence
+    // 3. Then prefer shorter, cleaner labels (less verbose)
+    return [...group].sort((a, b) => {
+      // Prefer damage category
+      const aIsDamage = a.category === "damage" ? 1 : 0;
+      const bIsDamage = b.category === "damage" ? 1 : 0;
+      if (aIsDamage !== bIsDamage) return bIsDamage - aIsDamage;
+
+      // Prefer higher confidence
+      if (Math.abs(a.confidence - b.confidence) > 0.1) {
+        return b.confidence - a.confidence;
+      }
+
+      // Prefer shorter labels (usually cleaner/more specific)
+      return a.issue.length - b.issue.length;
+    })[0];
+  };
+
+  const mergePhotoIdsInto = (group: Finding[], target: Finding): void => {
+    const allPhotoIds = new Set<number>(target.photoIds);
+    for (const item of group) {
+      for (const photoId of item.photoIds) {
+        allPhotoIds.add(photoId);
+      }
+    }
+    target.photoIds = [...allPhotoIds];
+  };
+
+  for (const group of semanticGroups.values()) {
     if (group.length === 1) {
       deduplicated.push(group[0]);
     } else {
-      // Pick the best representative from the group:
-      // 1. Prefer "damage" category (more specific/actionable)
-      // 2. Then prefer higher confidence
-      // 3. Then prefer shorter, cleaner labels (less verbose)
-      const best = group.sort((a, b) => {
-        // Prefer damage category
-        const aIsDamage = a.category === "damage" ? 1 : 0;
-        const bIsDamage = b.category === "damage" ? 1 : 0;
-        if (aIsDamage !== bIsDamage) return bIsDamage - aIsDamage;
-        
-        // Prefer higher confidence
-        if (Math.abs(a.confidence - b.confidence) > 0.1) {
-          return b.confidence - a.confidence;
-        }
-        
-        // Prefer shorter labels (usually cleaner/more specific)
-        return a.issue.length - b.issue.length;
-      })[0];
-      
-      // Merge photoIds from all duplicates
-      const allPhotoIds = new Set<number>();
-      for (const finding of group) {
-        for (const photoId of finding.photoIds) {
-          allPhotoIds.add(photoId);
-        }
-      }
-      best.photoIds = [...allPhotoIds];
-      
+      const best = selectBestRepresentative(group);
+      mergePhotoIdsInto(group, best);
       deduplicated.push(best);
     }
   }
-  
   return deduplicated;
 }
 
