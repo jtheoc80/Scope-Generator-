@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
+import { generateTestUser, createTestUserViaAPI, signUp, signIn } from '../../qa/flows/auth';
 
 /**
  * Smoke Test: Proposal Photos Flow
@@ -136,6 +137,63 @@ test.describe('Proposal Photos Flow @smoke', () => {
     
     // This documents expected behavior - categories should be available
     expect(categoryLabels.length).toBeGreaterThan(0);
+  });
+
+  test('should upload a photo and persist after refresh', async ({ page }) => {
+    // Auth (Clerk): create user via API when available, else UI signup.
+    const user = generateTestUser();
+    const created = await createTestUserViaAPI(page, user);
+    if (created) {
+      await signIn(page, user);
+    } else {
+      await signUp(page, user);
+    }
+
+    await page.goto('/generator');
+    await page.waitForLoadState('networkidle');
+
+    // Select trade + job type to enable photo section.
+    await page.locator('[data-testid="select-trade-0"]').click();
+    await page.locator('[role="option"]').first().click();
+    await page.waitForTimeout(500);
+
+    await page.locator('[data-testid="select-jobtype-0"]').click();
+    await page.locator('[role="option"]').first().click();
+    await page.waitForTimeout(500);
+
+    const uploader = page.locator('[data-testid="photo-uploader"]');
+    await expect(uploader).toBeVisible({ timeout: 10000 });
+
+    const fixturesDir = path.join(process.cwd(), 'tests', 'fixtures', 'images');
+    const testImagePath = path.join(fixturesDir, 'test-photo-1.jpg');
+    expect(fs.existsSync(testImagePath)).toBeTruthy();
+
+    const input = page.locator('[data-testid="photo-upload-input"]');
+    await input.setInputFiles(testImagePath);
+
+    // Wait for server-backed render to appear (and no longer rely on blob URLs).
+    const firstItem = page.locator('[data-testid="photo-item"]').first();
+    await expect(firstItem).toBeVisible({ timeout: 30000 });
+
+    // Upload overlay should eventually disappear.
+    await expect(page.locator('[data-testid="photo-upload-progress"]')).toHaveCount(0, { timeout: 30000 });
+
+    const img = firstItem.locator('img').first();
+    await expect(img).toBeVisible();
+    const src = await img.getAttribute('src');
+    expect(src).toBeTruthy();
+    expect(src || '').not.toMatch(/^blob:/);
+
+    // Refresh and confirm it still renders from canonical server truth.
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+
+    const firstItemAfter = page.locator('[data-testid="photo-item"]').first();
+    await expect(firstItemAfter).toBeVisible({ timeout: 30000 });
+    const imgAfter = firstItemAfter.locator('img').first();
+    const srcAfter = await imgAfter.getAttribute('src');
+    expect(srcAfter).toBeTruthy();
+    expect(srcAfter || '').not.toMatch(/^blob:/);
   });
 
   test('page should handle missing images gracefully', async ({ page }) => {

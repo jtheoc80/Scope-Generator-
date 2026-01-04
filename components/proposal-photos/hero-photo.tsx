@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import type { ProposalPhoto } from './types';
 
@@ -33,13 +32,13 @@ export function HeroPhoto({
     <div className={cn('relative w-full', className)}>
       {/* Hero image container with aspect ratio */}
       <div className="relative w-full h-48 md:h-64 lg:h-72 overflow-hidden rounded-lg">
-        <Image
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src={photo.url}
           alt={photo.caption || 'Project site overview'}
-          fill
-          className="object-cover"
-          sizes="(max-width: 768px) 100vw, 800px"
-          priority
+          className="absolute inset-0 w-full h-full object-cover"
+          loading="eager"
+          decoding="async"
         />
         
         {/* Gradient overlay for text readability */}
@@ -65,12 +64,13 @@ export function HeroPhoto({
             {/* Company logo */}
             {companyLogo && (
               <div className="bg-white/95 rounded-lg p-2 shadow-lg">
-                <Image
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
                   src={companyLogo}
                   alt={`${companyName} logo`}
-                  width={80}
-                  height={40}
                   className="w-auto h-8 md:h-10 object-contain"
+                  loading="lazy"
+                  decoding="async"
                 />
               </div>
             )}

@@ -20,6 +20,7 @@ import { mobileApiFetch, newIdempotencyKey, PresignResponse } from "@/app/m/lib/
 
 type UploadedPhoto = {
   id: string;
+  serverId?: number;
   localUrl: string;
   remoteUrl?: string;
   status: "pending" | "uploading" | "uploaded" | "error";
@@ -95,6 +96,34 @@ export default function CapturePhotosPage() {
 
   const generateId = () => `photo-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
+  // Hydrate from server truth on load (refresh-safe).
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      try {
+        const res = await mobileApiFetch<{ photos: Array<{ id: number; publicUrl: string }> }>(
+          `/api/mobile/jobs/${jobId}/photos`,
+          { method: "GET" }
+        );
+        if (cancelled) return;
+        const serverPhotos: UploadedPhoto[] = (res.photos || []).map((p, idx) => ({
+          id: `server-${p.id}`,
+          serverId: p.id,
+          localUrl: p.publicUrl,
+          remoteUrl: p.publicUrl,
+          status: "uploaded",
+        }));
+        setPhotos(serverPhotos);
+      } catch {
+        // Non-blocking: allow page to function even if list fails.
+      }
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [jobId]);
+
   const uploadPhoto = async (photo: UploadedPhoto, file: File) => {
     try {
       // Update status to uploading
@@ -129,7 +158,7 @@ export default function CapturePhotosPage() {
       }
 
       // Register photo with the API
-      await mobileApiFetch(`/api/mobile/jobs/${jobId}/photos`, {
+      const registered = await mobileApiFetch<{ photoId: number }>(`/api/mobile/jobs/${jobId}/photos`, {
         method: "POST",
         headers: { "Idempotency-Key": newIdempotencyKey() },
         body: JSON.stringify({ url: presign.publicUrl, kind: "site" }),
@@ -143,6 +172,27 @@ export default function CapturePhotosPage() {
             : p
         )
       );
+
+      // Reconcile with server truth (ensures refresh-safe + canonical ordering).
+      try {
+        const res = await mobileApiFetch<{ photos: Array<{ id: number; publicUrl: string }> }>(
+          `/api/mobile/jobs/${jobId}/photos`,
+          { method: "GET" }
+        );
+        setPhotos((prev) => {
+          const inFlight = prev.filter((p) => p.status === "uploading" || p.status === "pending" || p.status === "error");
+          const serverPhotos: UploadedPhoto[] = (res.photos || []).map((p, idx) => ({
+            id: `server-${p.id}`,
+            serverId: p.id,
+            localUrl: p.publicUrl,
+            remoteUrl: p.publicUrl,
+            status: "uploaded",
+          }));
+          return [...serverPhotos, ...inFlight];
+        });
+      } catch {
+        // ignore
+      }
     } catch (e) {
       // Update status to error
       setPhotos((prev) =>
@@ -501,7 +551,7 @@ export default function CapturePhotosPage() {
                   {/* Use native img for blob URLs - more reliable on mobile browsers */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={photo.localUrl}
+                    src={photo.remoteUrl ?? photo.localUrl}
                     alt={`Photo ${index + 1}`}
                     className="absolute inset-0 w-full h-full object-cover"
                   />

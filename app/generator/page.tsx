@@ -574,7 +574,7 @@ function GeneratorContent() {
     userId: user?.id ?? null,
     isAuthLoading,
     form,
-    state: { services, photos, enhancedScopes, watchedValues },
+    state: { services, photos, enhancedScopes, watchedValues, savedProposalId },
     setters: {
       setServices,
       setPhotos,
@@ -973,7 +973,7 @@ function GeneratorContent() {
     // Transform photos for preview
     const previewPhotos = photos.map((p) => ({
       id: p.id,
-      url: p.url,
+      url: p.mediumUrl || p.originalUrl || p.url,
       category: p.category,
       caption: p.caption,
       order: p.displayOrder,
@@ -1010,6 +1010,118 @@ function GeneratorContent() {
   };
 
   const hasValidServices = services.some((s) => s.tradeId && s.jobTypeId);
+
+  // Ensure we have a proposal ID before persisting photos.
+  // This is the key to refresh-safe, server-canonical photo rendering.
+  const ensureProposalIdForPhotos = async (): Promise<number> => {
+    if (savedProposalId) return savedProposalId;
+
+    const validServices = services.filter((s) => s.tradeId && s.jobTypeId);
+    if (validServices.length === 0) {
+      throw new Error("Please add a service first");
+    }
+
+    // Reuse draft-first behavior: allow placeholder client info for drafts.
+    const clientName =
+      watchedValues.clientName?.trim() || "Draft Proposal";
+    const address = watchedValues.address?.trim() || "Address pending";
+
+    const firstService = validServices[0];
+    const firstServiceData = generateServiceData(firstService);
+    if (!firstServiceData) {
+      throw new Error("Invalid service data");
+    }
+
+    const isMultiService = validServices.length > 1;
+    const lineItems = isMultiService
+      ? validServices
+          .map((service) => {
+            const serviceData = generateServiceData(service);
+            if (!serviceData) return null;
+            const trade = availableTemplates.find((t) => t.id === service.tradeId);
+            return {
+              id: service.id,
+              tradeId: service.tradeId,
+              tradeName: trade?.trade || service.tradeId,
+              jobTypeId: service.jobTypeId,
+              jobTypeName: serviceData.jobTypeName,
+              jobSize: service.jobSize,
+              homeArea: service.homeArea,
+              footage: service.footage || undefined,
+              scope: enhancedScopes[service.id] || serviceData.scope,
+              scopeSections: serviceData.scopeSections,
+              options: service.options,
+              priceLow: serviceData.priceRange.low,
+              priceHigh: serviceData.priceRange.high,
+              estimatedDaysLow: serviceData.estimatedDays.low,
+              estimatedDaysHigh: serviceData.estimatedDays.high,
+              warranty: serviceData.warranty,
+              exclusions: serviceData.exclusions,
+              windowQuantity: serviceData.windowQuantity,
+              windowSizePreset: serviceData.windowSizePreset,
+              windowWidthIn: serviceData.windowWidthIn,
+              windowHeightIn: serviceData.windowHeightIn,
+            };
+          })
+          .filter((x): x is NonNullable<typeof x> => x !== null)
+      : undefined;
+
+    const allScope = isMultiService
+      ? (lineItems || []).flatMap((item) => item.scope)
+      : firstServiceData.scope;
+
+    const totalPriceLow = isMultiService
+      ? (lineItems || []).reduce((sum, item) => sum + item.priceLow, 0)
+      : firstServiceData.priceRange.low;
+    const totalPriceHigh = isMultiService
+      ? (lineItems || []).reduce((sum, item) => sum + item.priceHigh, 0)
+      : firstServiceData.priceRange.high;
+
+    const totalDaysLow = isMultiService
+      ? (lineItems || []).reduce((sum, item) => sum + (item.estimatedDaysLow || 0), 0)
+      : firstServiceData.estimatedDays.low;
+    const totalDaysHigh = isMultiService
+      ? (lineItems || []).reduce((sum, item) => sum + (item.estimatedDaysHigh || 0), 0)
+      : firstServiceData.estimatedDays.high;
+
+    const proposalData = {
+      clientName,
+      address,
+      tradeId: firstService.tradeId,
+      jobTypeId: firstService.jobTypeId,
+      jobTypeName: isMultiService
+        ? `Multi-Service (${(lineItems || []).length} services)`
+        : firstServiceData.jobTypeName,
+      jobSize: firstService.jobSize,
+      scope: allScope,
+      scopeSections: isMultiService ? undefined : firstServiceData.scopeSections,
+      options: firstService.options,
+      priceLow: totalPriceLow,
+      priceHigh: totalPriceHigh,
+      lineItems: isMultiService ? lineItems : undefined,
+      isMultiService,
+      estimatedDaysLow: totalDaysLow,
+      estimatedDaysHigh: totalDaysHigh,
+      status: "draft",
+      isUnlocked: true,
+      photoCount: photos.length,
+      isDraftWithoutClientInfo:
+        clientName === "Draft Proposal" || address === "Address pending",
+    };
+
+    const response = await fetch("/api/proposals", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(proposalData),
+    });
+    if (!response.ok) {
+      throw new Error("Failed to create draft for photos");
+    }
+    const savedProposal = await response.json();
+    setSavedProposalId(savedProposal.id);
+    return savedProposal.id as number;
+  };
 
   // Draft-first: Check if finalize fields (client name + address) are valid
   // These are required only for export/send actions, not for generating drafts
@@ -2313,6 +2425,8 @@ function GeneratorContent() {
                             onPhotosChange={setPhotos}
                             maxPhotos={10}
                             disabled={isGenerating}
+                            proposalId={savedProposalId}
+                            ensureProposalId={ensureProposalIdForPhotos}
                             learningContext={{
                               tradeId: services[0]?.tradeId,
                               jobTypeId: services[0]?.jobTypeId,

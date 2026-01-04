@@ -14,6 +14,37 @@ import { enqueueEmbeddingJob, ensureSimilarJobEmbeddingWorker } from "@/src/lib/
 // IMPORTANT: Use Node.js runtime for AWS SDK compatibility and Buffer support.
 export const runtime = "nodejs";
 
+// GET /api/mobile/jobs/:jobId/photos (list registered photos for a job)
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ jobId: string }> }
+) {
+  const requestId = getRequestId(request.headers);
+  const t0 = Date.now();
+  try {
+    const authResult = await requireMobileAuth(request);
+    if (!authResult.ok) return authResult.response;
+
+    const { jobId } = await params;
+    const id = parseInt(jobId);
+    if (Number.isNaN(id)) {
+      return jsonError(requestId, 400, "INVALID_INPUT", "Invalid jobId");
+    }
+
+    const photos = await storage.listMobileJobPhotos(id, authResult.userId);
+    logEvent("mobile.photos.list.ok", {
+      requestId,
+      jobId: id,
+      count: photos.length,
+      ms: Date.now() - t0,
+    });
+    return withRequestId(requestId, { photos }, 200);
+  } catch (error) {
+    console.error("Error listing mobile job photos:", error);
+    return jsonError(requestId, 500, "INTERNAL", "Failed to list photos");
+  }
+}
+
 // POST /api/mobile/jobs/:jobId/photos (register uploaded photo public URL)
 export async function POST(
   request: NextRequest,
