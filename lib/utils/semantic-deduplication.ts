@@ -7,11 +7,20 @@
 
 /**
  * Generic item interface for deduplication.
- * Items must have confidence, category (including "damage"), and photoIds.
+ *
+ * Items must have:
+ * - a numeric confidence score,
+ * - a category value, and
+ * - a list of associated photo IDs.
+ *
+ * The interface is generic over the category type so that callers can provide
+ * a domain-specific category union (for example, a union that includes
+ * `"damage"` for damage-detection workflows). By default, the category type
+ * is `string` to keep this utility broadly reusable.
  */
-export interface DeduplicatableItem {
+export interface DeduplicatableItem<Category extends string = string> {
   confidence: number;
-  category: string;
+  category: Category;
   photoIds: number[];
 }
 
