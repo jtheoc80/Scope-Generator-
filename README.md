@@ -1,36 +1,274 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ScopeGen - Contractor Proposal Generator
+
+<p align="center">
+  <strong>Create professional contractor proposals in 60 seconds</strong>
+</p>
+
+<p align="center">
+  <a href="#features">Features</a> •
+  <a href="#tech-stack">Tech Stack</a> •
+  <a href="#getting-started">Getting Started</a> •
+  <a href="#project-structure">Project Structure</a> •
+  <a href="#scripts">Scripts</a> •
+  <a href="#testing">Testing</a>
+</p>
+
+---
+
+## Overview
+
+ScopeGen is a modern web application designed to help contractors and home service companies generate professional proposals quickly and efficiently. Built by **Lead Ledger Pro LLC** (Houston, Texas), ScopeGen streamlines the proposal process with pre-built scopes, consistent pricing, and professional formatting.
+
+## Features
+
+### 🏠 Trade Support
+Generate proposals for 17+ contractor trades:
+- Bathroom & Kitchen Remodeling
+- Roofing & Siding
+- HVAC, Plumbing & Electrical
+- Painting & Drywall
+- Landscaping & Concrete
+- Flooring, Fencing, Decks & more
+
+### 📝 Proposal Generation
+- **Instant Price Calculator** - Quick estimates for common job types
+- **Pre-built Scope Templates** - Professional line items for every trade
+- **PDF Export** - Download branded, client-ready proposals
+- **Email Delivery** - Send proposals directly to clients
+- **E-Signatures** - Get proposals signed digitally (Pro+)
+
+### 📸 ScopeScan (AI-Powered)
+- Photo capture and analysis
+- AI-powered scope suggestions
+- Automatic issue detection
+- Smart pricing recommendations
+
+### 👥 Team Features (Crew Plan)
+- Multi-user accounts
+- Crew management
+- Shared templates
+- Team analytics
+
+### 📊 Business Tools
+- Dashboard with proposal tracking
+- Pricing insights and market data
+- Analytics and reporting
+- Customer management
+
+## Tech Stack
+
+| Category | Technology |
+|----------|------------|
+| **Framework** | Next.js 15.5.9 (App Router) |
+| **Language** | TypeScript |
+| **Frontend** | React 19, Tailwind CSS 4 |
+| **UI Components** | Radix UI, Lucide Icons |
+| **State Management** | React Query (TanStack) |
+| **Database** | PostgreSQL with Drizzle ORM |
+| **Authentication** | Clerk |
+| **Payments** | Stripe |
+| **AI** | OpenAI (primary – vision & embeddings), Anthropic Claude (optional) |
+| **Cloud Storage** | AWS S3 |
+| **Image Analysis** | AWS Rekognition |
+| **Maps** | Google Maps API |
+| **Testing** | Playwright (E2E), Lighthouse |
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+- Node.js 20+
+- PostgreSQL database
+- Required API keys (see Environment Variables)
+
+### Installation
+
+1. Clone the repository:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/jtheoc80/Scope-Generator-.git
+cd Scope-Generator-
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Set up environment variables:
+```bash
+cp .env.example .env.local
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Configure your environment variables (see below)
 
-## Learn More
+5. Set up the database:
+```bash
+npm run db:push
+```
 
-To learn more about Next.js, take a look at the following resources:
+6. Start the development server:
+```bash
+npm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Environment Variables
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The application requires the following environment variables:
 
-## Deploy on Vercel
+```env
+# Database
+DATABASE_URL=
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Clerk Authentication
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+CLERK_SECRET_KEY=
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# Stripe Payments
+STRIPE_SECRET_KEY=
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+STRIPE_WEBHOOK_SECRET=
+
+# AI Services
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+
+# Email (Resend)
+RESEND_API_KEY=
+FROM_EMAIL=
+
+# Google Search Console
+GOOGLE_SERVICE_ACCOUNT_EMAIL=
+GOOGLE_PRIVATE_KEY=
+
+# Analytics
+NEXT_PUBLIC_GA_MEASUREMENT_ID=
+
+# External APIs
+ONEBUILD_EXTERNAL_KEY=
+
+# AWS
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_REGION=
+
+# S3 Storage
+S3_BUCKET=
+S3_PUBLIC_BASE_URL=
+# Google Maps
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=
+```
+
+## Project Structure
+
+```
+├── app/                    # Next.js App Router pages
+│   ├── api/               # API routes
+│   ├── (landing)/         # Landing pages
+│   ├── dashboard/         # User dashboard
+│   ├── generator/         # Proposal generator
+│   ├── m/                 # Mobile web app
+│   └── ...
+├── components/            # Reusable UI components
+│   ├── ui/               # Base UI components (Radix-based)
+│   ├── marketing/        # Marketing components
+│   └── pricing/          # Pricing components
+├── hooks/                 # Custom React hooks
+├── lib/                   # Utility functions and configs (including schema.ts)
+├── drizzle/              # Database migrations (drizzle/migrations/)
+├── src/lib/              # Core business logic
+│   ├── learning/         # AI learning systems
+│   ├── mobile/           # Mobile-specific logic
+│   └── similar-jobs/     # Job matching
+├── tests/                # Test files
+├── qa/                   # QA automation scripts
+└── scripts/              # Build and utility scripts
+```
+
+## Scripts
+
+### Development
+```bash
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run start        # Start production server
+npm run lint         # Run ESLint
+npm run typecheck    # Run TypeScript type checking
+```
+
+### Database
+```bash
+npm run db:push      # Push schema changes
+npm run db:generate  # Generate migrations
+npm run db:migrate   # Run migrations
+npm run db:studio    # Open Drizzle Studio
+npm run db:check     # Check database status
+```
+
+### Testing
+```bash
+npm run test:e2e     # Run Playwright E2E tests
+npm run e2e:ui       # Run E2E tests with UI
+npm run e2e:headed   # Run E2E tests in headed mode
+npm run e2e:debug    # Debug E2E tests
+npm run test:smoke   # Run smoke tests only
+npm run lighthouse   # Run Lighthouse performance audit
+```
+
+### SEO & QA
+```bash
+npm run seo:audit    # Run SEO audit
+npm run seo:scan     # Scan pages for SEO issues
+npm run qa           # Run QA automation
+```
+
+## Testing
+
+### E2E Testing with Playwright
+
+Run the full test suite:
+```bash
+npm run test:e2e
+```
+
+Run specific tests:
+```bash
+npx playwright test --grep "proposal"
+```
+
+### Performance Testing
+
+Run Lighthouse audits:
+```bash
+npm run lighthouse
+```
+
+## Pricing Plans
+
+| Plan | Price | Features |
+|------|-------|----------|
+| **Starter** | $9/proposal | Pay per use, PDF export, email delivery |
+| **Pro** | $29/month | Unlimited proposals, e-signatures, priority support |
+| **Crew** | $79/month | Team accounts, shared templates, analytics |
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## Support
+
+- **Email**: support@leadledgerpro.com
+- **Business Hours**: Monday - Friday, 9am - 5pm CST
+
+## License
+
+Private - All rights reserved by Lead Ledger Pro LLC
+
+---
+
+<p align="center">
+  Built with ❤️ by <a href="https://leadledgerpro.com">Lead Ledger Pro LLC</a> in Houston, Texas
+</p>
