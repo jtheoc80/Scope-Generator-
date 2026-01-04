@@ -16,22 +16,31 @@ export interface TestSessionData {
   expiresAt: number;
 }
 
+// Random secret generated at startup for environments without TEST_AUTH_SECRET
+let generatedSecret: string | null = null;
+
 /**
  * Get the secret key for signing tokens.
- * Uses a dedicated test auth secret or falls back to a default for development.
+ * Uses a dedicated test auth secret or generates a random one at startup.
  * 
- * SECURITY NOTE: In production-like test environments, always set TEST_AUTH_SECRET.
+ * SECURITY NOTE: In production-like test environments, always set TEST_AUTH_SECRET
+ * to ensure tokens remain valid across server restarts.
  */
 function getTestAuthSecret(): string {
   const secret = process.env.TEST_AUTH_SECRET || process.env.NEXTAUTH_SECRET;
   
-  if (!secret) {
-    // Fallback for local development only
-    console.warn('[TEST-AUTH] No TEST_AUTH_SECRET found, using default. Set TEST_AUTH_SECRET for production-like testing.');
-    return 'test-auth-default-secret-change-in-production';
+  if (secret) {
+    return secret;
   }
   
-  return secret;
+  // Generate a random secret at startup if none is configured
+  // This is more secure than a hardcoded default but tokens won't survive restarts
+  if (!generatedSecret) {
+    generatedSecret = require('crypto').randomBytes(32).toString('hex');
+    console.warn('[TEST-AUTH] No TEST_AUTH_SECRET found, generated random secret. Tokens will not survive server restarts.');
+  }
+  
+  return generatedSecret;
 }
 
 /**
@@ -83,7 +92,15 @@ export function verifySignedToken(token: string): TestSessionData | null {
     const expectedSignature = hmac.digest('base64');
     
     // Use timing-safe comparison to prevent timing attacks
-    const providedBuffer = Buffer.from(providedSignature, 'base64');
+    // Wrap base64 decoding in try-catch to handle invalid base64 securely
+    let providedBuffer: Buffer;
+    try {
+      providedBuffer = Buffer.from(providedSignature, 'base64');
+    } catch (error) {
+      console.error('[TEST-AUTH] Invalid signature encoding');
+      return null;
+    }
+    
     const expectedBuffer = Buffer.from(expectedSignature, 'base64');
     
     if (providedBuffer.length !== expectedBuffer.length) {
@@ -98,7 +115,15 @@ export function verifySignedToken(token: string): TestSessionData | null {
     
     // Decode the session data
     const dataString = Buffer.from(encodedData, 'base64').toString('utf-8');
-    const sessionData = JSON.parse(dataString) as TestSessionData;
+    const parsedData = JSON.parse(dataString);
+    
+    // Validate the parsed data structure
+    if (!isValidSessionData(parsedData)) {
+      console.error('[TEST-AUTH] Invalid session data structure');
+      return null;
+    }
+    
+    const sessionData = parsedData as TestSessionData;
     
     // Check expiration
     if (sessionData.expiresAt < Date.now()) {
@@ -111,4 +136,22 @@ export function verifySignedToken(token: string): TestSessionData | null {
     console.error('[TEST-AUTH] Error verifying token:', error);
     return null;
   }
+}
+
+/**
+ * Runtime type guard to validate session data structure
+ */
+function isValidSessionData(data: unknown): data is TestSessionData {
+  if (typeof data !== 'object' || data === null) {
+    return false;
+  }
+  
+  const obj = data as Record<string, unknown>;
+  
+  return (
+    typeof obj.userId === 'string' &&
+    typeof obj.email === 'string' &&
+    typeof obj.createdAt === 'number' &&
+    typeof obj.expiresAt === 'number'
+  );
 }
