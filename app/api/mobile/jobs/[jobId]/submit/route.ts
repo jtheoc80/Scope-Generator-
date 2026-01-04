@@ -69,6 +69,8 @@ export async function POST(
       jobTypeName: job.jobTypeName,
       jobSize: job.jobSize,
       scope: Array.isArray(lineItem.scope) ? lineItem.scope : [],
+      // Include structured scope sections if present in draft (mobile draft generator may provide these)
+      scopeSections: Array.isArray(lineItem.scopeSections) ? lineItem.scopeSections : undefined,
       options: {
         ...(lineItem.options ?? {}),
         __mobile: {
@@ -82,6 +84,7 @@ export async function POST(
       isMultiService: false,
       estimatedDaysLow: lineItem.estimatedDaysLow,
       estimatedDaysHigh: lineItem.estimatedDaysHigh,
+      source: 'mobile', // Track proposal origin for analytics
     });
 
     if (!validation.success) {
@@ -93,7 +96,38 @@ export async function POST(
       );
     }
 
-    const proposal = await storage.createProposal(validation.data);
+    // Create proposal in database
+    // Note: Schema drift between code and DB can cause failures here (e.g., missing columns).
+    // Always ensure migrations are applied before deploying code changes.
+    let proposal;
+    try {
+      proposal = await storage.createProposal(validation.data);
+    } catch (dbError) {
+      // Log detailed error for debugging schema drift or other DB issues
+      const errMsg = dbError instanceof Error ? dbError.message : String(dbError);
+      logEvent("mobile.submit.proposal_create_failed", {
+        requestId,
+        jobId: job.id,
+        draftId: draft.id,
+        error: errMsg,
+        ms: Date.now() - t0,
+      });
+      console.error("Proposal creation failed:", { requestId, jobId: job.id, error: dbError });
+      return jsonError(requestId, 500, "INTERNAL", "Failed to create proposal");
+    }
+
+    // Guard: Ensure proposal was actually created (defensive check)
+    if (!proposal || !proposal.id) {
+      logEvent("mobile.submit.proposal_create_empty", {
+        requestId,
+        jobId: job.id,
+        draftId: draft.id,
+        ms: Date.now() - t0,
+      });
+      console.error("Proposal creation returned empty result:", { requestId, jobId: job.id });
+      return jsonError(requestId, 500, "INTERNAL", "Failed to create proposal - empty result");
+    }
+
     await storage.linkDraftToProposal(draft.id, authResult.userId, proposal.id);
 
     // Similar Job Retrieval (Phase 1): snapshot FINAL scope line items + initialize outcome row.
@@ -153,7 +187,15 @@ export async function POST(
       webReviewUrl,
     });
   } catch (error) {
-    console.error("Error submitting mobile job:", error);
+    // Catch-all for unexpected errors (auth failures, network issues, etc.)
+    // This ensures we NEVER return 200 when an error occurs.
+    const errMsg = error instanceof Error ? error.message : String(error);
+    logEvent("mobile.submit.unexpected_error", {
+      requestId,
+      error: errMsg,
+      ms: Date.now() - t0,
+    });
+    console.error("Error submitting mobile job:", { requestId, error });
     return jsonError(requestId, 500, "INTERNAL", "Failed to submit job");
   }
 }
