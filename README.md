@@ -67,7 +67,7 @@ Generate proposals for 17+ contractor trades:
 | **Database** | PostgreSQL with Drizzle ORM |
 | **Authentication** | Clerk |
 | **Payments** | Stripe |
-| **AI** | OpenAI, Anthropic Claude |
+| **AI** | OpenAI (primary – vision & embeddings), Anthropic Claude (optional) |
 | **Cloud Storage** | AWS S3 |
 | **Image Analysis** | AWS Rekognition |
 | **Maps** | Google Maps API |
