@@ -12,6 +12,7 @@ import EmailProposalModal from "@/components/email-proposal-modal";
 import EditPriceModal from "@/components/edit-price-modal";
 import CountersignModal from "@/components/countersign-modal";
 import PaymentLinkModal from "@/components/payment-link-modal";
+import PaywallModal from "@/components/paywall-modal";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
 import { DashboardPageHeader, type DashboardDateRange } from "@/components/dashboard/PageHeader";
@@ -78,6 +79,7 @@ export default function Dashboard() {
     clientName: string;
   } | null>(null);
   const [dateRange, setDateRange] = useState<DashboardDateRange>("30d");
+  const [showPaywall, setShowPaywall] = useState(false);
   const { toast } = useToast();
 
   // Proposal actions are handled inline where used to keep callbacks lightweight.
@@ -387,6 +389,7 @@ export default function Dashboard() {
           isPro={user.isPro}
           dateRange={dateRange}
           onDateRangeChange={setDateRange}
+          onUpgrade={() => setShowPaywall(true)}
           language={language}
           newProposalLabel={t.dashboard.newProposal}
           scopeScanLabel="ScopeScan"
@@ -604,6 +607,12 @@ export default function Dashboard() {
           onError={handleDeleteError}
         />
       )}
+
+      {/* Paywall Modal */}
+      <PaywallModal
+        isOpen={showPaywall}
+        onClose={() => setShowPaywall(false)}
+      />
     </Layout>
   );
 }

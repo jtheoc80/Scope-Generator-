@@ -37,7 +37,7 @@ test.describe('Checkout Flow @smoke', () => {
       await page.waitForTimeout(1000);
 
       // Paywall modal should show pricing options
-      const modal = page.locator('[role="dialog"], .modal, [data-testid="paywall-modal"]');
+      const modal = page.locator('[role="dialog"], .modal, [data-testid="paywall"]');
       await expect(modal).toBeVisible({ timeout: 5000 });
     }
   });
