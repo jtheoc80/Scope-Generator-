@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     const userId = `test_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     // Create user in database
-    const user = await storage.upsertUser({
+    await storage.upsertUser({
       id: userId,
       email,
       firstName: firstName || 'Test',
