@@ -1,5 +1,4 @@
-// Utility functions for blog content processing
-// These are server-side utilities that don't require 'use client'
+// Blog utility functions that can be used in both server and client components
 
 export interface TOCItem {
   id: string;
@@ -8,8 +7,9 @@ export interface TOCItem {
 }
 
 /**
- * Extract table of contents items from blog content array
- * Processes headings (## and ###) into TOC structure
+ * Extracts table of contents items from blog content
+ * @param content Array of content blocks (markdown strings)
+ * @returns Array of TOC items with id, text, and level
  */
 export function extractTOC(content: string[]): TOCItem[] {
   return content

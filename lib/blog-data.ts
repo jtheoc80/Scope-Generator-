@@ -5,7 +5,7 @@ export interface BlogPostFAQ {
 
 export interface AuthorInfo {
   name: string;
-  credentials: string;
+  credentials?: string;
   avatar?: string;
 }
 
@@ -180,15 +180,23 @@ export const blogPosts: Record<string, BlogPost> = {
     excerpt: "If you want a price that wins jobs and protects profit, you need your real job cost, a target profit margin, and a clean way to present the price so clients trust it.",
     author: {
       name: "ScopeGen Team",
-      credentials: "Construction business experts",
+      credentials: "Construction Industry Experts",
     },
     datePublished: "January 2, 2026",
     dateModified: "January 2, 2026",
     readTime: "12 min read",
     category: "Business Tips",
+    tags: [
+      "pricing",
+      "business tips",
+      "contractor",
+      "profit margin",
+      "business",
+      "profit",
+      "margins",
+    ],
     metaTitle: "Contractor Pricing Guide 2025 (Updated): Markup, Margin, Break-Even + Trade Benchmarks",
     metaDescription: "Learn how to price contractor jobs profitably in 2025: markup vs margin, break-even rate, regional adjustments, pricing strategies, and trade benchmarks. Includes examples and templates.",
-    tags: ["pricing", "business", "profit", "margins"],
     heroImage: "/blog/contractor-pricing-guide-2025/hero.svg",
     ogImage: "/blog/contractor-pricing-guide-2025/og.svg",
     content: [

@@ -3,7 +3,11 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { List, ChevronDown, ChevronUp } from "lucide-react";
-import type { TOCItem } from "@/lib/blog-utils";
+import { TOCItem } from "@/lib/blog-utils";
+
+// Re-export for backward compatibility
+export { extractTOC } from "@/lib/blog-utils";
+export type { TOCItem } from "@/lib/blog-utils";
 
 interface TableOfContentsProps {
   items: TOCItem[];
