@@ -6,9 +6,9 @@ This directory contains test fixtures used by the E2E test suite.
 
 The `images/` directory contains minimal JPEG test images used for photo upload testing:
 
-- `test-photo-1.jpg` - Minimal 1x1 white pixel JPEG (362 bytes)
-- `test-photo-2.jpg` - Minimal 1x1 white pixel JPEG (362 bytes)
-- `test-photo-3.jpg` - Minimal 1x1 white pixel JPEG (362 bytes)
+- `test-photo-1.jpg` - Minimal 1x1 white pixel JPEG
+- `test-photo-2.jpg` - Minimal 1x1 white pixel JPEG
+- `test-photo-3.jpg` - Minimal 1x1 white pixel JPEG
 
 These images are intentionally minimal to:
 - Keep the repository size small
