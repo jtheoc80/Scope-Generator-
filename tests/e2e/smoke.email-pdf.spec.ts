@@ -55,7 +55,7 @@ test.describe('Email PDF Flow @smoke', () => {
       const recipientEmail = page.locator('[data-testid="input-recipient-email"]');
       const recipientName = page.locator('[data-testid="input-recipient-name"]');
       const messageInput = page.locator('[data-testid="input-email-message"]');
-      const sendButton = page.locator('[data-testid="button-send-email"]');
+      const sendButton = page.locator('[data-testid="email-pdf"]');
 
       await expect(recipientEmail).toBeVisible();
       await expect(sendButton).toBeVisible();
@@ -73,7 +73,7 @@ test.describe('Email PDF Flow @smoke', () => {
       await page.waitForTimeout(1000);
 
       // Try to send without email
-      const sendButton = page.locator('[data-testid="button-send-email"]');
+      const sendButton = page.locator('[data-testid="email-pdf"]');
       await sendButton.click();
       await page.waitForTimeout(1000);
 
@@ -159,7 +159,7 @@ test.describe('Email PDF Flow @smoke', () => {
       // Fill and send
       const testEmail = `recipient+${runId}@example.test`;
       await page.locator('[data-testid="input-recipient-email"]').fill(testEmail);
-      await page.locator('[data-testid="button-send-email"]').click();
+      await page.locator('[data-testid="email-pdf"]').click();
       
       await page.waitForTimeout(3000);
 

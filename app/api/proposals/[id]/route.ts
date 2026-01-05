@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
 import { storage } from '@/lib/services/storage';
+import { getRequestUserId } from '@/lib/services/requestUserId';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId } = await auth();
+    const userId = await getRequestUserId(request);
     
     if (!userId) {
       return NextResponse.json(
@@ -49,7 +49,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId } = await auth();
+    const userId = await getRequestUserId(request);
     
     if (!userId) {
       return NextResponse.json(
@@ -86,7 +86,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId } = await auth();
+    const userId = await getRequestUserId(request);
     
     if (!userId) {
       return NextResponse.json(

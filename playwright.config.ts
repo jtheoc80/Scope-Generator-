@@ -108,13 +108,15 @@ export default defineConfig({
   /* Directory for test artifacts */
   outputDir: 'qa/reports/test-results',
 
-  /*
+  /**
    * Web server configuration for Playwright tests.
    * - In CI, the server is started separately in the workflow; this will reuse it.
    * - Locally, this will start the dev server if it's not already running.
+   *
+   * EMAIL_MODE=test makes email sending deterministic (DB outbox mode).
    */
   webServer: {
-    command: 'npm run dev',
+    command: 'EMAIL_MODE=test npm run dev',
     url: baseURL,
     reuseExistingServer: true,
     timeout: 120000,

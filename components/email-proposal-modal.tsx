@@ -22,6 +22,7 @@ interface EmailProposalModalProps {
   clientName: string;
   publicToken?: string;
   onSuccess?: () => void;
+  onSent?: (info: { sentAt: string; messageId?: string }) => void;
 }
 
 export default function EmailProposalModal({
@@ -31,6 +32,7 @@ export default function EmailProposalModal({
   clientName,
   publicToken,
   onSuccess,
+  onSent,
 }: EmailProposalModalProps) {
   const [recipientEmail, setRecipientEmail] = useState("");
   const [recipientName, setRecipientName] = useState(clientName);
@@ -39,6 +41,7 @@ export default function EmailProposalModal({
   );
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState(false);
+  const [sentAt, setSentAt] = useState<string | null>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
@@ -87,11 +90,17 @@ export default function EmailProposalModal({
       if (data.publicUrl) {
         setShareUrl(data.publicUrl);
       }
+      if (data.sentAt) {
+        setSentAt(data.sentAt);
+      } else {
+        setSentAt(new Date().toISOString());
+      }
 
       toast({
         title: "Proposal sent!",
         description: `The proposal has been sent to ${recipientEmail}`,
       });
+      onSent?.({ sentAt: data.sentAt || new Date().toISOString(), messageId: data.messageId });
       onSuccess?.();
       onClose();
     } catch {
@@ -148,6 +157,15 @@ export default function EmailProposalModal({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          <div className="text-xs text-slate-500" data-testid="email-send-status">
+            {sending
+              ? "Email: Sending…"
+              : sentAt
+                ? `Email: Sent (${new Date(sentAt).toLocaleString("en-US")})`
+                : sendError
+                  ? "Email: Failed (retry)"
+                  : "Email: Idle"}
+          </div>
           <div className="space-y-2">
             <Label htmlFor="recipient-email">Recipient Email *</Label>
             <Input
@@ -223,7 +241,7 @@ export default function EmailProposalModal({
           <Button variant="outline" onClick={onClose} disabled={sending}>
             Cancel
           </Button>
-          <Button onClick={handleSend} disabled={sending} data-testid="button-send-email">
+          <Button onClick={handleSend} disabled={sending} data-testid="email-pdf">
             {sending ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
