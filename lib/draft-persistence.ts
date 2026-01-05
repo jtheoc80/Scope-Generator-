@@ -201,7 +201,20 @@ function migrateDraft(draft: ProposalDraft, fromVersion: number): ProposalDraft 
       ...draft,
       proposalId: null,
       photos: Array.isArray(draft.photos)
-        ? draft.photos.filter((p) => typeof p.url === "string" && !p.url.startsWith("blob:"))
+        ? draft.photos.filter((p) => {
+            if (!p || typeof p !== "object") {
+              return false;
+            }
+            const url = (p as { url?: unknown }).url;
+            if (typeof url !== "string") {
+              return false;
+            }
+            const trimmed = url.trim();
+            if (!trimmed) {
+              return false;
+            }
+            return !trimmed.startsWith("blob:");
+          })
         : [],
     };
   }
