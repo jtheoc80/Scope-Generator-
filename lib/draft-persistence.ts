@@ -8,7 +8,8 @@
 
 // Schema version - increment when draft structure changes
 // v2: Added window-specific fields (windowQuantity, windowSizePreset, windowWidthIn, windowHeightIn)
-export const DRAFT_SCHEMA_VERSION = 2;
+// v3: Added server-backed `proposalId` and drop non-refreshable blob photo URLs on restore
+export const DRAFT_SCHEMA_VERSION = 3;
 
 // localStorage key prefix
 const STORAGE_KEY_PREFIX = 'scopegen_proposal_draft';
@@ -47,6 +48,8 @@ export interface DraftPhoto {
  * The draft data structure
  */
 export interface ProposalDraft {
+  /** Server draft proposal id (enables refresh-safe photo hydration) */
+  proposalId?: number | null;
   clientName: string;
   address: string;
   services: DraftServiceItem[];
@@ -87,6 +90,7 @@ export function getDraftStorageKey(userId: string | null): string {
  */
 export function createEmptyDraft(): ProposalDraft {
   return {
+    proposalId: null,
     clientName: '',
     address: '',
     services: [
@@ -123,6 +127,15 @@ function validateDraftStructure(draft: unknown): draft is ProposalDraft {
   // Required string fields (can be empty)
   if (typeof d.clientName !== 'string') return false;
   if (typeof d.address !== 'string') return false;
+
+  // Optional server proposal ID
+  if (
+    d.proposalId !== undefined &&
+    d.proposalId !== null &&
+    typeof d.proposalId !== 'number'
+  ) {
+    return false;
+  }
 
   // Services array
   if (!Array.isArray(d.services)) return false;
@@ -181,6 +194,30 @@ function migrateDraft(draft: ProposalDraft, fromVersion: number): ProposalDraft 
       })),
     };
   }
+
+  // v2 -> v3: add proposalId + remove blob URLs (not refresh-safe)
+  if (fromVersion === 2) {
+    return {
+      ...draft,
+      proposalId: null,
+      photos: Array.isArray(draft.photos)
+        ? draft.photos.filter((p) => {
+            if (!p || typeof p !== "object") {
+              return false;
+            }
+            const url = (p as { url?: unknown }).url;
+            if (typeof url !== "string") {
+              return false;
+            }
+            const trimmed = url.trim();
+            if (!trimmed) {
+              return false;
+            }
+            return !trimmed.startsWith("blob:");
+          })
+        : [],
+    };
+  }
   
   return draft;
 }
@@ -210,7 +247,7 @@ export function deserializeDraft(raw: string | null): DeserializeResult {
       return { success: false, draft: null, timestamp: null, error: 'Missing version' };
     }
 
-    // Attempt migration from older versions (1 -> 2 supported)
+    // Attempt migration from older versions (1 -> 3 supported)
     if (version < DRAFT_SCHEMA_VERSION && version >= 1) {
       const migratedDraft = migrateDraft(draft, version);
       

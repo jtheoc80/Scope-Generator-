@@ -20,6 +20,7 @@ import { mobileApiFetch, newIdempotencyKey, PresignResponse } from "@/app/m/lib/
 
 type UploadedPhoto = {
   id: string;
+  serverId?: number;
   localUrl: string;
   remoteUrl?: string;
   status: "pending" | "uploading" | "uploaded" | "error";
@@ -95,6 +96,37 @@ export default function CapturePhotosPage() {
 
   const generateId = () => `photo-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
+  // Hydrate from server truth on load (refresh-safe).
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      try {
+        const res = await mobileApiFetch<{ photos: Array<{ id: number; publicUrl: string }> }>(
+          `/api/mobile/jobs/${jobId}/photos`,
+          { method: "GET" }
+        );
+        if (cancelled) return;
+        const serverPhotos: UploadedPhoto[] = (res.photos || []).map((p, idx) => ({
+          id: `server-${p.id}`,
+          serverId: p.id,
+          localUrl: p.publicUrl,
+          remoteUrl: p.publicUrl,
+          status: "uploaded",
+        }));
+        setPhotos(serverPhotos);
+      } catch (err) {
+        // Non-blocking: allow page to function even if list fails,
+        // but log for debugging and surface a gentle error message.
+        console.error("Failed to load existing photos for job", jobId, err);
+        setError((prev) => prev ?? "We couldn't load existing photos. You can still add new ones.");
+      }
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [jobId]);
+
   const uploadPhoto = async (photo: UploadedPhoto, file: File) => {
     try {
       // Update status to uploading
@@ -129,7 +161,7 @@ export default function CapturePhotosPage() {
       }
 
       // Register photo with the API
-      await mobileApiFetch(`/api/mobile/jobs/${jobId}/photos`, {
+      const registered = await mobileApiFetch<{ photoId: number }>(`/api/mobile/jobs/${jobId}/photos`, {
         method: "POST",
         headers: { "Idempotency-Key": newIdempotencyKey() },
         body: JSON.stringify({ url: presign.publicUrl, kind: "site" }),
@@ -143,6 +175,55 @@ export default function CapturePhotosPage() {
             : p
         )
       );
+
+      // Reconcile with server truth (ensures refresh-safe + canonical ordering).
+      try {
+        const res = await mobileApiFetch<{ photos: Array<{ id: number; publicUrl: string }> }>(
+          `/api/mobile/jobs/${jobId}/photos`,
+          { method: "GET" }
+        );
+        setPhotos((prev) => {
+          // Index any existing server-backed photos by serverId so we can reuse them
+          const byServerId = new Map<number, UploadedPhoto>();
+          for (const p of prev) {
+            if (typeof p.serverId === "number") {
+              byServerId.set(p.serverId, p);
+            }
+          }
+
+          const serverPhotos: UploadedPhoto[] = (res.photos || []).map((p) => {
+            const existing = byServerId.get(p.id);
+            if (existing) {
+              // Reuse existing client entry but ensure canonical server data
+              return {
+                ...existing,
+                serverId: p.id,
+                localUrl: p.publicUrl,
+                remoteUrl: p.publicUrl,
+                status: "uploaded" as const,
+              };
+            }
+            // New server photo we haven't seen before
+            return {
+              id: `server-${p.id}`,
+              serverId: p.id,
+              localUrl: p.publicUrl,
+              remoteUrl: p.publicUrl,
+              status: "uploaded" as const,
+            };
+          });
+
+          // In-flight photos are those that do not yet have a serverId
+          const inFlight = prev.filter(
+            (p) =>
+              p.serverId == null &&
+              (p.status === "uploading" || p.status === "pending" || p.status === "error")
+          );
+          return [...serverPhotos, ...inFlight];
+        });
+      } catch {
+        // ignore
+      }
     } catch (e) {
       // Update status to error
       setPhotos((prev) =>
@@ -501,7 +582,7 @@ export default function CapturePhotosPage() {
                   {/* Use native img for blob URLs - more reliable on mobile browsers */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={photo.localUrl}
+                    src={photo.remoteUrl ?? photo.localUrl}
                     alt={`Photo ${index + 1}`}
                     className="absolute inset-0 w-full h-full object-cover"
                   />

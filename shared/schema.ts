@@ -163,6 +163,16 @@ export const proposalPhotos = pgTable("proposal_photos", {
   proposalId: integer("proposal_id").notNull().references(() => proposals.id, { onDelete: "cascade" }),
   // Photo metadata
   publicUrl: text("public_url").notNull(),
+  /** Storage key for the original asset (S3 key / local path) */
+  storageKey: text("storage_key"),
+  /** Storage key for thumbnail derivative (S3 key / local path) */
+  thumbKey: text("thumb_key"),
+  /** Storage key for medium derivative (S3 key / local path) */
+  mediumKey: text("medium_key"),
+  /** Public URL for thumbnail derivative (preferred for grids/lists) */
+  thumbUrl: text("thumb_url"),
+  /** Public URL for medium derivative (preferred for preview/lightbox) */
+  mediumUrl: text("medium_url"),
   category: varchar("category", { length: 30 }).notNull().default("other"), // hero, existing, shower, vanity, flooring, etc.
   caption: text("caption"),
   filename: varchar("filename", { length: 255 }),
