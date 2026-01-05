@@ -9,8 +9,8 @@ import { createQASessionCookieValue, qaSessionCookieName } from "@/lib/services/
  * - Only intended for non-production environments
  */
 export async function POST(request: NextRequest) {
-  // Guard: Never in production unless explicitly configured for QA
-  if (process.env.NODE_ENV === "production" && !process.env.QA_TEST_SECRET) {
+  // Guard: Never in production
+  if (process.env.NODE_ENV === "production") {
     return NextResponse.json({ error: "Not available in production" }, { status: 403 });
   }
 
