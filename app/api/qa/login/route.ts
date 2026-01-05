@@ -40,7 +40,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const ttlSeconds = Number.isFinite(expiresInSeconds) ? Math.max(60, expiresInSeconds!) : 60 * 60;
+    const ttlSeconds =
+      typeof expiresInSeconds === "number" && Number.isFinite(expiresInSeconds)
+        ? Math.max(60, expiresInSeconds)
+        : 60 * 60;
     const expiresAtMs = Date.now() + ttlSeconds * 1000;
     const cookieValue = createQASessionCookieValue(userId, expiresAtMs);
 
