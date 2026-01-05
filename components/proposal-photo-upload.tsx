@@ -27,6 +27,7 @@ import {
   type ProposalPhotoCategory,
   proposalPhotoCategories,
 } from '@shared/schema';
+import { useToast } from '@/hooks/use-toast';
 
 export interface UploadedPhoto {
   id: string;
@@ -128,13 +129,15 @@ export function ProposalPhotoUpload({
   enableLearning = true,
 }: ProposalPhotoUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
-  const [recentlyDeleted, setRecentlyDeleted] = useState<UploadedPhoto | null>(null);
+  const [recentlyDeleted, setRecentlyDeleted] = useState<{ photo: UploadedPhoto; originalIndex: number } | null>(null);
   const [captionSuggestions, setCaptionSuggestions] = useState<Record<string, string[]>>({});
   const [learningReady, setLearningReady] = useState(false);
   const [isHydrating, setIsHydrating] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const undoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { toast } = useToast();
 
-  const generateId = () => `photo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const generateId = () => `photo-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 
   const isServerBacked = Boolean(proposalId || ensureProposalId);
 
@@ -467,40 +470,110 @@ export function ProposalPhotoUpload({
     const photo = photos.find(p => p.id === id);
     if (!photo) return;
 
+    // Store original index for restoration if needed
+    const originalIndex = photos.findIndex(p => p.id === id);
+    // Store for undo (don't revoke URL yet)
+    setRecentlyDeleted({ photo, originalIndex });
+    // Clear any existing timeout
+    if (undoTimeoutRef.current) {
+      clearTimeout(undoTimeoutRef.current);
+    }
+    // Optimistically remove from UI
+    const updatedPhotos = photos.filter(p => p.id !== id);
+    onPhotosChange(updatedPhotos);
+
+    // Handle server-backed deletion
     if (isServerBacked && photo.serverId && proposalId) {
-      void (async () => {
-        await fetch(`/api/proposals/${proposalId}/photos/${photo.serverId}`, {
-          method: 'DELETE',
-          credentials: 'include',
-        }).catch(() => null);
-        // Refetch canonical truth after deletion.
+      (async () => {
         try {
-          const serverPhotos = await fetchCanonicalPhotos(proposalId);
-          onPhotosChange(serverPhotos);
-        } catch {
-          // keep optimistic removal
+          const deleteResponse = await fetch(`/api/proposals/${proposalId}/photos/${photo.serverId}`, {
+            method: 'DELETE',
+            credentials: 'include',
+          });
+
+          if (!deleteResponse.ok) {
+            // Server deletion failed - try to refetch canonical truth
+            throw new Error('Failed to delete photo on server');
+          }
+
+          // Deletion succeeded - refetch to ensure consistency
+          try {
+            const serverPhotos = await fetchCanonicalPhotos(proposalId);
+            onPhotosChange(serverPhotos);
+          } catch (refetchError) {
+            // Refetch failed but deletion succeeded - optimistic removal is correct
+            console.warn('Photo deleted but failed to refetch:', refetchError);
+          }
+        } catch (error) {
+          // Server deletion failed - attempt to restore UI state
+          console.error('Failed to delete photo:', error);
+          
+          try {
+            // Try to refetch the canonical state from server
+            const serverPhotos = await fetchCanonicalPhotos(proposalId);
+            onPhotosChange(serverPhotos);
+            // Clear undo state and timeout since we restored from server
+            if (undoTimeoutRef.current) {
+              clearTimeout(undoTimeoutRef.current);
+              undoTimeoutRef.current = null;
+            }
+            setRecentlyDeleted(null);
+            
+            // Show error to user
+            toast({
+              title: 'Failed to delete photo',
+              description: 'The photo could not be deleted. Please try again.',
+              variant: 'destructive',
+            });
+          } catch (refetchError) {
+            // Both deletion and refetch failed - restore photo to UI manually
+            console.error('Failed to refetch after delete error:', refetchError);
+            
+            // Restore the photo at its original position
+            const restoredPhotos = [...updatedPhotos];
+            restoredPhotos.splice(originalIndex, 0, photo);
+            onPhotosChange(restoredPhotos);
+            // Clear undo state and timeout since we manually restored
+            if (undoTimeoutRef.current) {
+              clearTimeout(undoTimeoutRef.current);
+              undoTimeoutRef.current = null;
+            }
+            setRecentlyDeleted(null);
+            
+            toast({
+              title: 'Failed to delete photo',
+              description: 'Unable to connect to the server. Please check your connection and try again.',
+              variant: 'destructive',
+            });
+          }
         }
       })();
     }
     
-    // Store for undo (don't revoke URL yet)
-    setRecentlyDeleted(photo);
-    onPhotosChange(photos.filter(p => p.id !== id));
-    
     // Clear undo after 5 seconds and revoke URL
-    setTimeout(() => {
+    undoTimeoutRef.current = setTimeout(() => {
       setRecentlyDeleted(prev => {
-        if (prev?.id === photo.id && photo.url.startsWith('blob:')) {
-          URL.revokeObjectURL(photo.url);
+        if (prev?.photo.id === photo.id && prev.photo.url.startsWith('blob:')) {
+          URL.revokeObjectURL(prev.photo.url);
         }
-        return prev?.id === photo.id ? null : prev;
+        return prev?.photo.id === photo.id ? null : prev;
       });
+      undoTimeoutRef.current = null;
     }, 5000);
   };
 
   const undoDelete = () => {
     if (recentlyDeleted) {
-      onPhotosChange([...photos, recentlyDeleted]);
+      const { photo, originalIndex } = recentlyDeleted;
+      // Restore photo at its original position
+      const restoredPhotos = [...photos];
+      restoredPhotos.splice(originalIndex, 0, photo);
+      onPhotosChange(restoredPhotos);
+      // Clear timeout and state
+      if (undoTimeoutRef.current) {
+        clearTimeout(undoTimeoutRef.current);
+        undoTimeoutRef.current = null;
+      }
       setRecentlyDeleted(null);
     }
   };
