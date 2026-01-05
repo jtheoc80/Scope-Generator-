@@ -137,7 +137,7 @@ export function ProposalPhotoUpload({
   const undoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { toast } = useToast();
 
-  const generateId = () => `photo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const generateId = () => `photo-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 
   const isServerBacked = Boolean(proposalId || ensureProposalId);
 
@@ -553,8 +553,8 @@ export function ProposalPhotoUpload({
     // Clear undo after 5 seconds and revoke URL
     undoTimeoutRef.current = setTimeout(() => {
       setRecentlyDeleted(prev => {
-        if (prev?.photo.id === photo.id && photo.url.startsWith('blob:')) {
-          URL.revokeObjectURL(photo.url);
+        if (prev?.photo.id === photo.id && prev.photo.url.startsWith('blob:')) {
+          URL.revokeObjectURL(prev.photo.url);
         }
         return prev?.photo.id === photo.id ? null : prev;
       });
