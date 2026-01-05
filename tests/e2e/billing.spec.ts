@@ -263,7 +263,6 @@ test.describe('Billing Flow @billing', () => {
       await page.waitForLoadState('networkidle');
 
       // Look for manage subscription button (only visible for active subscribers)
-      const manageButton = page.locator('[data-testid="manage-subscription"]');
       
       // This will only be visible if user has an active subscription
       // We just verify the element exists in the DOM structure
