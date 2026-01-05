@@ -114,8 +114,11 @@ export default function CapturePhotosPage() {
           status: "uploaded",
         }));
         setPhotos(serverPhotos);
-      } catch {
-        // Non-blocking: allow page to function even if list fails.
+      } catch (err) {
+        // Non-blocking: allow page to function even if list fails,
+        // but log for debugging and surface a gentle error message.
+        console.error("Failed to load existing photos for job", jobId, err);
+        setError((prev) => prev ?? "We couldn't load existing photos. You can still add new ones.");
       }
     };
     run();
