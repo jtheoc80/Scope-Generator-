@@ -6,7 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Camera, Calendar, Plus } from "lucide-react";
+import { Camera, Calendar, Plus, Crown } from "lucide-react";
 
 export type DashboardDateRange = "7d" | "30d" | "90d" | "all";
 
@@ -25,8 +25,10 @@ export function DashboardPageHeader({
   newProposalLabel = "New Proposal",
   scopeScanLabel = "ScopeScan",
   manageTemplatesLabel = "Manage Templates",
+  upgradeLabel = "Upgrade",
   dateRange,
   onDateRangeChange,
+  onUpgrade,
   language,
 }: {
   title: string;
@@ -35,8 +37,10 @@ export function DashboardPageHeader({
   newProposalLabel?: string;
   scopeScanLabel?: string;
   manageTemplatesLabel?: string;
+  upgradeLabel?: string;
   dateRange?: DashboardDateRange;
   onDateRangeChange?: (range: DashboardDateRange) => void;
+  onUpgrade?: () => void;
   language?: string;
 }) {
   return (
@@ -58,6 +62,18 @@ export function DashboardPageHeader({
           </div>
 
           <div className="flex flex-wrap items-center gap-2 md:justify-end">
+            {/* Upgrade Button - Only shown for non-Pro users */}
+            {!isPro && onUpgrade && (
+              <Button 
+                onClick={onUpgrade}
+                className="gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600"
+                data-testid="button-upgrade"
+              >
+                <Crown className="h-4 w-4" />
+                {upgradeLabel}
+              </Button>
+            )}
+
             {dateRange && onDateRangeChange ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

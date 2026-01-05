@@ -2,8 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { stripeService } from '@/lib/services/stripeService';
 import { storage } from '@/lib/services/storage';
+import { billingService } from '@/lib/services/billingService';
 import { isStripeConfigured } from '@/lib/services/stripeClient';
 
+/**
+ * Verify Checkout Session and Return Updated Billing Status
+ * 
+ * Called after successful Stripe checkout to:
+ * 1. Verify the session belongs to the user
+ * 2. Ensure credits/subscription are applied (idempotently)
+ * 3. Return current billing status for UI refresh
+ */
 export async function POST(request: NextRequest) {
   try {
     // Check if Stripe is configured
@@ -34,6 +43,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Retrieve session from Stripe
     const session = await stripeService.retrieveCheckoutSession(sessionId);
     
     if (!session) {
@@ -43,48 +53,77 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (session.payment_status !== 'paid') {
-      return NextResponse.json(
-        { message: 'Payment not completed' },
-        { status: 400 }
-      );
-    }
-
-    if (session.metadata?.userId !== userId) {
+    // Verify ownership
+    if (session.metadata?.userId !== userId && session.client_reference_id !== userId) {
       return NextResponse.json(
         { message: 'Session does not belong to this user' },
         { status: 403 }
       );
     }
 
+    // Determine what type of purchase this was
+    const productType = session.metadata?.productType;
+    const planType = session.metadata?.planType;
     const credits = parseInt(session.metadata?.credits || '0');
-    const productType = session.metadata?.productType as 'single' | 'pack';
-
-    if (credits < 1) {
-      return NextResponse.json(
-        { message: 'Invalid credits in session' },
-        { status: 400 }
-      );
-    }
-
-    const expiresAt = productType === 'pack' 
-      ? new Date(Date.now() + 6 * 30 * 24 * 60 * 60 * 1000)
-      : null;
-
-    const result = await storage.addProposalCredits(userId, credits, expiresAt, sessionId);
     
-    if (!result.user) {
-      return NextResponse.json(
-        { message: 'User not found' },
-        { status: 404 }
-      );
+    let result: {
+      type: 'subscription' | 'credits';
+      creditsAdded?: number;
+      planActivated?: string;
+      alreadyProcessed: boolean;
+    } = {
+      type: 'credits',
+      alreadyProcessed: false,
+    };
+
+    // Handle one-time credit purchases
+    if (productType && ['starter', 'single', 'pack'].includes(productType) && credits > 0) {
+      if (session.payment_status === 'paid') {
+        const expiresAt = productType === 'pack' 
+          ? new Date(Date.now() + 6 * 30 * 24 * 60 * 60 * 1000)
+          : null;
+
+        const creditResult = await storage.addProposalCredits(userId, credits, expiresAt, sessionId);
+        
+        result = {
+          type: 'credits',
+          creditsAdded: creditResult.alreadyProcessed ? 0 : credits,
+          alreadyProcessed: creditResult.alreadyProcessed,
+        };
+      }
     }
+    
+    // Handle subscription purchases
+    if (planType && session.subscription) {
+      result = {
+        type: 'subscription',
+        planActivated: planType,
+        alreadyProcessed: false, // Webhook handles the actual activation
+      };
+    }
+
+    // Always return current billing status for UI to use
+    const billingStatus = await billingService.getBillingStatus(userId);
+    
+    // Get updated user for credits display
+    const user = await storage.getUser(userId);
 
     return NextResponse.json({ 
-      proposalCredits: result.user.proposalCredits,
-      creditsExpireAt: result.user.creditsExpireAt,
-      creditsAdded: result.alreadyProcessed ? 0 : credits,
-      alreadyProcessed: result.alreadyProcessed
+      verified: true,
+      sessionId,
+      purchaseType: result.type,
+      ...result,
+      // Include full billing status for immediate UI update
+      billingStatus,
+      // Include user credit info
+      proposalCredits: user?.proposalCredits || 0,
+      creditsExpireAt: user?.creditsExpireAt,
+      isPro: user?.isPro || false,
+      subscriptionPlan: user?.subscriptionPlan,
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+      },
     });
   } catch (error: any) {
     if (error.code === 'resource_missing') {

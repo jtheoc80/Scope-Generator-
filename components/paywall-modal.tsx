@@ -1,6 +1,6 @@
 'use client';
 import { useState } from "react";
-import { Lock, Check, Loader2, Zap, Package, Shield, Star, Users } from "lucide-react";
+import { Lock, Check, Loader2, Zap, Package, Shield, Star, Users, AlertCircle, RefreshCw } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
@@ -14,9 +14,11 @@ type PricingOption = 'single' | 'pack';
 export default function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
   const [selectedOption, setSelectedOption] = useState<PricingOption>('pack');
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleCheckout = async () => {
     setCheckoutLoading(true);
+    setError(null);
     try {
       const response = await fetch('/api/stripe/checkout', {
         method: 'POST',
@@ -28,25 +30,28 @@ export default function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
       
       const data = await response.json();
       
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to start checkout');
+      }
+      
       if (data.url) {
         window.location.href = data.url;
-      } else if (data.message) {
-        alert(data.message);
       } else {
-        console.error('No checkout URL returned');
-        alert('Failed to start checkout. Please try again.');
+        throw new Error('No checkout URL returned');
       }
-    } catch (error) {
-      console.error('Checkout error:', error);
-      alert('Failed to start checkout. Please try again.');
+    } catch (err) {
+      console.error('Checkout error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to start checkout. Please try again.');
     } finally {
+      // If checkout succeeds, the page will redirect and this reset is moot,
+      // but we keep it for consistency and for any non-redirect flows.
       setCheckoutLoading(false);
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg border-none shadow-2xl p-0 overflow-hidden" data-testid="paywall-modal">
+      <DialogContent className="sm:max-w-lg border-none shadow-2xl p-0 overflow-hidden" data-testid="paywall">
         <div className="bg-slate-900 p-6 text-center text-white relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-secondary to-transparent opacity-50"></div>
           <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
@@ -57,6 +62,25 @@ export default function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
             Get the complete, unblurred PDF and editable text to send to your client immediately.
           </p>
         </div>
+
+        {/* Error Banner */}
+        {error && (
+          <div 
+            className="bg-red-50 border-l-4 border-red-400 p-4 flex items-start gap-3"
+            data-testid="paywall-error"
+          >
+            <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm text-red-700">{error}</p>
+              <button 
+                onClick={() => setError(null)}
+                className="text-sm text-red-600 underline mt-1 hover:text-red-800"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="p-6 bg-white">
           <div className="grid gap-4">
@@ -175,7 +199,7 @@ export default function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
           </div>
 
           <Button 
-            data-testid="button-unlock"
+            data-testid="start-checkout"
             onClick={handleCheckout}
             disabled={checkoutLoading}
             className="w-full mt-6 bg-primary hover:bg-primary/90 text-white font-bold py-6 text-lg shadow-lg shadow-primary/20"
@@ -191,6 +215,20 @@ export default function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
               'Unlock for $12'
             )}
           </Button>
+
+          {/* Retry Button (shown after error) */}
+          {error && (
+            <Button
+              variant="outline"
+              onClick={handleCheckout}
+              disabled={checkoutLoading}
+              className="w-full mt-3"
+              data-testid="checkout-retry"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Try Again
+            </Button>
+          )}
           
           <p className="text-center text-xs text-muted-foreground mt-4">
             Secure payment via Stripe. One-time purchase, no subscription.
