@@ -75,13 +75,13 @@ export function buildProposalPdf(params: {
   // jsPDF sets both a creation date and a random file ID by default.
   try {
     pdf.setCreationDate("D:20000101000000Z");
-  } catch {
-    // ignore
+  } catch (error) {
+    console.error('[ProposalPDF] Failed to set creation date:', error);
   }
   try {
     pdf.setFileId("00000000000000000000000000000000");
-  } catch {
-    // ignore
+  } catch (error) {
+    console.error('[ProposalPDF] Failed to set file ID:', error);
   }
   try {
     pdf.setProperties({
@@ -91,8 +91,9 @@ export function buildProposalPdf(params: {
       author: "ScopeGen",
       keywords: "proposal,scopegen",
     });
-  } catch {
+  } catch (error) {
     // Older jsPDF builds may not support setProperties in server mode; non-fatal.
+    console.error('[ProposalPDF] Failed to set properties:', error);
   }
 
   const pageWidth = pdf.internal.pageSize.getWidth();
