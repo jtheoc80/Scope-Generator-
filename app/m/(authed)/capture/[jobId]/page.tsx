@@ -180,14 +180,42 @@ export default function CapturePhotosPage() {
           { method: "GET" }
         );
         setPhotos((prev) => {
-          const inFlight = prev.filter((p) => p.status === "uploading" || p.status === "pending" || p.status === "error");
-          const serverPhotos: UploadedPhoto[] = (res.photos || []).map((p, idx) => ({
-            id: `server-${p.id}`,
-            serverId: p.id,
-            localUrl: p.publicUrl,
-            remoteUrl: p.publicUrl,
-            status: "uploaded",
-          }));
+          // Index any existing server-backed photos by serverId so we can reuse them
+          const byServerId = new Map<number, UploadedPhoto>();
+          for (const p of prev) {
+            if (typeof p.serverId === "number") {
+              byServerId.set(p.serverId, p);
+            }
+          }
+
+          const serverPhotos: UploadedPhoto[] = (res.photos || []).map((p) => {
+            const existing = byServerId.get(p.id);
+            if (existing) {
+              // Reuse existing client entry but ensure canonical server data
+              return {
+                ...existing,
+                serverId: p.id,
+                localUrl: p.publicUrl,
+                remoteUrl: p.publicUrl,
+                status: "uploaded" as const,
+              };
+            }
+            // New server photo we haven't seen before
+            return {
+              id: `server-${p.id}`,
+              serverId: p.id,
+              localUrl: p.publicUrl,
+              remoteUrl: p.publicUrl,
+              status: "uploaded" as const,
+            };
+          });
+
+          // In-flight photos are those that do not yet have a serverId
+          const inFlight = prev.filter(
+            (p) =>
+              p.serverId == null &&
+              (p.status === "uploading" || p.status === "pending" || p.status === "error")
+          );
           return [...serverPhotos, ...inFlight];
         });
       } catch {
