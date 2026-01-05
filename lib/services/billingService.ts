@@ -8,73 +8,18 @@
 import { db } from '@/lib/db';
 import { sql } from 'drizzle-orm';
 import type Stripe from 'stripe';
+import type {
+  SubscriptionStatus,
+  PlanType,
+  BillingStatus,
+  Subscription,
+  WebhookEvent,
+  InsertWebhookEvent,
+} from '@/shared/billing-schema';
 
 // ==========================================
-// Inline Types (to avoid circular imports)
+// Billing Types (imported from shared schema)
 // ==========================================
-
-export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired' | 'paused' | 'none';
-export type PlanType = 'free' | 'starter' | 'pro' | 'crew';
-
-export interface BillingStatus {
-  hasActiveSubscription: boolean;
-  canAccessPremiumFeatures: boolean;
-  plan: PlanType;
-  status: SubscriptionStatus;
-  currentPeriodEnd: Date | null;
-  isTrialing: boolean;
-  trialEndsAt: Date | null;
-  availableCredits: number;
-  creditsExpireAt: Date | null;
-  cancelAtPeriodEnd: boolean;
-  stripeCustomerId: string | null;
-}
-
-export interface Subscription {
-  id: number;
-  userId: string;
-  stripeCustomerId: string;
-  stripeSubscriptionId: string | null;
-  stripePriceId: string | null;
-  status: string;
-  plan: string;
-  currentPeriodStart: Date | null;
-  currentPeriodEnd: Date | null;
-  trialStart: Date | null;
-  trialEnd: Date | null;
-  cancelAtPeriodEnd: boolean;
-  canceledAt: Date | null;
-  lastWebhookEventId: string | null;
-  lastUpdatedByEvent: string | null;
-  createdAt: Date | null;
-  updatedAt: Date | null;
-}
-
-export interface WebhookEvent {
-  id: number;
-  eventId: string;
-  eventType: string;
-  processedAt: Date | null;
-  processingResult: string;
-  stripeCustomerId: string | null;
-  stripeSubscriptionId: string | null;
-  userId: string | null;
-  errorMessage: string | null;
-  rawPayload: string | null;
-  createdAt: Date | null;
-}
-
-export interface InsertWebhookEvent {
-  eventId: string;
-  eventType: string;
-  processingResult?: string;
-  stripeCustomerId?: string | null;
-  stripeSubscriptionId?: string | null;
-  userId?: string | null;
-  errorMessage?: string | null;
-  rawPayload?: string | null;
-}
-
 function isActiveSubscriptionStatus(status: SubscriptionStatus | string): boolean {
   return status === 'active' || status === 'trialing';
 }
