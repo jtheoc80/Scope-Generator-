@@ -42,6 +42,9 @@ export default function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
     } catch (err) {
       console.error('Checkout error:', err);
       setError(err instanceof Error ? err.message : 'Failed to start checkout. Please try again.');
+    } finally {
+      // If checkout succeeds, the page will redirect and this reset is moot,
+      // but we keep it for consistency and for any non-redirect flows.
       setCheckoutLoading(false);
     }
   };
