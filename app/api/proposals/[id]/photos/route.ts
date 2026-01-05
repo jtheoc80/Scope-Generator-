@@ -6,6 +6,7 @@ import { promises as fs } from "fs";
 import { storage } from "@/lib/services/storage";
 import { createS3Client, isS3Configured } from "@/src/lib/mobile/storage/s3";
 import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { proposalPhotoCategories, type ProposalPhotoCategory } from "@/shared/schema";
 
 export const runtime = "nodejs";
 
@@ -22,6 +23,14 @@ function safeExtFromMime(mime: string): string {
   if (m === "image/webp") return "webp";
   if (m === "image/avif") return "avif";
   return "bin";
+}
+
+/**
+ * Type guard to validate that a string is a valid ProposalPhotoCategory.
+ * This ensures only valid category values are accepted and provides type safety.
+ */
+function isValidPhotoCategory(value: string): value is ProposalPhotoCategory {
+  return (proposalPhotoCategories as readonly string[]).includes(value);
 }
 
 function toPublicUrlFromKey(key: string): string {
@@ -150,7 +159,14 @@ export async function POST(
     return jsonError(400, "File too large (max 10MB)");
   }
 
-  const category = (form.get("category") as string | null) ?? "other";
+  const categoryRaw = (form.get("category") as string | null) ?? "other";
+  
+  // Validate category using type guard to ensure type safety
+  if (!isValidPhotoCategory(categoryRaw)) {
+    return jsonError(400, `Invalid category. Must be one of: ${proposalPhotoCategories.join(", ")}`);
+  }
+  const category = categoryRaw; // Now properly typed as ProposalPhotoCategory
+  
   const caption = (form.get("caption") as string | null) ?? null;
   const displayOrderRaw = form.get("displayOrder");
   const displayOrder =
@@ -221,7 +237,7 @@ export async function POST(
     mediumKey,
     thumbUrl,
     mediumUrl,
-    category: category as any,
+    category,
     caption,
     filename: file.name || null,
     displayOrder: Number.isFinite(displayOrder) ? displayOrder : 0,
