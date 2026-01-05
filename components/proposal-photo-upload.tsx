@@ -399,15 +399,6 @@ export function ProposalPhotoUpload({
         if (p.url?.startsWith('blob:')) URL.revokeObjectURL(p.url);
       });
 
-      if (anyRejected) {
-        // Best-effort: surface a single error on the last photo slot.
-        const lastId = updatedPhotos[updatedPhotos.length - 1]?.id;
-        if (lastId) {
-          onPhotosChange(
-            serverPhotos.map((sp) => sp) // no-op; keeps server truth
-          );
-        }
-      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Upload failed';
       // Mark temp photos as failed (keeps UI responsive; user can retry by re-adding).
