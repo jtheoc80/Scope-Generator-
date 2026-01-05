@@ -65,56 +65,98 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ received: true, skipped: true });
     }
 
-    // Handle the event
+    // Handle the event with error handling to ensure failed events are recorded
     let result: { success: boolean; message: string };
 
-    switch (event.type) {
-      case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.Checkout.Session;
-        result = await billingService.handleCheckoutCompleted(session, event.id);
-        break;
+    try {
+      switch (event.type) {
+        case 'checkout.session.completed': {
+          const session = event.data.object as Stripe.Checkout.Session;
+          result = await billingService.handleCheckoutCompleted(session, event.id);
+          break;
+        }
+
+        case 'customer.subscription.created':
+        case 'customer.subscription.updated': {
+          const subscription = event.data.object as Stripe.Subscription;
+          result = await billingService.handleSubscriptionUpdated(subscription, event.id);
+          break;
+        }
+
+        case 'customer.subscription.deleted': {
+          const subscription = event.data.object as Stripe.Subscription;
+          result = await billingService.handleSubscriptionDeleted(subscription, event.id);
+          break;
+        }
+
+        case 'payment_intent.succeeded': {
+          const paymentIntent = event.data.object as Stripe.PaymentIntent;
+          result = await handlePaymentSucceeded(paymentIntent, event.id);
+          break;
+        }
+
+        case 'invoice.paid': {
+          // Handle subscription renewals
+          const invoice = event.data.object as Stripe.Invoice;
+          result = await handleInvoicePaid(invoice, event.id);
+          break;
+        }
+
+        case 'invoice.payment_failed': {
+          // Handle failed payments
+          const invoice = event.data.object as Stripe.Invoice;
+          result = await handleInvoicePaymentFailed(invoice, event.id);
+          break;
+        }
+
+        default:
+          console.log(`STRIPE WEBHOOK: Unhandled event type: ${event.type}`);
+          result = { success: true, message: `Unhandled event type: ${event.type}` };
       }
 
-      case 'customer.subscription.created':
-      case 'customer.subscription.updated': {
-        const subscription = event.data.object as Stripe.Subscription;
-        result = await billingService.handleSubscriptionUpdated(subscription, event.id);
-        break;
+      console.log(`STRIPE WEBHOOK: ${event.type} result:`, result);
+      return NextResponse.json({ received: true, ...result });
+    } catch (handlerError) {
+      // Record failed event to prevent infinite retries
+      const errorMessage = handlerError instanceof Error ? handlerError.message : 'Unknown handler error';
+      console.error(`STRIPE WEBHOOK: Handler failed for ${event.type} (${event.id}):`, errorMessage);
+      
+      // Extract customer/subscription IDs from event data for better tracking
+      // Handle both string IDs and expanded objects with defensive type checking
+      let customerId: string | undefined;
+      let subscriptionId: string | undefined;
+      
+      if ('customer' in event.data.object && event.data.object.customer) {
+        const customer = event.data.object.customer;
+        const extractedId = typeof customer === 'string' ? customer : customer?.id;
+        customerId = typeof extractedId === 'string' ? extractedId : undefined;
       }
-
-      case 'customer.subscription.deleted': {
-        const subscription = event.data.object as Stripe.Subscription;
-        result = await billingService.handleSubscriptionDeleted(subscription, event.id);
-        break;
+      if ('subscription' in event.data.object && event.data.object.subscription) {
+        const subscription = event.data.object.subscription;
+        const extractedId = typeof subscription === 'string' ? subscription : subscription?.id;
+        subscriptionId = typeof extractedId === 'string' ? extractedId : undefined;
       }
-
-      case 'payment_intent.succeeded': {
-        const paymentIntent = event.data.object as Stripe.PaymentIntent;
-        result = await handlePaymentSucceeded(paymentIntent, event.id);
-        break;
+      
+      // Record the failed event to ensure idempotency
+      // Store only essential event data to prevent database bloat
+      try {
+        await billingService.recordWebhookEvent({
+          eventId: event.id,
+          eventType: event.type,
+          stripeCustomerId: customerId,
+          stripeSubscriptionId: subscriptionId,
+          processingResult: 'failed',
+          errorMessage,
+          // Store only event type and ID, not full payload to save space
+          rawPayload: JSON.stringify({ id: event.id, type: event.type, created: event.created }),
+        });
+      } catch (recordError) {
+        console.error('STRIPE WEBHOOK: Failed to record failed event:', recordError);
       }
-
-      case 'invoice.paid': {
-        // Handle subscription renewals
-        const invoice = event.data.object as Stripe.Invoice;
-        result = await handleInvoicePaid(invoice, event.id);
-        break;
-      }
-
-      case 'invoice.payment_failed': {
-        // Handle failed payments
-        const invoice = event.data.object as Stripe.Invoice;
-        result = await handleInvoicePaymentFailed(invoice, event.id);
-        break;
-      }
-
-      default:
-        console.log(`STRIPE WEBHOOK: Unhandled event type: ${event.type}`);
-        result = { success: true, message: `Unhandled event type: ${event.type}` };
+      
+      // Re-throw to trigger outer error handler
+      throw handlerError;
     }
-
-    console.log(`STRIPE WEBHOOK: ${event.type} result:`, result);
-    return NextResponse.json({ received: true, ...result });
   } catch (error) {
     console.error('STRIPE WEBHOOK: Handler error:', error);
     return NextResponse.json(
