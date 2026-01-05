@@ -129,11 +129,12 @@ export function ProposalPhotoUpload({
   enableLearning = true,
 }: ProposalPhotoUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
-  const [recentlyDeleted, setRecentlyDeleted] = useState<UploadedPhoto | null>(null);
+  const [recentlyDeleted, setRecentlyDeleted] = useState<{ photo: UploadedPhoto; originalIndex: number } | null>(null);
   const [captionSuggestions, setCaptionSuggestions] = useState<Record<string, string[]>>({});
   const [learningReady, setLearningReady] = useState(false);
   const [isHydrating, setIsHydrating] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const undoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { toast } = useToast();
 
   const generateId = () => `photo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -469,10 +470,14 @@ export function ProposalPhotoUpload({
     const photo = photos.find(p => p.id === id);
     if (!photo) return;
 
-    // Store for undo (don't revoke URL yet)
-    setRecentlyDeleted(photo);
     // Store original index for restoration if needed
     const originalIndex = photos.findIndex(p => p.id === id);
+    // Store for undo (don't revoke URL yet)
+    setRecentlyDeleted({ photo, originalIndex });
+    // Clear any existing timeout
+    if (undoTimeoutRef.current) {
+      clearTimeout(undoTimeoutRef.current);
+    }
     // Optimistically remove from UI
     const updatedPhotos = photos.filter(p => p.id !== id);
     onPhotosChange(updatedPhotos);
@@ -507,7 +512,11 @@ export function ProposalPhotoUpload({
             // Try to refetch the canonical state from server
             const serverPhotos = await fetchCanonicalPhotos(proposalId);
             onPhotosChange(serverPhotos);
-            // Clear undo state since we restored from server
+            // Clear undo state and timeout since we restored from server
+            if (undoTimeoutRef.current) {
+              clearTimeout(undoTimeoutRef.current);
+              undoTimeoutRef.current = null;
+            }
             setRecentlyDeleted(null);
             
             // Show error to user
@@ -524,7 +533,11 @@ export function ProposalPhotoUpload({
             const restoredPhotos = [...updatedPhotos];
             restoredPhotos.splice(originalIndex, 0, photo);
             onPhotosChange(restoredPhotos);
-            // Clear undo state since we manually restored
+            // Clear undo state and timeout since we manually restored
+            if (undoTimeoutRef.current) {
+              clearTimeout(undoTimeoutRef.current);
+              undoTimeoutRef.current = null;
+            }
             setRecentlyDeleted(null);
             
             toast({
@@ -538,19 +551,29 @@ export function ProposalPhotoUpload({
     }
     
     // Clear undo after 5 seconds and revoke URL
-    setTimeout(() => {
+    undoTimeoutRef.current = setTimeout(() => {
       setRecentlyDeleted(prev => {
-        if (prev?.id === photo.id && photo.url.startsWith('blob:')) {
+        if (prev?.photo.id === photo.id && photo.url.startsWith('blob:')) {
           URL.revokeObjectURL(photo.url);
         }
-        return prev?.id === photo.id ? null : prev;
+        return prev?.photo.id === photo.id ? null : prev;
       });
+      undoTimeoutRef.current = null;
     }, 5000);
   };
 
   const undoDelete = () => {
     if (recentlyDeleted) {
-      onPhotosChange([...photos, recentlyDeleted]);
+      const { photo, originalIndex } = recentlyDeleted;
+      // Restore photo at its original position
+      const restoredPhotos = [...photos];
+      restoredPhotos.splice(originalIndex, 0, photo);
+      onPhotosChange(restoredPhotos);
+      // Clear timeout and state
+      if (undoTimeoutRef.current) {
+        clearTimeout(undoTimeoutRef.current);
+        undoTimeoutRef.current = null;
+      }
       setRecentlyDeleted(null);
     }
   };
