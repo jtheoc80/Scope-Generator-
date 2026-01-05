@@ -8,7 +8,6 @@
  * UI should ONLY read from these tables, never from cached guesses.
  */
 
-import { sql } from 'drizzle-orm';
 import {
   pgTable,
   timestamp,
