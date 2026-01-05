@@ -122,17 +122,21 @@ export async function POST(request: NextRequest) {
       console.error(`STRIPE WEBHOOK: Handler failed for ${event.type} (${event.id}):`, errorMessage);
       
       // Extract customer/subscription IDs from event data for better tracking
+      // Handle both string IDs and expanded objects
       let customerId: string | undefined;
       let subscriptionId: string | undefined;
       
       if ('customer' in event.data.object) {
-        customerId = event.data.object.customer as string;
+        const customer = event.data.object.customer;
+        customerId = typeof customer === 'string' ? customer : customer?.id;
       }
       if ('subscription' in event.data.object) {
-        subscriptionId = event.data.object.subscription as string;
+        const subscription = event.data.object.subscription;
+        subscriptionId = typeof subscription === 'string' ? subscription : subscription?.id;
       }
       
       // Record the failed event to ensure idempotency
+      // Store only essential event data to prevent database bloat
       try {
         await billingService.recordWebhookEvent({
           eventId: event.id,
@@ -141,7 +145,8 @@ export async function POST(request: NextRequest) {
           stripeSubscriptionId: subscriptionId,
           processingResult: 'failed',
           errorMessage,
-          rawPayload: JSON.stringify(event),
+          // Store only event type and ID, not full payload to save space
+          rawPayload: JSON.stringify({ id: event.id, type: event.type, created: event.created }),
         });
       } catch (recordError) {
         console.error('STRIPE WEBHOOK: Failed to record failed event:', recordError);
