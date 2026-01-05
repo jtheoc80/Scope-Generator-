@@ -198,7 +198,7 @@ export function buildProposalPdf(params: {
 
   pdf.setTextColor(textColor);
   setFont("normal", 10);
-  const createdAt = proposal.createdAt ? new Date(proposal.createdAt) : new Date(0);
+  const createdAt = proposal.createdAt ? new Date(proposal.createdAt) : new Date();
   addText(formatLongDateUTC(createdAt), pageWidth - margin - 50, y - 6);
 
   pdf.setTextColor(lightGray);
