@@ -5,7 +5,7 @@
  * All operations are idempotent using Stripe event IDs.
  */
 
-import { db } from './db';
+import { db } from '@/lib/db';
 import { sql } from 'drizzle-orm';
 import type Stripe from 'stripe';
 
