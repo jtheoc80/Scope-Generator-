@@ -7,9 +7,12 @@ import { storage } from "@/lib/services/storage";
  * SECURITY: Only available with valid QA_TEST_SECRET and NOT in production.
  */
 export async function POST(request: NextRequest) {
-  // Guard: Never in production
-  if (process.env.NODE_ENV === "production" && !process.env.QA_TEST_SECRET) {
-    return NextResponse.json({ error: "Not available in production" }, { status: 403 });
+  // Guard: Never in production, and require explicit enable flag in non-production
+  const isProduction = process.env.NODE_ENV === "production";
+  const qaEndpointsEnabled = process.env.ENABLE_QA_ENDPOINTS === "true";
+
+  if (isProduction || !qaEndpointsEnabled) {
+    return NextResponse.json({ error: "Not available in this environment" }, { status: 403 });
   }
 
   try {
