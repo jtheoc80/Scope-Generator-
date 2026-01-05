@@ -122,17 +122,19 @@ export async function POST(request: NextRequest) {
       console.error(`STRIPE WEBHOOK: Handler failed for ${event.type} (${event.id}):`, errorMessage);
       
       // Extract customer/subscription IDs from event data for better tracking
-      // Handle both string IDs and expanded objects
+      // Handle both string IDs and expanded objects with defensive type checking
       let customerId: string | undefined;
       let subscriptionId: string | undefined;
       
-      if ('customer' in event.data.object) {
+      if ('customer' in event.data.object && event.data.object.customer) {
         const customer = event.data.object.customer;
-        customerId = typeof customer === 'string' ? customer : customer?.id;
+        const extractedId = typeof customer === 'string' ? customer : customer?.id;
+        customerId = typeof extractedId === 'string' ? extractedId : undefined;
       }
-      if ('subscription' in event.data.object) {
+      if ('subscription' in event.data.object && event.data.object.subscription) {
         const subscription = event.data.object.subscription;
-        subscriptionId = typeof subscription === 'string' ? subscription : subscription?.id;
+        const extractedId = typeof subscription === 'string' ? subscription : subscription?.id;
+        subscriptionId = typeof extractedId === 'string' ? extractedId : undefined;
       }
       
       // Record the failed event to ensure idempotency
