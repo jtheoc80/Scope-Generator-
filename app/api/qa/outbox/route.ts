@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   }
 
   const qaSecret = process.env.QA_TEST_SECRET;
-  const providedSecret = request.headers.get("x-qa-secret") || request.nextUrl.searchParams.get("secret");
+  const providedSecret = request.headers.get("x-qa-secret");
   if (!qaSecret || !providedSecret || providedSecret !== qaSecret) {
     return NextResponse.json({ error: "Invalid QA secret" }, { status: 401 });
   }
