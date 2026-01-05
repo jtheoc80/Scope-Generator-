@@ -471,6 +471,8 @@ export function ProposalPhotoUpload({
 
     // Store for undo (don't revoke URL yet)
     setRecentlyDeleted(photo);
+    // Store original index for restoration if needed
+    const originalIndex = photos.findIndex(p => p.id === id);
     // Optimistically remove from UI
     const updatedPhotos = photos.filter(p => p.id !== id);
     onPhotosChange(updatedPhotos);
@@ -518,14 +520,16 @@ export function ProposalPhotoUpload({
             // Both deletion and refetch failed - restore photo to UI manually
             console.error('Failed to refetch after delete error:', refetchError);
             
-            // Restore the photo by adding it back to the filtered list
-            onPhotosChange([...updatedPhotos, photo]);
+            // Restore the photo at its original position
+            const restoredPhotos = [...updatedPhotos];
+            restoredPhotos.splice(originalIndex, 0, photo);
+            onPhotosChange(restoredPhotos);
             // Clear undo state since we manually restored
             setRecentlyDeleted(null);
             
             toast({
               title: 'Failed to delete photo',
-              description: 'The photo could not be deleted and the state could not be restored. Please refresh the page.',
+              description: 'Unable to connect to the server. Please check your connection and try again.',
               variant: 'destructive',
             });
           }
