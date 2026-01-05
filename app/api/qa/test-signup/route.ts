@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { storage } from '@/lib/services/storage';
+import { createSignedToken } from '@/lib/test-auth-token';
 
 /**
  * QA Test Sign Up - For E2E tests to create accounts without Clerk.
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
     expiresAt.setMonth(expiresAt.getMonth() + 6);
     await storage.addProposalCredits(userId, 10, expiresAt);
 
-    // Create test session token
+    // Create cryptographically signed test session token
     const sessionData = {
       userId,
       email,
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
       expiresAt: Date.now() + (TEST_SESSION_MAX_AGE * 1000),
     };
     
-    const sessionToken = Buffer.from(JSON.stringify(sessionData)).toString('base64');
+    const sessionToken = createSignedToken(sessionData);
 
     // Set session cookie
     const cookieStore = await cookies();
