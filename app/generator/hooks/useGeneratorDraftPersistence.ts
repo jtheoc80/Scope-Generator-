@@ -51,6 +51,7 @@ export interface GeneratorCurrentState {
   photos: UploadedPhoto[];
   enhancedScopes: Record<string, string[]>;
   watchedValues: GeneratorFormValues;
+  savedProposalId: number | null;
 }
 
 /**
@@ -94,7 +95,7 @@ export function useGeneratorDraftPersistence(
   options: UseGeneratorDraftPersistenceOptions
 ): UseGeneratorDraftPersistenceReturn {
   const { userId, isAuthLoading, form, state, setters, onReset } = options;
-  const { services, photos, enhancedScopes, watchedValues } = state;
+  const { services, photos, enhancedScopes, watchedValues, savedProposalId } = state;
   const { setServices, setPhotos, setEnhancedScopes, setStep, setSavedProposalId, setFinalizeErrors } = setters;
 
   // Track if draft was restored
@@ -121,6 +122,7 @@ export function useGeneratorDraftPersistence(
   // Convert current state to ProposalDraft format
   const getCurrentDraft = useCallback((): ProposalDraft => {
     return {
+      proposalId: savedProposalId ?? null,
       clientName: watchedValues.clientName || '',
       address: watchedValues.address || '',
       services: services.map(s => ({
@@ -146,7 +148,7 @@ export function useGeneratorDraftPersistence(
       })),
       enhancedScopes,
     };
-  }, [watchedValues.clientName, watchedValues.address, services, photos, enhancedScopes]);
+  }, [savedProposalId, watchedValues.clientName, watchedValues.address, services, photos, enhancedScopes]);
 
   // Restore draft from localStorage on mount (once auth settles)
   useEffect(() => {
@@ -159,6 +161,9 @@ export function useGeneratorDraftPersistence(
     
     const savedDraft = loadDraft();
     if (savedDraft) {
+      // Restore server proposal id if present (enables refresh-safe photo hydration)
+      setSavedProposalId(savedDraft.proposalId ?? null);
+
       // Restore form values
       form.setValue('clientName', savedDraft.clientName);
       form.setValue('address', savedDraft.address);
@@ -202,7 +207,7 @@ export function useGeneratorDraftPersistence(
       // Mark as saved to prevent immediate re-save
       markAsSaved(savedDraft);
     }
-  }, [isAuthLoading, loadDraft, markAsSaved, form, setServices, setPhotos, setEnhancedScopes]);
+  }, [isAuthLoading, loadDraft, markAsSaved, form, setServices, setPhotos, setEnhancedScopes, setSavedProposalId]);
 
   // Autosave on draft changes (debounced)
   useEffect(() => {

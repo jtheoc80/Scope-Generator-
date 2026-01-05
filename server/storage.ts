@@ -280,7 +280,7 @@ export class DatabaseStorage implements IStorage {
       .select({
         ...getTableColumns(proposals),
         thumbnailUrl: sql<string | null>`(
-          select pp.public_url
+          select COALESCE(pp.thumb_url, pp.medium_url, pp.public_url)
           from proposal_photos as pp
           where pp.proposal_id = ${proposals.id}
           order by

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,8 +30,14 @@ import {
 
 export interface UploadedPhoto {
   id: string;
+  /** Server-side numeric ID when persisted */
+  serverId?: number;
   file?: File;
   url: string;
+  /** Optional optimized variants (server-backed) */
+  thumbUrl?: string;
+  mediumUrl?: string;
+  originalUrl?: string;
   category: ProposalPhotoCategory;
   caption: string;
   displayOrder: number;
@@ -68,6 +73,10 @@ interface ProposalPhotoUploadProps {
   maxPhotos?: number;
   disabled?: boolean;
   className?: string;
+  /** If provided, the component becomes server-backed and refresh-safe */
+  proposalId?: number | null;
+  /** Optional: callback to lazily create a draft proposal before uploads */
+  ensureProposalId?: () => Promise<number>;
   /** Learning context for smart suggestions */
   learningContext?: LearningContext;
   /** Enable learning system integration */
@@ -113,6 +122,8 @@ export function ProposalPhotoUpload({
   maxPhotos = 20,
   disabled = false,
   className,
+  proposalId,
+  ensureProposalId,
   learningContext,
   enableLearning = true,
 }: ProposalPhotoUploadProps) {
@@ -120,9 +131,61 @@ export function ProposalPhotoUpload({
   const [recentlyDeleted, setRecentlyDeleted] = useState<UploadedPhoto | null>(null);
   const [captionSuggestions, setCaptionSuggestions] = useState<Record<string, string[]>>({});
   const [learningReady, setLearningReady] = useState(false);
+  const [isHydrating, setIsHydrating] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const generateId = () => `photo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+  const isServerBacked = Boolean(proposalId || ensureProposalId);
+
+  const fetchCanonicalPhotos = useCallback(async (pid: number) => {
+    const res = await fetch(`/api/proposals/${pid}/photos`, { credentials: 'include' });
+    if (!res.ok) throw new Error('Failed to fetch photos');
+    const data = (await res.json()) as {
+      photos: Array<{
+        id: number;
+        category: ProposalPhotoCategory;
+        caption: string | null;
+        displayOrder: number;
+        urls?: { original: string; thumb: string; medium: string };
+        publicUrl: string;
+        thumbUrl?: string | null;
+        mediumUrl?: string | null;
+      }>;
+    };
+    return data.photos.map((p, idx) => ({
+      id: `server-${p.id}`,
+      serverId: p.id,
+      url: p.urls?.thumb ?? p.thumbUrl ?? p.publicUrl,
+      thumbUrl: p.urls?.thumb ?? p.thumbUrl ?? p.publicUrl,
+      mediumUrl: p.urls?.medium ?? p.mediumUrl ?? p.publicUrl,
+      originalUrl: p.urls?.original ?? p.publicUrl,
+      category: p.category ?? 'other',
+      caption: p.caption ?? '',
+      displayOrder: typeof p.displayOrder === 'number' ? p.displayOrder : idx,
+    }));
+  }, []);
+
+  // Hydrate from server truth when proposalId is present (refresh-safe).
+  useEffect(() => {
+    if (!isServerBacked || !proposalId) return;
+    let cancelled = false;
+    setIsHydrating(true);
+    fetchCanonicalPhotos(proposalId)
+      .then((serverPhotos) => {
+        if (cancelled) return;
+        onPhotosChange(serverPhotos);
+      })
+      .catch(() => {
+        // Non-blocking: keep existing UI state if fetch fails.
+      })
+      .finally(() => {
+        if (!cancelled) setIsHydrating(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isServerBacked, proposalId, fetchCanonicalPhotos, onPhotosChange]);
 
   // Fetch caption suggestions when learning is enabled
   useEffect(() => {
@@ -274,6 +337,7 @@ export function ProposalPhotoUpload({
       caption: '',
       displayOrder: photos.length + index,
       wasAutoAssigned: true,
+      isUploading: isServerBacked ? true : false,
     }));
 
     // Immediately show photos
@@ -294,8 +358,60 @@ export function ProposalPhotoUpload({
 
     // Update with smart categories
     onPhotosChange([...photos, ...updatedPhotos]);
+
+    if (!isServerBacked) return;
+
+    // Server-backed upload: upload -> server returns canonical record -> refetch list.
+    try {
+      const pid =
+        proposalId ??
+        (ensureProposalId ? await ensureProposalId() : null);
+      if (!pid) return;
+
+      const uploads = updatedPhotos.map(async (p) => {
+        if (!p.file) return;
+        const form = new FormData();
+        form.set('file', p.file);
+        form.set('category', p.category);
+        form.set('caption', p.caption);
+        form.set('displayOrder', String(p.displayOrder));
+
+        const res = await fetch(`/api/proposals/${pid}/photos`, {
+          method: 'POST',
+          credentials: 'include',
+          body: form,
+        });
+        if (!res.ok) {
+          const msg = (await res.json().catch(() => null)) as { message?: string } | null;
+          throw new Error(msg?.message || 'Upload failed');
+        }
+      });
+
+      const results = await Promise.allSettled(uploads);
+      const anyRejected = results.some((r) => r.status === 'rejected');
+
+      // Always refetch server truth when possible.
+      const serverPhotos = await fetchCanonicalPhotos(pid);
+      onPhotosChange(serverPhotos);
+
+      // Revoke blob URLs for any temp previews we replaced.
+      updatedPhotos.forEach((p) => {
+        if (p.url?.startsWith('blob:')) URL.revokeObjectURL(p.url);
+      });
+
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Upload failed';
+      // Mark temp photos as failed (keeps UI responsive; user can retry by re-adding).
+      onPhotosChange(
+        [...photos, ...updatedPhotos].map((p) =>
+          updatedPhotos.some((u) => u.id === p.id)
+            ? { ...p, isUploading: false, error: msg }
+            : p
+        )
+      );
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [photos, onPhotosChange, maxPhotos, disabled, enableLearning, learningContext]);
+  }, [photos, onPhotosChange, maxPhotos, disabled, enableLearning, learningContext, isServerBacked, proposalId, ensureProposalId, fetchCanonicalPhotos]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -329,12 +445,43 @@ export function ProposalPhotoUpload({
       );
     }
 
-    onPhotosChange(photos.map(p => p.id === id ? { ...p, ...updates, wasAutoAssigned: false } : p));
+    const next = photos.map(p => p.id === id ? { ...p, ...updates, wasAutoAssigned: false } : p);
+    onPhotosChange(next);
+
+    if (isServerBacked && photo.serverId && proposalId) {
+      // Fire-and-forget persistence to server truth.
+      void fetch(`/api/proposals/${proposalId}/photos/${photo.serverId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          category: updates.category,
+          caption: updates.caption,
+          displayOrder: updates.displayOrder,
+        }),
+      });
+    }
   };
 
   const removePhoto = (id: string) => {
     const photo = photos.find(p => p.id === id);
     if (!photo) return;
+
+    if (isServerBacked && photo.serverId && proposalId) {
+      void (async () => {
+        await fetch(`/api/proposals/${proposalId}/photos/${photo.serverId}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        }).catch(() => null);
+        // Refetch canonical truth after deletion.
+        try {
+          const serverPhotos = await fetchCanonicalPhotos(proposalId);
+          onPhotosChange(serverPhotos);
+        } catch {
+          // keep optimistic removal
+        }
+      })();
+    }
     
     // Store for undo (don't revoke URL yet)
     setRecentlyDeleted(photo);
@@ -373,7 +520,7 @@ export function ProposalPhotoUpload({
   const otherPhotos = photos.filter(p => p.category === 'other');
 
   return (
-    <div className={cn('space-y-6', className)}>
+    <div className={cn('space-y-6', className)} data-testid="photo-uploader">
       {/* Undo Toast */}
       {recentlyDeleted && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 z-50 animate-in slide-in-from-bottom-4">
@@ -411,6 +558,7 @@ export function ProposalPhotoUpload({
           className="hidden"
           onChange={(e) => handleFileSelect(e.target.files)}
           disabled={disabled || photos.length >= maxPhotos}
+          data-testid="photo-upload-input"
         />
         
         <div className="flex flex-col items-center gap-2">
@@ -485,6 +633,12 @@ export function ProposalPhotoUpload({
         </div>
       )}
 
+      {isHydrating && (
+        <div className="text-xs text-slate-500">
+          Loading photos…
+        </div>
+      )}
+
       {/* Learning Status Indicator */}
       {enableLearning && learningReady && photos.length > 0 && (
         <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2">
@@ -493,6 +647,7 @@ export function ProposalPhotoUpload({
         </div>
       )}
 
+      <div data-testid="photo-grid" className="space-y-6">
       {/* Hero Photo Section */}
       {heroPhoto && (
         <div>
@@ -574,6 +729,7 @@ export function ProposalPhotoUpload({
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
@@ -601,6 +757,7 @@ function PhotoCard({
 }: PhotoCardProps) {
   const [showCaptionSuggestions, setShowCaptionSuggestions] = useState(false);
   const [loadedSuggestions, setLoadedSuggestions] = useState<string[]>(captionSuggestions);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   const handleCaptionFocus = async () => {
     if (onRequestCaptionSuggestions && loadedSuggestions.length === 0) {
@@ -615,23 +772,28 @@ function PhotoCard({
       'border rounded-lg overflow-hidden bg-white',
       isHero ? 'border-amber-300' : 'border-slate-200',
       photo.error && 'border-red-300'
-    )}>
+    )} data-testid="photo-item">
       {/* Image Preview */}
       <div className={cn(
         'relative bg-slate-100',
         isHero ? 'aspect-video' : 'aspect-square'
       )}>
-        <Image
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src={photo.url}
           alt={photo.caption || 'Photo preview'}
-          fill
-          className="object-cover"
-          sizes={isHero ? '(max-width: 768px) 100vw, 600px' : '200px'}
+          className={cn('absolute inset-0 w-full h-full object-cover', !isLoaded && 'opacity-0')}
+          onLoad={() => setIsLoaded(true)}
+          loading="lazy"
+          decoding="async"
         />
+        {!isLoaded && (
+          <div className="absolute inset-0 bg-slate-200 animate-pulse" />
+        )}
         
         {/* Loading overlay */}
         {photo.isUploading && (
-          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50 flex items-center justify-center" data-testid="photo-upload-progress">
             <Loader2 className="w-8 h-8 text-white animate-spin" />
           </div>
         )}

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { X, ZoomIn } from 'lucide-react';
 import type { ProposalPhoto } from './types';
@@ -47,12 +46,13 @@ export function ScopePhotoInline({
               variant === 'single' ? 'aspect-video w-full max-w-md' : 'aspect-[4/3]'
             )}
           >
-            <Image
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               src={photo.url}
               alt={generatePhotoCaption(photo)}
-              fill
-              className="object-cover transition-transform duration-200 group-hover:scale-105"
-              sizes={variant === 'single' ? '(max-width: 768px) 100vw, 400px' : '(max-width: 768px) 50vw, 200px'}
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+              loading="lazy"
+              decoding="async"
             />
             
             {/* Hover overlay */}
@@ -90,12 +90,13 @@ export function ScopePhotoInline({
             className="relative max-w-4xl max-h-[85vh] w-full"
             onClick={(e) => e.stopPropagation()}
           >
-            <Image
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               src={lightboxPhoto.url}
               alt={generatePhotoCaption(lightboxPhoto)}
-              width={1200}
-              height={900}
               className="object-contain w-full h-auto max-h-[80vh] rounded-lg"
+              loading="eager"
+              decoding="async"
             />
             
             {lightboxPhoto.caption && (

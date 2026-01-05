@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { X, ZoomIn, ChevronLeft, ChevronRight, Camera } from 'lucide-react';
 import type { ProposalPhoto } from './types';
@@ -103,15 +102,16 @@ export function ExistingConditionsGrid({
                 <div className="absolute inset-0 bg-slate-200 animate-pulse" />
               )}
               
-              <Image
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src={photo.url}
                 alt={generatePhotoCaption(photo)}
-                fill
                 className={cn(
-                  "object-cover transition-all duration-200 group-hover:scale-105",
+                  "absolute inset-0 w-full h-full object-cover transition-all duration-200 group-hover:scale-105",
                   imageLoading[photo.id] !== false && "opacity-0"
                 )}
-                sizes="(max-width: 768px) 50vw, 33vw"
+                loading="lazy"
+                decoding="async"
                 onLoad={() => setImageLoading(prev => ({ ...prev, [photo.id]: false }))}
               />
               
@@ -190,13 +190,13 @@ export function ExistingConditionsGrid({
             className="relative max-w-4xl max-h-[85vh] w-full"
             onClick={(e) => e.stopPropagation()}
           >
-            <Image
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               src={currentPhoto.url}
               alt={generatePhotoCaption(currentPhoto)}
-              width={1200}
-              height={900}
               className="object-contain w-full h-auto max-h-[75vh] rounded-lg"
-              priority
+              loading="eager"
+              decoding="async"
             />
             
             {/* Caption */}
@@ -225,12 +225,13 @@ export function ExistingConditionsGrid({
                   )}
                   aria-label={`View photo ${index + 1}`}
                 >
-                  <Image
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
                     src={photo.url}
                     alt=""
-                    fill
-                    className="object-cover"
-                    sizes="48px"
+                    className="absolute inset-0 w-full h-full object-cover"
+                    loading="lazy"
+                    decoding="async"
                   />
                 </button>
               ))}

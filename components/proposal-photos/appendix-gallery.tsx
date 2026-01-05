@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { X, ChevronLeft, ChevronRight, ImageIcon } from 'lucide-react';
 import type { ProposalPhoto } from './types';
@@ -76,12 +75,13 @@ export function AppendixGallery({
                 className="group relative aspect-square overflow-hidden rounded-md bg-slate-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-transform hover:scale-105"
                 title={generatePhotoCaption(photo)}
               >
-                <Image
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
                   src={photo.url}
                   alt={generatePhotoCaption(photo)}
-                  fill
-                  className="object-cover"
-                  sizes="100px"
+                  className="absolute inset-0 w-full h-full object-cover"
+                  loading="lazy"
+                  decoding="async"
                 />
                 
                 {/* Index badge */}
@@ -143,13 +143,13 @@ export function AppendixGallery({
             className="relative max-w-5xl max-h-[85vh] w-full mx-16"
             onClick={(e) => e.stopPropagation()}
           >
-            <Image
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               src={currentPhoto.url}
               alt={generatePhotoCaption(currentPhoto)}
-              width={1400}
-              height={1050}
               className="object-contain w-full h-auto max-h-[75vh] rounded-lg"
-              priority
+              loading="eager"
+              decoding="async"
             />
             
             {/* Caption */}
@@ -179,12 +179,13 @@ export function AppendixGallery({
                       : 'opacity-60 hover:opacity-100'
                   )}
                 >
-                  <Image
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
                     src={photo.url}
                     alt=""
-                    fill
-                    className="object-cover"
-                    sizes="48px"
+                    className="absolute inset-0 w-full h-full object-cover"
+                    loading="lazy"
+                    decoding="async"
                   />
                 </button>
               ))}

@@ -4,6 +4,14 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { isClerkConfigured } from "@/lib/authUtils";
 import { Hammer, CheckCircle2, UserPlus, HelpCircle, ArrowRight } from "lucide-react";
+import { TestSignInForm } from "./test-signin-form";
+
+/**
+ * Check if we're in test auth mode (for e2e testing without real Clerk)
+ */
+function isTestAuthMode(): boolean {
+  return process.env.AUTH_MODE === 'test' || process.env.NEXT_PUBLIC_AUTH_MODE === 'test';
+}
 
 export default async function SignInPage({
   searchParams,
@@ -13,8 +21,8 @@ export default async function SignInPage({
   const params = await searchParams;
   const redirectUrl = params?.redirect_url || "/dashboard";
 
-  // Check if user is already signed in
-  if (isClerkConfigured()) {
+  // Check if user is already signed in (skip in test mode)
+  if (isClerkConfigured() && !isTestAuthMode()) {
     const { userId } = await auth();
     if (userId) {
       redirect(redirectUrl);
@@ -22,11 +30,50 @@ export default async function SignInPage({
   }
 
   const selectedPlan = params?.plan;
+  const testMode = isTestAuthMode();
+
+  // In test mode, render a predictable test-friendly form
+  if (testMode) {
+    return (
+      <div 
+        className="min-h-screen flex items-center justify-center bg-slate-50 px-6"
+        data-testid="signin-page"
+      >
+        <div 
+          className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-sm"
+          data-testid="signin-form"
+        >
+          <h1 className="text-xl font-semibold text-slate-900 mb-4">Sign in</h1>
+          <p className="text-sm text-slate-600 mb-6">
+            Test authentication mode is active.
+          </p>
+          <TestSignInForm redirectUrl={redirectUrl} />
+          <div className="mt-6 text-center">
+            <p className="text-sm text-slate-600">
+              Don&apos;t have an account?{" "}
+              <Link 
+                href="/sign-up"
+                className="text-orange-600 hover:text-orange-700 font-semibold"
+              >
+                Sign up
+              </Link>
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!isClerkConfigured()) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-6">
-        <div className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+      <div 
+        className="min-h-screen flex items-center justify-center bg-slate-50 px-6"
+        data-testid="signin-page"
+      >
+        <div 
+          className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-sm"
+          data-testid="signin-form"
+        >
           <h1 className="text-xl font-semibold text-slate-900">Sign in</h1>
           <p className="mt-2 text-sm text-slate-600">
             Sign in isn&apos;t available right now because authentication isn&apos;t configured.
@@ -55,7 +102,7 @@ export default async function SignInPage({
   }
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
+    <div className="min-h-screen flex flex-col lg:flex-row" data-testid="signin-page">
       {/* Left side - Branding and benefits */}
       <div className="hidden lg:flex lg:w-1/2 bg-slate-900 text-white p-12 flex-col justify-between">
         <div>
@@ -158,34 +205,36 @@ export default async function SignInPage({
             </div>
           </div>
           
-          <SignIn 
-            appearance={{
-              elements: {
-                rootBox: "w-full",
-                card: "shadow-xl border border-slate-200 rounded-xl",
-                headerTitle: "hidden",
-                headerSubtitle: "hidden",
-                socialButtonsBlockButton: "border border-slate-300 hover:bg-slate-50",
-                formButtonPrimary: "bg-orange-500 hover:bg-orange-600",
-                footerActionLink: "text-orange-600 hover:text-orange-700",
-                // Enhanced error styling for better visibility
-                formFieldErrorText: "text-red-600 font-medium",
-                alert: "bg-amber-50 border-amber-200 text-amber-800",
-                alertText: "text-amber-800",
-                // Style the "forgot password" and other links
-                formFieldAction: "text-orange-600 hover:text-orange-700",
-                // Make form fields more visible
-                formFieldInput: "border-slate-300 focus:border-orange-500 focus:ring-orange-500",
-                // Better styling for the divider
-                dividerLine: "bg-slate-200",
-                dividerText: "text-slate-500",
-                // Footer link styling
-                footerActionText: "text-slate-600",
-              },
-            }}
-            fallbackRedirectUrl={redirectUrl}
-            signUpUrl={`/sign-up${selectedPlan ? `?plan=${selectedPlan}` : ''}`}
-          />
+          <div data-testid="signin-form">
+            <SignIn 
+              appearance={{
+                elements: {
+                  rootBox: "w-full",
+                  card: "shadow-xl border border-slate-200 rounded-xl",
+                  headerTitle: "hidden",
+                  headerSubtitle: "hidden",
+                  socialButtonsBlockButton: "border border-slate-300 hover:bg-slate-50",
+                  formButtonPrimary: "bg-orange-500 hover:bg-orange-600",
+                  footerActionLink: "text-orange-600 hover:text-orange-700",
+                  // Enhanced error styling for better visibility
+                  formFieldErrorText: "text-red-600 font-medium",
+                  alert: "bg-amber-50 border-amber-200 text-amber-800",
+                  alertText: "text-amber-800",
+                  // Style the "forgot password" and other links
+                  formFieldAction: "text-orange-600 hover:text-orange-700",
+                  // Make form fields more visible
+                  formFieldInput: "border-slate-300 focus:border-orange-500 focus:ring-orange-500",
+                  // Better styling for the divider
+                  dividerLine: "bg-slate-200",
+                  dividerText: "text-slate-500",
+                  // Footer link styling
+                  footerActionText: "text-slate-600",
+                },
+              }}
+              fallbackRedirectUrl={redirectUrl}
+              signUpUrl={`/sign-up${selectedPlan ? `?plan=${selectedPlan}` : ''}`}
+            />
+          </div>
           
           {/* Help section for users having trouble */}
           <div className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-xl">
