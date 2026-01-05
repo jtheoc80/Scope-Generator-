@@ -158,25 +158,43 @@ export async function POST(
 
   const originalBuffer = Buffer.from(await file.arrayBuffer());
 
-  // Read image metadata + normalize orientation.
-  const img = sharp(originalBuffer, { failOn: "none" }).rotate();
-  const meta = await img.metadata();
-  const width = typeof meta.width === "number" ? meta.width : null;
-  const height = typeof meta.height === "number" ? meta.height : null;
+  // Read image metadata + normalize orientation, validating that this is a real image.
+  let width: number | null = null;
+  let height: number | null = null;
+  let thumbBuffer: Buffer;
+  let mediumBuffer: Buffer;
 
-  // Generate optimized derivatives (webp) for fast, consistent UI rendering.
-  const thumbBuffer = await img
-    .clone()
-    .resize({ width: 480, withoutEnlargement: true })
-    .webp({ quality: 75 })
-    .toBuffer();
+  try {
+    // Use metadata extraction as the primary validation step.
+    const baseImg = sharp(originalBuffer);
+    const meta = await baseImg.metadata();
 
-  const mediumBuffer = await img
-    .clone()
-    .resize({ width: 1200, withoutEnlargement: true })
-    .webp({ quality: 80 })
-    .toBuffer();
+    // If format is missing, treat this as an invalid image upload.
+    if (!meta.format) {
+      return jsonError(400, "Invalid image file");
+    }
 
+    width = typeof meta.width === "number" ? meta.width : null;
+    height = typeof meta.height === "number" ? meta.height : null;
+
+    const img = baseImg.rotate();
+
+    // Generate optimized derivatives (webp) for fast, consistent UI rendering.
+    thumbBuffer = await img
+      .clone()
+      .resize({ width: 480, withoutEnlargement: true })
+      .webp({ quality: 75 })
+      .toBuffer();
+
+    mediumBuffer = await img
+      .clone()
+      .resize({ width: 1200, withoutEnlargement: true })
+      .webp({ quality: 80 })
+      .toBuffer();
+  } catch (err) {
+    console.error("Invalid or corrupted image upload", err);
+    return jsonError(400, "Invalid image file");
+  }
   const baseKey = `uploads/proposals/${userId}/${proposalId}/${crypto.randomUUID()}`;
   const originalKey = `${baseKey}.${safeExtFromMime(file.type || "image/jpeg")}`;
   const thumbKey = `${baseKey}.thumb.webp`;
