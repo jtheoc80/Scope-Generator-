@@ -12,8 +12,13 @@ test.describe("PDF Export + Email Outbox @smoke", () => {
   test("should export deterministic PDF and write email to outbox", async ({ page }) => {
     const qaSecret = process.env.QA_TEST_SECRET;
     const baseURL = process.env.QA_BASE_URL || "http://localhost:3000";
+    const isLocalQaBaseUrl =
+      baseURL.startsWith("http://localhost") ||
+      baseURL.startsWith("https://localhost") ||
+      baseURL.startsWith("http://127.0.0.1") ||
+      baseURL.startsWith("https://127.0.0.1");
     test.skip(!qaSecret, "QA_TEST_SECRET is required for deterministic E2E");
-    test.skip(!baseURL.includes("localhost"), "Runs only against local QA server (not staging/prod)");
+    test.skip(!isLocalQaBaseUrl, "Runs only against local QA server (not staging/prod)");
 
     const runId = Date.now().toString();
     const recipientEmail = `recipient+${runId}@example.test`;
