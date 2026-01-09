@@ -568,7 +568,12 @@ export function isMeasurementTrade(jobType: string): jobType is MeasurementTrade
   return MEASUREMENT_TRADES.includes(jobType as MeasurementTrade);
 }
 
-export const PRIMARY_JOB_TYPES = JOB_TYPES.slice(0, 5);
+// Primary job types shown on initial load - includes measurement trades (fence, driveway)
+export const PRIMARY_JOB_TYPES = [
+  ...JOB_TYPES.slice(0, 5), // Bathroom, Kitchen, Roofing, HVAC, Plumbing
+  JOB_TYPES.find(t => t.id === 'fence')!,
+  JOB_TYPES.find(t => t.id === 'driveway')!,
+];
 
 export function getJobTypeLabel(id: string): string {
   const found = JOB_TYPES.find((t) => t.id === id);
