@@ -4,7 +4,7 @@ import { storage } from "@/lib/services/storage";
 import { db } from "@/server/db";
 import { proposalPhotos } from "@shared/schema";
 import { and, eq } from "drizzle-orm";
-import { cleanupProposalPhotoObjects } from "../route";
+import { cleanupProposalPhotoObjects } from "@/lib/services/photoStorage";
 
 export const runtime = "nodejs";
 

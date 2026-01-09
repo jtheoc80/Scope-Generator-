@@ -287,7 +287,7 @@ export function calculateBillingStatus(
   const availableCredits = creditsExpired ? 0 : (user.proposalCredits || 0);
   
   // Check trial
-  const isInTrial = user.trialEndsAt && new Date(user.trialEndsAt) > now;
+  const isInTrial = !!user.trialEndsAt && new Date(user.trialEndsAt) > now;
   
   // Determine status
   const status = subscription?.status as SubscriptionStatus || 'none';

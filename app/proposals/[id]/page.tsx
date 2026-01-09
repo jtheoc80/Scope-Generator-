@@ -286,7 +286,7 @@ export default function ProposalViewPage() {
           onClose={() => setIsEmailModalOpen(false)}
           proposalId={proposal.id}
           clientName={proposal.clientName}
-          publicToken={proposal.publicToken}
+          publicToken={proposal.publicToken ?? undefined}
           onSent={(info) => {
             setLastSentAt(info.sentAt);
             setPdfStatus("sent");

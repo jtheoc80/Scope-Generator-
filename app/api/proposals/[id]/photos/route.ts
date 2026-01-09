@@ -5,7 +5,7 @@ import path from "path";
 import { promises as fs } from "fs";
 import { storage } from "@/lib/services/storage";
 import { createS3Client, isS3Configured } from "@/src/lib/mobile/storage/s3";
-import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
 
 export const runtime = "nodejs";
 
@@ -39,16 +39,6 @@ async function putObjectToLocalPublicDir(key: string, body: Buffer) {
   await fs.writeFile(abs, body);
 }
 
-async function deleteObjectFromLocalPublicDir(key: string) {
-  const rel = key.replace(/^\/+/, "");
-  const abs = path.join(process.cwd(), "public", rel);
-  try {
-    await fs.unlink(abs);
-  } catch {
-    // best-effort
-  }
-}
-
 async function putObject(key: string, contentType: string, body: Buffer) {
   const s3 = isS3Configured();
   if (s3.configured) {
@@ -73,24 +63,6 @@ async function putObject(key: string, contentType: string, body: Buffer) {
     );
   }
   await putObjectToLocalPublicDir(key, body);
-}
-
-async function deleteObject(key: string) {
-  const s3 = isS3Configured();
-  if (s3.configured) {
-    const bucket = process.env.S3_BUCKET!;
-    const client = createS3Client();
-    await client.send(
-      new DeleteObjectCommand({
-        Bucket: bucket,
-        Key: key,
-      })
-    );
-    return;
-  }
-
-  if (process.env.NODE_ENV === "production") return;
-  await deleteObjectFromLocalPublicDir(key);
 }
 
 // GET /api/proposals/:id/photos
@@ -242,11 +214,5 @@ export async function POST(
     },
     { status: 201 }
   );
-}
-
-// DELETE helper for cleaning up files when DB delete is driven by another route.
-export async function cleanupProposalPhotoObjects(keys: Array<string | null | undefined>) {
-  const unique = Array.from(new Set(keys.filter((k): k is string => typeof k === "string" && k.length > 0)));
-  await Promise.allSettled(unique.map((k) => deleteObject(k)));
 }
 
