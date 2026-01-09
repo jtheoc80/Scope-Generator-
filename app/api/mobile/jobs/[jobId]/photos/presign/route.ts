@@ -31,14 +31,16 @@ export async function POST(
       );
     }
 
-    const authResult = await requireMobileAuth(request);
-    if (!authResult.ok) return authResult.response;
-
+    // 1. Validate jobId param format FIRST (before auth)
     const { jobId } = await params;
     const id = parseInt(jobId);
     if (Number.isNaN(id)) {
       return jsonError(requestId, 400, "INVALID_INPUT", "Invalid jobId");
     }
+
+    // 2. Check auth AFTER validating jobId format
+    const authResult = await requireMobileAuth(request, requestId);
+    if (!authResult.ok) return authResult.response;
 
     const job = await storage.getMobileJob(id, authResult.userId);
     if (!job) {

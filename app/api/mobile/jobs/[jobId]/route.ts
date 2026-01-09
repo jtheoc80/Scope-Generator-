@@ -19,15 +19,17 @@ export async function GET(
   const t0 = Date.now();
   
   try {
-    const authResult = await requireMobileAuth(request);
-    if (!authResult.ok) return authResult.response;
-
+    // 1. Validate jobId param format FIRST (before auth)
     const { jobId } = await params;
     const jobIdNum = parseInt(jobId, 10);
     
     if (isNaN(jobIdNum)) {
       return jsonError(requestId, 400, "INVALID_INPUT", "Invalid job ID");
     }
+
+    // 2. Check auth AFTER validating jobId format
+    const authResult = await requireMobileAuth(request, requestId);
+    if (!authResult.ok) return authResult.response;
 
     const job = await storage.getMobileJob(jobIdNum, authResult.userId);
     
@@ -70,15 +72,17 @@ export async function PATCH(
   const t0 = Date.now();
   
   try {
-    const authResult = await requireMobileAuth(request);
-    if (!authResult.ok) return authResult.response;
-
+    // 1. Validate jobId param format FIRST (before auth)
     const { jobId } = await params;
     const jobIdNum = parseInt(jobId, 10);
     
     if (isNaN(jobIdNum)) {
       return jsonError(requestId, 400, "INVALID_INPUT", "Invalid job ID");
     }
+
+    // 2. Check auth AFTER validating jobId format
+    const authResult = await requireMobileAuth(request, requestId);
+    if (!authResult.ok) return authResult.response;
 
     const body = await request.json();
     const parsed = updateJobSchema.safeParse(body);

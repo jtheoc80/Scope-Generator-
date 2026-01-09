@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
+import { jsonError } from "./observability";
 
 export type MobileAuthResult =
   | { ok: true; userId: string }
@@ -10,7 +11,7 @@ export type MobileAuthResult =
  * - Production/web: Clerk cookie-based session via `auth()`.
  * - Companion app/dev: `x-mobile-api-key` + `x-mobile-user-id` (server-side API key).
  */
-export async function requireMobileAuth(request: NextRequest): Promise<MobileAuthResult> {
+export async function requireMobileAuth(request: NextRequest, requestId: string): Promise<MobileAuthResult> {
   const mode = (process.env.MOBILE_API_AUTH || "clerk").toLowerCase();
 
   const apiKey = request.headers.get("x-mobile-api-key");
@@ -21,10 +22,7 @@ export async function requireMobileAuth(request: NextRequest): Promise<MobileAut
     if (!userId) {
       return {
         ok: false,
-        response: NextResponse.json(
-          { message: "Missing x-mobile-user-id" },
-          { status: 401 }
-        ),
+        response: jsonError(requestId, 401, "UNAUTHORIZED", "Missing x-mobile-user-id"),
       };
     }
     return { ok: true, userId };
@@ -36,10 +34,7 @@ export async function requireMobileAuth(request: NextRequest): Promise<MobileAut
     if (!userId) {
       return {
         ok: false,
-        response: NextResponse.json(
-          { message: "Missing x-mobile-user-id (MOBILE_API_AUTH=none)" },
-          { status: 401 }
-        ),
+        response: jsonError(requestId, 401, "UNAUTHORIZED", "Missing x-mobile-user-id (MOBILE_API_AUTH=none)"),
       };
     }
     return { ok: true, userId };
@@ -50,7 +45,7 @@ export async function requireMobileAuth(request: NextRequest): Promise<MobileAut
   if (!userId) {
     return {
       ok: false,
-      response: NextResponse.json({ message: "Unauthorized" }, { status: 401 }),
+      response: jsonError(requestId, 401, "UNAUTHORIZED", "Unauthorized"),
     };
   }
 

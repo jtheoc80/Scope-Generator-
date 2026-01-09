@@ -4,6 +4,7 @@ import { db } from "@/server/db";
 import { jobSetupPreferences, savedCustomers, savedAddresses } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { getRequestId } from "@/src/lib/mobile/observability";
 
 // Schema for updating job setup preferences
 const updatePreferencesSchema = z.object({
@@ -15,8 +16,9 @@ const updatePreferencesSchema = z.object({
 
 // GET /api/mobile/job-setup - Get job setup preferences with resolved customer/address
 export async function GET(request: NextRequest) {
+  const requestId = getRequestId(request.headers);
   try {
-    const authResult = await requireMobileAuth(request);
+    const authResult = await requireMobileAuth(request, requestId);
     if (!authResult.ok) return authResult.response;
 
     // Get preferences
@@ -73,8 +75,9 @@ export async function GET(request: NextRequest) {
 
 // PUT /api/mobile/job-setup - Update job setup preferences
 export async function PUT(request: NextRequest) {
+  const requestId = getRequestId(request.headers);
   try {
-    const authResult = await requireMobileAuth(request);
+    const authResult = await requireMobileAuth(request, requestId);
     if (!authResult.ok) return authResult.response;
 
     const body = await request.json();
@@ -144,8 +147,9 @@ export async function PUT(request: NextRequest) {
 
 // POST /api/mobile/job-setup/add-recent-job-type - Add a job type to recent list
 export async function POST(request: NextRequest) {
+  const requestId = getRequestId(request.headers);
   try {
-    const authResult = await requireMobileAuth(request);
+    const authResult = await requireMobileAuth(request, requestId);
     if (!authResult.ok) return authResult.response;
 
     const body = await request.json();
