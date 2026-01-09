@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       value: cookieValue,
       httpOnly: true,
       sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
+      secure: false, // Never production (guarded above)
       path: "/",
       maxAge: ttlSeconds,
     });

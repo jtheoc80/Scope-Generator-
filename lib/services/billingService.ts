@@ -431,7 +431,7 @@ export class BillingService {
     const userId = subscription.metadata?.userId;
     
     // Find user by metadata or customer ID
-    let targetUserId = userId;
+    let targetUserId: string | undefined = userId;
     if (!targetUserId) {
       const userResult = await db.execute(
         sql`SELECT id FROM users WHERE stripe_customer_id = ${customerId} LIMIT 1`

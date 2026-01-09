@@ -67,8 +67,10 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
         if (typeof a.content === 'string') {
           // Treat as raw string payload; store base64 of UTF-8 to preserve bytes deterministically.
           buf = Buffer.from(a.content, 'utf8');
+        } else if (a.content instanceof ArrayBuffer) {
+          buf = Buffer.from(new Uint8Array(a.content));
         } else {
-          buf = Buffer.from(a.content as Buffer | Uint8Array | ArrayBuffer);
+          buf = Buffer.from(a.content as Buffer | Uint8Array);
         }
         return {
           filename: a.filename,
