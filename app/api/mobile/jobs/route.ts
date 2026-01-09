@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
   const requestId = getRequestId(request.headers);
   const t0 = Date.now();
   try {
-    const authResult = await requireMobileAuth(request);
+    const authResult = await requireMobileAuth(request, requestId);
     if (!authResult.ok) return authResult.response;
 
     // Ensure user exists before proceeding (fixes foreign key issues with new users)

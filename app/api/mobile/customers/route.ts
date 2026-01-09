@@ -4,6 +4,7 @@ import { db } from "@/server/db";
 import { savedCustomers } from "@shared/schema";
 import { eq, desc, sql } from "drizzle-orm";
 import { z } from "zod";
+import { getRequestId } from "@/src/lib/mobile/observability";
 
 // Schema for creating/updating a customer
 const createCustomerSchema = z.object({
@@ -15,8 +16,9 @@ const createCustomerSchema = z.object({
 
 // GET /api/mobile/customers - List customers with optional search
 export async function GET(request: NextRequest) {
+  const requestId = getRequestId(request.headers);
   try {
-    const authResult = await requireMobileAuth(request);
+    const authResult = await requireMobileAuth(request, requestId);
     if (!authResult.ok) return authResult.response;
 
     const { searchParams } = new URL(request.url);
@@ -60,8 +62,9 @@ export async function GET(request: NextRequest) {
 
 // POST /api/mobile/customers - Create a new customer
 export async function POST(request: NextRequest) {
+  const requestId = getRequestId(request.headers);
   try {
-    const authResult = await requireMobileAuth(request);
+    const authResult = await requireMobileAuth(request, requestId);
     if (!authResult.ok) return authResult.response;
 
     const body = await request.json();
@@ -97,8 +100,9 @@ export async function POST(request: NextRequest) {
 
 // PUT /api/mobile/customers - Update customer (touch lastUsedAt)
 export async function PUT(request: NextRequest) {
+  const requestId = getRequestId(request.headers);
   try {
-    const authResult = await requireMobileAuth(request);
+    const authResult = await requireMobileAuth(request, requestId);
     if (!authResult.ok) return authResult.response;
 
     const body = await request.json();
