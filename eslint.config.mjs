@@ -20,8 +20,6 @@ const config = [
       "build/**",
       "next-env.d.ts",
       // Migration / scratch areas:
-      "api-to-convert/**",
-      "pages-to-convert/**",
       "nextjs-app/**",
       // Large content-addressed folders that aren't source:
       "[0-9a-f][0-9a-f]/**",

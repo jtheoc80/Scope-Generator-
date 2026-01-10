@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
+import { logger } from '@/lib/logger';
 import { getStripeClient, getStripeWebhookSecret } from '@/lib/services/stripeClient';
 import { billingService } from '@/lib/services/billingService';
 import { storage } from '@/lib/services/storage';
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
     const signature = headersList.get('stripe-signature');
 
     if (!signature) {
-      console.error('STRIPE WEBHOOK: Missing stripe-signature header');
+      logger.error('Stripe webhook: Missing stripe-signature header');
       return NextResponse.json(
         { message: 'Missing stripe-signature header' },
         { status: 400 }
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
     try {
       webhookSecret = getStripeWebhookSecret();
     } catch {
-      console.error('STRIPE WEBHOOK: STRIPE_WEBHOOK_SECRET not configured');
+      logger.error('Stripe webhook: STRIPE_WEBHOOK_SECRET not configured');
       return NextResponse.json(
         { message: 'Webhook secret not configured' },
         { status: 500 }
@@ -49,19 +50,19 @@ export async function POST(request: NextRequest) {
     try {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
     } catch (err: any) {
-      console.error('STRIPE WEBHOOK: Signature verification failed:', err.message);
+      logger.error('Stripe webhook: Signature verification failed', { error: err.message });
       return NextResponse.json(
         { message: `Webhook signature verification failed: ${err.message}` },
         { status: 400 }
       );
     }
 
-    console.log(`STRIPE WEBHOOK: Processing event ${event.type} (${event.id})`);
+    logger.info('Stripe webhook: Processing event', { eventType: event.type, eventId: event.id });
 
     // Check idempotency - skip if already processed
     const alreadyProcessed = await billingService.isEventProcessed(event.id);
     if (alreadyProcessed) {
-      console.log(`STRIPE WEBHOOK: Event ${event.id} already processed, skipping`);
+      logger.debug('Stripe webhook: Event already processed, skipping', { eventId: event.id });
       return NextResponse.json({ received: true, skipped: true });
     }
 
@@ -109,14 +110,14 @@ export async function POST(request: NextRequest) {
       }
 
       default:
-        console.log(`STRIPE WEBHOOK: Unhandled event type: ${event.type}`);
+        logger.debug('Stripe webhook: Unhandled event type', { eventType: event.type });
         result = { success: true, message: `Unhandled event type: ${event.type}` };
     }
 
-    console.log(`STRIPE WEBHOOK: ${event.type} result:`, result);
+    logger.info('Stripe webhook: Event processed', { eventType: event.type, result });
     return NextResponse.json({ received: true, ...result });
   } catch (error) {
-    console.error('STRIPE WEBHOOK: Handler error:', error);
+    logger.error('Stripe webhook: Handler error', error as Error);
     return NextResponse.json(
       { message: 'Webhook handler failed', error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -146,7 +147,7 @@ async function handlePaymentSucceeded(
       stripePaymentIntentId: paymentIntent.id,
     });
     
-    console.log(`STRIPE WEBHOOK: Payment received for proposal ${proposalId}`);
+    logger.info('Stripe webhook: Payment received for proposal', { proposalId });
     return { success: true, message: `Payment received for proposal ${proposalId}` };
   }
 
@@ -176,7 +177,7 @@ async function handleInvoicePaid(
       await billingService.handleSubscriptionUpdated(subscription, eventId);
       return { success: true, message: 'Subscription renewed successfully' };
     } catch (error) {
-      console.error('STRIPE WEBHOOK: Error handling invoice.paid:', error);
+      logger.error('Stripe webhook: Error handling invoice.paid', error as Error);
       return { success: false, message: 'Failed to update subscription' };
     }
   }
@@ -199,7 +200,7 @@ async function handleInvoicePaymentFailed(
   const subscriptionId = invoice.subscription as string;
   const customerId = invoice.customer as string;
 
-  console.warn(`STRIPE WEBHOOK: Payment failed for customer ${customerId}, subscription ${subscriptionId}`);
+  logger.warn('Stripe webhook: Payment failed', { customerId, subscriptionId });
 
   // The subscription status will be updated via customer.subscription.updated event
   // Just log for now

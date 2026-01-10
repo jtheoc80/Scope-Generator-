@@ -43,8 +43,6 @@
     "node_modules",
     // Legacy SPA entrypoint / migration artifacts (not used by Next app router)
     "App.tsx",
-    "api-to-convert/**",
-    "pages-to-convert/**",
     "nextjs-app/**",
     "apps/**",
     "script/**",
