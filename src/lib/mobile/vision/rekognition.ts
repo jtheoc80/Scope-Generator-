@@ -1,4 +1,5 @@
 import { RekognitionClient, DetectLabelsCommand } from "@aws-sdk/client-rekognition";
+import sharp from "sharp";
 import { parseS3Url, fetchS3ObjectBytes, type S3ObjectRef } from "../storage/s3";
 
 function requireEnv(name: string) {
@@ -177,53 +178,83 @@ export async function analyzeWithRekognition(params: {
   const s3Ref = params.s3Ref !== undefined ? params.s3Ref : parseS3Url(params.imageUrl);
   
   // PREFERRED: Use S3Object to let Rekognition read directly from S3
-  // This avoids 301 redirect issues that occur when S3 URLs are accessed via HTTP
-  // with wrong region in the URL.
+  // BUT only if we are sure it's a supported format (JPEG/PNG).
+  // If we suspect HEIC, we must fetch and convert it first.
   if (s3Ref) {
-    console.log("rekognition.request.s3Object", {
-      bucket: s3Ref.bucket,
-      key: s3Ref.key.substring(0, 60) + "...",
-    });
+    // We check the file extension as a heuristic. If it's likely HEIC, skip S3 direct mode.
+    const isLikelySupported = /\.(jpg|jpeg|png)$/i.test(s3Ref.key);
     
-    const cmd = new DetectLabelsCommand({
-      Image: { 
-        S3Object: { 
-          Bucket: s3Ref.bucket, 
-          Name: s3Ref.key 
-        } 
-      },
-      MaxLabels: params.maxLabels ?? 20,
-      MinConfidence: params.minConfidence ?? 70,
-    });
+    if (isLikelySupported) {
+      console.log("rekognition.request.s3Object", {
+        bucket: s3Ref.bucket,
+        key: s3Ref.key.substring(0, 60) + "...",
+      });
+      
+      try {
+        const cmd = new DetectLabelsCommand({
+          Image: { 
+            S3Object: { 
+              Bucket: s3Ref.bucket, 
+              Name: s3Ref.key 
+            } 
+          },
+          MaxLabels: params.maxLabels ?? 20,
+          MinConfidence: params.minConfidence ?? 70,
+        });
 
-    const out = await client.send(cmd);
-    const labels = (out.Labels || [])
-      .filter((l) => l.Name && typeof l.Confidence === "number")
-      .map((l) => ({ name: l.Name as string, confidence: l.Confidence as number }))
-      .sort((a, b) => b.confidence - a.confidence);
+        const out = await client.send(cmd);
+        const labels = (out.Labels || [])
+          .filter((l) => l.Name && typeof l.Confidence === "number")
+          .map((l) => ({ name: l.Name as string, confidence: l.Confidence as number }))
+          .sort((a, b) => b.confidence - a.confidence);
 
-    console.log("rekognition.success.s3Object", {
-      bucket: s3Ref.bucket,
-      labelCount: labels.length,
-      topLabels: labels.slice(0, 5).map(l => l.name),
-    });
+        console.log("rekognition.success.s3Object", {
+          bucket: s3Ref.bucket,
+          labelCount: labels.length,
+          topLabels: labels.slice(0, 5).map(l => l.name),
+        });
 
-    return {
-      provider: "aws" as const,
-      service: "rekognition" as const,
-      model: "DetectLabels",
-      labels,
-    };
+        return {
+          provider: "aws" as const,
+          service: "rekognition" as const,
+          model: "DetectLabels",
+          labels,
+        };
+      } catch (err: any) {
+        // If S3 direct fails (e.g. InvalidImageFormatException), fall back to byte conversion below
+        console.warn("rekognition.s3Object.failed", { error: err.message });
+      }
+    }
   }
   
-  // FALLBACK: Fetch bytes and send to Rekognition (for non-S3 URLs)
-  const bytes = await fetchImageBytesFromS3OrUrl(params.imageUrl, null);
+  // FALLBACK: Fetch bytes and send to Rekognition (for non-S3 URLs or fallback)
+  let bytes = await fetchImageBytesFromS3OrUrl(params.imageUrl, null);
 
-  // CRITICAL: Validate image format before sending to Rekognition.
-  // Rekognition only supports JPEG/PNG. HEIC (common from iPhones) will fail silently.
-  // @see https://docs.aws.amazon.com/rekognition/latest/dg/images-information.html
+  // Validate image format before sending to Rekognition.
   const formatCheck = validateImageFormat(bytes);
-  if (!formatCheck.valid) {
+  
+  // AUTOMATIC CONVERSION FIX: If HEIC/WebP, convert to JPEG
+  if (!formatCheck.valid && (formatCheck.format === 'heic' || formatCheck.format === 'webp')) {
+    console.log(`rekognition.converting`, { 
+      from: formatCheck.format, 
+      to: 'jpeg',
+      originalSize: bytes.length 
+    });
+    
+    try {
+      bytes = await sharp(bytes)
+        .toFormat('jpeg')
+        .toBuffer();
+        
+      // Re-validate to ensure conversion worked
+      const newCheck = validateImageFormat(bytes);
+      if (!newCheck.valid) {
+        throw new Error(`Conversion failed: ${newCheck.error}`);
+      }
+    } catch (convertErr: any) {
+      throw new Error(`IMAGE_CONVERSION_ERROR: Failed to convert ${formatCheck.format} to JPEG: ${convertErr.message}`);
+    }
+  } else if (!formatCheck.valid) {
     console.error("rekognition.invalidFormat", {
       url: params.imageUrl.substring(0, 80) + "...",
       detectedFormat: formatCheck.format,
@@ -234,7 +265,7 @@ export async function analyzeWithRekognition(params: {
 
   console.log("rekognition.request.bytes", {
     url: params.imageUrl.substring(0, 80) + "...",
-    format: formatCheck.format,
+    format: "jpeg (converted or original)",
     byteLength: bytes.length,
   });
 

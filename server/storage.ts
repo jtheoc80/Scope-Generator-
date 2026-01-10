@@ -25,7 +25,6 @@ import {
   type Invite,
   type InsertInvite,
   type ProposalView,
-  type InsertProposalView,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, count, inArray, getTableColumns } from "drizzle-orm";

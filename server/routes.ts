@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { createServer, type Server } from "http";
+import { type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertProposalSchema, insertCancellationFeedbackSchema, type User } from "@shared/schema";
@@ -121,7 +121,7 @@ export async function registerRoutes(
         hasActiveAccess: userHasAccess,
         hasAccess: userHasAccess || remaining > 0
       });
-    } catch (error) {
+    } catch (_error) {
       console.error("Error fetching usage:", error);
       res.status(500).json({ message: "Failed to fetch usage" });
     }
@@ -148,7 +148,7 @@ export async function registerRoutes(
       );
 
       res.json(result);
-    } catch (error) {
+    } catch (_error) {
       console.error("Error searching costs:", error);
       res.status(500).json({ message: "Failed to search costs" });
     }
@@ -176,7 +176,7 @@ export async function registerRoutes(
       } else {
         res.status(404).json({ message: "Material not found" });
       }
-    } catch (error) {
+    } catch (_error) {
       console.error("Error fetching material cost:", error);
       res.status(500).json({ message: "Failed to fetch material cost" });
     }
@@ -204,7 +204,7 @@ export async function registerRoutes(
       } else {
         res.status(404).json({ message: "Labor rate not found" });
       }
-    } catch (error) {
+    } catch (_error) {
       console.error("Error fetching labor rate:", error);
       res.status(500).json({ message: "Failed to fetch labor rate" });
     }
@@ -269,7 +269,7 @@ export async function registerRoutes(
         
         res.json({ ...result, _anonymous: true });
       }
-    } catch (error) {
+    } catch (_error) {
       console.error("Error fetching trade pricing:", error);
       res.status(500).json({ message: "Failed to fetch trade pricing" });
     }
@@ -312,7 +312,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         success: result.success,
         error: result.error,
       });
-    } catch (error) {
+    } catch (_error) {
       console.error("Error enhancing scope:", error);
       res.status(500).json({ 
         message: "Failed to enhance scope",
@@ -336,7 +336,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       } else {
         res.json(null);
       }
-    } catch (error) {
+    } catch (_error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
     }
@@ -384,7 +384,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       }
 
       res.json(user);
-    } catch (error) {
+    } catch (_error) {
       console.error("Error updating company profile:", error);
       res.status(500).json({ message: "Failed to update company profile" });
     }
@@ -429,7 +429,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       const { userStripeSecretKey: _, ...safeUser } = user;
       const hasStripeKey = !!user.userStripeSecretKey;
       res.json({ ...safeUser, hasStripeKey });
-    } catch (error) {
+    } catch (_error) {
       console.error("Error updating Stripe settings:", error);
       res.status(500).json({ message: "Failed to update Stripe settings" });
     }
@@ -459,7 +459,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
 
       const { userStripeSecretKey, ...safeUser } = user;
       res.json(safeUser);
-    } catch (error) {
+    } catch (_error) {
       console.error("Error updating notification preferences:", error);
       res.status(500).json({ message: "Failed to update notification preferences" });
     }
@@ -485,7 +485,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       }
 
       res.json(user);
-    } catch (error) {
+    } catch (_error) {
       console.error("Error completing onboarding:", error);
       res.status(500).json({ message: "Failed to complete onboarding" });
     }
@@ -546,7 +546,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
           companyLogo: user.companyLogo,
         } : null,
       });
-    } catch (error) {
+    } catch (_error) {
       console.error("Error fetching public proposal:", error);
       res.status(500).json({ message: "Failed to fetch proposal" });
     }
@@ -620,7 +620,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         acceptedAt: acceptedProposal.acceptedAt,
         acceptedByName: acceptedProposal.acceptedByName,
       });
-    } catch (error) {
+    } catch (_error) {
       console.error("Error accepting proposal:", error);
       res.status(500).json({ message: "Failed to accept proposal" });
     }
@@ -631,7 +631,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     try {
       const result = await emailService.testConnection();
       res.json(result);
-    } catch (error) {
+    } catch (_error) {
       console.error("Error testing email connection:", error);
       res.status(500).json({ success: false, error: "Failed to test connection" });
     }
@@ -701,7 +701,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         sentTo: recipientEmail,
         messageId: emailResult.messageId
       });
-    } catch (error) {
+    } catch (_error) {
       console.error("Error sending proposal email:", error);
       res.status(500).json({ message: "Failed to send proposal" });
     }
@@ -772,7 +772,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         message: "Proposal countersigned successfully",
         contractorSignedAt: countersignedProposal.contractorSignedAt,
       });
-    } catch (error) {
+    } catch (_error) {
       console.error("Error countersigning proposal:", error);
       res.status(500).json({ message: "Failed to countersign proposal" });
     }
@@ -797,7 +797,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
 
       const proposal = await storage.createProposal(validationResult.data);
       res.json(proposal);
-    } catch (error) {
+    } catch (_error) {
       console.error("Error creating proposal:", error);
       res.status(500).json({ message: "Failed to create proposal" });
     }
@@ -820,7 +820,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       }));
       
       res.json(proposalsWithViews);
-    } catch (error) {
+    } catch (_error) {
       console.error("Error fetching proposals:", error);
       res.status(500).json({ message: "Failed to fetch proposals" });
     }
@@ -841,7 +841,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       }
 
       res.json(proposal);
-    } catch (error) {
+    } catch (_error) {
       console.error("Error fetching proposal:", error);
       res.status(500).json({ message: "Failed to fetch proposal" });
     }
@@ -859,7 +859,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       }
 
       res.json(updated);
-    } catch (error) {
+    } catch (_error) {
       console.error("Error updating proposal:", error);
       res.status(500).json({ message: "Failed to update proposal" });
     }
@@ -877,7 +877,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       }
 
       res.json({ message: "Proposal deleted successfully" });
-    } catch (error) {
+    } catch (_error) {
       console.error("Error deleting proposal:", error);
       res.status(500).json({ message: "Failed to delete proposal" });
     }
@@ -930,7 +930,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         ...unlocked,
         remainingCredits: updatedUser.proposalCredits
       });
-    } catch (error) {
+    } catch (_error) {
       console.error("Error unlocking proposal:", error);
       res.status(500).json({ message: "Failed to unlock proposal" });
     }
@@ -940,7 +940,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     try {
       const publishableKey = await getStripePublishableKey();
       res.json({ publishableKey });
-    } catch (error) {
+    } catch (_error) {
       console.error("Error getting Stripe config:", error);
       res.status(500).json({ message: "Failed to get Stripe configuration" });
     }
@@ -974,7 +974,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       }
 
       res.json({ data: Array.from(productsMap.values()) });
-    } catch (error) {
+    } catch (_error) {
       console.error("Error listing products:", error);
       res.status(500).json({ message: "Failed to list products" });
     }
@@ -1120,7 +1120,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
 
       const subscription = await storage.getSubscription(user.stripeSubscriptionId);
       res.json({ subscription });
-    } catch (error) {
+    } catch (_error) {
       console.error("Error getting subscription:", error);
       res.status(500).json({ message: "Failed to get subscription" });
     }
@@ -1141,7 +1141,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       );
 
       res.json({ url: session.url });
-    } catch (error) {
+    } catch (_error) {
       console.error("Error creating portal session:", error);
       res.status(500).json({ message: "Failed to create portal session" });
     }
@@ -1217,7 +1217,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         depositPercentage,
         proposal: updated,
       });
-    } catch (error) {
+    } catch (_error) {
       console.error("Error creating payment link:", error);
       res.status(500).json({ message: "Failed to create payment link" });
     }
@@ -1265,7 +1265,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         message: "Feedback saved successfully",
         portalUrl 
       });
-    } catch (error) {
+    } catch (_error) {
       console.error("Error saving cancellation feedback:", error);
       res.status(500).json({ message: "Failed to save feedback" });
     }
@@ -1290,7 +1290,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         memberCount,
         totalSeats: membership.company.seatLimit + membership.company.extraSeats,
       });
-    } catch (error) {
+    } catch (_error) {
       console.error("Error fetching company:", error);
       res.status(500).json({ message: "Failed to fetch company" });
     }
@@ -1326,7 +1326,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         memberCount: 1,
         totalSeats: company.seatLimit,
       });
-    } catch (error) {
+    } catch (_error) {
       console.error("Error creating company:", error);
       res.status(500).json({ message: "Failed to create company" });
     }
@@ -1355,7 +1355,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       }
 
       res.json(updated);
-    } catch (error) {
+    } catch (_error) {
       console.error("Error updating company:", error);
       res.status(500).json({ message: "Failed to update company" });
     }
@@ -1385,7 +1385,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
           profileImageUrl: m.user.profileImageUrl,
         }
       })));
-    } catch (error) {
+    } catch (_error) {
       console.error("Error fetching members:", error);
       res.status(500).json({ message: "Failed to fetch members" });
     }
@@ -1416,7 +1416,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       }
 
       res.json(updated);
-    } catch (error) {
+    } catch (_error) {
       console.error("Error updating member role:", error);
       res.status(500).json({ message: "Failed to update member role" });
     }
@@ -1444,7 +1444,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       }
 
       res.json({ message: "Member removed successfully" });
-    } catch (error) {
+    } catch (_error) {
       console.error("Error removing member:", error);
       res.status(500).json({ message: "Failed to remove member" });
     }
@@ -1462,7 +1462,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
 
       const invites = await storage.getCompanyInvites(membership.companyId);
       res.json(invites);
-    } catch (error) {
+    } catch (_error) {
       console.error("Error fetching invites:", error);
       res.status(500).json({ message: "Failed to fetch invites" });
     }
@@ -1519,7 +1519,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         invite,
         inviteLink,
       });
-    } catch (error) {
+    } catch (_error) {
       console.error("Error creating invite:", error);
       res.status(500).json({ message: "Failed to create invite" });
     }
@@ -1541,7 +1541,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       }
 
       res.json({ message: "Invite deleted successfully" });
-    } catch (error) {
+    } catch (_error) {
       console.error("Error deleting invite:", error);
       res.status(500).json({ message: "Failed to delete invite" });
     }
@@ -1571,7 +1571,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         email: invite.email,
         expiresAt: invite.expiresAt,
       });
-    } catch (error) {
+    } catch (_error) {
       console.error("Error fetching invite:", error);
       res.status(500).json({ message: "Failed to fetch invite" });
     }
@@ -1613,7 +1613,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         message: "Successfully joined the company",
         role: member.role,
       });
-    } catch (error) {
+    } catch (_error) {
       console.error("Error accepting invite:", error);
       res.status(500).json({ message: "Failed to accept invite" });
     }
@@ -1625,7 +1625,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       const userId = req.user.claims.sub;
       const analytics = await storage.getProposalAnalytics(userId);
       res.json(analytics);
-    } catch (error) {
+    } catch (_error) {
       console.error("Error fetching pricing summary:", error);
       res.status(500).json({ message: "Failed to fetch pricing summary" });
     }
@@ -1637,7 +1637,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       const userId = req.user.claims.sub;
       const insights = await storage.getEnhancedProposalAnalytics(userId);
       res.json(insights);
-    } catch (error) {
+    } catch (_error) {
       console.error("Error fetching insights:", error);
       res.status(500).json({ message: "Failed to fetch insights" });
     }
@@ -1649,7 +1649,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         trades: benchmarkTrades,
         regions: regionalMultipliers,
       });
-    } catch (error) {
+    } catch (_error) {
       console.error("Error fetching benchmarks:", error);
       res.status(500).json({ message: "Failed to fetch benchmarks" });
     }
@@ -1667,7 +1667,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         return res.status(403).json({ message: "This feature requires a Crew subscription" });
       }
       next();
-    } catch (error) {
+    } catch (_error) {
       res.status(500).json({ message: "Failed to verify subscription" });
     }
   };
