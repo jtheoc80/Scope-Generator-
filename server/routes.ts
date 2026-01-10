@@ -10,6 +10,7 @@ import { aiService } from "./aiService";
 import { benchmarkTrades, regionalMultipliers } from "./benchmark-data";
 import { oneBuildService } from "./services/onebuild";
 import { logger } from "@/lib/logger";
+import { checkCrewEntitlement } from "@/lib/entitlements";
 
 /**
  * Check if a user has active access (Pro subscription OR active trial period)
@@ -1274,8 +1275,44 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
+  // ==========================================
+  // Crew Entitlement Middleware
+  // ==========================================
+  // Uses the centralized entitlement resolver which supports dev/staging overrides.
+  // This middleware protects all Crew-only features (Company management, Search Console, etc.)
+  const isCrewUser = async (req: any, res: any, next: any) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Use centralized entitlement check (supports dev/staging overrides)
+      const entitlement = checkCrewEntitlement({
+        userId,
+        email: user.email,
+        subscriptionPlan: user.subscriptionPlan,
+      });
+      
+      if (!entitlement.hasCrewAccess) {
+        return res.status(403).json({ message: "This feature requires a Crew subscription" });
+      }
+      
+      // Attach entitlement info to request for downstream use
+      req.crewEntitlement = entitlement;
+      next();
+    } catch (error) {
+      logger.error("Error verifying subscription", error as Error);
+      res.status(500).json({ message: "Failed to verify subscription" });
+    }
+  };
+
   // Company/Workspace routes for Crew plan
-  app.get('/api/company', isAuthenticated, async (req: any, res) => {
+  app.get('/api/company', isAuthenticated, isCrewUser, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       
@@ -1299,7 +1336,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
-  app.post('/api/company', isAuthenticated, async (req: any, res) => {
+  app.post('/api/company', isAuthenticated, isCrewUser, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { name, address, phone, licenseNumber } = req.body;
@@ -1335,7 +1372,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
-  app.patch('/api/company', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/company', isAuthenticated, isCrewUser, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { name, address, phone, logo, licenseNumber } = req.body;
@@ -1365,7 +1402,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
   });
 
   // Company members routes
-  app.get('/api/company/members', isAuthenticated, async (req: any, res) => {
+  app.get('/api/company/members', isAuthenticated, isCrewUser, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
 
@@ -1394,7 +1431,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
-  app.patch('/api/company/members/:userId/role', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/company/members/:userId/role', isAuthenticated, isCrewUser, async (req: any, res) => {
     try {
       const currentUserId = req.user.claims.sub;
       const targetUserId = req.params.userId;
@@ -1425,7 +1462,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
-  app.delete('/api/company/members/:userId', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/company/members/:userId', isAuthenticated, isCrewUser, async (req: any, res) => {
     try {
       const currentUserId = req.user.claims.sub;
       const targetUserId = req.params.userId;
@@ -1454,7 +1491,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
   });
 
   // Invite routes
-  app.get('/api/company/invites', isAuthenticated, async (req: any, res) => {
+  app.get('/api/company/invites', isAuthenticated, isCrewUser, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
 
@@ -1471,7 +1508,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
-  app.post('/api/company/invites', isAuthenticated, async (req: any, res) => {
+  app.post('/api/company/invites', isAuthenticated, isCrewUser, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { email, role = 'member' } = req.body;
@@ -1528,7 +1565,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
-  app.delete('/api/company/invites/:id', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/company/invites/:id', isAuthenticated, isCrewUser, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const inviteId = parseInt(req.params.id);
@@ -1659,23 +1696,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
   });
 
   // Search Console routes (crew only)
-  const isCrewUser = async (req: any, res: any, next: any) => {
-    try {
-      const userId = req.user?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-      const user = await storage.getUser(userId);
-      if (user?.subscriptionPlan !== 'crew') {
-        return res.status(403).json({ message: "This feature requires a Crew subscription" });
-      }
-      next();
-    } catch (error) {
-      logger.error("Error verifying subscription", error as Error);
-      res.status(500).json({ message: "Failed to verify subscription" });
-    }
-  };
-
+  // Protected by isCrewUser middleware defined above
   app.get('/api/search-console/test', isAuthenticated, isCrewUser, async (req: any, res) => {
     try {
       const { searchConsoleService } = await import('./services/searchConsole');
