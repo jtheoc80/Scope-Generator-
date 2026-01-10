@@ -83,6 +83,7 @@ import {
   saveLastAddressForCustomer,
   SavedCustomer,
   isMeasurementTrade,
+  isValidJobTypeId,
 } from "@/app/m/lib/job-memory";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -1038,6 +1039,9 @@ function CreateJobPageInner() {
   const [estimateParams, setEstimateParams] = useState<EstimateParams | null>(null);
   const hasAppliedEstimateParams = useRef(false);
 
+  // State for invalid jobType warning
+  const [invalidJobTypeCleared, setInvalidJobTypeCleared] = useState<string | null>(null);
+  
   // Parse estimate params from URL (from calculator handoff)
   // This runs once on mount and applies params as initial defaults
   useEffect(() => {
@@ -1048,14 +1052,35 @@ function CreateJobPageInner() {
       hasAppliedEstimateParams.current = true;
       setEstimateParams(params);
       
-      // Apply job type from trade
+      // Apply job type from trade - with validation
       const mappedJobType = getJobTypeFromEstimate(params);
       if (mappedJobType) {
-        setJobType(mappedJobType);
+        // Validate the mapped job type before using
+        if (isValidJobTypeId(mappedJobType)) {
+          setJobType(mappedJobType);
+        } else {
+          // Invalid job type from URL - use default and show warning
+          console.warn(`Invalid jobType from estimate params: ${mappedJobType}`);
+          setInvalidJobTypeCleared(mappedJobType);
+          setJobType("bathroom-remodel");
+        }
       }
       
       // Mark as prefilled for banner display
       setPrefilledFromEstimate(true);
+    }
+    
+    // Also check for direct jobType URL param
+    const urlJobType = searchParams.get("jobType");
+    if (urlJobType && !params) {
+      if (isValidJobTypeId(urlJobType)) {
+        setJobType(urlJobType);
+        hasAppliedEstimateParams.current = true;
+      } else {
+        // Invalid job type from URL - clear and warn
+        console.warn(`Invalid jobType from URL: ${urlJobType}`);
+        setInvalidJobTypeCleared(urlJobType);
+      }
     }
   }, [searchParams]);
 
@@ -1066,30 +1091,40 @@ function CreateJobPageInner() {
     const initializeData = async () => {
       // First, load from localStorage for instant display
       const lastSetup = getLastJobSetup();
-      const recent = getRecentJobTypes(3);
-      setRecentJobTypes(recent);
+      // Filter recent job types to only include valid ones
+      const rawRecent = getRecentJobTypes(5);
+      const validRecent = rawRecent.filter(isValidJobTypeId);
+      setRecentJobTypes(validRecent.slice(0, 3));
 
       // Only apply lastSetup if we didn't get estimate params
       if (lastSetup && !hasAppliedEstimateParams.current) {
-        // Only restore job type and customer, NOT address
-        setJobType(lastSetup.jobType);
+        // Validate the stored job type before using
+        if (isValidJobTypeId(lastSetup.jobType)) {
+          setJobType(lastSetup.jobType);
+        } else {
+          // Invalid stored job type - clear and use default
+          console.warn(`Invalid jobType from localStorage: ${lastSetup.jobType}`);
+          setInvalidJobTypeCleared(lastSetup.jobType);
+          // Don't restore invalid job type - use default
+        }
         if (lastSetup.customerId) {
           const customer = getCustomerById(lastSetup.customerId);
           if (customer) setSelectedCustomer(customer);
         }
         // DO NOT restore address - must be explicitly selected by user
         // This was the root cause of the 1/10 accuracy issue
-      } else if (recent.length > 0 && !hasAppliedEstimateParams.current) {
-        setJobType(recent[0]);
+      } else if (validRecent.length > 0 && !hasAppliedEstimateParams.current) {
+        setJobType(validRecent[0]);
       }
 
       // Then sync with backend in background
       setSyncing(true);
       try {
         await syncAllData();
-        // Refresh local state after sync
-        const newRecent = getRecentJobTypes(3);
-        setRecentJobTypes(newRecent);
+        // Refresh local state after sync - filter invalid types
+        const newRawRecent = getRecentJobTypes(5);
+        const newValidRecent = newRawRecent.filter(isValidJobTypeId);
+        setRecentJobTypes(newValidRecent.slice(0, 3));
         forceUpdate((n) => n + 1);
       } catch (e) {
         console.error("Background sync failed:", e);
@@ -1128,6 +1163,14 @@ function CreateJobPageInner() {
       setError("Please wait for address verification to complete.");
       return;
     }
+
+    // Validate job type before submission
+    const finalJobType = templateCode.trim() || jobType;
+    if (!isValidJobTypeId(finalJobType) && !/^\d+$/.test(finalJobType)) {
+      // Not a valid job type ID and not a numeric template ID
+      setError(`Unknown job type "${finalJobType}". Please select a valid job type.`);
+      return;
+    }
     
     setBusy(true);
     setError(null);
@@ -1141,7 +1184,6 @@ function CreateJobPageInner() {
     });
 
     try {
-      const finalJobType = templateCode.trim() || jobType;
       const res = await mobileApiFetch<MobileJob>("/api/mobile/jobs", {
         method: "POST",
         headers: { "Idempotency-Key": newIdempotencyKey() },
@@ -1222,6 +1264,32 @@ function CreateJobPageInner() {
             {t.mobile.wellRememberCustomers}
           </p>
         </div>
+
+        {/* Invalid jobType warning banner */}
+        {invalidJobTypeCleared && (
+          <div 
+            data-testid="banner-invalid-jobtype"
+            className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-950"
+          >
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              <span className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                Unknown or inactive jobType
+                <span className="text-amber-600 dark:text-amber-300">
+                  {" "}— &quot;{invalidJobTypeCleared}&quot; was reset. Please select a job type below.
+                </span>
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setInvalidJobTypeCleared(null)}
+              className="rounded p-1 text-amber-600 hover:bg-amber-100 dark:text-amber-400 dark:hover:bg-amber-900"
+              aria-label="Dismiss"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
 
         {/* Prefilled from estimate banner */}
         {prefilledFromEstimate && (
