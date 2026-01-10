@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  parseAddressComponents as parseAddressComponentsShared,
+  type ParsedAddressComponents,
+} from "@/lib/services/google-places-address";
+
 /**
  * Job Address Types and Storage
  * 
@@ -21,20 +26,7 @@ export type JobAddressSource = "places" | "last";
 /**
  * Parsed address components from Google Places
  */
-export type AddressComponents = {
-  /** Street number + route combined (e.g., "123 Main St") */
-  line1: string;
-  /** Unit/apt/suite number if present */
-  line2?: string;
-  /** City (locality) */
-  city: string;
-  /** State (administrative_area_level_1, short_name) */
-  state: string;
-  /** ZIP code (postal_code) */
-  postalCode: string;
-  /** ZIP+4 suffix if present */
-  postalCodeSuffix?: string;
-};
+export type AddressComponents = ParsedAddressComponents;
 
 /**
  * Address Validation verdict from Google Address Validation API
@@ -231,62 +223,8 @@ export function clearLastAddressForCustomer(customerId: string | number): void {
 export function parseAddressComponents(
   addressComponents: google.maps.GeocoderAddressComponent[] | undefined
 ): AddressComponents | null {
-  if (!addressComponents || addressComponents.length === 0) {
-    return null;
-  }
-  
-  let streetNumber = "";
-  let route = "";
-  let subpremise = "";
-  let city = "";
-  let state = "";
-  let postalCode = "";
-  let postalCodeSuffix = "";
-  
-  for (const component of addressComponents) {
-    const types = component.types;
-    const longName = component.long_name;
-    const shortName = component.short_name;
-    
-    if (types.includes("street_number")) {
-      streetNumber = longName;
-    } else if (types.includes("route")) {
-      route = longName;
-    } else if (types.includes("subpremise")) {
-      // Unit, apt, suite number
-      subpremise = longName;
-    } else if (types.includes("locality")) {
-      city = longName;
-    } else if (types.includes("sublocality_level_1") && !city) {
-      // Fallback for areas like NYC boroughs
-      city = longName;
-    } else if (types.includes("administrative_area_level_1")) {
-      state = shortName; // Use short name for state (e.g., "CA" not "California")
-    } else if (types.includes("postal_code")) {
-      postalCode = longName;
-    } else if (types.includes("postal_code_suffix")) {
-      postalCodeSuffix = longName;
-    }
-  }
-  
-  // Build line1 from street number + route
-  const line1 = streetNumber && route 
-    ? `${streetNumber} ${route}` 
-    : route || streetNumber;
-  
-  // Require at minimum line1, city, state, and postal code
-  if (!line1 || !city || !state || !postalCode) {
-    return null;
-  }
-  
-  return {
-    line1,
-    line2: subpremise || undefined,
-    city,
-    state,
-    postalCode,
-    postalCodeSuffix: postalCodeSuffix || undefined,
-  };
+  // google.maps.GeocoderAddressComponent is structurally compatible with AddressComponentLike.
+  return parseAddressComponentsShared(addressComponents);
 }
 
 /**
