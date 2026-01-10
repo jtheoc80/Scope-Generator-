@@ -45,9 +45,8 @@
     "App.tsx",
     "nextjs-app/**",
     "apps/**",
-    "script/**",
-    "server/**",
-    "lib/services/**",
+    // Legacy Express/Vite dev server entrypoints (not part of Next runtime)
+    "server/index.ts",
     "server/vite.ts",
     "vite.config.ts",
     "vite-plugin-meta-images.ts",
@@ -60,7 +59,7 @@
     "qa/**",
     // drizzle-kit CLI config file (compiled separately by drizzle-kit)
     "drizzle.config.ts",
-    // Legacy src/ directory (not used by Next.js app router)
-    "src/**"
+    // Legacy script runner directory (compiled/executed separately)
+    "script/**"
   ]
 }
