@@ -7,6 +7,7 @@ import { createS3Client, isS3Configured } from "@/src/lib/mobile/storage/s3";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { upsertPhotoRow } from "@/src/lib/similar-jobs/db";
 import { enqueueEmbeddingJob, ensureSimilarJobEmbeddingWorker } from "@/src/lib/similar-jobs/worker";
+import sharp from "sharp";
 
 // IMPORTANT: Use Node.js runtime for crypto and AWS SDK operations.
 export const runtime = "nodejs";
@@ -15,8 +16,55 @@ export const runtime = "nodejs";
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 // Max files per request (avoid oversized multipart payloads/timeouts)
 const MAX_FILES = 20;
-// Rekognition supports JPEG/PNG; enforce at upload time to avoid "no analysis" jobs.
+// Rekognition supports JPEG/PNG; we accept these directly
 const SUPPORTED_TYPES = new Set(["image/jpeg", "image/png", "image/jpg"]);
+// These formats will be auto-converted to JPEG before storage
+const CONVERTIBLE_TYPES = new Set(["image/heic", "image/heif", "image/webp"]);
+
+/**
+ * Detect image format from magic bytes and convert if needed.
+ * Returns the buffer (converted or original) and the content type.
+ */
+async function ensureJpegOrPng(
+  inputBuffer: Buffer | Uint8Array,
+  originalType: string
+): Promise<{ buffer: Buffer; contentType: string; converted: boolean }> {
+  // Ensure we have a proper Buffer for sharp
+  const buffer = Buffer.isBuffer(inputBuffer) ? inputBuffer : Buffer.from(inputBuffer);
+  // Check magic bytes to detect actual format (content-type can be wrong)
+  const isHeic = buffer.length >= 12 &&
+    buffer[4] === 0x66 && // 'f'
+    buffer[5] === 0x74 && // 't'
+    buffer[6] === 0x79 && // 'y'
+    buffer[7] === 0x70;   // 'p'
+  
+  const isWebp = buffer.length >= 12 &&
+    buffer[0] === 0x52 && // 'R'
+    buffer[1] === 0x49 && // 'I'
+    buffer[2] === 0x46 && // 'F'
+    buffer[3] === 0x46 && // 'F'
+    buffer[8] === 0x57 && // 'W'
+    buffer[9] === 0x45 && // 'E'
+    buffer[10] === 0x42 && // 'B'
+    buffer[11] === 0x50;   // 'P'
+  
+  const isJpeg = buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF;
+  const isPng = buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47;
+  
+  // If already JPEG or PNG, return as-is
+  if (isJpeg || isPng) {
+    return { buffer, contentType: isJpeg ? "image/jpeg" : "image/png", converted: false };
+  }
+  
+  // If HEIC or WebP (by bytes or content-type), convert to JPEG
+  if (isHeic || isWebp || CONVERTIBLE_TYPES.has(originalType.toLowerCase())) {
+    const converted = await sharp(buffer).jpeg({ quality: 85 }).toBuffer();
+    return { buffer: converted, contentType: "image/jpeg", converted: true };
+  }
+  
+  // Unknown format - return as-is and let downstream handle it
+  return { buffer, contentType: originalType, converted: false };
+}
 
 /**
  * Hash a token using SHA-256
@@ -156,41 +204,63 @@ export async function POST(
     for (const file of files) {
       try {
         // Validate file type
-        const contentType = file.type.toLowerCase();
-        if (!contentType.startsWith("image/")) {
+        const originalContentType = file.type.toLowerCase();
+        if (!originalContentType.startsWith("image/")) {
           errors.push({ filename: file.name, error: "Not an image file" });
           continue;
         }
 
-        // Enforce supported formats (AWS Rekognition only supports JPEG/PNG).
-        // Without this, HEIC/WebP uploads lead to downstream "no analysis" behavior.
-        if (!SUPPORTED_TYPES.has(contentType)) {
-          errors.push({
-            filename: file.name,
-            error: `Unsupported image format (${contentType}). Please upload JPEG or PNG.`,
-          });
-          continue;
-        }
-
-        // Validate file size
+        // Validate file size before reading buffer
         if (file.size > MAX_FILE_SIZE) {
           errors.push({ filename: file.name, error: "File too large (max 10MB)" });
           continue;
         }
 
-        // Generate unique key
-        const ext = file.name.includes(".") ? file.name.split(".").pop()?.toLowerCase() : "jpg";
-        const key = `mobile/${session.userId}/jobs/${session.jobId}/phone-${crypto.randomUUID()}.${ext}`;
-
         // Read file buffer
-        const buffer = Buffer.from(await file.arrayBuffer());
+        const rawBuffer = Buffer.from(await file.arrayBuffer());
+        let contentType = originalContentType;
+        let processedBuffer: Buffer = rawBuffer;
+        
+        // Auto-convert HEIC/WebP to JPEG for Rekognition compatibility.
+        // This runs server-side so mobile users don't need to convert manually.
+        if (!SUPPORTED_TYPES.has(originalContentType) || CONVERTIBLE_TYPES.has(originalContentType)) {
+          try {
+            const result = await ensureJpegOrPng(rawBuffer, originalContentType);
+            processedBuffer = result.buffer;
+            contentType = result.contentType;
+            
+            if (result.converted) {
+              console.log(`Photo session ${sessionId}: Converted ${file.name} from ${originalContentType} to ${contentType}`);
+            }
+          } catch (conversionError) {
+            console.error(`Photo session ${sessionId}: Failed to convert ${file.name}:`, conversionError);
+            errors.push({
+              filename: file.name,
+              error: `Could not process image format (${originalContentType}). Please try JPEG or PNG.`,
+            });
+            continue;
+          }
+        }
+
+        // Final check: ensure we have a supported format after conversion
+        if (!SUPPORTED_TYPES.has(contentType)) {
+          errors.push({
+            filename: file.name,
+            error: `Unsupported image format (${originalContentType}). Please upload JPEG or PNG.`,
+          });
+          continue;
+        }
+
+        // Generate unique key - always use .jpg extension for converted files
+        const ext = contentType === "image/png" ? "png" : "jpg";
+        const key = `mobile/${session.userId}/jobs/${session.jobId}/phone-${crypto.randomUUID()}.${ext}`;
 
         // Upload to S3
         await client.send(
           new PutObjectCommand({
             Bucket: bucket,
             Key: key,
-            Body: buffer,
+            Body: processedBuffer,
             ContentType: contentType,
           })
         );
