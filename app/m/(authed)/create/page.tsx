@@ -110,7 +110,8 @@ function JobTypeIcon({ id }: { id: string }) {
   return <Icon className="h-4 w-4 text-muted-foreground" aria-hidden />;
 }
 
-// Progress step indicator
+// Progress step indicator - mobile-responsive design
+// Shows only step numbers on narrow screens, labels on sm: and wider
 function WizardStepper({ currentStep, t }: { currentStep: number; t: ReturnType<typeof useLanguage>['t'] }) {
   const steps = [
     { num: 1, label: t.mobile.setup },
@@ -120,17 +121,17 @@ function WizardStepper({ currentStep, t }: { currentStep: number; t: ReturnType<
   ];
 
   return (
-    <nav aria-label="ScopeScan steps" className="w-full">
-      <ol className="flex items-center justify-center gap-2">
+    <nav aria-label="ScopeScan steps" className="w-full overflow-hidden">
+      <ol className="flex items-center justify-center gap-1 sm:gap-2">
         {steps.map((step, idx) => {
           const isComplete = step.num < currentStep;
           const isActive = step.num === currentStep;
           return (
-            <li key={step.num} className="flex items-center">
-              <div className="flex items-center gap-2">
+            <li key={step.num} className="flex items-center shrink-0">
+              <div className="flex items-center gap-1 sm:gap-2">
                 <div
                   className={cn(
-                    "relative grid h-7 w-7 place-items-center rounded-full border text-xs font-medium transition-colors",
+                    "relative grid h-6 w-6 sm:h-7 sm:w-7 place-items-center rounded-full border text-xs font-medium transition-colors shrink-0",
                     isComplete && "border-primary bg-primary text-primary-foreground",
                     isActive && "border-primary bg-background",
                     !isComplete && !isActive && "border-border bg-background text-muted-foreground"
@@ -138,19 +139,20 @@ function WizardStepper({ currentStep, t }: { currentStep: number; t: ReturnType<
                   aria-current={isActive ? "step" : undefined}
                 >
                   {isComplete ? (
-                    <Check className="h-4 w-4" aria-hidden />
+                    <Check className="h-3 w-3 sm:h-4 sm:w-4" aria-hidden />
                   ) : isActive ? (
                     <>
                       <span className="sr-only">{step.num}</span>
-                      <span className="h-2.5 w-2.5 rounded-full bg-primary" aria-hidden />
+                      <span className="h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-primary" aria-hidden />
                     </>
                   ) : (
                     <span className="text-muted-foreground">{step.num}</span>
                   )}
                 </div>
+                {/* Hide labels on narrow screens (< 480px), show on wider screens */}
                 <span
                   className={cn(
-                    "text-xs text-muted-foreground",
+                    "hidden min-[480px]:inline text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap",
                     isActive && "font-semibold text-foreground"
                   )}
                 >
@@ -158,7 +160,7 @@ function WizardStepper({ currentStep, t }: { currentStep: number; t: ReturnType<
                 </span>
               </div>
               {idx < steps.length - 1 && (
-                <div className="mx-2 h-px w-6 bg-border" aria-hidden />
+                <div className="mx-1 sm:mx-2 h-px w-3 sm:w-6 bg-border shrink-0" aria-hidden />
               )}
             </li>
           );
@@ -1028,7 +1030,6 @@ function CreateJobPageInner() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recentJobTypes, setRecentJobTypes] = useState<string[]>([]);
-  const [initialized, setInitialized] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [, forceUpdate] = useState(0);
   
@@ -1081,8 +1082,6 @@ function CreateJobPageInner() {
       } else if (recent.length > 0 && !hasAppliedEstimateParams.current) {
         setJobType(recent[0]);
       }
-
-      setInitialized(true);
 
       // Then sync with backend in background
       setSyncing(true);
@@ -1190,17 +1189,9 @@ function CreateJobPageInner() {
     (rt) => !PRIMARY_JOB_TYPES.some((pt) => pt.id === rt)
   );
 
-  if (!initialized) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
   return (
-    <div className="px-4 pt-4 pb-safe lg:px-8 lg:pt-8">
-      <div className="mx-auto max-w-4xl space-y-6">
+    <div className="px-4 pt-4 pb-safe lg:px-8 lg:pt-8 overflow-x-hidden">
+      <div className="mx-auto max-w-4xl space-y-6 overflow-hidden">
         {/* Back button */}
         <div className="flex items-center justify-between">
           <Button
