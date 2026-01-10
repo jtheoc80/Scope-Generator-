@@ -6,14 +6,15 @@ This document tracks incomplete features, technical debt, and planned improvemen
 
 ## 🔴 High Priority
 
-### Learning System - Incomplete Features
+### Learning System - Planned Features
 
 | Location | Description | Status |
 |----------|-------------|--------|
-| `src/lib/learning/learning-service.ts:640` | Implement option learning for `preferredOptions` | TODO |
-| `src/lib/learning/learning-service.ts:656` | Implement pattern aggregation logic | TODO |
-| `src/lib/learning/recommendation-engine.ts:389` | Implement competitor analysis for `competitorRange` | TODO |
-| `src/lib/learning/recommendation-engine.ts:459` | Implement option recommendations | TODO |
+| `src/lib/learning/learning-service.ts:640` | Option learning for `preferredOptions` | Documented (future enhancement) |
+| `src/lib/learning/recommendation-engine.ts:389` | Competitor analysis for `competitorRange` | Documented (requires external data) |
+| `src/lib/learning/recommendation-engine.ts:459` | Option recommendations | Documented (future enhancement) |
+
+> **Note**: These are planned features, not bugs. The code includes proper documentation explaining the current state and future plans. See: `docs/FUTURE_ENHANCEMENTS.md`
 
 ### Storage Layer
 
@@ -25,9 +26,9 @@ This document tracks incomplete features, technical debt, and planned improvemen
 
 ## 🟡 Medium Priority
 
-### Console.log Migration
+### Console.log Migration (Ongoing)
 
-The codebase has ~177 console.log/error/warn statements in API routes that should be migrated to the structured logger (`@/lib/logger`).
+The codebase has console.log/error/warn statements in API routes that should be migrated to the structured logger (`@/lib/logger`).
 
 **Pattern to replace:**
 ```typescript
@@ -41,7 +42,7 @@ logger.info('Message', { data });
 logger.error('Error occurred', error);
 ```
 
-**Files with highest counts:**
+**Remaining high-count files:**
 - `app/api/webhooks/eagleview/route.ts` (14 occurrences)
 - `app/api/stripe/webhook/route.ts` (11 occurrences)
 - `app/api/mobile/jobs/[jobId]/submit/route.ts` (7 occurrences)
@@ -63,9 +64,8 @@ logger.error('Error occurred', error);
 
 1. **Webpack Cache Warning**: Build shows `Serializing big strings (181kiB)` warning. Consider optimizing large string handling.
 
-2. **Legacy Directories**: The following can be removed if confirmed unused:
-   - `/workspace/nextjs-app/` - Alternative Next.js setup
-   - `/workspace/apps/` - Mobile app prototypes
+2. **Legacy Directories**:
+   - `/workspace/apps/mobile/` - React Native prototype (documented, see README.md)
 
 ---
 
@@ -73,6 +73,13 @@ logger.error('Error occurred', error);
 
 | Date | Description |
 |------|-------------|
+| 2026-01-10 | Fixed critical `_error` → `error` bug pattern in `server/routes.ts` (was causing ReferenceErrors) |
+| 2026-01-10 | Migrated `server/routes.ts` from console.log to structured logger (~58 occurrences) |
+| 2026-01-10 | Migrated `src/lib/learning/learning-service.ts` from console.log to structured logger |
+| 2026-01-10 | Replaced `any` types in `server/routes.ts` with proper type annotations |
+| 2026-01-10 | Removed legacy `/nextjs-app/` directory (migration scratch, not used) |
+| 2026-01-10 | Added documentation README for `apps/mobile/` prototype status |
+| 2026-01-10 | Updated learning system TODOs with proper documentation comments |
 | 2026-01-10 | Consolidated duplicate schema files (lib/schema.ts → @shared/schema) |
 | 2026-01-10 | Improved SSL certificate validation with DB_SSL_CA support |
 | 2026-01-10 | Removed legacy migration directories (pages-to-convert, api-to-convert) |

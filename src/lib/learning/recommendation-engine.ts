@@ -386,7 +386,10 @@ export async function getSmartPricingRecommendation(
     insights: {
       localMarketPosition,
       winRatePrediction: pricingSuggestion.localWinRate ?? null,
-      competitorRange: null, // TODO: Implement competitor analysis
+      // Competitor analysis not yet implemented - requires external data source.
+      // Future enhancement: Integrate with market data APIs.
+      // See: docs/FUTURE_ENHANCEMENTS.md
+      competitorRange: null,
     },
     explanation,
   };
@@ -456,7 +459,10 @@ export async function getProposalRecommendations(
     photos: photoSuggestions,
     scope: scopeSuggestions,
     pricing: pricingRecommendation,
-    options: [], // TODO: Implement option recommendations
+    // Option recommendations not yet implemented - returns empty array for forward compatibility.
+    // Future enhancement: Suggest options based on user patterns and job context.
+    // See: docs/FUTURE_ENHANCEMENTS.md
+    options: [],
     overallConfidence,
     learningStatus: {
       hasUserPatterns,

@@ -9,6 +9,7 @@ import { emailService } from "./emailService";
 import { aiService } from "./aiService";
 import { benchmarkTrades, regionalMultipliers } from "./benchmark-data";
 import { oneBuildService } from "./services/onebuild";
+import { logger } from "@/lib/logger";
 
 /**
  * Check if a user has active access (Pro subscription OR active trial period)
@@ -121,8 +122,8 @@ export async function registerRoutes(
         hasActiveAccess: userHasAccess,
         hasAccess: userHasAccess || remaining > 0
       });
-    } catch (_error) {
-      console.error("Error fetching usage:", error);
+    } catch (error) {
+      logger.error("Error fetching usage", error as Error);
       res.status(500).json({ message: "Failed to fetch usage" });
     }
   });
@@ -148,8 +149,8 @@ export async function registerRoutes(
       );
 
       res.json(result);
-    } catch (_error) {
-      console.error("Error searching costs:", error);
+    } catch (error) {
+      logger.error("Error searching costs", error as Error);
       res.status(500).json({ message: "Failed to search costs" });
     }
   });
@@ -176,8 +177,8 @@ export async function registerRoutes(
       } else {
         res.status(404).json({ message: "Material not found" });
       }
-    } catch (_error) {
-      console.error("Error fetching material cost:", error);
+    } catch (error) {
+      logger.error("Error fetching material cost", error as Error);
       res.status(500).json({ message: "Failed to fetch material cost" });
     }
   });
@@ -204,8 +205,8 @@ export async function registerRoutes(
       } else {
         res.status(404).json({ message: "Labor rate not found" });
       }
-    } catch (_error) {
-      console.error("Error fetching labor rate:", error);
+    } catch (error) {
+      logger.error("Error fetching labor rate", error as Error);
       res.status(500).json({ message: "Failed to fetch labor rate" });
     }
   });
@@ -269,8 +270,8 @@ export async function registerRoutes(
         
         res.json({ ...result, _anonymous: true });
       }
-    } catch (_error) {
-      console.error("Error fetching trade pricing:", error);
+    } catch (error) {
+      logger.error("Error fetching trade pricing", error as Error);
       res.status(500).json({ message: "Failed to fetch trade pricing" });
     }
   });
@@ -312,8 +313,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         success: result.success,
         error: result.error,
       });
-    } catch (_error) {
-      console.error("Error enhancing scope:", error);
+    } catch (error) {
+      logger.error("Error enhancing scope", error as Error);
       res.status(500).json({ 
         message: "Failed to enhance scope",
         error: {
@@ -336,8 +337,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       } else {
         res.json(null);
       }
-    } catch (_error) {
-      console.error("Error fetching user:", error);
+    } catch (error) {
+      logger.error("Error fetching user", error as Error);
       res.status(500).json({ message: "Failed to fetch user" });
     }
   });
@@ -384,8 +385,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       }
 
       res.json(user);
-    } catch (_error) {
-      console.error("Error updating company profile:", error);
+    } catch (error) {
+      logger.error("Error updating company profile", error as Error);
       res.status(500).json({ message: "Failed to update company profile" });
     }
   });
@@ -429,8 +430,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       const { userStripeSecretKey: _, ...safeUser } = user;
       const hasStripeKey = !!user.userStripeSecretKey;
       res.json({ ...safeUser, hasStripeKey });
-    } catch (_error) {
-      console.error("Error updating Stripe settings:", error);
+    } catch (error) {
+      logger.error("Error updating Stripe settings", error as Error);
       res.status(500).json({ message: "Failed to update Stripe settings" });
     }
   });
@@ -459,8 +460,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
 
       const { userStripeSecretKey, ...safeUser } = user;
       res.json(safeUser);
-    } catch (_error) {
-      console.error("Error updating notification preferences:", error);
+    } catch (error) {
+      logger.error("Error updating notification preferences", error as Error);
       res.status(500).json({ message: "Failed to update notification preferences" });
     }
   });
@@ -485,8 +486,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       }
 
       res.json(user);
-    } catch (_error) {
-      console.error("Error completing onboarding:", error);
+    } catch (error) {
+      logger.error("Error completing onboarding", error as Error);
       res.status(500).json({ message: "Failed to complete onboarding" });
     }
   });
@@ -509,13 +510,13 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       const viewerIp = req.ip || req.headers['x-forwarded-for']?.toString().split(',')[0] || undefined;
       const userAgent = req.headers['user-agent'] || undefined;
       storage.recordProposalView(proposal.id, viewerIp, userAgent).catch(err => 
-        console.error("Error recording proposal view:", err)
+        logger.error("Error recording proposal view", err as Error)
       );
 
       // Update proposal status to 'viewed' if currently 'sent'
       if (proposal.status === 'sent') {
         storage.updateProposal(proposal.id, proposal.userId, { status: 'viewed' }).catch(err =>
-          console.error("Error updating proposal status to viewed:", err)
+          logger.error("Error updating proposal status to viewed", err as Error)
         );
       }
 
@@ -546,8 +547,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
           companyLogo: user.companyLogo,
         } : null,
       });
-    } catch (_error) {
-      console.error("Error fetching public proposal:", error);
+    } catch (error) {
+      logger.error("Error fetching public proposal", error as Error);
       res.status(500).json({ message: "Failed to fetch proposal" });
     }
   });
@@ -611,7 +612,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
             acceptedAt: acceptedProposal.acceptedAt!,
           });
         } catch (emailError) {
-          console.error("Error sending acceptance notification email:", emailError);
+          logger.error("Error sending acceptance notification email", emailError as Error);
         }
       }
 
@@ -620,8 +621,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         acceptedAt: acceptedProposal.acceptedAt,
         acceptedByName: acceptedProposal.acceptedByName,
       });
-    } catch (_error) {
-      console.error("Error accepting proposal:", error);
+    } catch (error) {
+      logger.error("Error accepting proposal", error as Error);
       res.status(500).json({ message: "Failed to accept proposal" });
     }
   });
@@ -631,8 +632,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     try {
       const result = await emailService.testConnection();
       res.json(result);
-    } catch (_error) {
-      console.error("Error testing email connection:", error);
+    } catch (error) {
+      logger.error("Error testing email connection", error as Error);
       res.status(500).json({ success: false, error: "Failed to test connection" });
     }
   });
@@ -684,7 +685,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       });
 
       if (!emailResult.success) {
-        console.error('[API] Proposal email send failed:', {
+        logger.error('Proposal email send failed', {
           proposalId,
           recipientEmail,
           error: emailResult.error,
@@ -701,8 +702,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         sentTo: recipientEmail,
         messageId: emailResult.messageId
       });
-    } catch (_error) {
-      console.error("Error sending proposal email:", error);
+    } catch (error) {
+      logger.error("Error sending proposal email", error as Error);
       res.status(500).json({ message: "Failed to send proposal" });
     }
   });
@@ -764,7 +765,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
             proposalUrl,
           });
         } catch (emailError) {
-          console.error("Error sending completed proposal email:", emailError);
+          logger.error("Error sending completed proposal email", emailError as Error);
         }
       }
 
@@ -772,8 +773,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         message: "Proposal countersigned successfully",
         contractorSignedAt: countersignedProposal.contractorSignedAt,
       });
-    } catch (_error) {
-      console.error("Error countersigning proposal:", error);
+    } catch (error) {
+      logger.error("Error countersigning proposal", error as Error);
       res.status(500).json({ message: "Failed to countersign proposal" });
     }
   });
@@ -797,8 +798,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
 
       const proposal = await storage.createProposal(validationResult.data);
       res.json(proposal);
-    } catch (_error) {
-      console.error("Error creating proposal:", error);
+    } catch (error) {
+      logger.error("Error creating proposal", error as Error);
       res.status(500).json({ message: "Failed to create proposal" });
     }
   });
@@ -820,8 +821,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       }));
       
       res.json(proposalsWithViews);
-    } catch (_error) {
-      console.error("Error fetching proposals:", error);
+    } catch (error) {
+      logger.error("Error fetching proposals", error as Error);
       res.status(500).json({ message: "Failed to fetch proposals" });
     }
   });
@@ -841,8 +842,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       }
 
       res.json(proposal);
-    } catch (_error) {
-      console.error("Error fetching proposal:", error);
+    } catch (error) {
+      logger.error("Error fetching proposal", error as Error);
       res.status(500).json({ message: "Failed to fetch proposal" });
     }
   });
@@ -859,8 +860,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       }
 
       res.json(updated);
-    } catch (_error) {
-      console.error("Error updating proposal:", error);
+    } catch (error) {
+      logger.error("Error updating proposal", error as Error);
       res.status(500).json({ message: "Failed to update proposal" });
     }
   });
@@ -877,8 +878,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       }
 
       res.json({ message: "Proposal deleted successfully" });
-    } catch (_error) {
-      console.error("Error deleting proposal:", error);
+    } catch (error) {
+      logger.error("Error deleting proposal", error as Error);
       res.status(500).json({ message: "Failed to delete proposal" });
     }
   });
@@ -930,8 +931,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         ...unlocked,
         remainingCredits: updatedUser.proposalCredits
       });
-    } catch (_error) {
-      console.error("Error unlocking proposal:", error);
+    } catch (error) {
+      logger.error("Error unlocking proposal", error as Error);
       res.status(500).json({ message: "Failed to unlock proposal" });
     }
   });
@@ -940,8 +941,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     try {
       const publishableKey = await getStripePublishableKey();
       res.json({ publishableKey });
-    } catch (_error) {
-      console.error("Error getting Stripe config:", error);
+    } catch (error) {
+      logger.error("Error getting Stripe config", error as Error);
       res.status(500).json({ message: "Failed to get Stripe configuration" });
     }
   });
@@ -974,8 +975,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       }
 
       res.json({ data: Array.from(productsMap.values()) });
-    } catch (_error) {
-      console.error("Error listing products:", error);
+    } catch (error) {
+      logger.error("Error listing products", error as Error);
       res.status(500).json({ message: "Failed to list products" });
     }
   });
@@ -1030,24 +1031,25 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       }
 
       res.json({ url: session.url });
-    } catch (error: any) {
-      console.error("Error creating checkout session:", error);
+    } catch (error: unknown) {
+      logger.error("Error creating checkout session", error as Error);
       
       // Provide more specific error messages based on the error type
+      const err = error as Record<string, unknown>;
       let message = 'Failed to create checkout session';
       let status = 500;
       
-      if (error?.type === 'StripeAuthenticationError' || error?.code === 'api_key_expired') {
+      if (err?.type === 'StripeAuthenticationError' || err?.code === 'api_key_expired') {
         message = 'Payment service is temporarily unavailable. Please try again later.';
         status = 503;
-      } else if (error?.type === 'StripeInvalidRequestError') {
-        message = error?.message || 'Invalid payment request. Please try again.';
+      } else if (err?.type === 'StripeInvalidRequestError') {
+        message = (err?.message as string) || 'Invalid payment request. Please try again.';
         status = 400;
-      } else if (error?.code === 'ENOTFOUND' || error?.code === 'ECONNREFUSED') {
+      } else if (err?.code === 'ENOTFOUND' || err?.code === 'ECONNREFUSED') {
         message = 'Unable to connect to payment service. Please check your internet connection.';
         status = 503;
-      } else if (error?.message) {
-        message = `Failed to create checkout session: ${error.message}`;
+      } else if (err?.message) {
+        message = `Failed to create checkout session: ${err.message}`;
       }
       
       res.status(status).json({ message });
@@ -1100,11 +1102,12 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         creditsAdded: result.alreadyProcessed ? 0 : credits,
         alreadyProcessed: result.alreadyProcessed
       });
-    } catch (error: any) {
-      if (error.code === 'resource_missing') {
+    } catch (error) {
+      const err = error as Record<string, unknown>;
+      if (err.code === 'resource_missing') {
         return res.status(404).json({ message: "Invalid session" });
       }
-      console.error("Error verifying session:", error);
+      logger.error("Error verifying session", error as Error);
       res.status(500).json({ message: "Failed to verify session" });
     }
   });
@@ -1120,8 +1123,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
 
       const subscription = await storage.getSubscription(user.stripeSubscriptionId);
       res.json({ subscription });
-    } catch (_error) {
-      console.error("Error getting subscription:", error);
+    } catch (error) {
+      logger.error("Error getting subscription", error as Error);
       res.status(500).json({ message: "Failed to get subscription" });
     }
   });
@@ -1141,8 +1144,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       );
 
       res.json({ url: session.url });
-    } catch (_error) {
-      console.error("Error creating portal session:", error);
+    } catch (error) {
+      logger.error("Error creating portal session", error as Error);
       res.status(500).json({ message: "Failed to create portal session" });
     }
   });
@@ -1182,7 +1185,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         try {
           await stripeService.deactivatePaymentLink(proposal.paymentLinkId);
         } catch (e) {
-          console.log("Could not deactivate previous payment link:", e);
+          logger.warn("Could not deactivate previous payment link", e as Error);
         }
       }
 
@@ -1217,8 +1220,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         depositPercentage,
         proposal: updated,
       });
-    } catch (_error) {
-      console.error("Error creating payment link:", error);
+    } catch (error) {
+      logger.error("Error creating payment link", error as Error);
       res.status(500).json({ message: "Failed to create payment link" });
     }
   });
@@ -1257,7 +1260,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
           );
           portalUrl = session.url;
         } catch (portalError) {
-          console.error("Error creating portal session for cancellation:", portalError);
+          logger.error("Error creating portal session for cancellation", portalError as Error);
         }
       }
 
@@ -1265,8 +1268,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         message: "Feedback saved successfully",
         portalUrl 
       });
-    } catch (_error) {
-      console.error("Error saving cancellation feedback:", error);
+    } catch (error) {
+      logger.error("Error saving cancellation feedback", error as Error);
       res.status(500).json({ message: "Failed to save feedback" });
     }
   });
@@ -1290,8 +1293,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         memberCount,
         totalSeats: membership.company.seatLimit + membership.company.extraSeats,
       });
-    } catch (_error) {
-      console.error("Error fetching company:", error);
+    } catch (error) {
+      logger.error("Error fetching company", error as Error);
       res.status(500).json({ message: "Failed to fetch company" });
     }
   });
@@ -1326,8 +1329,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         memberCount: 1,
         totalSeats: company.seatLimit,
       });
-    } catch (_error) {
-      console.error("Error creating company:", error);
+    } catch (error) {
+      logger.error("Error creating company", error as Error);
       res.status(500).json({ message: "Failed to create company" });
     }
   });
@@ -1355,8 +1358,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       }
 
       res.json(updated);
-    } catch (_error) {
-      console.error("Error updating company:", error);
+    } catch (error) {
+      logger.error("Error updating company", error as Error);
       res.status(500).json({ message: "Failed to update company" });
     }
   });
@@ -1385,8 +1388,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
           profileImageUrl: m.user.profileImageUrl,
         }
       })));
-    } catch (_error) {
-      console.error("Error fetching members:", error);
+    } catch (error) {
+      logger.error("Error fetching members", error as Error);
       res.status(500).json({ message: "Failed to fetch members" });
     }
   });
@@ -1416,8 +1419,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       }
 
       res.json(updated);
-    } catch (_error) {
-      console.error("Error updating member role:", error);
+    } catch (error) {
+      logger.error("Error updating member role", error as Error);
       res.status(500).json({ message: "Failed to update member role" });
     }
   });
@@ -1444,8 +1447,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       }
 
       res.json({ message: "Member removed successfully" });
-    } catch (_error) {
-      console.error("Error removing member:", error);
+    } catch (error) {
+      logger.error("Error removing member", error as Error);
       res.status(500).json({ message: "Failed to remove member" });
     }
   });
@@ -1462,8 +1465,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
 
       const invites = await storage.getCompanyInvites(membership.companyId);
       res.json(invites);
-    } catch (_error) {
-      console.error("Error fetching invites:", error);
+    } catch (error) {
+      logger.error("Error fetching invites", error as Error);
       res.status(500).json({ message: "Failed to fetch invites" });
     }
   });
@@ -1519,8 +1522,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         invite,
         inviteLink,
       });
-    } catch (_error) {
-      console.error("Error creating invite:", error);
+    } catch (error) {
+      logger.error("Error creating invite", error as Error);
       res.status(500).json({ message: "Failed to create invite" });
     }
   });
@@ -1541,8 +1544,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       }
 
       res.json({ message: "Invite deleted successfully" });
-    } catch (_error) {
-      console.error("Error deleting invite:", error);
+    } catch (error) {
+      logger.error("Error deleting invite", error as Error);
       res.status(500).json({ message: "Failed to delete invite" });
     }
   });
@@ -1571,8 +1574,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         email: invite.email,
         expiresAt: invite.expiresAt,
       });
-    } catch (_error) {
-      console.error("Error fetching invite:", error);
+    } catch (error) {
+      logger.error("Error fetching invite", error as Error);
       res.status(500).json({ message: "Failed to fetch invite" });
     }
   });
@@ -1613,8 +1616,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         message: "Successfully joined the company",
         role: member.role,
       });
-    } catch (_error) {
-      console.error("Error accepting invite:", error);
+    } catch (error) {
+      logger.error("Error accepting invite", error as Error);
       res.status(500).json({ message: "Failed to accept invite" });
     }
   });
@@ -1625,8 +1628,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       const userId = req.user.claims.sub;
       const analytics = await storage.getProposalAnalytics(userId);
       res.json(analytics);
-    } catch (_error) {
-      console.error("Error fetching pricing summary:", error);
+    } catch (error) {
+      logger.error("Error fetching pricing summary", error as Error);
       res.status(500).json({ message: "Failed to fetch pricing summary" });
     }
   });
@@ -1637,8 +1640,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       const userId = req.user.claims.sub;
       const insights = await storage.getEnhancedProposalAnalytics(userId);
       res.json(insights);
-    } catch (_error) {
-      console.error("Error fetching insights:", error);
+    } catch (error) {
+      logger.error("Error fetching insights", error as Error);
       res.status(500).json({ message: "Failed to fetch insights" });
     }
   });
@@ -1649,8 +1652,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         trades: benchmarkTrades,
         regions: regionalMultipliers,
       });
-    } catch (_error) {
-      console.error("Error fetching benchmarks:", error);
+    } catch (error) {
+      logger.error("Error fetching benchmarks", error as Error);
       res.status(500).json({ message: "Failed to fetch benchmarks" });
     }
   });
@@ -1667,7 +1670,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         return res.status(403).json({ message: "This feature requires a Crew subscription" });
       }
       next();
-    } catch (_error) {
+    } catch (error) {
+      logger.error("Error verifying subscription", error as Error);
       res.status(500).json({ message: "Failed to verify subscription" });
     }
   };
@@ -1677,9 +1681,10 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       const { searchConsoleService } = await import('./services/searchConsole');
       const result = await searchConsoleService.testConnection();
       res.json(result);
-    } catch (error: any) {
-      console.error("Error testing Search Console connection:", error);
-      res.status(500).json({ success: false, error: error.message || "Failed to test connection" });
+    } catch (error) {
+      logger.error("Error testing Search Console connection", error as Error);
+      const err = error as Error;
+      res.status(500).json({ success: false, error: err.message || "Failed to test connection" });
     }
   });
 
@@ -1688,9 +1693,10 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       const { searchConsoleService } = await import('./services/searchConsole');
       const sites = await searchConsoleService.listSites();
       res.json(sites);
-    } catch (error: any) {
-      console.error("Error fetching Search Console sites:", error);
-      res.status(500).json({ message: error.message || "Failed to fetch sites" });
+    } catch (error) {
+      logger.error("Error fetching Search Console sites", error as Error);
+      const err = error as Error;
+      res.status(500).json({ message: err.message || "Failed to fetch sites" });
     }
   });
 
@@ -1711,9 +1717,10 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         rowLimit ? parseInt(rowLimit as string) : 100
       );
       res.json(analytics);
-    } catch (error: any) {
-      console.error("Error fetching Search Console analytics:", error);
-      res.status(500).json({ message: error.message || "Failed to fetch analytics" });
+    } catch (error) {
+      logger.error("Error fetching Search Console analytics", error as Error);
+      const err = error as Error;
+      res.status(500).json({ message: err.message || "Failed to fetch analytics" });
     }
   });
 
@@ -1728,9 +1735,10 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       const { searchConsoleService } = await import('./services/searchConsole');
       const sitemaps = await searchConsoleService.listSitemaps(siteUrl as string);
       res.json(sitemaps);
-    } catch (error: any) {
-      console.error("Error fetching sitemaps:", error);
-      res.status(500).json({ message: error.message || "Failed to fetch sitemaps" });
+    } catch (error) {
+      logger.error("Error fetching sitemaps", error as Error);
+      const err = error as Error;
+      res.status(500).json({ message: err.message || "Failed to fetch sitemaps" });
     }
   });
 
@@ -1745,9 +1753,10 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       const { searchConsoleService } = await import('./services/searchConsole');
       await searchConsoleService.submitSitemap(siteUrl, feedpath);
       res.json({ message: "Sitemap submitted successfully" });
-    } catch (error: any) {
-      console.error("Error submitting sitemap:", error);
-      res.status(500).json({ message: error.message || "Failed to submit sitemap" });
+    } catch (error) {
+      logger.error("Error submitting sitemap", error as Error);
+      const err = error as Error;
+      res.status(500).json({ message: err.message || "Failed to submit sitemap" });
     }
   });
 
@@ -1762,9 +1771,10 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       const { searchConsoleService } = await import('./services/searchConsole');
       await searchConsoleService.deleteSitemap(siteUrl as string, feedpath as string);
       res.json({ message: "Sitemap deleted successfully" });
-    } catch (error: any) {
-      console.error("Error deleting sitemap:", error);
-      res.status(500).json({ message: error.message || "Failed to delete sitemap" });
+    } catch (error) {
+      logger.error("Error deleting sitemap", error as Error);
+      const err = error as Error;
+      res.status(500).json({ message: err.message || "Failed to delete sitemap" });
     }
   });
 
@@ -1779,9 +1789,10 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       const { searchConsoleService } = await import('./services/searchConsole');
       const result = await searchConsoleService.inspectUrl(siteUrl, inspectionUrl);
       res.json(result);
-    } catch (error: any) {
-      console.error("Error inspecting URL:", error);
-      res.status(500).json({ message: error.message || "Failed to inspect URL" });
+    } catch (error) {
+      logger.error("Error inspecting URL", error as Error);
+      const err = error as Error;
+      res.status(500).json({ message: err.message || "Failed to inspect URL" });
     }
   });
 
