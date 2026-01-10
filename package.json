@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
+    "pretypecheck": "node -e \"require('fs').rmSync('tsconfig.tsbuildinfo',{force:true})\"",
     "typecheck": "tsc --noEmit",
     "test:e2e": "npx playwright test",
     "test:ci": "echo 'Unit tests not yet configured' && exit 0",

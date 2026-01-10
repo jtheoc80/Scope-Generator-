@@ -186,9 +186,9 @@ NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=
 
 ### Numeric Folders (00–ff)
 
-The repository contains 248 hexadecimal-named folders (`00/`, `01/`, ... `ff/`) which are **Git object database backup folders**. These contain compressed Git history objects and should not be modified or deleted.
+Older snapshots of this repository included `00/`–`ff/` “git object backup” folders (an extracted `.git/objects` copy) plus a top-level `refs/` folder. Those are **not required** for normal development (the real repository history already lives in `.git/`) and they make clones/CI/tooling slower and more fragile.
 
-📁 **See [FOLDERS.md](./FOLDERS.md) for complete folder documentation.**
+If you see these folders re-appear, they should be removed from git and kept out of the repo (store backups externally if needed).
 
 ## Scripts
 

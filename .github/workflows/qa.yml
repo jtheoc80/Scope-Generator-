@@ -47,6 +47,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Fail if vendored artifacts are committed
+        run: |
+          if git ls-files | grep -qE '(^|/)node_modules/|^refs/|^[0-9a-f][0-9a-f]/'; then
+            echo "❌ Vendored artifacts detected (node_modules and/or legacy git-backup folders)."
+            echo "Remove from git and rely on lockfiles / normal .git history."
+            git ls-files | grep -E '(^|/)node_modules/|^refs/|^[0-9a-f][0-9a-f]/' | head -n 200
+            exit 1
+          fi
+
       - name: Verify tooling exists
         run: |
           node -p "require.resolve('typescript')"
@@ -158,6 +167,15 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Fail if vendored artifacts are committed
+        run: |
+          if git ls-files | grep -qE '(^|/)node_modules/|^refs/|^[0-9a-f][0-9a-f]/'; then
+            echo "❌ Vendored artifacts detected (node_modules and/or legacy git-backup folders)."
+            echo "Remove from git and rely on lockfiles / normal .git history."
+            git ls-files | grep -E '(^|/)node_modules/|^refs/|^[0-9a-f][0-9a-f]/' | head -n 200
+            exit 1
+          fi
 
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
