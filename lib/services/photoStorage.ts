@@ -7,8 +7,12 @@ import { createS3Client, isS3Configured } from "@/src/lib/mobile/storage/s3";
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 
 async function deleteObjectFromLocalPublicDir(key: string) {
-  const rel = key.replace(/^\/+/, "");
-  const abs = path.join(process.cwd(), "public", rel);
+  // Defense-in-depth: prevent path traversal (only allow deletes under /public).
+  const rel = path.posix.normalize(key.replace(/^\/+/, ""));
+  if (rel.startsWith("..") || rel.includes("/../")) return;
+  const publicDir = path.join(process.cwd(), "public");
+  const abs = path.join(publicDir, rel);
+  if (!abs.startsWith(publicDir + path.sep)) return;
   try {
     await fs.unlink(abs);
   } catch {

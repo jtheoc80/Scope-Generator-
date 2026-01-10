@@ -13,6 +13,10 @@ export const runtime = "nodejs";
 
 // Max file size: 10MB
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
+// Max files per request (avoid oversized multipart payloads/timeouts)
+const MAX_FILES = 20;
+// Rekognition supports JPEG/PNG; enforce at upload time to avoid "no analysis" jobs.
+const SUPPORTED_TYPES = new Set(["image/jpeg", "image/png", "image/jpg"]);
 
 /**
  * Hash a token using SHA-256
@@ -134,6 +138,12 @@ export async function POST(
         { status: 400 }
       );
     }
+    if (files.length > MAX_FILES) {
+      return NextResponse.json(
+        { success: false, error: `Too many files (max ${MAX_FILES})` },
+        { status: 413 }
+      );
+    }
 
     // Process uploads
     const uploadedPhotos: Array<{ id: number; publicUrl: string }> = [];
@@ -152,11 +162,14 @@ export async function POST(
           continue;
         }
 
-        // Check supported formats (AWS Rekognition only supports JPEG/PNG)
-        const supportedTypes = ["image/jpeg", "image/png", "image/jpg"];
-        if (!supportedTypes.includes(contentType)) {
-          // Allow but warn for other formats - client should have converted
-          console.warn(`Photo session ${sessionId}: Unsupported format ${contentType} for ${file.name}`);
+        // Enforce supported formats (AWS Rekognition only supports JPEG/PNG).
+        // Without this, HEIC/WebP uploads lead to downstream "no analysis" behavior.
+        if (!SUPPORTED_TYPES.has(contentType)) {
+          errors.push({
+            filename: file.name,
+            error: `Unsupported image format (${contentType}). Please upload JPEG or PNG.`,
+          });
+          continue;
         }
 
         // Validate file size
