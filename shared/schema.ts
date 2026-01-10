@@ -35,6 +35,10 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   isPro: boolean("is_pro").notNull().default(false),
   subscriptionPlan: varchar("subscription_plan", { length: 20 }), // 'pro' | 'crew' | null
+  // Admin role for platform administration (separate from company role)
+  role: varchar("role", { length: 20 }).notNull().default("user"), // 'user' | 'admin'
+  // Entitlements array for fine-grained access control (e.g., ['CREW_PAYOUT', 'ADMIN_USERS'])
+  entitlements: text("entitlements").array().default([]),
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
   proposalCredits: integer("proposal_credits").notNull().default(0),
@@ -71,6 +75,74 @@ export const users = pgTable("users", {
 
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+
+// Platform roles
+export const platformRoles = ['user', 'admin'] as const;
+export type PlatformRole = typeof platformRoles[number];
+
+// Available entitlements
+export const availableEntitlements = [
+  'CREW_ACCESS',      // Access to Crew dashboard and features
+  'CREW_PAYOUT',      // Access to Crew Payout functionality
+  'ADMIN_USERS',      // Access to admin user management
+  'SEARCH_CONSOLE',   // Access to Search Console integration
+] as const;
+export type Entitlement = typeof availableEntitlements[number];
+
+// ==========================================
+// Audit Log for Entitlement Changes
+// ==========================================
+
+/**
+ * Audit log for tracking entitlement grants/revokes
+ * Records who changed what, when, and additional context
+ */
+export const auditLog = pgTable("audit_log", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  // Who performed the action
+  actorId: varchar("actor_id").notNull().references(() => users.id, { onDelete: "set null" }),
+  actorEmail: varchar("actor_email", { length: 255 }),
+  // Who was affected
+  targetUserId: varchar("target_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  targetUserEmail: varchar("target_user_email", { length: 255 }),
+  // What action was performed
+  action: varchar("action", { length: 50 }).notNull(), // 'GRANT_ENTITLEMENT', 'REVOKE_ENTITLEMENT', 'CHANGE_ROLE', etc.
+  // What was changed
+  resourceType: varchar("resource_type", { length: 50 }).notNull(), // 'entitlement', 'role', 'subscription'
+  resourceValue: varchar("resource_value", { length: 100 }), // e.g., 'CREW_PAYOUT', 'admin'
+  // Previous value (for tracking changes)
+  previousValue: varchar("previous_value", { length: 255 }),
+  // New value
+  newValue: varchar("new_value", { length: 255 }),
+  // Additional context
+  metadata: jsonb("metadata").$type<{
+    reason?: string;
+    ipAddress?: string;
+    userAgent?: string;
+    [key: string]: unknown;
+  }>(),
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  actorIdx: index("idx_audit_log_actor").on(table.actorId),
+  targetIdx: index("idx_audit_log_target").on(table.targetUserId),
+  actionIdx: index("idx_audit_log_action").on(table.action),
+  createdAtIdx: index("idx_audit_log_created_at").on(table.createdAt),
+}));
+
+export type AuditLog = typeof auditLog.$inferSelect;
+export type InsertAuditLog = typeof auditLog.$inferInsert;
+
+// Audit log action types
+export const auditLogActions = [
+  'GRANT_ENTITLEMENT',
+  'REVOKE_ENTITLEMENT',
+  'CHANGE_ROLE',
+  'CHANGE_SUBSCRIPTION',
+  'USER_LOGIN',
+  'USER_CREATED',
+] as const;
+export type AuditLogAction = typeof auditLogActions[number];
 
 // Option value type - can be boolean, string, or nested object (e.g., __mobile metadata)
 export type OptionValue = boolean | string | Record<string, unknown>;
