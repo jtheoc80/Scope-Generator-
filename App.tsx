@@ -17,7 +17,7 @@ import Crew from "@/pages/crew";
 import Invite from "@/pages/invite";
 import PricingInsights from "@/pages/pricing-insights";
 import SearchConsole from "@/pages/search-console";
-import TradeLandingPage, { cityData as tradeCityData, tradeCityRoutes, cityKeys as tradeCityKeys } from "@/pages/trade-landing";
+import TradeLandingPage, { tradeCityRoutes, cityKeys as tradeCityKeys } from "@/pages/trade-landing";
 import LocationLandingPage, { cities, trades } from "@/pages/location-landing";
 import ComparePage, { competitorSlugs } from "@/pages/compare";
 import BlogIndex, { blogSlugs } from "@/pages/blog";

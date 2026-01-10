@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import sharp from "sharp";
 import { photoFindingsSchema } from "./types";
 import { parseS3Url, fetchS3ObjectBytes, type S3ObjectRef } from "../storage/s3";
 
@@ -107,6 +108,20 @@ async function fetchImageAsDataUrl(imageUrl: string, s3Ref: S3ObjectRef | null):
     throw new Error("GPT_EMPTY_IMAGE: Image is empty (0 bytes)");
   }
   
+  // FIX: Convert HEIC/WebP to JPEG for OpenAI
+  // OpenAI supports: jpeg, png, webp, gif. HEIC is NOT supported.
+  const mimeType = detectImageMimeType(bytes);
+  if (mimeType === 'image/heic' || !mimeType) {
+    try {
+      console.log("gpt.converting", { from: mimeType || 'unknown', to: 'jpeg' });
+      const convertedBuffer = await sharp(bytes).toFormat('jpeg').toBuffer();
+      return `data:image/jpeg;base64,${convertedBuffer.toString('base64')}`;
+    } catch (e) {
+      console.error("gpt.conversionFailed", e);
+      // Fall through to try original bytes
+    }
+  }
+
   return bytesToDataUrl(bytes);
 }
 

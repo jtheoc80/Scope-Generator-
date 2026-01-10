@@ -653,11 +653,47 @@ export async function updateAggregatedPatterns(): Promise<void> {
   // from the raw action log into the pattern tables
   console.log('Updating aggregated patterns...');
   
-  // TODO: Implement pattern aggregation logic
-  // - Calculate geographic price multipliers
-  // - Update win rates
-  // - Identify common materials by region
-  // - Update confidence scores
+  try {
+    // 1. Update Scope Item Patterns
+    // Move frequent additions from raw logs to patterns table
+    await db.execute(sql`
+      INSERT INTO scope_item_patterns (trade_id, job_type_id, scope_item, added_count, updated_at)
+      SELECT 
+        trade_id, 
+        job_type_id, 
+        payload->>'scopeItem' as item, 
+        COUNT(*) as count,
+        NOW()
+      FROM user_action_log 
+      WHERE action_type = 'scope_add' 
+        AND created_at > NOW() - INTERVAL '7 days'
+      GROUP BY trade_id, job_type_id, payload->>'scopeItem'
+      ON CONFLICT (trade_id, job_type_id, scope_item) 
+      DO UPDATE SET added_count = scope_item_patterns.added_count + EXCLUDED.added_count;
+    `);
+
+    // 2. Update Pricing Patterns (simplified)
+    await db.execute(sql`
+      INSERT INTO pricing_patterns (user_id, trade_id, job_type_id, job_size, adjustment_percent, updated_at)
+      SELECT 
+        user_id,
+        trade_id,
+        job_type_id,
+        (payload->>'jobSize')::int as size,
+        AVG((payload->>'adjustmentPercent')::int) as avg_adj,
+        NOW()
+      FROM user_action_log 
+      WHERE action_type = 'price_adjust' 
+        AND created_at > NOW() - INTERVAL '30 days'
+      GROUP BY user_id, trade_id, job_type_id, payload->>'jobSize'
+      ON CONFLICT (user_id, trade_id, job_type_id, job_size)
+      DO UPDATE SET adjustment_percent = EXCLUDED.adjustment_percent;
+    `);
+
+    console.log('Aggregated patterns updated successfully');
+  } catch (error) {
+    console.error('Failed to update aggregated patterns:', error);
+  }
 }
 
 export const learningService = {
