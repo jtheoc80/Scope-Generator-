@@ -347,7 +347,7 @@ function testSchemaVersionHandling() {
   
   // Older versions should migrate gracefully (v1 -> v2, v2 -> v3)
   const oldVersionData = JSON.stringify({
-    version: DRAFT_SCHEMA_VERSION - 1,
+    version: DRAFT_SCHEMA_VERSION - 1, // v2 - supported via migration
     timestamp: Date.now(),
     draft: validDraft,
   });
