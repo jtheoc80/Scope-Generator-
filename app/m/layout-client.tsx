@@ -35,7 +35,7 @@ export function MobileLayoutClient({
               )}
 
               <Link
-                href="/m"
+                href="/"
                 className="flex items-center gap-2 hover:opacity-80 transition-opacity"
                 data-testid="link-logo-home"
               >
