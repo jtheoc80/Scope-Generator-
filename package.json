@@ -10,7 +10,8 @@
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "test:e2e": "npx playwright test",
-    "test:ci": "echo 'Unit tests not yet configured' && exit 0",
+    "test:unit": "tsx scripts/run-unit-tests.ts",
+    "test:ci": "npm run test:unit",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:generate": "drizzle-kit generate",
@@ -129,9 +130,7 @@
     "typescript": "5.9.3"
   },
   "overrides": {
-    "@esbuild-kit/core-utils": {
-      "esbuild": "0.25.12"
-    },
+    "esbuild": "0.27.2",
     "tmp": "0.2.5"
   }
 }

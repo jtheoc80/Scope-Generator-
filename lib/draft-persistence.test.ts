@@ -345,25 +345,36 @@ function testSchemaVersionHandling() {
   const currentResult = deserializeDraft(currentVersionData);
   assert(currentResult.success === true, 'Current schema version should succeed');
   
-  // Old version should succeed via migration (v1 and v2 are supported)
+  // Older versions should migrate gracefully (v1 -> v2, v2 -> v3)
   const oldVersionData = JSON.stringify({
     version: DRAFT_SCHEMA_VERSION - 1, // v2 - supported via migration
     timestamp: Date.now(),
     draft: validDraft,
   });
   const oldResult = deserializeDraft(oldVersionData);
-  assert(oldResult.success === true, 'Old schema version should succeed via migration');
-  assert(oldResult.draft !== null, 'Migrated draft should not be null');
-  
-  // Very old unsupported version (v0) should fail gracefully
-  const unsupportedVersionData = JSON.stringify({
-    version: 0,
+  assert(oldResult.success === true, 'Older schema version should migrate and succeed');
+  assert(oldResult.draft?.proposalId === null, 'Migrated draft should include proposalId=null');
+
+  // v2 -> v3 migration should drop blob: photo URLs (not refresh-safe)
+  const blobPhotoDraft: ProposalDraft = {
+    ...validDraft,
+    photos: [
+      { id: "blob-1", url: "blob:https://example.com/abc" },
+      { id: "ok-1", url: "https://example.com/photo.jpg" },
+    ],
+  };
+  const blobVersionData = JSON.stringify({
+    version: 2,
     timestamp: Date.now(),
-    draft: validDraft,
+    draft: blobPhotoDraft,
   });
-  const unsupportedResult = deserializeDraft(unsupportedVersionData);
-  assert(unsupportedResult.success === false, 'Unsupported old version should fail');
-  assert((unsupportedResult.error ?? '').includes('Schema version mismatch'), 'Should indicate version mismatch');
+  const blobResult = deserializeDraft(blobVersionData);
+  assert(blobResult.success === true, "v2 draft with blob photos should migrate successfully");
+  assertEqual(
+    blobResult.draft?.photos.map((p) => p.id),
+    ["ok-1"],
+    "Migration should remove blob: photos"
+  );
   
   // Future version should fail gracefully
   const futureVersionData = JSON.stringify({
