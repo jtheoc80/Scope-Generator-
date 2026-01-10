@@ -106,7 +106,7 @@ export default function CapturePhotosPage() {
           { method: "GET" }
         );
         if (cancelled) return;
-        const serverPhotos: UploadedPhoto[] = (res.photos || []).map((p, idx) => ({
+        const serverPhotos: UploadedPhoto[] = (res.photos || []).map((p) => ({
           id: `server-${p.id}`,
           serverId: p.id,
           localUrl: p.publicUrl,
@@ -161,7 +161,7 @@ export default function CapturePhotosPage() {
       }
 
       // Register photo with the API
-      const registered = await mobileApiFetch<{ photoId: number }>(`/api/mobile/jobs/${jobId}/photos`, {
+      await mobileApiFetch<{ photoId: number }>(`/api/mobile/jobs/${jobId}/photos`, {
         method: "POST",
         headers: { "Idempotency-Key": newIdempotencyKey() },
         body: JSON.stringify({ url: presign.publicUrl, kind: "site" }),

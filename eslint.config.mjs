@@ -35,8 +35,11 @@ export default [
       "@typescript-eslint/no-empty-object-type": "off",
       // Allow unescaped entities during migration - pre-existing in legacy pages
       "react/no-unescaped-entities": "warn",
-      // Allow unused vars during migration
-      "@typescript-eslint/no-unused-vars": "warn",
+      // Allow unused vars during migration (ignore underscore-prefixed args)
+      "@typescript-eslint/no-unused-vars": ["warn", { 
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }],
       // Allow missing hook dependencies during migration
       "react-hooks/exhaustive-deps": "warn",
       // Allow prefer-const during migration

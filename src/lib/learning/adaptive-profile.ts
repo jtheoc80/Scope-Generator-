@@ -531,7 +531,6 @@ function learnPhotoPattern(profile: UserProfile, action: ActionEvent): void {
 /**
  * Learn workflow patterns
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function learnWorkflowPattern(profile: UserProfile, _action: ActionEvent): void {
   // Note: This function processes ALL historical workflow patterns, not just the current action
   const prefs = profile.preferences.workflow;

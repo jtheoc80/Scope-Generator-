@@ -151,7 +151,7 @@ export class BillingService {
     eventType: string
   ): Promise<Subscription> {
     // Try to find existing subscription
-    let existing = await this.getSubscriptionByStripeId(data.stripeSubscriptionId);
+    const existing = await this.getSubscriptionByStripeId(data.stripeSubscriptionId);
     
     if (existing) {
       // Update existing subscription

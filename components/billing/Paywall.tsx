@@ -2,7 +2,6 @@
 
 import { useState, useCallback } from "react";
 import { 
-  Lock, 
   Check, 
   Loader2, 
   Zap, 
