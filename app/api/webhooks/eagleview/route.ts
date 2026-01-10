@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
+import { logger } from "@/lib/logger";
 import {
   getEagleViewConfig,
   mapEagleViewStatus,
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
       const config = getEagleViewConfig();
       webhookSecret = config.webhookSecret;
     } catch {
-      console.error("EagleView webhook: Configuration not available");
+      logger.error("EagleView webhook: Configuration not available");
       return NextResponse.json(
         { message: "Webhook not configured" },
         { status: 503 }
@@ -58,9 +59,9 @@ export async function POST(request: NextRequest) {
     const signature = headersList.get('x-webhook-secret') || headersList.get('x-eagleview-signature');
 
     if (!webhookSecret) {
-      console.warn("EagleView webhook: No webhook secret configured, skipping verification");
+      logger.warn("EagleView webhook: No webhook secret configured, skipping verification");
     } else if (!signature || signature !== webhookSecret) {
-      console.error("EagleView webhook: Invalid signature");
+      logger.error("EagleView webhook: Invalid signature");
       return NextResponse.json(
         { message: "Invalid webhook signature" },
         { status: 401 }
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
     try {
       event = await request.json();
     } catch {
-      console.error("EagleView webhook: Invalid JSON body");
+      logger.error("EagleView webhook: Invalid JSON body");
       return NextResponse.json(
         { message: "Invalid request body" },
         { status: 400 }
@@ -81,19 +82,19 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!event.orderId) {
-      console.error("EagleView webhook: Missing orderId");
+      logger.error("EagleView webhook: Missing orderId");
       return NextResponse.json(
         { message: "Missing orderId" },
         { status: 400 }
       );
     }
 
-    console.log(`EagleView webhook received: ${event.eventType} for order ${event.orderId}`);
+    logger.info("EagleView webhook received", { eventType: event.eventType, orderId: event.orderId });
 
     // Find order in our database
     const order = await getEagleViewOrderByEvOrderId(event.orderId);
     if (!order) {
-      console.warn(`EagleView webhook: Order not found: ${event.orderId}`);
+      logger.warn("EagleView webhook: Order not found", { orderId: event.orderId });
       // Return 200 to acknowledge - order might have been deleted
       return NextResponse.json({ received: true, message: "Order not found" });
     }
@@ -107,7 +108,7 @@ export async function POST(request: NextRequest) {
             status: newStatus as 'queued' | 'processing' | 'completed' | 'failed',
             payloadJson: { lastEvent: event },
           });
-          console.log(`EagleView order ${event.orderId} status updated to ${newStatus}`);
+          logger.info("EagleView order status updated", { orderId: event.orderId, status: newStatus });
         }
         break;
       }
@@ -122,7 +123,7 @@ export async function POST(request: NextRequest) {
             report = await getReport(event.reportId);
             measurements = parseRoofingMeasurements(report);
           } catch (err) {
-            console.error(`Failed to fetch EagleView report ${event.reportId}:`, err);
+            logger.error("Failed to fetch EagleView report", { reportId: event.reportId }, err as Error);
           }
         }
 
@@ -136,7 +137,7 @@ export async function POST(request: NextRequest) {
             ...(report ? { reportData: report } : {}),
           },
         });
-        console.log(`EagleView order ${event.orderId} completed with report ${event.reportId}`);
+        logger.info("EagleView order completed", { orderId: event.orderId, reportId: event.reportId });
         break;
       }
 
@@ -146,19 +147,19 @@ export async function POST(request: NextRequest) {
           errorMessage: event.error?.message || 'Order failed',
           payloadJson: { lastEvent: event },
         });
-        console.log(`EagleView order ${event.orderId} failed: ${event.error?.message}`);
+        logger.warn("EagleView order failed", { orderId: event.orderId, error: event.error?.message });
         break;
       }
 
       default:
-        console.log(`EagleView webhook: Unhandled event type: ${event.eventType}`);
+        logger.debug("EagleView webhook: Unhandled event type", { eventType: event.eventType });
     }
 
-    console.log(`EagleView webhook processed in ${Date.now() - t0}ms`);
+    logger.info("EagleView webhook processed", { durationMs: Date.now() - t0 });
     return NextResponse.json({ received: true });
 
   } catch (error) {
-    console.error("EagleView webhook error:", error);
+    logger.error("EagleView webhook error", error as Error);
     // Return 200 to prevent retries for unrecoverable errors
     return NextResponse.json(
       { received: true, error: "Internal error" },

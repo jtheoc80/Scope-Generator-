@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { getEagleViewOrderByJobId } from "@/lib/eagleview/storage";
-import type { RoofingMeasurements } from "@/lib/schema";
+import type { RoofingMeasurements } from "@shared/schema";
 
 export async function GET(request: NextRequest) {
   try {

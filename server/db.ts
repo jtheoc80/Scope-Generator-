@@ -18,13 +18,20 @@ function initializeDb() {
   
   if (!pool) {
     // Configure pool with SSL for Supabase/Neon compatibility
+    // SECURITY NOTE: rejectUnauthorized: false is used for compatibility with cloud databases
+    // that use self-signed certificates. For maximum security, set DB_SSL_CA env var with
+    // your database's CA certificate, which enables proper certificate validation.
+    const sslRequired = process.env.DATABASE_URL.includes('supabase.com') || 
+                        process.env.DATABASE_URL.includes('neon.tech') ||
+                        process.env.NODE_ENV === 'production';
+    
     pool = new Pool({ 
       connectionString: process.env.DATABASE_URL,
-      // Enable SSL for production databases (Supabase, Neon)
-      ssl: process.env.DATABASE_URL.includes('supabase.com') || 
-           process.env.DATABASE_URL.includes('neon.tech') ||
-           process.env.NODE_ENV === 'production'
-        ? { rejectUnauthorized: false }
+      ssl: sslRequired
+        ? {
+            rejectUnauthorized: process.env.DB_SSL_CA ? true : false,
+            ca: process.env.DB_SSL_CA || undefined,
+          }
         : false,
     });
   }

@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import * as schema from "./schema";
+import * as schema from "@shared/schema";
 
 // Lazy initialization to defer DATABASE_URL check until runtime.
 // This allows Next.js builds to succeed without requiring the env var at build time.
@@ -16,13 +16,20 @@ function getPool(): Pool {
     }
     
     // Configure pool with SSL for Supabase/Neon compatibility
+    // SECURITY NOTE: rejectUnauthorized: false is used for compatibility with cloud databases
+    // that use self-signed certificates. For maximum security, set DB_SSL_CA env var with
+    // your database's CA certificate, which enables proper certificate validation.
+    const sslRequired = process.env.DATABASE_URL.includes('supabase.com') || 
+                        process.env.DATABASE_URL.includes('neon.tech') ||
+                        process.env.NODE_ENV === 'production';
+    
     _pool = new Pool({
       connectionString: process.env.DATABASE_URL,
-      // Enable SSL for production databases (Supabase, Neon)
-      ssl: process.env.DATABASE_URL.includes('supabase.com') || 
-           process.env.DATABASE_URL.includes('neon.tech') ||
-           process.env.NODE_ENV === 'production'
-        ? { rejectUnauthorized: false }
+      ssl: sslRequired
+        ? {
+            rejectUnauthorized: process.env.DB_SSL_CA ? true : false,
+            ca: process.env.DB_SSL_CA || undefined,
+          }
         : false,
     });
   }

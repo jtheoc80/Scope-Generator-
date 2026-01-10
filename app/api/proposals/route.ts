@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { storage } from '@/lib/services/storage';
 import { insertProposalSchema } from '@shared/schema';
 import { getRequestUserId } from '@/lib/services/requestUserId';
@@ -32,7 +33,7 @@ export async function GET() {
     
     return NextResponse.json(proposalsWithViews);
   } catch (error) {
-    console.error('Error fetching proposals:', error);
+    logger.error('Error fetching proposals', error as Error);
     return NextResponse.json(
       { message: 'Failed to fetch proposals' },
       { status: 500 }
@@ -74,12 +75,12 @@ export async function POST(request: NextRequest) {
 
     // Log basic insert metadata for debugging without exposing field names
     const fieldCount = Object.keys(validationResult.data).length;
-    console.log('[proposals/POST] Validated proposal payload with', fieldCount, 'fields');
+    logger.debug('Validated proposal payload', { fieldCount });
 
     const proposal = await storage.createProposal(validationResult.data);
     return NextResponse.json(proposal);
   } catch (error) {
-    console.error("Error creating proposal:", error);
+    logger.error('Error creating proposal', error as Error);
     return NextResponse.json(
       { message: "Failed to create proposal" },
       { status: 500 }
