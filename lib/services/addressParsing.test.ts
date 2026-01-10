@@ -8,80 +8,10 @@
  * Google Places API address_components array.
  */
 
-// Type definitions for testing (mirrors Google Maps types)
-interface MockAddressComponent {
-  long_name: string;
-  short_name: string;
-  types: string[];
-}
+import { parseAddressComponents, type AddressComponentLike } from "./google-places-address";
 
-/**
- * Parse address_components from Google Places Place Details into structured fields.
- * This is a copy of the function from job-address.ts for testing purposes.
- */
-function parseAddressComponents(
-  addressComponents: MockAddressComponent[] | undefined
-): {
-  line1: string;
-  line2?: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  postalCodeSuffix?: string;
-} | null {
-  if (!addressComponents || addressComponents.length === 0) {
-    return null;
-  }
-  
-  let streetNumber = "";
-  let route = "";
-  let subpremise = "";
-  let city = "";
-  let state = "";
-  let postalCode = "";
-  let postalCodeSuffix = "";
-  
-  for (const component of addressComponents) {
-    const types = component.types;
-    const longName = component.long_name;
-    const shortName = component.short_name;
-    
-    if (types.includes("street_number")) {
-      streetNumber = longName;
-    } else if (types.includes("route")) {
-      route = longName;
-    } else if (types.includes("subpremise")) {
-      subpremise = longName;
-    } else if (types.includes("locality")) {
-      city = longName;
-    } else if (types.includes("sublocality_level_1") && !city) {
-      city = longName;
-    } else if (types.includes("administrative_area_level_1")) {
-      state = shortName;
-    } else if (types.includes("postal_code")) {
-      postalCode = longName;
-    } else if (types.includes("postal_code_suffix")) {
-      postalCodeSuffix = longName;
-    }
-  }
-  
-  const line1 = streetNumber && route 
-    ? `${streetNumber} ${route}` 
-    : route || streetNumber;
-  
-  if (!line1 || !city || !state || !postalCode) {
-    return null;
-  }
-  
-  return {
-    line1,
-    line2: subpremise || undefined,
-    city,
-    state,
-    postalCode,
-    postalCodeSuffix: postalCodeSuffix || undefined,
-  };
-}
+// Type definitions for testing (mirrors Google Maps types)
+interface MockAddressComponent extends AddressComponentLike {}
 
 // ============ TEST CASES ============
 
