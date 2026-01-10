@@ -544,46 +544,34 @@ export function saveLastAddressForCustomer(customerId: number, address: SavedAdd
 }
 
 // ============ JOB TYPE DEFINITIONS ============
+// Re-export from shared source of truth to maintain backwards compatibility
+// All job type definitions are centralized in lib/job-types.ts
 
-export const JOB_TYPES = [
-  { id: "bathroom-remodel", label: "Bathroom", icon: "🛁", category: "interior" },
-  { id: "kitchen-remodel", label: "Kitchen", icon: "🍳", category: "interior" },
-  { id: "roofing", label: "Roofing", icon: "🏠", category: "exterior" },
-  { id: "hvac", label: "HVAC", icon: "❄️", category: "systems" },
-  { id: "plumbing", label: "Plumbing", icon: "🔧", category: "systems" },
-  { id: "flooring", label: "Flooring", icon: "🪵", category: "interior" },
-  { id: "painting", label: "Painting", icon: "🎨", category: "interior" },
-  { id: "electrical", label: "Electrical", icon: "⚡", category: "systems" },
-  { id: "windows", label: "Windows", icon: "🪟", category: "exterior" },
-  { id: "siding", label: "Siding", icon: "🧱", category: "exterior" },
-  { id: "fence", label: "Fence", icon: "🚧", category: "exterior" },
-  { id: "driveway", label: "Driveway", icon: "🚗", category: "exterior" },
-] as const;
+import {
+  JOB_TYPE_DEFINITIONS,
+  getPrimaryJobTypes,
+  getJobTypeLabel as _getJobTypeLabel,
+  getJobTypeIcon as _getJobTypeIcon,
+  isMeasurementTrade as _isMeasurementTrade,
+  isValidJobTypeId,
+  validateJobTypeIdOrDefault,
+  MEASUREMENT_TRADE_IDS,
+  type JobTypeDefinition,
+  type MeasurementTradeId,
+} from "@/lib/job-types";
 
-// Trades that require map measurement step
-export const MEASUREMENT_TRADES = ["fence", "driveway"] as const;
-export type MeasurementTrade = typeof MEASUREMENT_TRADES[number];
+// Re-export for backwards compatibility
+export const JOB_TYPES = JOB_TYPE_DEFINITIONS;
+export const PRIMARY_JOB_TYPES = getPrimaryJobTypes();
+export const MEASUREMENT_TRADES = MEASUREMENT_TRADE_IDS;
+export type MeasurementTrade = MeasurementTradeId;
 
-export function isMeasurementTrade(jobType: string): jobType is MeasurementTrade {
-  return MEASUREMENT_TRADES.includes(jobType as MeasurementTrade);
-}
-
-// Primary job types shown on initial load - includes measurement trades (fence, driveway)
-export const PRIMARY_JOB_TYPES = [
-  ...JOB_TYPES.slice(0, 5), // Bathroom, Kitchen, Roofing, HVAC, Plumbing
-  JOB_TYPES.find(t => t.id === 'fence')!,
-  JOB_TYPES.find(t => t.id === 'driveway')!,
-];
-
-export function getJobTypeLabel(id: string): string {
-  const found = JOB_TYPES.find((t) => t.id === id);
-  return found?.label || id;
-}
-
-export function getJobTypeIcon(id: string): string {
-  const found = JOB_TYPES.find((t) => t.id === id);
-  return found?.icon || "📋";
-}
+// Re-export utility functions
+export const isMeasurementTrade = _isMeasurementTrade;
+export const getJobTypeLabel = _getJobTypeLabel;
+export const getJobTypeIcon = _getJobTypeIcon;
+export { isValidJobTypeId, validateJobTypeIdOrDefault };
+export type { JobTypeDefinition };
 
 // ============ COMBINED GETTERS (LOCAL + REMOTE) ============
 

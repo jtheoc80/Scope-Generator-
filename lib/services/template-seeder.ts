@@ -473,6 +473,54 @@ const defaultTemplates: Record<string, {
     warranty: 'N/A - Consultation/Estimate',
     exclusions: ['Actual work not included in estimate'],
   },
+  
+  // Exterior - Fence & Driveway
+  'fence': {
+    tradeId: 'fence',
+    tradeName: 'Fence',
+    jobTypeId: 'fence',
+    jobTypeName: 'Fence Installation',
+    baseScope: [
+      'Survey property line and mark fence layout.',
+      'Call 811 for utility locate before digging.',
+      'Set corner and end posts in concrete footings.',
+      'Install line posts at standard spacing.',
+      'Attach rails to posts.',
+      'Install fence boards/panels.',
+      'Install gate hardware and hang gate(s).',
+      'Final cleanup and debris removal.',
+    ],
+    options: [],
+    basePriceLow: 3000,
+    basePriceHigh: 8000,
+    estimatedDaysLow: 2,
+    estimatedDaysHigh: 5,
+    warranty: '1-year warranty on workmanship. Manufacturer warranty on materials.',
+    exclusions: ['Permit fees', 'Survey if required', 'Tree/stump removal', 'Grading'],
+  },
+  'driveway': {
+    tradeId: 'driveway',
+    tradeName: 'Driveway',
+    jobTypeId: 'driveway',
+    jobTypeName: 'Driveway Installation',
+    baseScope: [
+      'Site assessment and measurement.',
+      'Remove existing driveway material if applicable.',
+      'Grade and compact subbase.',
+      'Install aggregate base layer.',
+      'Install forms/edging as needed.',
+      'Pour and finish concrete/asphalt.',
+      'Apply sealer if included.',
+      'Final cleanup and curing time guidance.',
+    ],
+    options: [],
+    basePriceLow: 4000,
+    basePriceHigh: 12000,
+    estimatedDaysLow: 2,
+    estimatedDaysHigh: 5,
+    warranty: '1-year warranty on workmanship.',
+    exclusions: ['Permit fees', 'Utility relocation', 'Extensive grading', 'Drainage systems'],
+  },
 };
 
 /**
@@ -481,6 +529,21 @@ const defaultTemplates: Record<string, {
  */
 export function getDefaultTemplateForJobType(jobTypeId: string): typeof defaultTemplates[string] | null {
   return defaultTemplates[jobTypeId] || null;
+}
+
+/**
+ * Canonical list of active job type IDs.
+ * This is the source of truth for all job types supported by the system.
+ * UI components should use this to validate/filter job types.
+ */
+export const ACTIVE_JOB_TYPE_IDS = Object.keys(defaultTemplates) as readonly string[];
+
+/**
+ * Check if a job type ID is valid (exists in the active templates).
+ * Use this to guard against invalid persisted or URL-provided job types.
+ */
+export function isValidJobTypeId(jobTypeId: string): boolean {
+  return jobTypeId in defaultTemplates;
 }
 
 /**
