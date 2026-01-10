@@ -345,15 +345,25 @@ function testSchemaVersionHandling() {
   const currentResult = deserializeDraft(currentVersionData);
   assert(currentResult.success === true, 'Current schema version should succeed');
   
-  // Old version should fail gracefully
+  // Old version should succeed via migration (v1 and v2 are supported)
   const oldVersionData = JSON.stringify({
-    version: DRAFT_SCHEMA_VERSION - 1,
+    version: DRAFT_SCHEMA_VERSION - 1, // v2 - supported via migration
     timestamp: Date.now(),
     draft: validDraft,
   });
   const oldResult = deserializeDraft(oldVersionData);
-  assert(oldResult.success === false, 'Old schema version should fail');
-  assert((oldResult.error ?? '').includes('Schema version mismatch'), 'Should indicate version mismatch');
+  assert(oldResult.success === true, 'Old schema version should succeed via migration');
+  assert(oldResult.draft !== null, 'Migrated draft should not be null');
+  
+  // Very old unsupported version (v0) should fail gracefully
+  const unsupportedVersionData = JSON.stringify({
+    version: 0,
+    timestamp: Date.now(),
+    draft: validDraft,
+  });
+  const unsupportedResult = deserializeDraft(unsupportedVersionData);
+  assert(unsupportedResult.success === false, 'Unsupported old version should fail');
+  assert((unsupportedResult.error ?? '').includes('Schema version mismatch'), 'Should indicate version mismatch');
   
   // Future version should fail gracefully
   const futureVersionData = JSON.stringify({
