@@ -2,6 +2,7 @@ import Stripe from 'stripe';
 import { getStripeSync, getUncachableStripeClient } from './stripeClient';
 import { storage } from './storage';
 import { sendPurchaseNotification } from './emailService';
+import { logger } from '@/lib/logger';
 
 const ADMIN_NOTIFICATION_EMAIL = process.env.ADMIN_EMAIL || '';
 
@@ -24,7 +25,7 @@ export class WebhookHandlers {
   }
 
   static async handleEvent(event: Stripe.Event): Promise<void> {
-    console.log(`Processing Stripe event: ${event.type}`);
+    logger.info('Processing Stripe event', { eventType: event.type });
 
     switch (event.type) {
       case 'checkout.session.completed':
@@ -57,11 +58,11 @@ export class WebhookHandlers {
     const planType = session.metadata?.planType as 'pro' | 'crew' | undefined;
 
     if (!userId) {
-      console.error('No user ID in checkout session');
+      logger.error('No user ID in checkout session');
       return;
     }
 
-    console.log(`Activating Pro for user ${userId}, customer ${customerId}, subscription ${subscriptionId}, plan: ${planType}`);
+    logger.info('Activating Pro for user', { userId, customerId, subscriptionId, planType });
 
     await storage.updateUserStripeInfo(userId, {
       stripeCustomerId: customerId,
@@ -94,12 +95,12 @@ export class WebhookHandlers {
         });
 
         if (result.success) {
-          console.log(`Purchase notification sent to ${ADMIN_NOTIFICATION_EMAIL}`);
+          logger.info('Purchase notification sent', { to: ADMIN_NOTIFICATION_EMAIL });
         } else {
-          console.error('Failed to send purchase notification:', result.error);
+          logger.error('Failed to send purchase notification', { error: result.error });
         }
       } catch (error) {
-        console.error('Error sending purchase notification:', error);
+        logger.error('Error sending purchase notification', error as Error);
       }
     }
   }
@@ -111,11 +112,11 @@ export class WebhookHandlers {
 
     const user = await storage.getUserByStripeCustomerId(customerId);
     if (!user) {
-      console.error(`No user found for customer ${customerId}`);
+      logger.error('No user found for customer', { customerId });
       return;
     }
 
-    console.log(`Updating subscription for user ${user.id}, active: ${isActive}`);
+    logger.info('Updating subscription for user', { userId: user.id, isActive });
 
     await storage.updateUserStripeInfo(user.id, {
       stripeSubscriptionId: subscriptionId,
@@ -128,11 +129,11 @@ export class WebhookHandlers {
 
     const user = await storage.getUserByStripeCustomerId(customerId);
     if (!user) {
-      console.error(`No user found for customer ${customerId}`);
+      logger.error('No user found for customer', { customerId });
       return;
     }
 
-    console.log(`Deactivating Pro for user ${user.id}`);
+    logger.info('Deactivating Pro for user', { userId: user.id });
 
     await storage.updateUserStripeInfo(user.id, {
       stripeSubscriptionId: null,
@@ -146,22 +147,22 @@ export class WebhookHandlers {
     const amountTotal = session.amount_total || 0;
     const paymentIntentId = session.payment_intent as string;
 
-    console.log(`Processing payment link completion: ${paymentLinkId}, amount: ${amountTotal}`);
+    logger.info('Processing payment link completion', { paymentLinkId, amountTotal });
 
     // Find the proposal with this payment link
     const proposal = await storage.getProposalByPaymentLinkId(paymentLinkId);
     if (!proposal) {
-      console.error(`No proposal found for payment link ${paymentLinkId}`);
+      logger.error('No proposal found for payment link', { paymentLinkId });
       return;
     }
 
     // Idempotency check: if this payment intent was already processed, skip
     if (proposal.stripePaymentIntentId === paymentIntentId) {
-      console.log(`Payment intent ${paymentIntentId} already processed for proposal ${proposal.id}, skipping`);
+      logger.debug('Payment intent already processed, skipping', { paymentIntentId, proposalId: proposal.id });
       return;
     }
 
-    console.log(`Updating payment status for proposal ${proposal.id}`);
+    logger.info('Updating payment status for proposal', { proposalId: proposal.id });
 
     // Calculate new paid amount
     const newPaidAmount = (proposal.paidAmount || 0) + amountTotal;
@@ -180,6 +181,6 @@ export class WebhookHandlers {
       stripePaymentIntentId: paymentIntentId,
     });
 
-    console.log(`Payment recorded for proposal ${proposal.id}: ${paymentStatus}, paid: ${newPaidAmount}`);
+    logger.info('Payment recorded for proposal', { proposalId: proposal.id, paymentStatus, paidAmount: newPaidAmount });
   }
 }

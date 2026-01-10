@@ -2,6 +2,7 @@
 import { Resend } from 'resend';
 import { db } from '@/server/db';
 import { emailOutbox, type EmailOutboxAttachment } from '@shared/schema';
+import { logger } from '@/lib/logger';
 
 // Cache the Resend client
 let resendClient: Resend | null = null;
@@ -21,7 +22,7 @@ function getCredentials(): { apiKey: string; fromEmail: string } {
   const fromEmail = getFromEmail();
 
   if (!apiKey) {
-    console.error('[EmailService] RESEND_API_KEY environment variable is not set');
+    logger.error('RESEND_API_KEY environment variable is not set');
     throw new Error('Email service not configured');
   }
 
@@ -110,32 +111,31 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
       html: options.html,
       attachments: options.attachments?.map((a) => ({
         filename: a.filename,
-        content: typeof a.content === 'string' ? a.content : Buffer.from(a.content as any),
+        content: typeof a.content === 'string' 
+          ? a.content 
+          : Buffer.from(a.content instanceof ArrayBuffer ? new Uint8Array(a.content) : a.content),
       })),
     });
 
     if (result.error) {
-      console.error('[EmailService] Resend API error:', {
+      logger.error('Resend API error', {
         code: result.error.name,
-        message: result.error.message,
+        errorMessage: result.error.message,
         to: options.to,
       });
       return { success: false, error: 'Failed to send email' };
     }
 
-    console.log('[EmailService] Email sent successfully:', {
+    logger.info('Email sent successfully', {
       messageId: result.data?.id,
       to: options.to,
       subject: options.subject,
     });
 
     return { success: true, messageId: result.data?.id };
-  } catch (error: any) {
-    console.error('[EmailService] Email sending failed:', {
-      error: error.message,
-      stack: error.stack,
-      to: options.to,
-    });
+  } catch (error: unknown) {
+    const err = error as Error;
+    logger.error('Email sending failed', { to: options.to }, err);
     return { success: false, error: 'Failed to send email' };
   }
 }
@@ -147,13 +147,14 @@ export async function testConnection(): Promise<{ success: boolean; fromEmail?: 
     }
 
     const { fromEmail } = getCredentials();
-    console.log('[EmailService] Connection test successful, fromEmail:', fromEmail);
+    logger.info('Connection test successful', { fromEmail });
     return { 
       success: true, 
       fromEmail 
     };
-  } catch (error: any) {
-    console.error('[EmailService] Connection test failed:', error.message);
+  } catch (error: unknown) {
+    const err = error as Error;
+    logger.error('Connection test failed', err);
     return { success: false, error: 'Email service not configured' };
   }
 }
@@ -272,7 +273,7 @@ ${data.senderCompany || ''}
       ? `${data.senderName} via ScopeGen <${emailAddress}>` 
       : `ScopeGen <${emailAddress}>`;
       
-    console.log('[EmailService] Sending proposal email:', {
+    logger.info('Sending proposal email', {
       to: data.recipientEmail,
       project: data.proposalTitle,
       client: data.clientName,
@@ -288,8 +289,9 @@ ${data.senderCompany || ''}
       proposalId: data.proposalId,
       runId: data.runId,
     });
-  } catch (error: any) {
-    console.error('[EmailService] Failed to send proposal email:', error.message);
+  } catch (error: unknown) {
+    const err = error as Error;
+    logger.error('Failed to send proposal email', err);
     return { success: false, error: 'Failed to send email' };
   }
 }
@@ -667,7 +669,7 @@ ${data.contractorCompany || data.contractorName || 'Your Contractor'}
       ? `${data.contractorName} via ScopeGen <${emailAddress}>` 
       : `ScopeGen <${emailAddress}>`;
     
-    console.log('[EmailService] Sending completed proposal email:', {
+    logger.info('Sending completed proposal email', {
       to: data.clientEmail,
       project: data.projectTitle,
       client: data.clientName,
@@ -680,8 +682,9 @@ ${data.contractorCompany || data.contractorName || 'Your Contractor'}
       html,
       from: fromAddress
     });
-  } catch (error: any) {
-    console.error('[EmailService] Failed to send completed proposal email:', error.message);
+  } catch (error: unknown) {
+    const err = error as Error;
+    logger.error('Failed to send completed proposal email', err);
     return { success: false, error: 'Failed to send email' };
   }
 }

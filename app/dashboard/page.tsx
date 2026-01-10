@@ -275,10 +275,10 @@ export default function Dashboard() {
   }, [proposalsInRange]);
 
   const pipelineCounts = useMemo(() => {
-    const init = { draft: 0, sent: 0, viewed: 0, accepted: 0, won: 0, lost: 0 };
+    const init: Record<string, number> = { draft: 0, sent: 0, viewed: 0, accepted: 0, won: 0, lost: 0 };
     for (const p of proposalsInRange) {
       const s = p.status.toLowerCase();
-      if (s in init) (init as any)[s] += 1;
+      if (s in init) init[s] += 1;
     }
     return init as { draft: number; sent: number; viewed: number; accepted: number; won: number; lost: number };
   }, [proposalsInRange]);

@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { logger } from '@/lib/logger';
 
 const anthropic = new Anthropic({
   apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
@@ -156,7 +157,7 @@ Example: ["Line item 1.", "Line item 2.", "Line item 3."]`;
           },
         };
       } catch (parseError) {
-        console.error("Error parsing AI response:", parseError, "Response:", textContent.substring(0, 200));
+        logger.error('Error parsing AI response', { responsePreview: textContent.substring(0, 200) }, parseError as Error);
         return {
           success: false,
           enhancedScope: baseScope,
@@ -177,7 +178,7 @@ Example: ["Line item 1.", "Line item 2.", "Line item 3."]`;
       },
     };
   } catch (error: unknown) {
-    console.error("Error enhancing scope with AI:", error);
+    logger.error('Error enhancing scope with AI', error as Error);
     
     // Handle specific error types
     if (error instanceof Error) {
@@ -290,7 +291,7 @@ Example: ["Repair of existing water damage", "Permit fees", "Structural modifica
       error: { code: 'INVALID_RESPONSE', message: 'Failed to generate exclusions' },
     };
   } catch (error) {
-    console.error("Error generating exclusions:", error);
+    logger.error('Error generating exclusions', error as Error);
     return {
       success: false,
       exclusions: [],

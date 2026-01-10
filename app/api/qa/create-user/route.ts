@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { storage } from '@/lib/services/storage';
+import { qaGuard } from '@/lib/services/qaGuard';
+import { logger } from '@/lib/logger';
 
 /**
  * QA User Creation - For E2E tests to create test users quickly.
@@ -8,26 +10,13 @@ import { storage } from '@/lib/services/storage';
  */
 
 export async function POST(request: NextRequest) {
-  // Guard: Never in production
-  if (process.env.NODE_ENV === 'production' && !process.env.QA_TEST_SECRET) {
-    return NextResponse.json(
-      { error: 'Not available in production' },
-      { status: 403 }
-    );
-  }
-
   try {
     const body = await request.json();
     const { email, firstName, lastName, secret } = body;
 
-    // Validate secret
-    const qaSecret = process.env.QA_TEST_SECRET;
-    if (!qaSecret || secret !== qaSecret) {
-      return NextResponse.json(
-        { error: 'Invalid QA secret' },
-        { status: 401 }
-      );
-    }
+    // Use centralized QA guard for consistent security
+    const guard = qaGuard(request, secret);
+    if (!guard.allowed) return guard.error!;
 
     if (!email) {
       return NextResponse.json(
@@ -53,7 +42,7 @@ export async function POST(request: NextRequest) {
     expiresAt.setMonth(expiresAt.getMonth() + 6);
     await storage.addProposalCredits(userId, 5, expiresAt);
 
-    console.log(`[QA] Created test user: ${email} (${userId})`);
+    logger.info('Created test user', { email, userId });
 
     return NextResponse.json({
       success: true,
@@ -65,7 +54,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error in QA create-user:', error);
+    logger.error('Error in QA create-user', error as Error);
     return NextResponse.json(
       { error: 'Failed to create test user' },
       { status: 500 }
