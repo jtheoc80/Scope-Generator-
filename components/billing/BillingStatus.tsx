@@ -197,7 +197,7 @@ export default function BillingStatus({
         data-has-access={status.canAccessPremiumFeatures}
       >
         <Badge 
-          variant={statusConfig.badgeVariant as any}
+          variant={statusConfig.badgeVariant}
           className={cn("flex items-center gap-1", statusConfig.badgeClass)}
         >
           {statusConfig.icon}
@@ -237,7 +237,7 @@ export default function BillingStatus({
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-slate-900">{statusConfig.title}</h3>
               <Badge 
-                variant={statusConfig.badgeVariant as any}
+                variant={statusConfig.badgeVariant}
                 className={statusConfig.badgeClass}
               >
                 {statusConfig.label}
@@ -311,9 +311,25 @@ export default function BillingStatus({
 }
 
 /**
+ * Badge variant type - matches the Badge component's variant prop
+ */
+type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
+
+interface StatusConfig {
+  icon: React.ReactNode;
+  title: string;
+  label: string;
+  description: string;
+  badgeVariant: BadgeVariant;
+  badgeClass: string;
+  containerClass: string;
+  iconBgClass: string;
+}
+
+/**
  * Get display configuration based on billing status
  */
-function getStatusConfig(status: BillingStatusData) {
+function getStatusConfig(status: BillingStatusData): StatusConfig {
   if (status.status === 'active') {
     return {
       icon: <Crown className="w-5 h-5 text-primary" />,

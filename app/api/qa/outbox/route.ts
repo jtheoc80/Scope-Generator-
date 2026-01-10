@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/server/db";
 import { emailOutbox } from "@shared/schema";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, type SQL } from "drizzle-orm";
 
 /**
  * QA Email Outbox API - For E2E tests to verify deterministic email sending.
@@ -28,14 +28,14 @@ export async function GET(request: NextRequest) {
   const to = request.nextUrl.searchParams.get("to");
 
   const where = (() => {
-    const clauses = [];
+    const clauses: SQL[] = [];
     if (proposalIdRaw) {
       const proposalId = Number(proposalIdRaw);
       if (!Number.isFinite(proposalId)) return null;
       clauses.push(eq(emailOutbox.proposalId, proposalId));
     }
     if (to) clauses.push(eq(emailOutbox.to, to));
-    return clauses.length ? and(...(clauses as any)) : undefined;
+    return clauses.length ? and(...clauses) : undefined;
   })();
 
   if (where === null) {

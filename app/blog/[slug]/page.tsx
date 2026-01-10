@@ -7,6 +7,7 @@ import { ArrowLeft, ArrowRight, Calendar, Clock, User, RefreshCw } from "lucide-
 import { Button } from "@/components/ui/button";
 import { blogPosts, getRelatedPosts } from "@/lib/blog-data";
 import { generateArticleSchema, generateBreadcrumbSchema, generateFAQSchema } from "@/lib/seo/jsonld";
+import { processMarkdownToSafeHtml } from "@/lib/sanitize";
 import { 
   TableOfContents, 
   AuthorCard,
@@ -157,9 +158,7 @@ function renderContent(content: string[], inlineCTAIndex: number) {
                       key={cellIndex}
                       className="border border-slate-200 px-4 py-2 text-slate-600"
                       dangerouslySetInnerHTML={{
-                        __html: cell
-                          .trim()
-                          .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>"),
+                        __html: processMarkdownToSafeHtml(cell.trim()),
                       }}
                     />
                   ))}
@@ -181,10 +180,7 @@ function renderContent(content: string[], inlineCTAIndex: number) {
             <li
               key={j}
               dangerouslySetInnerHTML={{
-                __html: line
-                  .replace(/^[-*] /, "")
-                  .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-                  .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>'),
+                __html: processMarkdownToSafeHtml(line.replace(/^[-*] /, "")),
               }}
             />
           ))}
@@ -246,10 +242,7 @@ function renderContent(content: string[], inlineCTAIndex: number) {
       <p
         key={i}
         dangerouslySetInnerHTML={{
-          __html: block
-            .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-            .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
-            .replace(/`([^`]+)`/g, '<code class="bg-slate-100 px-1.5 py-0.5 rounded text-sm">$1</code>'),
+          __html: processMarkdownToSafeHtml(block),
         }}
       />
     );
@@ -379,17 +372,7 @@ export default async function BlogPostPage({ params }: PageProps) {
           </div>
         )}
 
-        {/* Last Updated Notice - E-E-A-T Signal */}
-        <div className="bg-slate-100 border-b">
-          <div className="container mx-auto px-4 py-3">
-            <div className="max-w-3xl mx-auto flex items-center gap-2 text-sm text-slate-600">
-              <RefreshCw className="h-4 w-4" />
-              <span>Last updated: {post.dateModified}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Last Updated Notice */}
+        {/* Last Updated Notice - E-E-A-T Signal (only show if modified after publish) */}
         {post.dateModified !== post.datePublished && (
           <div className="bg-slate-100 border-b">
             <div className="container mx-auto px-4 py-3">

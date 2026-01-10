@@ -145,11 +145,41 @@ These appear to have been an extracted `.git/objects/` directory (plus refs) tha
 
 ---
 
+## Excluded / Legacy Directories
+
+The following directories are **excluded from TypeScript compilation** (see `tsconfig.json`) and contain legacy code from the Vite/Express migration:
+
+| Directory | Status | Notes |
+|-----------|--------|-------|
+| `server/` | **Partially Active** | Contains `db.ts` and `storage.ts` which are still used. See `server/LEGACY.md` for details. |
+| `apps/` | Legacy | Mobile app code, excluded from build |
+| `script/` | Excluded | Build/utility scripts run separately |
+| `scripts/` | Excluded | Additional scripts |
+| `tests/` | Excluded | E2E tests use Playwright's TS compilation |
+| `qa/` | Excluded | QA scripts run separately |
+| `App.tsx` | Legacy | Old SPA entry point |
+| `nextjs-app/` | Migration scratch | Not part of main app |
+| `src/` | Mixed | Learning/mobile modules, some used at runtime |
+
+### Migration Status
+
+The project was migrated from React + Vite + Express to Next.js 15 App Router. Key notes:
+
+1. **Use `lib/services/*`** for new service code (not `server/services/*`)
+2. **Use `lib/db.ts`** for database access (re-exports from `server/db.ts`)
+3. **Use `app/api/*`** for API routes (not `server/routes.ts`)
+
+See `.github/copilot-instructions.md` for current coding conventions.
+
+---
+
 ## Related Documentation
 
 - [Project README](./README.md) — Getting started guide
 - [API Documentation](./docs/) — API reference
 - [Database Schema](./lib/schema.ts) — Database structure
+- [Future Enhancements](./docs/FUTURE_ENHANCEMENTS.md) — Planned features
+- [Legacy Server](./server/LEGACY.md) — Server directory documentation
 
 ---
 

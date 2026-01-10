@@ -40,9 +40,12 @@ const config = [
   },
   {
     rules: {
-      // The repo currently contains a lot of WIP/migration code; keep lint useful
-      // without blocking builds on `any` usage.
+      // NOTE: There are ~38 existing `as any` usages in the codebase.
+      // Keeping as "off" until those are addressed to avoid blocking CI.
+      // See docs/FUTURE_ENHANCEMENTS.md for the plan to enable stricter rules.
+      // TODO: Change to "warn" then "error" as usages are fixed.
       "@typescript-eslint/no-explicit-any": "off",
+      // Empty object types are often valid for component props that extend
       "@typescript-eslint/no-empty-object-type": "off",
       // Allow unescaped entities during migration - pre-existing in legacy pages
       "react/no-unescaped-entities": "warn",

@@ -80,6 +80,7 @@
     "googleapis": "^168.0.0",
     "html2canvas": "^1.4.1",
     "input-otp": "^1.4.2",
+    "isomorphic-dompurify": "^2.35.0",
     "jspdf": "^4.0.0",
     "lucide-react": "^0.454.0",
     "memoizee": "^0.4.17",
@@ -110,6 +111,7 @@
     "@playwright/test": "^1.57.0",
     "@tailwindcss/postcss": "^4",
     "@types/connect-pg-simple": "^7.0.3",
+    "@types/dompurify": "^3.0.5",
     "@types/express": "^4.17.25",
     "@types/express-session": "^1.18.2",
     "@types/memoizee": "^0.4.12",
@@ -132,6 +134,7 @@
     "@esbuild-kit/core-utils": {
       "esbuild": "0.25.12"
     },
+    "esbuild": "0.25.12",
     "tmp": "0.2.5"
   }
 }

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { storage } from '@/lib/services/storage';
+import { qaGuard } from '@/lib/services/qaGuard';
+import { logger } from '@/lib/logger';
 
 /**
  * QA Payment Simulation - For E2E tests to simulate successful payments.
@@ -10,26 +12,16 @@ import { storage } from '@/lib/services/storage';
  */
 
 export async function POST(request: NextRequest) {
-  // Guard: Never in production without explicit flag
-  if (process.env.NODE_ENV === 'production' && !process.env.QA_ALLOW_PAYMENT_SIMULATION) {
-    return NextResponse.json(
-      { error: 'Not available in production' },
-      { status: 403 }
-    );
-  }
-
   try {
     const body = await request.json();
     const { sessionId, userId, productType, secret } = body;
 
-    // Validate secret
-    const qaSecret = process.env.QA_TEST_SECRET;
-    if (!qaSecret || secret !== qaSecret) {
-      return NextResponse.json(
-        { error: 'Invalid QA secret' },
-        { status: 401 }
-      );
-    }
+    // Use centralized QA guard with special production flag for payment simulation
+    const guard = qaGuard(request, secret, {
+      allowInProduction: true,
+      productionEnvVar: 'QA_ALLOW_PAYMENT_SIMULATION',
+    });
+    if (!guard.allowed) return guard.error!;
 
     if (!sessionId) {
       return NextResponse.json(
@@ -38,7 +30,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`[QA] Simulating payment success for session: ${sessionId}`);
+    logger.info('Simulating payment success', { sessionId });
 
     // Determine what to do based on product type or session metadata
     // This should match what the real webhook handler does
@@ -86,7 +78,7 @@ export async function POST(request: NextRequest) {
       simulated: true,
     });
   } catch (error) {
-    console.error('Error in QA simulate-payment:', error);
+    logger.error('Error in QA simulate-payment', error as Error);
     return NextResponse.json(
       { error: 'Failed to simulate payment' },
       { status: 500 }
