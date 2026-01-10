@@ -82,12 +82,10 @@ function getLocationFromZip(zipcode: string): OneBuildLocation {
 
 export class OneBuildService {
   private apiKey: string;
+  private warned = false;
 
   constructor() {
     const key = process.env.ONEBUILD_EXTERNAL_KEY;
-    if (!key) {
-      console.warn("ONEBUILD_EXTERNAL_KEY not configured - 1build API will not be available");
-    }
     this.apiKey = key || "";
   }
 
@@ -97,6 +95,12 @@ export class OneBuildService {
 
   private async query<T>(queryString: string, variables?: Record<string, unknown>): Promise<T> {
     if (!this.isConfigured()) {
+      // Avoid noisy logs during build/SSG where the module can be imported.
+      // Emit a single warning only when a request is actually attempted.
+      if (!this.warned && !process.env.CI) {
+        this.warned = true;
+        console.warn("ONEBUILD_EXTERNAL_KEY not configured - 1build API will not be available");
+      }
       throw new Error("1build external API key not configured");
     }
 

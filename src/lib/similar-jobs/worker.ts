@@ -6,6 +6,7 @@ import { parseS3Url } from "@/src/lib/mobile/storage/s3";
 
 const WORKER_ID = `similarity-${process.pid}-${Math.random().toString(16).slice(2)}`;
 let started = false;
+const ENABLE_IN_PROCESS_WORKERS = process.env.ENABLE_IN_PROCESS_WORKERS === "true";
 
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
@@ -33,6 +34,9 @@ export async function enqueueEmbeddingJob(jobId: number) {
 }
 
 export function startSimilarJobEmbeddingWorker() {
+  // In-process infinite loops are only safe on long-lived Node deployments.
+  // In serverless/edge-like runtimes this can cause duplicate workers and cost.
+  if (!ENABLE_IN_PROCESS_WORKERS) return;
   if (started) return;
   started = true;
 
