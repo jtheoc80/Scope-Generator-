@@ -48,10 +48,10 @@ jobs:
 
       - name: Fail if vendored artifacts are committed
         run: |
-          if git ls-files | grep -qE '(^|/)node_modules/|^refs/|^[0-9a-f][0-9a-f]/'; then
+          if git ls-files | grep -qE '(^|/)node_modules/|^refs/|^[0-9a-f]{2}/'; then
             echo "❌ Vendored artifacts detected (node_modules and/or legacy git-backup folders)."
             echo "Remove from git and rely on lockfiles / normal .git history."
-            git ls-files | grep -E '(^|/)node_modules/|^refs/|^[0-9a-f][0-9a-f]/' | head -n 200
+            git ls-files | grep -E '(^|/)node_modules/|^refs/|^[0-9a-f]{2}/' | head -n 200
             exit 1
           fi
 
