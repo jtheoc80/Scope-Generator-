@@ -42,15 +42,15 @@ export async function checkSchemaOnStartup(): Promise<void> {
     databaseUrl.includes("supabase.com") || databaseUrl.includes("neon.tech");
   const isDev = process.env.NODE_ENV === "development";
 
+  // SECURITY NOTE: For maximum security, set DB_SSL_CA env var with
+  // your database's CA certificate to enable proper certificate validation.
   const pool = new Pool({
     connectionString: databaseUrl,
-    // For Supabase/Neon we sometimes need to relax SSL validation in development
-    // because of how their certificates are presented. Never disable certificate
-    // validation in production to avoid man-in-the-middle vulnerabilities.
     ssl: isSupabaseOrNeon
-      ? isDev
-        ? { rejectUnauthorized: false }
-        : { rejectUnauthorized: true }
+      ? {
+          rejectUnauthorized: process.env.DB_SSL_CA ? true : isDev ? false : true,
+          ca: process.env.DB_SSL_CA || undefined,
+        }
       : false,
     connectionTimeoutMillis: 5000,
   });

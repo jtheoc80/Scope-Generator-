@@ -101,12 +101,15 @@ async function main() {
   const isDevLikeEnv =
     process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test";
 
+  // SECURITY NOTE: For maximum security, set DB_SSL_CA env var with
+  // your database's CA certificate to enable proper certificate validation.
   const pool = new Pool({
     connectionString: databaseUrl,
     ssl: isManagedHostedDb
-      ? (isDevLikeEnv
-          ? { rejectUnauthorized: false }
-          : true)
+      ? {
+          rejectUnauthorized: process.env.DB_SSL_CA ? true : isDevLikeEnv ? false : true,
+          ca: process.env.DB_SSL_CA || undefined,
+        }
       : false,
     connectionTimeoutMillis: 10000,
   });
