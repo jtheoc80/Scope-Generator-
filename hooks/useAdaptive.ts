@@ -32,7 +32,6 @@ import {
   getLearnedPhotoCategory,
   getLearnedCaptions,
   getLearningProgress,
-  getUserProfile,
 } from '@/src/lib/learning/adaptive-profile';
 import { getRequiredComponents, getMissingScopeItems } from './useAutoEnhance';
 
