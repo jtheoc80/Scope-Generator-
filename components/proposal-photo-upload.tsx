@@ -387,8 +387,7 @@ export function ProposalPhotoUpload({
         }
       });
 
-      const results = await Promise.allSettled(uploads);
-      const anyRejected = results.some((r) => r.status === 'rejected');
+      await Promise.allSettled(uploads);
 
       // Always refetch server truth when possible.
       const serverPhotos = await fetchCanonicalPhotos(pid);

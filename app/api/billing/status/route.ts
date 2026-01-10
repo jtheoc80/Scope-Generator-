@@ -18,7 +18,7 @@ import { billingService } from '@/lib/services/billingService';
  * - isTrialing: whether user is in trial
  */
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const { userId } = await auth();
     
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
  * POST - Force refresh billing status from Stripe (if subscription exists)
  * This can be called after checkout to ensure status is current
  */
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
     const { userId } = await auth();
     

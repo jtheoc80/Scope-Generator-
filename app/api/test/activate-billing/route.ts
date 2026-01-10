@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
 /**
  * GET - Check current billing status for test user
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   // Guard: Check PAYMENTS_MODE
   if (process.env.PAYMENTS_MODE !== 'test') {
     return NextResponse.json(

@@ -51,7 +51,6 @@
     "script/**",
     "server/**",
     "lib/services/**",
-    "shared/**",
     "server/vite.ts",
     "vite.config.ts",
     "vite-plugin-meta-images.ts",
