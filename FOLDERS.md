@@ -15,9 +15,9 @@ This document provides a reference for all folders at the repository root, with 
 
 ## Overview
 
-This repository contains **248 hexadecimal-named folders** (`00`, `01`, `02`, ... `fe`, `ff`) which are **Git object storage folders**. These were extracted from a Git database and committed to the repository, likely as a backup or for specific tooling purposes.
+Some older snapshots of this repository included **248 hexadecimal-named folders** (`00`, `01`, `02`, ... `fe`, `ff`) plus a top-level `refs/` folder. Those were an extracted copy of `.git/objects` + `.git/refs` that had been committed as “backup data”.
 
-> ⚠️ **Important**: These folders are NOT arbitrary data—they contain Git history and should be treated as read-only backup data.
+**They are not required for normal development**, because the real Git object database already exists inside the actual `.git/` directory. Keeping them in the repo root increases clone size, slows down tooling, and adds maintenance risk, so they should remain **out of version control**.
 
 ---
 
@@ -31,16 +31,16 @@ This repository contains **248 hexadecimal-named folders** (`00`, `01`, `02`, ..
 | **Count** | 248 folders |
 | **Total Objects** | ~2,324 files |
 | **Content Type** | zlib-compressed Git objects |
-| **Purpose** | Git object database backup |
-| **Used By** | Git internals / backup restoration |
-| **Safe to Delete?** | ❌ No (contains repository history) |
+| **Purpose** | Legacy git object database backup (do not commit) |
+| **Used By** | Not used by the application |
+| **Safe to Delete?** | ✅ Yes (from the repository working tree) |
 
 ### Folder Reference Table
 
 | Folder | Purpose | Contents | Used By | Notes |
 |--------|---------|----------|---------|-------|
-| `00`–`ff` | Git object storage | zlib-compressed blobs, trees, commits | Git internals | SHA-1 hash prefixes |
-| `refs/` | Git references | Branch pointers (main, replit-agent) | Git internals | Points to commit hashes |
+| `00`–`ff` | Legacy backup data | zlib-compressed blobs, trees, commits | None (keep out of repo) | SHA-1 hash prefixes |
+| `refs/` | Legacy backup data | Branch pointers | None (keep out of repo) | Duplicates `.git/refs` |
 
 ### What These Folders Contain
 
@@ -128,12 +128,9 @@ These are **Git object storage folders**, not application data. Git uses the fir
 
 ### Can I delete the numbered folders?
 
-**Not recommended.** These folders contain Git history that may be needed for:
-- Repository backup restoration
-- Historical code analysis
-- Audit trails
+Yes — **from the repository working tree**. The authoritative Git history is stored in `.git/` as usual.
 
-If you're certain they're not needed, consult with your team first.
+If you need a portable backup of repository history, prefer standard Git mechanisms like `git bundle` or a remote mirror instead of committing `.git/objects` into the repo.
 
 ### What's in the `refs/` folder?
 
@@ -144,7 +141,7 @@ The `refs/` folder contains branch pointers:
 
 ### How were these folders created?
 
-These appear to be an extracted `.git/objects/` directory that was committed to the repository, possibly as a backup mechanism or from a Git hosting tool.
+These appear to have been an extracted `.git/objects/` directory (plus refs) that was mistakenly committed, possibly as a backup mechanism or from a Git hosting tool.
 
 ---
 

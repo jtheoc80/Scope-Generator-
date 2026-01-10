@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+**/node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -53,3 +54,7 @@ next-env.d.ts
 /types/routes.d.ts
 /types/cache-life.d.ts
 /types/validator.ts
+
+# legacy git-backup artifacts (should never be committed)
+/[0-9a-f][0-9a-f]/
+/refs/

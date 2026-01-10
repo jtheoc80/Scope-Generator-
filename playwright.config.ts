@@ -122,8 +122,9 @@ export default defineConfig({
     timeout: 120000,
     /* Pass test auth mode env variables to dev server */
     env: {
-      AUTH_MODE: process.env.AUTH_MODE || '',
-      NEXT_PUBLIC_AUTH_MODE: process.env.NEXT_PUBLIC_AUTH_MODE || '',
+      // Default to test auth mode for deterministic E2E runs.
+      AUTH_MODE: process.env.AUTH_MODE || 'test',
+      NEXT_PUBLIC_AUTH_MODE: process.env.NEXT_PUBLIC_AUTH_MODE || 'test',
     },
   },
 });
