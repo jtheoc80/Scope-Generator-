@@ -113,9 +113,6 @@ Missing folders: `2b`, `5e`, `93`, `af`, `d2`, `d3`, `dc`, `e9` (no objects with
 | `docs/` | Documentation | Guides, API docs | Dev | Project docs |
 | `build-logs/` | Build output | CI logs | CI | Build artifacts |
 | `.github/` | GitHub config | Workflows, templates | GitHub Actions | CI/CD config |
-| `api-to-convert/` | API migration | Old API code | Migration | Legacy code |
-| `pages-to-convert/` | Pages migration | Old pages | Migration | Legacy code |
-| `nextjs-app/` | Next.js app | App variant | Build | Alternative app |
 | `create-next-app-nodejs/` | Template | Starter template | Dev | Project template |
 
 ---
@@ -152,13 +149,12 @@ The following directories are **excluded from TypeScript compilation** (see `tsc
 | Directory | Status | Notes |
 |-----------|--------|-------|
 | `server/` | **Partially Active** | Contains `db.ts` and `storage.ts` which are still used. See `server/LEGACY.md` for details. |
-| `apps/` | Legacy | Mobile app code, excluded from build |
+| `apps/` | Legacy | Mobile app prototype, excluded from build (see apps/mobile/README.md) |
 | `script/` | Excluded | Build/utility scripts run separately |
 | `scripts/` | Excluded | Additional scripts |
 | `tests/` | Excluded | E2E tests use Playwright's TS compilation |
 | `qa/` | Excluded | QA scripts run separately |
 | `App.tsx` | Legacy | Old SPA entry point |
-| `nextjs-app/` | Migration scratch | Not part of main app |
 | `src/` | Mixed | Learning/mobile modules, some used at runtime |
 
 ### Migration Status

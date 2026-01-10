@@ -17,6 +17,7 @@ import {
   type ProposalPhotoCategory,
 } from "@shared/schema";
 import { eq, and, desc, sql, count } from "drizzle-orm";
+import { logger } from "@/lib/logger";
 
 // ==========================================
 // Types
@@ -92,7 +93,7 @@ export async function logUserAction(
     });
   } catch (error) {
     // Don't fail the main operation if logging fails
-    console.error('Failed to log user action:', error);
+    logger.error('Failed to log user action', error as Error);
   }
 }
 
@@ -113,7 +114,7 @@ export async function updateActionOutcomes(
       })
       .where(eq(userActionLog.proposalId, proposalId));
   } catch (error) {
-    console.error('Failed to update action outcomes:', error);
+    logger.error('Failed to update action outcomes', error as Error);
   }
 }
 
@@ -152,7 +153,7 @@ export async function recordPhotoCategory(
       wasModified,
     });
   } catch (error) {
-    console.error('Failed to record photo categorization:', error);
+    logger.error('Failed to record photo categorization', error as Error);
   }
 }
 
@@ -238,7 +239,7 @@ export async function suggestPhotoCategory(
 
     return defaultSuggestion;
   } catch (error) {
-    console.error('Failed to get photo category suggestion:', error);
+    logger.error('Failed to get photo category suggestion', error as Error);
     return defaultSuggestion;
   }
 }
@@ -271,7 +272,7 @@ export async function getCommonCaptions(
       .filter(c => c.caption)
       .map(c => c.caption as string);
   } catch (error) {
-    console.error('Failed to get common captions:', error);
+    logger.error('Failed to get common captions', error as Error);
     return [];
   }
 }
@@ -334,7 +335,7 @@ export async function recordScopeAction(
       { scopeItem, isFromTemplate }
     );
   } catch (error) {
-    console.error('Failed to record scope action:', error);
+    logger.error('Failed to record scope action', error as Error);
   }
 }
 
@@ -407,7 +408,7 @@ export async function getScopeSuggestions(
       removals: removals.slice(0, 3),   // Top 3 removal suggestions
     };
   } catch (error) {
-    console.error('Failed to get scope suggestions:', error);
+    logger.error('Failed to get scope suggestions', error as Error);
     return { additions, removals };
   }
 }
@@ -457,7 +458,7 @@ export async function recordPricingAdjustment(
       jobSize,
     });
   } catch (error) {
-    console.error('Failed to record pricing adjustment:', error);
+    logger.error('Failed to record pricing adjustment', error as Error);
   }
 }
 
@@ -532,7 +533,7 @@ export async function getPricingSuggestion(
       localWinRate: localPatterns?.[0]?.winRate ?? undefined,
     };
   } catch (error) {
-    console.error('Failed to get pricing suggestion:', error);
+    logger.error('Failed to get pricing suggestion', error as Error);
     return null;
   }
 }
@@ -591,7 +592,7 @@ export async function getGeographicInsights(
 
     return { priceMultiplier, commonMaterials, localWinRate, confidence };
   } catch (error) {
-    console.error('Failed to get geographic insights:', error);
+    logger.error('Failed to get geographic insights', error as Error);
     return defaults;
   }
 }
@@ -637,7 +638,10 @@ export async function getLearnedPreferences(
     scopeAdditions: scopeSuggestions.additions,
     scopeRemovals: scopeSuggestions.removals,
     pricingAdjustment: null, // Caller should use getPricingSuggestion with base prices
-    preferredOptions: {}, // TODO: Implement option learning
+    // Option learning not yet implemented - returns empty object for forward compatibility.
+    // Future enhancement: Track user option selections and suggest based on patterns.
+    // See: docs/FUTURE_ENHANCEMENTS.md
+    preferredOptions: {},
   };
 }
 
@@ -651,7 +655,7 @@ export async function getLearnedPreferences(
 export async function updateAggregatedPatterns(): Promise<void> {
   // This would be run as a cron job to aggregate patterns
   // from the raw action log into the pattern tables
-  console.log('Updating aggregated patterns...');
+  logger.info('Updating aggregated patterns...');
   
   try {
     // 1. Update Scope Item Patterns
@@ -690,9 +694,9 @@ export async function updateAggregatedPatterns(): Promise<void> {
       DO UPDATE SET adjustment_percent = EXCLUDED.adjustment_percent;
     `);
 
-    console.log('Aggregated patterns updated successfully');
+    logger.info('Aggregated patterns updated successfully');
   } catch (error) {
-    console.error('Failed to update aggregated patterns:', error);
+    logger.error('Failed to update aggregated patterns', error as Error);
   }
 }
 
