@@ -20,6 +20,10 @@ env:
   QA_TEST_EMAIL_DOMAIN: 'example.test'
   QA_EMAIL_SINK: 'file'
   QA_STRIPE_MODE: 'redirect'
+  # Deterministic auth/email behavior for E2E.
+  AUTH_MODE: 'test'
+  NEXT_PUBLIC_AUTH_MODE: 'test'
+  EMAIL_MODE: 'test'
   CI: true
   # Ensure tooling devDependencies are installed for lint/typecheck in CI.
   NODE_ENV: development

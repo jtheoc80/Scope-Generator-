@@ -10,6 +10,10 @@ env:
   CI: true
   # Ensure devDependencies (typescript, eslint, drizzle-kit) are installed during npm ci
   NODE_ENV: development
+  # Allow CI builds without real Clerk credentials.
+  AUTH_MODE: 'test'
+  NEXT_PUBLIC_AUTH_MODE: 'test'
+  EMAIL_MODE: 'test'
 
 jobs:
   build:
