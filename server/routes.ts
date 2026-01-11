@@ -1824,13 +1824,34 @@ Sitemap: ${baseUrl}/sitemap.xml`;
   app.get('/api/admin/users', isAuthenticated, isAdminUser, async (req: any, res) => {
     try {
       const { limit, offset, search, role, hasEntitlement } = req.query;
-      
+
+      // Validate and normalize query parameters
+      const parsedLimit = limit ? parseInt(limit as string, 10) : 50;
+      const parsedOffset = offset ? parseInt(offset as string, 10) : 0;
+      const searchTerm = typeof search === "string" ? search : undefined;
+
+      // Only allow known role values; ignore anything else
+      const roleFilter =
+        typeof role === "string" && (role === "admin" || role === "user")
+          ? role
+          : undefined;
+
+      // Parse hasEntitlement from string to boolean; ignore invalid values
+      let hasEntitlementFilter: boolean | undefined;
+      if (typeof hasEntitlement === "string") {
+        if (hasEntitlement === "true") {
+          hasEntitlementFilter = true;
+        } else if (hasEntitlement === "false") {
+          hasEntitlementFilter = false;
+        }
+      }
+
       const result = await storage.getAllUsers({
-        limit: limit ? parseInt(limit as string) : 50,
-        offset: offset ? parseInt(offset as string) : 0,
-        search: search as string,
-        role: role as any,
-        hasEntitlement: hasEntitlement as any,
+        limit: parsedLimit,
+        offset: parsedOffset,
+        search: searchTerm,
+        role: roleFilter,
+        hasEntitlement: hasEntitlementFilter,
       });
       
       // Remove sensitive fields before sending
