@@ -36,18 +36,22 @@ function isProductionEnvironment(): boolean {
  * Parse the DEV_CREW_EMAILS environment variable
  * Returns a Set of lowercase emails for efficient lookup
  */
-function getDevCrewEmailAllowlist(): Set<string> {
+const DEV_CREW_EMAIL_ALLOWLIST: Set<string> = (() => {
   const emailsRaw = process.env.DEV_CREW_EMAILS || '';
   if (!emailsRaw.trim()) {
-    return new Set();
+    return new Set<string>();
   }
-  
-  return new Set(
+
+  return new Set<string>(
     emailsRaw
       .split(',')
-      .map(email => email.trim().toLowerCase())
-      .filter(email => email.length > 0 && email.includes('@'))
+      .map((email) => email.trim().toLowerCase())
+      .filter((email) => email.length > 0 && email.includes('@')),
   );
+})();
+
+function getDevCrewEmailAllowlist(): Set<string> {
+  return DEV_CREW_EMAIL_ALLOWLIST;
 }
 
 /**
