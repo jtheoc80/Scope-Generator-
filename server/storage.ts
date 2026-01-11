@@ -10,6 +10,7 @@ import {
   mobileJobs,
   mobileJobPhotos,
   mobileJobDrafts,
+  auditLog,
   type User,
   type UpsertUser,
   type Proposal,
@@ -25,6 +26,10 @@ import {
   type Invite,
   type InsertInvite,
   type ProposalView,
+  type AuditLog,
+  type InsertAuditLog,
+  type Entitlement,
+  type PlatformRole,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, count, inArray, getTableColumns } from "drizzle-orm";
@@ -134,6 +139,81 @@ export interface IStorage {
   // Market pricing usage tracking
   getMarketPricingLookups(userId: string): Promise<number>;
   incrementMarketPricingLookups(userId: string): Promise<number>;
+
+  // ==========================================
+  // Entitlement Management
+  // ==========================================
+  
+  /**
+   * Check if a user has a specific entitlement
+   */
+  hasEntitlement(userId: string, entitlement: Entitlement): Promise<boolean>;
+  
+  /**
+   * Check if a user has the admin role
+   */
+  isAdmin(userId: string): Promise<boolean>;
+  
+  /**
+   * Check if a user has crew access (subscription OR explicit entitlement)
+   */
+  hasCrewAccess(userId: string): Promise<boolean>;
+  
+  /**
+   * Grant an entitlement to a user
+   */
+  grantEntitlement(
+    actorId: string, 
+    targetUserId: string, 
+    entitlement: Entitlement,
+    metadata?: Record<string, unknown>
+  ): Promise<User | undefined>;
+  
+  /**
+   * Revoke an entitlement from a user
+   */
+  revokeEntitlement(
+    actorId: string, 
+    targetUserId: string, 
+    entitlement: Entitlement,
+    metadata?: Record<string, unknown>
+  ): Promise<User | undefined>;
+  
+  /**
+   * Change a user's platform role
+   */
+  changeUserRole(
+    actorId: string, 
+    targetUserId: string, 
+    newRole: PlatformRole,
+    metadata?: Record<string, unknown>
+  ): Promise<User | undefined>;
+  
+  /**
+   * Get all users (for admin panel)
+   */
+  getAllUsers(options?: { 
+    limit?: number; 
+    offset?: number; 
+    search?: string;
+    role?: PlatformRole;
+    hasEntitlement?: Entitlement;
+  }): Promise<{ users: User[]; total: number }>;
+  
+  /**
+   * Create audit log entry
+   */
+  createAuditLog(entry: InsertAuditLog): Promise<AuditLog>;
+  
+  /**
+   * Get audit logs for a user
+   */
+  getAuditLogsForUser(userId: string, limit?: number): Promise<AuditLog[]>;
+  
+  /**
+   * Get recent audit logs (for admin panel)
+   */
+  getRecentAuditLogs(limit?: number): Promise<AuditLog[]>;
 
   // ==========================================
   // Mobile Companion App: Jobs / Photos / Drafts
@@ -1384,6 +1464,236 @@ export class DatabaseStorage implements IStorage {
         eq(proposals.id, proposalId),
         eq(proposals.userId, userId)
       ));
+  }
+
+  // ==========================================
+  // Entitlement Management
+  // ==========================================
+
+  async hasEntitlement(userId: string, entitlement: Entitlement): Promise<boolean> {
+    const user = await this.getUser(userId);
+    if (!user) return false;
+    return user.entitlements?.includes(entitlement) ?? false;
+  }
+
+  async isAdmin(userId: string): Promise<boolean> {
+    const user = await this.getUser(userId);
+    if (!user) return false;
+    return user.role === 'admin';
+  }
+
+  async hasCrewAccess(userId: string): Promise<boolean> {
+    const user = await this.getUser(userId);
+    if (!user) return false;
+    
+    // Check if user has crew subscription
+    if (user.subscriptionPlan === 'crew') return true;
+    
+    // Check if user has explicit CREW_ACCESS entitlement
+    if (user.entitlements?.includes('CREW_ACCESS')) return true;
+    
+    return false;
+  }
+
+  async grantEntitlement(
+    actorId: string,
+    targetUserId: string,
+    entitlement: Entitlement,
+    metadata?: Record<string, unknown>
+  ): Promise<User | undefined> {
+    const actor = await this.getUser(actorId);
+    const targetUser = await this.getUser(targetUserId);
+    
+    if (!actor || !targetUser) return undefined;
+    
+    // Check if entitlement already granted
+    const currentEntitlements = targetUser.entitlements ?? [];
+    if (currentEntitlements.includes(entitlement)) {
+      return targetUser; // Already has entitlement
+    }
+    
+    // Grant the entitlement
+    const newEntitlements = [...currentEntitlements, entitlement];
+    const [updated] = await db
+      .update(users)
+      .set({ 
+        entitlements: newEntitlements,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, targetUserId))
+      .returning();
+    
+    // Create audit log
+    await this.createAuditLog({
+      actorId,
+      actorEmail: actor.email ?? undefined,
+      targetUserId,
+      targetUserEmail: targetUser.email ?? undefined,
+      action: 'GRANT_ENTITLEMENT',
+      resourceType: 'entitlement',
+      resourceValue: entitlement,
+      previousValue: currentEntitlements.join(',') || null,
+      newValue: newEntitlements.join(','),
+      metadata: metadata ?? null,
+    });
+    
+    return updated;
+  }
+
+  async revokeEntitlement(
+    actorId: string,
+    targetUserId: string,
+    entitlement: Entitlement,
+    metadata?: Record<string, unknown>
+  ): Promise<User | undefined> {
+    const actor = await this.getUser(actorId);
+    const targetUser = await this.getUser(targetUserId);
+    
+    if (!actor || !targetUser) return undefined;
+    
+    // Check if entitlement exists
+    const currentEntitlements = targetUser.entitlements ?? [];
+    if (!currentEntitlements.includes(entitlement)) {
+      return targetUser; // Doesn't have entitlement
+    }
+    
+    // Revoke the entitlement
+    const newEntitlements = currentEntitlements.filter(e => e !== entitlement);
+    const [updated] = await db
+      .update(users)
+      .set({ 
+        entitlements: newEntitlements,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, targetUserId))
+      .returning();
+    
+    // Create audit log
+    await this.createAuditLog({
+      actorId,
+      actorEmail: actor.email ?? undefined,
+      targetUserId,
+      targetUserEmail: targetUser.email ?? undefined,
+      action: 'REVOKE_ENTITLEMENT',
+      resourceType: 'entitlement',
+      resourceValue: entitlement,
+      previousValue: currentEntitlements.join(','),
+      newValue: newEntitlements.join(',') || null,
+      metadata: metadata ?? null,
+    });
+    
+    return updated;
+  }
+
+  async changeUserRole(
+    actorId: string,
+    targetUserId: string,
+    newRole: PlatformRole,
+    metadata?: Record<string, unknown>
+  ): Promise<User | undefined> {
+    const actor = await this.getUser(actorId);
+    const targetUser = await this.getUser(targetUserId);
+    
+    if (!actor || !targetUser) return undefined;
+    
+    const previousRole = targetUser.role;
+    
+    // Update the role
+    const [updated] = await db
+      .update(users)
+      .set({ 
+        role: newRole,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, targetUserId))
+      .returning();
+    
+    // Create audit log
+    await this.createAuditLog({
+      actorId,
+      actorEmail: actor.email ?? undefined,
+      targetUserId,
+      targetUserEmail: targetUser.email ?? undefined,
+      action: 'CHANGE_ROLE',
+      resourceType: 'role',
+      resourceValue: newRole,
+      previousValue: previousRole,
+      newValue: newRole,
+      metadata: metadata ?? null,
+    });
+    
+    return updated;
+  }
+
+  async getAllUsers(options?: {
+    limit?: number;
+    offset?: number;
+    search?: string;
+    role?: PlatformRole;
+    hasEntitlement?: Entitlement;
+  }): Promise<{ users: User[]; total: number }> {
+    const limit = options?.limit ?? 50;
+    const offset = options?.offset ?? 0;
+    
+    // Build conditions
+    const conditions = [];
+    
+    if (options?.role) {
+      conditions.push(eq(users.role, options.role));
+    }
+    
+    if (options?.search) {
+      const searchTerm = `%${options.search.toLowerCase()}%`;
+      conditions.push(
+        sql`(LOWER(${users.email}) LIKE ${searchTerm} OR LOWER(${users.firstName}) LIKE ${searchTerm} OR LOWER(${users.lastName}) LIKE ${searchTerm})`
+      );
+    }
+    
+    if (options?.hasEntitlement) {
+      conditions.push(
+        sql`${options.hasEntitlement} = ANY(${users.entitlements})`
+      );
+    }
+    
+    // Get total count
+    const [countResult] = conditions.length > 0 
+      ? await db.select({ count: count() }).from(users).where(and(...conditions))
+      : await db.select({ count: count() }).from(users);
+    
+    // Get users
+    const userList = conditions.length > 0
+      ? await db.select().from(users).where(and(...conditions)).orderBy(desc(users.createdAt)).limit(limit).offset(offset)
+      : await db.select().from(users).orderBy(desc(users.createdAt)).limit(limit).offset(offset);
+    
+    return {
+      users: userList,
+      total: countResult?.count ?? 0,
+    };
+  }
+
+  async createAuditLog(entry: InsertAuditLog): Promise<AuditLog> {
+    const [created] = await db
+      .insert(auditLog)
+      .values(entry)
+      .returning();
+    return created;
+  }
+
+  async getAuditLogsForUser(userId: string, limit = 50): Promise<AuditLog[]> {
+    return await db
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.targetUserId, userId))
+      .orderBy(desc(auditLog.createdAt))
+      .limit(limit);
+  }
+
+  async getRecentAuditLogs(limit = 100): Promise<AuditLog[]> {
+    return await db
+      .select()
+      .from(auditLog)
+      .orderBy(desc(auditLog.createdAt))
+      .limit(limit);
   }
 }
 

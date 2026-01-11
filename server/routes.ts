@@ -1796,5 +1796,289 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
+  // ==========================================
+  // Admin Routes - User Management & Entitlements
+  // ==========================================
+  
+  /**
+   * Middleware to check if user is an admin
+   */
+  const isAdminUser = async (req: any, res: any, next: any) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = await storage.getUser(userId);
+      if (user?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      next();
+    } catch (error) {
+      logger.error("Error verifying admin status", error as Error);
+      res.status(500).json({ message: "Failed to verify admin status" });
+    }
+  };
+
+  // Get all users (admin only)
+  app.get('/api/admin/users', isAuthenticated, isAdminUser, async (req: any, res) => {
+    try {
+      const { limit, offset, search, role, hasEntitlement } = req.query;
+
+      // Validate and normalize query parameters
+      const parsedLimit = limit ? parseInt(limit as string, 10) : 50;
+      const parsedOffset = offset ? parseInt(offset as string, 10) : 0;
+      const searchTerm = typeof search === "string" ? search : undefined;
+
+      // Only allow known role values; ignore anything else
+      const roleFilter =
+        typeof role === "string" && (role === "admin" || role === "user")
+          ? role
+          : undefined;
+
+      // Parse hasEntitlement from string to boolean; ignore invalid values
+      let hasEntitlementFilter: boolean | undefined;
+      if (typeof hasEntitlement === "string") {
+        if (hasEntitlement === "true") {
+          hasEntitlementFilter = true;
+        } else if (hasEntitlement === "false") {
+          hasEntitlementFilter = false;
+        }
+      }
+
+      const result = await storage.getAllUsers({
+        limit: parsedLimit,
+        offset: parsedOffset,
+        search: searchTerm,
+        role: roleFilter,
+        hasEntitlement: hasEntitlementFilter,
+      });
+      
+      // Remove sensitive fields before sending
+      const safeUsers = result.users.map(user => {
+        const { userStripeSecretKey, ...safeUser } = user;
+        return safeUser;
+      });
+      
+      res.json({ users: safeUsers, total: result.total });
+    } catch (error) {
+      logger.error("Error fetching users", error as Error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  // Get user details (admin only)
+  app.get('/api/admin/users/:userId', isAuthenticated, isAdminUser, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Remove sensitive fields
+      const { userStripeSecretKey, ...safeUser } = user;
+      
+      // Get audit logs for this user
+      const auditLogs = await storage.getAuditLogsForUser(userId, 20);
+      
+      res.json({ user: safeUser, auditLogs });
+    } catch (error) {
+      logger.error("Error fetching user details", error as Error);
+      res.status(500).json({ message: "Failed to fetch user details" });
+    }
+  });
+
+  // Grant entitlement to user (admin only)
+  app.post('/api/admin/users/:userId/entitlements', isAuthenticated, isAdminUser, async (req: any, res) => {
+    try {
+      const actorId = req.user.claims.sub;
+      const { userId } = req.params;
+      const { entitlement, reason } = req.body;
+      
+      // Import and validate entitlement
+      const { isValidEntitlement } = await import('@/lib/entitlements');
+      
+      if (!entitlement || !isValidEntitlement(entitlement)) {
+        return res.status(400).json({ 
+          message: "Invalid entitlement. Valid values: CREW_ACCESS, CREW_PAYOUT, ADMIN_USERS, SEARCH_CONSOLE" 
+        });
+      }
+      
+      const updated = await storage.grantEntitlement(
+        actorId,
+        userId,
+        entitlement,
+        { 
+          reason: reason || 'Granted via admin panel',
+          ipAddress: req.ip,
+        }
+      );
+      
+      if (!updated) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const { userStripeSecretKey, ...safeUser } = updated;
+      res.json({ 
+        message: `Entitlement ${entitlement} granted successfully`,
+        user: safeUser,
+      });
+    } catch (error) {
+      logger.error("Error granting entitlement", error as Error);
+      res.status(500).json({ message: "Failed to grant entitlement" });
+    }
+  });
+
+  // Revoke entitlement from user (admin only)
+  app.delete('/api/admin/users/:userId/entitlements/:entitlement', isAuthenticated, isAdminUser, async (req: any, res) => {
+    try {
+      const actorId = req.user.claims.sub;
+      const { userId, entitlement } = req.params;
+      const { reason } = req.query;
+      
+      // Import and validate entitlement
+      const { isValidEntitlement } = await import('@/lib/entitlements');
+      
+      if (!isValidEntitlement(entitlement)) {
+        return res.status(400).json({ 
+          message: "Invalid entitlement. Valid values: CREW_ACCESS, CREW_PAYOUT, ADMIN_USERS, SEARCH_CONSOLE" 
+        });
+      }
+      
+      const updated = await storage.revokeEntitlement(
+        actorId,
+        userId,
+        entitlement,
+        { 
+          reason: reason || 'Revoked via admin panel',
+          ipAddress: req.ip,
+        }
+      );
+      
+      if (!updated) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const { userStripeSecretKey, ...safeUser } = updated;
+      res.json({ 
+        message: `Entitlement ${entitlement} revoked successfully`,
+        user: safeUser,
+      });
+    } catch (error) {
+      logger.error("Error revoking entitlement", error as Error);
+      res.status(500).json({ message: "Failed to revoke entitlement" });
+    }
+  });
+
+  // Change user role (admin only)
+  app.patch('/api/admin/users/:userId/role', isAuthenticated, isAdminUser, async (req: any, res) => {
+    try {
+      const actorId = req.user.claims.sub;
+      const { userId } = req.params;
+      const { role, reason } = req.body;
+      
+      if (!['user', 'admin'].includes(role)) {
+        return res.status(400).json({ message: "Role must be 'user' or 'admin'" });
+      }
+      
+      // Prevent self-demotion
+      if (userId === actorId && role === 'user') {
+        return res.status(400).json({ message: "You cannot demote yourself from admin" });
+      }
+      
+      const updated = await storage.changeUserRole(
+        actorId,
+        userId,
+        role,
+        { 
+          reason: reason || 'Changed via admin panel',
+          ipAddress: req.ip,
+        }
+      );
+      
+      if (!updated) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const { userStripeSecretKey, ...safeUser } = updated;
+      res.json({ 
+        message: `User role changed to ${role}`,
+        user: safeUser,
+      });
+    } catch (error) {
+      logger.error("Error changing user role", error as Error);
+      res.status(500).json({ message: "Failed to change user role" });
+    }
+  });
+
+  // Get audit logs (admin only)
+  app.get('/api/admin/audit-logs', isAuthenticated, isAdminUser, async (req: any, res) => {
+    try {
+      const { limit, userId } = req.query;
+      
+      let logs;
+      if (userId) {
+        logs = await storage.getAuditLogsForUser(userId as string, limit ? parseInt(limit as string) : 50);
+      } else {
+        logs = await storage.getRecentAuditLogs(limit ? parseInt(limit as string) : 100);
+      }
+      
+      res.json({ logs });
+    } catch (error) {
+      logger.error("Error fetching audit logs", error as Error);
+      res.status(500).json({ message: "Failed to fetch audit logs" });
+    }
+  });
+
+  // Get current user's access summary (for client-side access checking)
+  app.get('/api/auth/access', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const { getUserAccessSummary } = await import('@/lib/entitlements');
+      const accessSummary = getUserAccessSummary(user);
+      
+      res.json(accessSummary);
+    } catch (error) {
+      logger.error("Error fetching access summary", error as Error);
+      res.status(500).json({ message: "Failed to fetch access summary" });
+    }
+  });
+
+  // Check crew access (for Crew page server-side check)
+  app.get('/api/crew/access', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const { checkCrewPayoutAccess, userHasCrewAccess } = await import('@/lib/entitlements');
+      const hasCrewAccess = userHasCrewAccess(user);
+      const crewPayoutAccess = checkCrewPayoutAccess(user);
+      
+      res.json({
+        hasCrewAccess,
+        hasCrewPayoutAccess: crewPayoutAccess.allowed,
+        accessDeniedReason: crewPayoutAccess.reason,
+        missingRequirement: crewPayoutAccess.missingRequirement,
+        subscriptionPlan: user.subscriptionPlan,
+        entitlements: user.entitlements ?? [],
+      });
+    } catch (error) {
+      logger.error("Error checking crew access", error as Error);
+      res.status(500).json({ message: "Failed to check crew access" });
+    }
+  });
+
   return httpServer;
 }
