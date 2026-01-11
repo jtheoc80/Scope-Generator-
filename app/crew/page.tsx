@@ -34,7 +34,9 @@ import {
   Sparkles,
   CheckCircle,
   Infinity,
-  Wrench
+  Wrench,
+  Lock,
+  XCircle
 } from "lucide-react";
 
 // Access check result from server
