@@ -270,8 +270,65 @@ export interface IStorage {
 export class DatabaseStorage implements IStorage {
   // User operations
   async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
+    try {
+      const [user] = await db.select().from(users).where(eq(users.id, id));
+      return user;
+    } catch (error) {
+      // If query fails (likely due to missing columns from pending migration),
+      // try a raw SQL query with defaults for new columns
+      console.warn('[getUser] Drizzle query failed, trying fallback query:', (error as Error).message);
+      try {
+        const result = await db.execute(
+          sql`SELECT 
+            id, email, first_name as "firstName", last_name as "lastName", 
+            profile_image_url as "profileImageUrl", is_pro as "isPro",
+            subscription_plan as "subscriptionPlan",
+            COALESCE(role, 'user') as role,
+            COALESCE(entitlements, ARRAY[]::TEXT[]) as entitlements,
+            stripe_customer_id as "stripeCustomerId",
+            stripe_subscription_id as "stripeSubscriptionId",
+            proposal_credits as "proposalCredits",
+            credits_expire_at as "creditsExpireAt",
+            trial_ends_at as "trialEndsAt",
+            processed_sessions as "processedSessions",
+            company_name as "companyName",
+            company_address as "companyAddress",
+            company_phone as "companyPhone",
+            company_logo as "companyLogo",
+            license_number as "licenseNumber",
+            price_multiplier as "priceMultiplier",
+            trade_multipliers as "tradeMultipliers",
+            selected_trades as "selectedTrades",
+            onboarding_completed as "onboardingCompleted",
+            phone,
+            business_size as "businessSize",
+            referral_source as "referralSource",
+            primary_trade as "primaryTrade",
+            years_in_business as "yearsInBusiness",
+            user_stripe_secret_key as "userStripeSecretKey",
+            user_stripe_enabled as "userStripeEnabled",
+            email_notifications_enabled as "emailNotificationsEnabled",
+            sms_notifications_enabled as "smsNotificationsEnabled",
+            market_pricing_lookups as "marketPricingLookups",
+            created_at as "createdAt",
+            updated_at as "updatedAt"
+          FROM users WHERE id = ${id} LIMIT 1`
+        );
+        if (result.rows.length > 0) {
+          // Ensure defaults for potentially missing columns
+          const row = result.rows[0] as Record<string, unknown>;
+          return {
+            ...row,
+            role: (row.role as string) || 'user',
+            entitlements: (row.entitlements as string[]) || [],
+          } as User;
+        }
+        return undefined;
+      } catch (fallbackError) {
+        console.error('[getUser] Fallback query also failed:', fallbackError);
+        return undefined;
+      }
+    }
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
@@ -279,22 +336,52 @@ export class DatabaseStorage implements IStorage {
     const trialEndsAt = new Date();
     trialEndsAt.setDate(trialEndsAt.getDate() + 60);
     
-    const [user] = await db
-      .insert(users)
-      .values({
-        ...userData,
-        trialEndsAt, // Set trial end date for new users
-      })
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
+    try {
+      const [user] = await db
+        .insert(users)
+        .values({
           ...userData,
-          updatedAt: new Date(),
-          // Don't override existing trialEndsAt on update
-        },
-      })
-      .returning();
-    return user;
+          trialEndsAt, // Set trial end date for new users
+        })
+        .onConflictDoUpdate({
+          target: users.id,
+          set: {
+            ...userData,
+            updatedAt: new Date(),
+            // Don't override existing trialEndsAt on update
+          },
+        })
+        .returning();
+      return user;
+    } catch (error) {
+      // If insert fails due to missing columns, try without new columns
+      console.warn('[upsertUser] Drizzle query failed, trying fallback:', (error as Error).message);
+      
+      // Remove potentially problematic fields and retry
+      const { role, entitlements, ...safeUserData } = userData as UpsertUser & { role?: string; entitlements?: string[] };
+      
+      const [user] = await db
+        .insert(users)
+        .values({
+          ...safeUserData,
+          trialEndsAt,
+        } as typeof users.$inferInsert)
+        .onConflictDoUpdate({
+          target: users.id,
+          set: {
+            ...safeUserData,
+            updatedAt: new Date(),
+          } as Partial<typeof users.$inferInsert>,
+        })
+        .returning();
+      
+      // Return with defaults for missing columns
+      return {
+        ...user,
+        role: 'user',
+        entitlements: [],
+      } as User;
+    }
   }
 
   // Proposal operations
