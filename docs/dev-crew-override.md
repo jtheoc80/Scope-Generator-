@@ -162,7 +162,7 @@ The following API routes are protected by the Crew entitlement check:
 - `/api/search-console/sitemaps` (GET, POST, DELETE)
 - `/api/search-console/inspect-url`
 
-Company management routes (`/api/company/*`) rely on the client-side redirect but the entitlement is still checked server-side through the auth user endpoint.
+Company management routes (`/api/company/*`) are directly protected server-side by the `isCrewUser` middleware (in addition to any client-side redirects used for navigation).
 
 ## Troubleshooting
 
