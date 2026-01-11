@@ -46,7 +46,7 @@ test.describe('Crew Entitlement Access Control', () => {
 
     test('GET /api/admin/users/:id should require admin access', async ({ request }) => {
       const response = await request.get('/api/admin/users/test-user-id');
-      expect([400, 401, 403, 404]).toContain(response.status());
+      expect([400, 401, 403]).toContain(response.status());
     });
 
     test('POST /api/admin/users/:id/entitlements should require admin access', async ({ request }) => {
