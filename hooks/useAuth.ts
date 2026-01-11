@@ -31,6 +31,9 @@ interface User {
   hasActiveAccess: boolean; // true if isPro OR in active trial period
   isInTrial: boolean;
   trialDaysRemaining: number;
+  // Dev/staging Crew override (only set in non-production environments)
+  isDevCrewOverride?: boolean;
+  devOverrideReason?: 'dev_email_allowlist' | 'dev_force_flag' | null;
 }
 
 export function useAuth() {

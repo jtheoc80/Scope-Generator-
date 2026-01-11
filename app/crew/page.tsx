@@ -34,8 +34,9 @@ import {
   Sparkles,
   CheckCircle,
   Infinity,
-  XCircle,
+  Wrench,
   Lock,
+  XCircle
 } from "lucide-react";
 
 // Access check result from server
@@ -555,6 +556,19 @@ export default function Crew() {
     return (
       <Layout>
         <div className="container mx-auto px-4 py-12 max-w-2xl">
+          {/* Dev Override Badge - Only shown when override is active */}
+          {user?.isDevCrewOverride && (
+            <div className="mb-4 flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
+              <Wrench className="w-4 h-4 flex-shrink-0" />
+              <span className="font-medium">Dev: Crew Override Enabled</span>
+              {user.devOverrideReason === 'dev_email_allowlist' && (
+                <span className="text-amber-600">(Email Allowlist)</span>
+              )}
+              {user.devOverrideReason === 'dev_force_flag' && (
+                <span className="text-amber-600">(Force Flag)</span>
+              )}
+            </div>
+          )}
           <Card className="text-center border-0 shadow-sm">
             <CardHeader>
               <div className="mx-auto w-16 h-16 bg-slate-900 rounded-xl flex items-center justify-center mb-4">
@@ -617,6 +631,19 @@ export default function Crew() {
         {/* Header */}
         <div className="bg-white border-b border-slate-200">
           <div className="container mx-auto px-4 py-6 md:py-8">
+            {/* Dev Override Badge - Only shown when override is active */}
+            {user?.isDevCrewOverride && (
+              <div className="mb-4 flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
+                <Wrench className="w-4 h-4 flex-shrink-0" />
+                <span className="font-medium">Dev: Crew Override Enabled</span>
+                {user.devOverrideReason === 'dev_email_allowlist' && (
+                  <span className="text-amber-600">(Email Allowlist)</span>
+                )}
+                {user.devOverrideReason === 'dev_force_flag' && (
+                  <span className="text-amber-600">(Force Flag)</span>
+                )}
+              </div>
+            )}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 bg-slate-900 rounded-xl flex items-center justify-center shadow-lg">

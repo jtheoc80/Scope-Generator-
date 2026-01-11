@@ -1,201 +1,171 @@
 /**
- * Entitlement System - Server-side helpers for access control
+ * Entitlements - Server-side Single Source of Truth
  * 
- * This module provides utilities for checking user entitlements
- * and protecting routes/resources based on subscription status,
- * role, and explicit entitlements.
+ * This module provides the canonical entitlement checks for subscription-based features.
+ * All entitlement logic should go through these functions.
+ * 
+ * DEV/STAGING OVERRIDE:
+ * In non-production environments, you can enable Crew access for testing via:
+ * - DEV_CREW_EMAILS: comma-separated list of emails that get Crew access
+ * - DEV_FORCE_CREW: set to "true" to give all authenticated users Crew access
+ * 
+ * These overrides are COMPLETELY DISABLED in production (NODE_ENV === 'production').
  */
 
-import { type User, type Entitlement, availableEntitlements } from "@shared/schema";
-
-/**
- * Check if a user has a specific entitlement
- */
-export function userHasEntitlement(user: User | null | undefined, entitlement: Entitlement): boolean {
-  if (!user) return false;
-  return user.entitlements?.includes(entitlement) ?? false;
+export interface EntitlementContext {
+  userId: string;
+  email?: string | null;
+  subscriptionPlan?: string | null;
 }
 
-/**
- * Check if a user has the admin role
- */
-export function userIsAdmin(user: User | null | undefined): boolean {
-  if (!user) return false;
-  return user.role === 'admin';
-}
-
-/**
- * Check if a user has crew access through any means:
- * 1. Crew subscription
- * 2. Explicit CREW_ACCESS entitlement (manual grant)
- */
-export function userHasCrewAccess(user: User | null | undefined): boolean {
-  if (!user) return false;
-  
-  // Check subscription
-  if (user.subscriptionPlan === 'crew') return true;
-  
-  // Check explicit entitlement
-  if (user.entitlements?.includes('CREW_ACCESS')) return true;
-  
-  return false;
-}
-
-/**
- * Check if a user has access to the Crew Payout feature
- * Requires either:
- * 1. Crew subscription + CREW_PAYOUT entitlement, OR
- * 2. Admin role
- */
-export function userHasCrewPayoutAccess(user: User | null | undefined): boolean {
-  if (!user) return false;
-  
-  // Admins always have access
-  if (user.role === 'admin') return true;
-  
-  // Check for crew access + CREW_PAYOUT entitlement
-  if (userHasCrewAccess(user) && user.entitlements?.includes('CREW_PAYOUT')) {
-    return true;
-  }
-  
-  return false;
-}
-
-/**
- * Check if user can access admin features
- */
-export function userCanAccessAdmin(user: User | null | undefined): boolean {
-  if (!user) return false;
-  
-  // Must be admin role
-  if (user.role !== 'admin') return false;
-  
-  // Optionally check for specific admin entitlement
-  if (user.entitlements?.includes('ADMIN_USERS')) return true;
-  
-  // Admin role alone is sufficient
-  return true;
-}
-
-/**
- * Get a summary of user access for the client
- * (Safe to send to client - no sensitive data)
- */
-export function getUserAccessSummary(user: User | null | undefined): {
-  isAuthenticated: boolean;
-  isAdmin: boolean;
+export interface CrewEntitlementResult {
   hasCrewAccess: boolean;
-  hasCrewPayoutAccess: boolean;
-  subscriptionPlan: string | null;
-  entitlements: string[];
-} {
-  if (!user) {
+  isDevOverride: boolean;
+  reason: 'subscription' | 'dev_email_allowlist' | 'dev_force_flag' | 'none';
+}
+
+/**
+ * Check if we're in a production environment
+ * This is the guard that ensures dev overrides never leak to production
+ */
+function isProductionEnvironment(): boolean {
+  return process.env.NODE_ENV === 'production';
+}
+
+/**
+ * Parse the DEV_CREW_EMAILS environment variable
+ * Returns a Set of lowercase emails for efficient lookup
+ */
+const DEV_CREW_EMAIL_ALLOWLIST: Set<string> = (() => {
+  const emailsRaw = process.env.DEV_CREW_EMAILS || '';
+  if (!emailsRaw.trim()) {
+    return new Set<string>();
+  }
+
+  return new Set<string>(
+    emailsRaw
+      .split(',')
+      .map((email) => email.trim().toLowerCase())
+      .filter((email) => email.length > 0 && email.includes('@')),
+  );
+})();
+
+function getDevCrewEmailAllowlist(): Set<string> {
+  return DEV_CREW_EMAIL_ALLOWLIST;
+}
+
+/**
+ * Check if the DEV_FORCE_CREW flag is enabled
+ */
+function isDevForceCrewEnabled(): boolean {
+  return process.env.DEV_FORCE_CREW === 'true';
+}
+
+/**
+ * Check if a user email is in the dev allowlist
+ */
+function isEmailInDevAllowlist(email: string | null | undefined): boolean {
+  if (!email) return false;
+  const allowlist = getDevCrewEmailAllowlist();
+  return allowlist.has(email.toLowerCase());
+}
+
+/**
+ * Check if a user has Crew subscription
+ */
+function hasCrewSubscription(subscriptionPlan: string | null | undefined): boolean {
+  return subscriptionPlan === 'crew';
+}
+
+/**
+ * Main entitlement check for Crew access
+ * 
+ * This is the SINGLE SOURCE OF TRUTH for determining if a user has Crew access.
+ * 
+ * Logic:
+ * 1. If user has 'crew' subscription plan → hasCrewAccess = true
+ * 2. If NOT in production AND user email is in DEV_CREW_EMAILS → hasCrewAccess = true (override)
+ * 3. If NOT in production AND DEV_FORCE_CREW=true → hasCrewAccess = true (override)
+ * 4. Otherwise → hasCrewAccess = false
+ * 
+ * @param context - The entitlement context containing user info
+ * @returns CrewEntitlementResult with access status and reason
+ */
+export function checkCrewEntitlement(context: EntitlementContext): CrewEntitlementResult {
+  // Check 1: Real subscription
+  if (hasCrewSubscription(context.subscriptionPlan)) {
     return {
-      isAuthenticated: false,
-      isAdmin: false,
+      hasCrewAccess: true,
+      isDevOverride: false,
+      reason: 'subscription',
+    };
+  }
+
+  // Dev overrides are COMPLETELY DISABLED in production
+  if (isProductionEnvironment()) {
+    return {
       hasCrewAccess: false,
-      hasCrewPayoutAccess: false,
-      subscriptionPlan: null,
-      entitlements: [],
+      isDevOverride: false,
+      reason: 'none',
     };
   }
-  
+
+  // Check 2: Email allowlist (dev/staging only)
+  if (isEmailInDevAllowlist(context.email)) {
+    return {
+      hasCrewAccess: true,
+      isDevOverride: true,
+      reason: 'dev_email_allowlist',
+    };
+  }
+
+  // Check 3: Force flag (dev/staging only)
+  if (isDevForceCrewEnabled()) {
+    return {
+      hasCrewAccess: true,
+      isDevOverride: true,
+      reason: 'dev_force_flag',
+    };
+  }
+
+  // No access
   return {
-    isAuthenticated: true,
-    isAdmin: userIsAdmin(user),
-    hasCrewAccess: userHasCrewAccess(user),
-    hasCrewPayoutAccess: userHasCrewPayoutAccess(user),
-    subscriptionPlan: user.subscriptionPlan,
-    entitlements: user.entitlements ?? [],
+    hasCrewAccess: false,
+    isDevOverride: false,
+    reason: 'none',
   };
 }
 
 /**
- * Validate that an entitlement string is a valid entitlement
+ * Quick check for Crew access (returns boolean only)
+ * Use this for simple guard checks where you don't need the full result
  */
-export function isValidEntitlement(entitlement: string): entitlement is Entitlement {
-  return (availableEntitlements as readonly string[]).includes(entitlement);
+export function hasCrewAccess(context: EntitlementContext): boolean {
+  return checkCrewEntitlement(context).hasCrewAccess;
 }
 
 /**
- * Get all available entitlements with descriptions
+ * Check if the current user's Crew access is via dev override
+ * Useful for displaying dev badges in UI
  */
-export function getEntitlementDescriptions(): Record<Entitlement, string> {
-  return {
-    'CREW_ACCESS': 'Access to Crew dashboard and team features',
-    'CREW_PAYOUT': 'Access to Crew Payout functionality',
-    'ADMIN_USERS': 'Access to user administration panel',
-    'SEARCH_CONSOLE': 'Access to Google Search Console integration',
-  };
+export function isCrewDevOverride(context: EntitlementContext): boolean {
+  const result = checkCrewEntitlement(context);
+  return result.hasCrewAccess && result.isDevOverride;
 }
 
 /**
- * Access denial reasons
+ * Get a human-readable description of the entitlement override
+ * For displaying in dev badges
  */
-export type AccessDeniedReason = 
-  | 'NOT_AUTHENTICATED'
-  | 'NOT_CREW_SUBSCRIBER'
-  | 'MISSING_ENTITLEMENT'
-  | 'NOT_ADMIN';
-
-/**
- * Check result type for detailed access checking
- */
-export interface AccessCheckResult {
-  allowed: boolean;
-  reason?: AccessDeniedReason;
-  missingRequirement?: string;
-}
-
-/**
- * Detailed access check for Crew Payout
- */
-export function checkCrewPayoutAccess(user: User | null | undefined): AccessCheckResult {
-  if (!user) {
-    return { allowed: false, reason: 'NOT_AUTHENTICATED' };
-  }
+export function getDevOverrideDescription(result: CrewEntitlementResult): string | null {
+  if (!result.isDevOverride) return null;
   
-  // Admins always have access
-  if (user.role === 'admin') {
-    return { allowed: true };
+  switch (result.reason) {
+    case 'dev_email_allowlist':
+      return 'Dev: Email Allowlist';
+    case 'dev_force_flag':
+      return 'Dev: Force Flag';
+    default:
+      return null;
   }
-  
-  // Check for crew access
-  if (!userHasCrewAccess(user)) {
-    return { 
-      allowed: false, 
-      reason: 'NOT_CREW_SUBSCRIBER',
-      missingRequirement: 'Crew subscription or CREW_ACCESS entitlement',
-    };
-  }
-  
-  // Check for CREW_PAYOUT entitlement
-  if (!user.entitlements?.includes('CREW_PAYOUT')) {
-    return { 
-      allowed: false, 
-      reason: 'MISSING_ENTITLEMENT',
-      missingRequirement: 'CREW_PAYOUT entitlement',
-    };
-  }
-  
-  return { allowed: true };
-}
-
-/**
- * Detailed access check for Admin features
- */
-export function checkAdminAccess(user: User | null | undefined): AccessCheckResult {
-  if (!user) {
-    return { allowed: false, reason: 'NOT_AUTHENTICATED' };
-  }
-  
-  if (user.role !== 'admin') {
-    return { 
-      allowed: false, 
-      reason: 'NOT_ADMIN',
-      missingRequirement: 'Admin role',
-    };
-  }
-  
-  return { allowed: true };
 }

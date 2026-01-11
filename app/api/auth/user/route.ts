@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { storage } from '@/lib/services/storage';
+import { checkCrewEntitlement } from '@/lib/entitlements';
 
 export async function GET() {
   try {
@@ -47,12 +48,28 @@ export async function GET() {
       ? Math.ceil((trialEndsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
       : 0;
     
+    // Check Crew entitlement (supports dev/staging overrides)
+    const crewEntitlement = checkCrewEntitlement({
+      userId,
+      email: user.email,
+      subscriptionPlan: user.subscriptionPlan,
+    });
+    
+    // If user has Crew access via dev override, treat them as having 'crew' plan for UI
+    const effectiveSubscriptionPlan = crewEntitlement.hasCrewAccess && crewEntitlement.isDevOverride
+      ? 'crew'
+      : safeUser.subscriptionPlan;
+    
     return NextResponse.json({ 
       ...safeUser, 
+      subscriptionPlan: effectiveSubscriptionPlan,
       hasStripeKey,
       hasActiveAccess,
       isInTrial,
       trialDaysRemaining,
+      // Dev override info (for displaying badges in non-prod)
+      isDevCrewOverride: crewEntitlement.isDevOverride,
+      devOverrideReason: crewEntitlement.isDevOverride ? crewEntitlement.reason : null,
     });
   } catch (error) {
     console.error('Error fetching user:', error);
