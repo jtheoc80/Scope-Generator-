@@ -37,6 +37,16 @@ import {
   Wrench
 } from "lucide-react";
 
+// Access check result from server
+interface CrewAccessResult {
+  hasCrewAccess: boolean;
+  hasCrewPayoutAccess: boolean;
+  accessDeniedReason?: string;
+  missingRequirement?: string;
+  subscriptionPlan: string | null;
+  entitlements: string[];
+}
+
 interface Company {
   id: number;
   name: string;
@@ -98,22 +108,52 @@ export default function Crew() {
   const [inviteRole, setInviteRole] = useState("member");
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
 
+  // Server-side access check state
+  const [accessChecked, setAccessChecked] = useState(false);
+  const [accessResult, setAccessResult] = useState<CrewAccessResult | null>(null);
+
   useEffect(() => {
     if (!authLoading && !user) {
       router.push("/");
     }
   }, [user, authLoading, router]);
 
-  // Redirect non-crew users
+  // Server-side access check - replaces client-only subscriptionPlan check
   useEffect(() => {
-    if (!authLoading && user && user.subscriptionPlan !== 'crew') {
-      if (user.subscriptionPlan === 'pro') {
-        router.push("/pro");
-      } else {
-        router.push("/#pricing");
+    const checkAccess = async () => {
+      if (authLoading || !user) return;
+      
+      try {
+        const res = await fetch("/api/crew/access", { credentials: "include" });
+        if (res.ok) {
+          const data = await res.json();
+          setAccessResult(data);
+        } else {
+          // If API fails, deny access
+          setAccessResult({
+            hasCrewAccess: false,
+            hasCrewPayoutAccess: false,
+            accessDeniedReason: 'NOT_AUTHENTICATED',
+            subscriptionPlan: null,
+            entitlements: [],
+          });
+        }
+      } catch (error) {
+        console.error("Error checking crew access:", error);
+        setAccessResult({
+          hasCrewAccess: false,
+          hasCrewPayoutAccess: false,
+          accessDeniedReason: 'NOT_AUTHENTICATED',
+          subscriptionPlan: null,
+          entitlements: [],
+        });
+      } finally {
+        setAccessChecked(true);
       }
-    }
-  }, [user, authLoading, router]);
+    };
+    
+    checkAccess();
+  }, [user, authLoading]);
 
   useEffect(() => {
     if (user) {
@@ -368,7 +408,7 @@ export default function Crew() {
   const isOwnerOrAdmin = companyInfo?.role === "owner" || companyInfo?.role === "admin";
   const isOwner = companyInfo?.role === "owner";
 
-  if (authLoading || loading) {
+  if (authLoading || !accessChecked) {
     return (
       <Layout>
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -378,7 +418,135 @@ export default function Crew() {
     );
   }
 
-  if (!user || user.subscriptionPlan !== 'crew') {
+  // Server-side access denied - show "No Access" UI
+  if (!accessResult?.hasCrewAccess) {
+    return (
+      <Layout>
+        <div className="bg-slate-50 min-h-screen flex items-center justify-center py-12">
+          <Card className="max-w-lg mx-4 border-0 shadow-lg">
+            <CardHeader className="text-center pb-2">
+              <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                <Lock className="w-8 h-8 text-red-600" />
+              </div>
+              <CardTitle className="text-2xl">Access Denied</CardTitle>
+              <CardDescription className="text-base mt-2">
+                You don&apos;t have access to the Crew dashboard.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Access denial reason */}
+              <div className="bg-slate-100 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <XCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium text-slate-900">
+                      {accessResult?.accessDeniedReason === 'NOT_CREW_SUBSCRIBER' && 
+                        "Crew subscription required"}
+                      {accessResult?.accessDeniedReason === 'MISSING_ENTITLEMENT' && 
+                        "Missing required entitlement"}
+                      {accessResult?.accessDeniedReason === 'NOT_AUTHENTICATED' && 
+                        "Authentication required"}
+                      {!accessResult?.accessDeniedReason && 
+                        "Access not authorized"}
+                    </p>
+                    {accessResult?.missingRequirement && (
+                      <p className="text-sm text-slate-600 mt-1">
+                        Requires: {accessResult.missingRequirement}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Next steps */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-slate-900">Next Steps</h3>
+                
+                {/* Option 1: Subscribe to Crew */}
+                <div className="border rounded-lg p-4 hover:border-primary transition-colors">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Users className="w-4 h-4 text-purple-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-slate-900">Subscribe to Crew</p>
+                      <p className="text-sm text-slate-500 mt-1">
+                        Get team collaboration features, unlimited proposals, and more.
+                      </p>
+                      <Link href="/#pricing">
+                        <Button className="mt-3" size="sm">
+                          View Plans <ArrowRight className="w-4 h-4 ml-2" />
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Option 2: Pro users */}
+                {user?.subscriptionPlan === 'pro' && (
+                  <div className="border rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Shield className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-slate-900">You have Pro</p>
+                        <p className="text-sm text-slate-500 mt-1">
+                          Upgrade to Crew for team features, or continue using Pro.
+                        </p>
+                        <Link href="/pro">
+                          <Button variant="outline" className="mt-3" size="sm">
+                            Go to Pro Dashboard
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Option 3: Contact admin */}
+                <div className="border rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Mail className="w-4 h-4 text-slate-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-slate-900">Need Access?</p>
+                      <p className="text-sm text-slate-500 mt-1">
+                        If you believe you should have access, contact your team administrator
+                        or reach out to support.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Back to dashboard */}
+              <div className="pt-2 border-t">
+                <Link href="/dashboard">
+                  <Button variant="ghost" className="w-full">
+                    Back to Dashboard
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!user) {
     return null;
   }
 
