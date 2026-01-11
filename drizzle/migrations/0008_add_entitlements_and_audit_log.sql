@@ -9,7 +9,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS entitlements TEXT[] DEFAULT ARRAY[]::
 
 -- Create audit_log table for tracking entitlement changes
 CREATE TABLE IF NOT EXISTS audit_log (
-  id SERIAL PRIMARY KEY,
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   actor_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE SET NULL,
   actor_email VARCHAR(255),
   target_user_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
