@@ -100,7 +100,7 @@ export type Entitlement = typeof availableEntitlements[number];
 export const auditLog = pgTable("audit_log", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   // Who performed the action
-  actorId: varchar("actor_id").notNull().references(() => users.id, { onDelete: "set null" }),
+  actorId: varchar("actor_id").references(() => users.id, { onDelete: "set null" }),
   actorEmail: varchar("actor_email", { length: 255 }),
   // Who was affected
   targetUserId: varchar("target_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
