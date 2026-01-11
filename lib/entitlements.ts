@@ -169,3 +169,162 @@ export function getDevOverrideDescription(result: CrewEntitlementResult): string
       return null;
   }
 }
+
+// ==========================================
+// Entitlement System for Admin Management
+// ==========================================
+
+/**
+ * Valid entitlement values that can be granted to users
+ */
+export const VALID_ENTITLEMENTS = [
+  'CREW_ACCESS',      // Access to Crew dashboard
+  'CREW_PAYOUT',      // Access to Crew Payout features
+  'ADMIN_USERS',      // Access to admin user management
+  'SEARCH_CONSOLE',   // Access to Search Console features
+] as const;
+
+export type Entitlement = typeof VALID_ENTITLEMENTS[number];
+
+/**
+ * Check if a string is a valid entitlement
+ */
+export function isValidEntitlement(value: string): value is Entitlement {
+  return VALID_ENTITLEMENTS.includes(value as Entitlement);
+}
+
+/**
+ * User type for entitlement checks (matches schema)
+ */
+interface UserForEntitlements {
+  id: string;
+  email?: string | null;
+  subscriptionPlan?: string | null;
+  entitlements?: string[] | null;
+  role?: string | null;
+}
+
+/**
+ * Check if a user has Crew access (subscription OR entitlement OR dev override)
+ */
+export function userHasCrewAccess(user: UserForEntitlements): boolean {
+  // Check subscription
+  if (user.subscriptionPlan === 'crew') {
+    return true;
+  }
+  
+  // Check entitlements array
+  if (user.entitlements?.includes('CREW_ACCESS')) {
+    return true;
+  }
+  
+  // Check dev override (non-production only)
+  if (!isProductionEnvironment()) {
+    if (isEmailInDevAllowlist(user.email)) {
+      return true;
+    }
+    if (isDevForceCrewEnabled()) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * Result of crew payout access check
+ */
+export interface CrewPayoutAccessResult {
+  allowed: boolean;
+  reason?: 'NOT_CREW_SUBSCRIBER' | 'MISSING_ENTITLEMENT' | 'NOT_AUTHENTICATED';
+  missingRequirement?: string;
+}
+
+/**
+ * Check if a user has access to Crew Payout features
+ * Requires BOTH Crew access AND the CREW_PAYOUT entitlement (or subscription)
+ */
+export function checkCrewPayoutAccess(user: UserForEntitlements | null): CrewPayoutAccessResult {
+  if (!user) {
+    return {
+      allowed: false,
+      reason: 'NOT_AUTHENTICATED',
+    };
+  }
+  
+  // First check if user has Crew access at all
+  if (!userHasCrewAccess(user)) {
+    return {
+      allowed: false,
+      reason: 'NOT_CREW_SUBSCRIBER',
+      missingRequirement: 'Crew subscription or CREW_ACCESS entitlement',
+    };
+  }
+  
+  // Crew subscribers automatically get payout access
+  if (user.subscriptionPlan === 'crew') {
+    return { allowed: true };
+  }
+  
+  // For entitlement-based access, also need CREW_PAYOUT
+  if (user.entitlements?.includes('CREW_PAYOUT')) {
+    return { allowed: true };
+  }
+  
+  // Has CREW_ACCESS but not CREW_PAYOUT
+  return {
+    allowed: false,
+    reason: 'MISSING_ENTITLEMENT',
+    missingRequirement: 'CREW_PAYOUT entitlement',
+  };
+}
+
+/**
+ * Access summary for a user (returned to client for UI decisions)
+ */
+export interface UserAccessSummary {
+  hasCrewAccess: boolean;
+  hasCrewPayoutAccess: boolean;
+  hasAdminAccess: boolean;
+  hasSearchConsoleAccess: boolean;
+  subscriptionPlan: string | null;
+  entitlements: string[];
+  isDevOverride: boolean;
+}
+
+/**
+ * Get a summary of what a user has access to
+ */
+export function getUserAccessSummary(user: UserForEntitlements | null): UserAccessSummary {
+  if (!user) {
+    return {
+      hasCrewAccess: false,
+      hasCrewPayoutAccess: false,
+      hasAdminAccess: false,
+      hasSearchConsoleAccess: false,
+      subscriptionPlan: null,
+      entitlements: [],
+      isDevOverride: false,
+    };
+  }
+  
+  const entitlements = user.entitlements ?? [];
+  const hasCrewAccess = userHasCrewAccess(user);
+  const crewPayoutResult = checkCrewPayoutAccess(user);
+  
+  // Check if access is via dev override
+  let isDevOverride = false;
+  if (hasCrewAccess && user.subscriptionPlan !== 'crew' && !entitlements.includes('CREW_ACCESS')) {
+    isDevOverride = true;
+  }
+  
+  return {
+    hasCrewAccess,
+    hasCrewPayoutAccess: crewPayoutResult.allowed,
+    hasAdminAccess: user.role === 'admin' || entitlements.includes('ADMIN_USERS'),
+    hasSearchConsoleAccess: hasCrewAccess || entitlements.includes('SEARCH_CONSOLE'),
+    subscriptionPlan: user.subscriptionPlan ?? null,
+    entitlements,
+    isDevOverride,
+  };
+}
