@@ -12,13 +12,10 @@ import { Loader2, TrendingUp, DollarSign, Hammer, MapPin, ArrowRight } from "luc
 const trades = [
   { id: "bathroom", label: "Bathroom Remodel" },
   { id: "kitchen", label: "Kitchen Remodel" },
-  { id: "roofing", label: "Roofing" },
   { id: "plumbing", label: "Plumbing" },
   { id: "electrical", label: "Electrical" },
   { id: "hvac", label: "HVAC" },
   { id: "painting", label: "Painting" },
-  { id: "flooring", label: "Flooring" },
-  { id: "drywall", label: "Drywall" },
 ];
 
 function formatCurrency(amount: number): string {
@@ -33,10 +30,10 @@ function formatCurrency(amount: number): string {
 export function MarketPricingWidget() {
   const [selectedTrade, setSelectedTrade] = useState("");
   const [zipcode, setZipcode] = useState("");
-  
+
   const { data: status } = useCostServiceStatus();
   const isValidZip = /^\d{5}$/.test(zipcode);
-  
+
   const { data: pricing, isLoading, error } = useTradePricing(
     selectedTrade,
     isValidZip ? zipcode : ""
@@ -117,8 +114,8 @@ export function MarketPricingWidget() {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {pricing.materials.slice(0, 4).map((item, idx) => (
-                    <div 
-                      key={idx} 
+                    <div
+                      key={idx}
                       className="text-xs"
                       data-testid={`widget-material-${idx}`}
                     >
@@ -144,8 +141,8 @@ export function MarketPricingWidget() {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {pricing.labor.slice(0, 4).map((item, idx) => (
-                    <div 
-                      key={idx} 
+                    <div
+                      key={idx}
                       className="text-xs"
                       data-testid={`widget-labor-${idx}`}
                     >
@@ -162,9 +159,9 @@ export function MarketPricingWidget() {
             )}
 
             <Link href="/app" className="w-full">
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="w-full gap-2 text-emerald-700 border-emerald-200 hover:bg-emerald-50"
                 data-testid="widget-create-proposal"
               >

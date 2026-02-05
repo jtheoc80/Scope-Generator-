@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/server/db";
+import { db } from "@/lib/services/db";
 import { photoUploadSessions, mobileJobs } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { createHash } from "crypto";

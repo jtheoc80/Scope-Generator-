@@ -1,4 +1,4 @@
-import { db } from "@/server/db";
+import { db } from "@/lib/services/db";
 import { sql } from "drizzle-orm";
 import { OpenAIImageEmbeddingProvider } from "./embeddings/provider";
 import { averageVectors, parsePgVector, pgVectorLiteral } from "./db";

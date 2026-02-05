@@ -1,6 +1,10 @@
 'use client';
+// Force dynamic rendering to prevent static generation errors
+// This page uses useQuery which requires QueryClientProvider
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect } from "react";
-import Layout from "@/components/layout";
+import LayoutWrapper from "@/components/layout-wrapper";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, ArrowRight, Clock, DollarSign, FileCheck, Loader2, Bath, ChefHat, Home as HomeIcon, Paintbrush, Plug, Wrench, Thermometer, TreePine, Calculator, Sparkles, Star, Users, TrendingUp, Target, FileText } from "lucide-react";
@@ -33,16 +37,6 @@ const calculatorTrades = [
     ]
   },
   {
-    id: "roofing",
-    name: "Roofing",
-    icon: HomeIcon,
-    jobTypes: [
-      { id: "full-roof", name: "Full Roof Replacement", low: 12000, high: 25000 },
-      { id: "roof-repair", name: "Roof Repair", low: 500, high: 2500 },
-      { id: "gutter-install", name: "Gutter Install/Replace", low: 1200, high: 3000 },
-    ]
-  },
-  {
     id: "painting",
     name: "Painting",
     icon: Paintbrush,
@@ -50,16 +44,6 @@ const calculatorTrades = [
       { id: "single-room", name: "Single Room (Interior)", low: 450, high: 850 },
       { id: "whole-house", name: "Whole House Interior", low: 3500, high: 8000 },
       { id: "exterior", name: "Exterior House Painting", low: 4000, high: 12000 },
-    ]
-  },
-  {
-    id: "electrical",
-    name: "Electrical",
-    icon: Plug,
-    jobTypes: [
-      { id: "panel-upgrade", name: "Panel Upgrade", low: 2500, high: 4500 },
-      { id: "ev-charger", name: "EV Charger Installation", low: 800, high: 2000 },
-      { id: "rewiring", name: "Whole House Rewiring", low: 8000, high: 15000 },
     ]
   },
   {
@@ -73,6 +57,16 @@ const calculatorTrades = [
     ]
   },
   {
+    id: "electrical",
+    name: "Electrical",
+    icon: Plug,
+    jobTypes: [
+      { id: "panel-upgrade", name: "Panel Upgrade", low: 2500, high: 4500 },
+      { id: "ev-charger", name: "EV Charger Installation", low: 800, high: 2000 },
+      { id: "rewiring", name: "Whole House Rewiring", low: 8000, high: 15000 },
+    ]
+  },
+  {
     id: "hvac",
     name: "HVAC",
     icon: Thermometer,
@@ -80,16 +74,6 @@ const calculatorTrades = [
       { id: "ac-install", name: "AC Unit Installation", low: 4500, high: 12000 },
       { id: "furnace", name: "Furnace Replacement", low: 3500, high: 8000 },
       { id: "maintenance", name: "Maintenance / Tune-Up", low: 99, high: 299 },
-    ]
-  },
-  {
-    id: "landscaping",
-    name: "Landscaping",
-    icon: TreePine,
-    jobTypes: [
-      { id: "lawn-install", name: "Lawn Installation", low: 2000, high: 6000 },
-      { id: "patio", name: "Patio / Walkway", low: 4000, high: 15000 },
-      { id: "tree-work", name: "Tree Removal / Trimming", low: 400, high: 3500 },
     ]
   },
 ];
@@ -119,7 +103,7 @@ function InstantPriceCalculator({ t }: { t: any }) {
     if (canCalculate && jobType && size) {
       setIsCalculating(true);
       setShowPrice(false);
-      
+
       console.log("[Price Calculator] User interaction:", {
         trade: selectedTrade,
         jobType: selectedJobType,
@@ -129,11 +113,11 @@ function InstantPriceCalculator({ t }: { t: any }) {
 
       const targetLow = Math.round(jobType.low * size.multiplier);
       const targetHigh = Math.round(jobType.high * size.multiplier);
-      
+
       setTimeout(() => {
         setIsCalculating(false);
         setShowPrice(true);
-        
+
         let frame = 0;
         const totalFrames = 20;
         const interval = setInterval(() => {
@@ -223,11 +207,10 @@ function InstantPriceCalculator({ t }: { t: any }) {
                   data-testid={`button-size-${key}`}
                   onClick={() => setSelectedSize(key)}
                   disabled={!selectedJobType}
-                  className={`py-2.5 px-3 rounded-lg border-2 transition-all text-center disabled:opacity-50 disabled:cursor-not-allowed ${
-                    selectedSize === key
-                      ? "border-orange-500 bg-orange-500/10 text-slate-900 font-bold"
-                      : "border-slate-200 hover:border-slate-300 text-slate-600"
-                  }`}
+                  className={`py-2.5 px-3 rounded-lg border-2 transition-all text-center disabled:opacity-50 disabled:cursor-not-allowed ${selectedSize === key
+                    ? "border-orange-500 bg-orange-500/10 text-slate-900 font-bold"
+                    : "border-slate-200 hover:border-slate-300 text-slate-600"
+                    }`}
                 >
                   <div className="font-medium text-sm">{key === 'small' ? t.calculator.small : key === 'medium' ? t.calculator.medium : t.calculator.large}</div>
                 </button>
@@ -235,13 +218,12 @@ function InstantPriceCalculator({ t }: { t: any }) {
             </div>
           </div>
 
-          <div className={`mt-4 p-4 rounded-xl transition-all duration-500 ${
-            showPrice 
-              ? "bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200" 
-              : isCalculating
-                ? "bg-slate-50 border border-slate-200"
-                : "bg-slate-50 border border-dashed border-slate-300"
-          }`}>
+          <div className={`mt-4 p-4 rounded-xl transition-all duration-500 ${showPrice
+            ? "bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200"
+            : isCalculating
+              ? "bg-slate-50 border border-slate-200"
+              : "bg-slate-50 border border-dashed border-slate-300"
+            }`}>
             {isCalculating ? (
               <div className="flex items-center justify-center gap-3 py-2">
                 <Loader2 className="w-5 h-5 text-orange-500 animate-spin" />
@@ -269,14 +251,13 @@ function InstantPriceCalculator({ t }: { t: any }) {
             )}
           </div>
 
-          <Link 
+          <Link
             href="/app"
             data-testid="button-get-full-proposal"
-            className={`block w-full text-center py-3 rounded-lg font-bold transition-all ${
-              showPrice
-                ? "bg-orange-500 text-white hover:bg-orange-600 shadow-lg hover:shadow-xl hover:scale-[1.02]"
-                : "bg-slate-200 text-slate-500 cursor-not-allowed pointer-events-none"
-            }`}
+            className={`block w-full text-center py-3 rounded-lg font-bold transition-all ${showPrice
+              ? "bg-orange-500 text-white hover:bg-orange-600 shadow-lg hover:shadow-xl hover:scale-[1.02]"
+              : "bg-slate-200 text-slate-500 cursor-not-allowed pointer-events-none"
+              }`}
             onClick={() => {
               if (showPrice) {
                 console.log("[Price Calculator] CTA clicked - Get Full Proposal", {
@@ -290,7 +271,7 @@ function InstantPriceCalculator({ t }: { t: any }) {
           >
             {t.calculator.getFullProposal}
           </Link>
-          
+
           <p className="text-center text-xs text-slate-500">
             {t.calculator.freeToCreate}
           </p>
@@ -332,9 +313,9 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productType }),
       });
-      
+
       const data = await response.json();
-      
+
       if (data.url) {
         window.location.href = data.url;
       } else if (data.message) {
@@ -349,34 +330,34 @@ export default function Home() {
   };
 
   return (
-    <Layout>
+    <LayoutWrapper>
       {/* Hero Section */}
       <section className="relative bg-slate-900 text-white overflow-hidden">
         <div className="absolute inset-0 z-0 opacity-20 bg-gradient-to-br from-slate-700 to-slate-900">
         </div>
-        
+
         <div className="container mx-auto px-4 py-20 md:py-32 relative z-10 grid md:grid-cols-2 gap-12 items-center">
           <div className="space-y-6 animate-in slide-in-from-left duration-700">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-heading font-bold leading-[1.1] tracking-tight">
-              {t.home.heroTitle1} <br/>
+              {t.home.heroTitle1} <br />
               <span className="text-orange-500">{t.home.heroTitle2}</span>
             </h1>
-            
+
             <p className="text-base sm:text-lg text-slate-300 max-w-lg leading-relaxed">
               {t.home.heroSubtitle}
             </p>
-            
+
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4">
-              <Link 
-                href="/app" 
+              <Link
+                href="/app"
                 data-testid="button-try-free-proposal"
                 className="inline-flex items-center justify-center h-12 sm:h-14 px-6 sm:px-8 rounded-md bg-orange-500 text-white font-bold text-base sm:text-lg hover:bg-orange-600 transition-all hover:scale-105 shadow-[0_0_20px_rgba(249,115,22,0.3)] whitespace-nowrap"
               >
                 {t.home.tryFreeProposal}
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Link>
-              <a 
-                href="#demo" 
+              <a
+                href="#demo"
                 data-testid="button-view-sample-proposal"
                 className="inline-flex items-center justify-center h-12 sm:h-14 px-6 sm:px-8 rounded-md border border-slate-700 bg-slate-800/50 text-white font-medium hover:bg-slate-800 transition-colors backdrop-blur-sm whitespace-nowrap"
               >
@@ -385,7 +366,7 @@ export default function Home() {
             </div>
 
           </div>
-          
+
           <div className="animate-in slide-in-from-right duration-1000 delay-200">
             <InstantPriceCalculator t={t} />
           </div>
@@ -431,7 +412,7 @@ export default function Home() {
               <div className="order-1 md:order-2">
                 <div className="w-full h-72 md:h-80 rounded-xl shadow-lg overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img 
+                  <img
                     src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&h=400&fit=crop&crop=center"
                     alt="Modern bathroom renovation with white tiles and fixtures"
                     className="w-full h-full object-cover"
@@ -439,7 +420,7 @@ export default function Home() {
                 </div>
               </div>
             </div>
-            
+
             <div className="grid sm:grid-cols-3 gap-12 mb-14 text-left max-w-4xl mx-auto">
               <div data-testid="benefit-prebuilt-scopes">
                 <div className="flex items-center gap-3 mb-3">
@@ -471,8 +452,8 @@ export default function Home() {
             </div>
 
             <div className="text-center">
-              <Link 
-                href="/app" 
+              <Link
+                href="/app"
                 data-testid="button-bathroom-proposal-cta"
                 className="inline-flex items-center justify-center h-14 px-10 rounded-md bg-slate-900 text-white font-bold text-lg hover:bg-slate-800 transition-all"
               >
@@ -548,23 +529,17 @@ export default function Home() {
               Proposal Templates for Every Trade
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              ScopeGen offers specialized proposal templates for 17+ contractor trades. Find the perfect templates for your business.
+              ScopeGen offers specialized proposal templates for plumbing, electrical, HVAC, bathroom, kitchen, and painting contractors.
             </p>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 max-w-5xl mx-auto">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 max-w-5xl mx-auto">
             {[
               { slug: "bathroom-remodeling", name: "Bathroom", icon: Bath },
               { slug: "kitchen-remodeling", name: "Kitchen", icon: ChefHat },
-              { slug: "roofing", name: "Roofing", icon: HomeIcon },
               { slug: "hvac", name: "HVAC", icon: Thermometer },
               { slug: "plumbing", name: "Plumbing", icon: Wrench },
               { slug: "electrical", name: "Electrical", icon: Plug },
               { slug: "painting", name: "Painting", icon: Paintbrush },
-              { slug: "landscaping", name: "Landscaping", icon: TreePine },
-              { slug: "flooring", name: "Flooring", icon: FileCheck },
-              { slug: "concrete", name: "Concrete", icon: FileCheck },
-              { slug: "deck-building", name: "Decks", icon: FileCheck },
-              { slug: "fence-installation", name: "Fencing", icon: FileCheck },
             ].map((trade) => (
               <Link
                 key={trade.slug}
@@ -575,11 +550,6 @@ export default function Home() {
                 <span className="text-sm font-medium text-slate-700 group-hover:text-primary transition-colors">{trade.name}</span>
               </Link>
             ))}
-          </div>
-          <div className="text-center mt-8">
-            <p className="text-sm text-muted-foreground">
-              Plus: Siding, Drywall, Windows, Tile, Cabinets, and more...
-            </p>
           </div>
         </div>
       </section>
@@ -636,7 +606,7 @@ export default function Home() {
           </div>
 
           <div className="text-center mt-12 lg:mt-16">
-            <Link 
+            <Link
               href="/app"
               data-testid="button-create-first-proposal-how"
               className="inline-flex items-center justify-center h-14 lg:h-16 px-10 lg:px-14 rounded-md bg-orange-500 text-white font-bold text-lg lg:text-xl hover:bg-orange-600 transition-all"
@@ -650,7 +620,7 @@ export default function Home() {
 
       {/* See What Your Proposals Look Like - Professional Preview Section */}
       <ProposalPreviewSection />
-      
+
       {/* Pricing Section */}
       <section id="pricing" className="py-20 sm:py-28 bg-slate-50">
         <div className="max-w-[95vw] xl:max-w-[90vw] 2xl:max-w-[85vw] mx-auto px-4 sm:px-8">
@@ -686,10 +656,10 @@ export default function Home() {
                   <span className="w-5 h-5 lg:w-6 lg:h-6 flex items-center justify-center text-slate-300">—</span> {t.home.starterFeature6}
                 </li>
               </ul>
-              <button 
+              <button
                 onClick={() => handleCheckout('starter')}
                 disabled={checkoutLoading === 'starter'}
-                className="block w-full text-center py-4 lg:py-5 border-2 border-slate-300 rounded-xl font-bold text-lg lg:text-xl hover:bg-slate-50 transition-colors disabled:opacity-50"
+                className="block w-full text-center py-4 lg:py-5 border-2 border-slate-300 rounded-xl font-bold text-lg lg:text-xl hover:bg-slate-50 transition-colors disabled:opacity-50  hover:cursor-pointer"
                 data-testid="button-get-started"
               >
                 {checkoutLoading === 'starter' ? (
@@ -726,20 +696,30 @@ export default function Home() {
                   <CheckCircle2 className="w-5 h-5 lg:w-6 lg:h-6 text-orange-500 flex-shrink-0" /> {t.home.proFeature6}
                 </li>
               </ul>
-              <button 
-                onClick={() => handleCheckout('pro')}
-                disabled={checkoutLoading === 'pro'}
-                className="block w-full text-center py-4 lg:py-5 bg-orange-500 text-white rounded-xl font-bold text-lg lg:text-xl hover:bg-orange-600 transition-colors disabled:opacity-50"
-                data-testid="button-subscribe-pro"
-              >
-                {checkoutLoading === 'pro' ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <Loader2 className="w-5 h-5 animate-spin" /> {t.home.processing}
-                  </span>
-                ) : (
-                  t.home.subscribePro
-                )}
-              </button>
+              {user?.isPro ? (
+                <button
+                  disabled
+                  className="block w-full text-center py-4 lg:py-5 bg-green-500 text-white rounded-xl font-bold text-lg lg:text-xl opacity-90 cursor-default"
+                  data-testid="button-current-plan-pro"
+                >
+                  Current Plan
+                </button>
+              ) : (
+                <button
+                  onClick={() => handleCheckout('pro')}
+                  disabled={checkoutLoading === 'pro'}
+                  className="block w-full text-center py-4 lg:py-5 bg-orange-500 text-white rounded-xl font-bold text-lg lg:text-xl hover:bg-orange-600 transition-colors disabled:opacity-50  hover:cursor-pointer"
+                  data-testid="button-subscribe-pro"
+                >
+                  {checkoutLoading === 'pro' ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="w-5 h-5 animate-spin" /> {t.home.processing}
+                    </span>
+                  ) : (
+                    t.home.subscribePro
+                  )}
+                </button>
+              )}
             </div>
 
             {/* Crew - For Teams */}
@@ -766,19 +746,11 @@ export default function Home() {
                   <CheckCircle2 className="w-5 h-5 lg:w-6 lg:h-6 text-green-500 flex-shrink-0" /> {t.home.crewFeature6}
                 </li>
               </ul>
-              <button 
-                onClick={() => handleCheckout('crew')}
-                disabled={checkoutLoading === 'crew'}
-                className="block w-full text-center py-4 lg:py-5 bg-slate-900 text-white rounded-xl font-bold text-lg lg:text-xl hover:bg-slate-800 transition-colors disabled:opacity-50"
+              <button
+                className="block w-full text-center py-4 lg:py-5 bg-slate-900 text-white rounded-xl font-bold text-lg lg:text-xl hover:bg-slate-800 transition-colors disabled:opacity-50 hover:cursor-pointer"
                 data-testid="button-subscribe-crew"
               >
-                {checkoutLoading === 'crew' ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <Loader2 className="w-5 h-5 animate-spin" /> {t.home.processing}
-                  </span>
-                ) : (
-                  t.home.subscribeCrew
-                )}
+                Coming soon...
               </button>
             </div>
           </div>
@@ -800,8 +772,8 @@ export default function Home() {
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-heading font-bold text-white mb-4 sm:mb-6">
             {t.home.readyToLookLikePro}
           </h2>
-          <Link 
-            href="/app" 
+          <Link
+            href="/app"
             data-testid="button-create-first-proposal-cta"
             className="inline-block bg-orange-500 text-white font-bold text-base sm:text-lg px-8 sm:px-10 py-3 sm:py-4 rounded-md hover:bg-orange-600 transition-colors shadow-lg"
           >
@@ -810,6 +782,6 @@ export default function Home() {
           <p className="mt-3 sm:mt-4 text-slate-400 text-xs sm:text-sm">{t.home.tryFreeThenUnlock}</p>
         </div>
       </section>
-    </Layout>
+    </LayoutWrapper>
   );
 }

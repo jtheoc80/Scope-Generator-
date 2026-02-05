@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { storage } from "@/lib/services/storage";
-import { db } from "@/server/db";
+import { db } from "@/lib/services/db";
 import { proposalPhotos } from "@shared/schema";
 import { and, eq } from "drizzle-orm";
 import { cleanupProposalPhotoObjects } from "@/lib/services/photoStorage";

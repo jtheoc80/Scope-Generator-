@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { db } from '@/server/db';
+import { db } from '@/lib/services/db';
 import { proposalTemplates, insertTemplateSchema } from '@shared/schema';
 import { eq, and, or, isNull, desc } from 'drizzle-orm';
 

@@ -10,33 +10,20 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-const LANGUAGE_STORAGE_KEY = "scopegen-language";
-
+// Language is now fixed to English only
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-      if (saved === "en" || saved === "es") {
-        return saved;
-      }
-      const browserLang = navigator.language.toLowerCase();
-      if (browserLang.startsWith("es")) {
-        return "es";
-      }
-    }
-    return "en";
-  });
+  // Always use English - Spanish language feature disabled
+  const [language] = useState<Language>("en");
 
-  const setLanguage = (lang: Language) => {
-    setLanguageState(lang);
-    localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
+  const setLanguage = (_lang: Language) => {
+    // No-op - language switching is disabled
   };
 
   useEffect(() => {
-    document.documentElement.lang = language;
-  }, [language]);
+    document.documentElement.lang = "en";
+  }, []);
 
-  const t = translations[language];
+  const t = translations.en;
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t }}>
@@ -48,7 +35,15 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 export function useLanguage() {
   const context = useContext(LanguageContext);
   if (context === undefined) {
-    throw new Error("useLanguage must be used within a LanguageProvider");
+    // During SSR/SSG, provide default English translations
+    // This allows the hook to work during static generation
+    return {
+      language: "en" as Language,
+      setLanguage: () => {
+        // No-op during SSR
+      },
+      t: translations.en,
+    };
   }
   return context;
 }

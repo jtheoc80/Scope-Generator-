@@ -84,3 +84,22 @@ export function isStripeConfigured(): boolean {
     process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
   );
 }
+
+
+let stripeSync: any = null;
+
+export async function getStripeSync() {
+  if (!stripeSync) {
+    const { StripeSync } = await import('stripe-replit-sync');
+    const secretKey = await getStripeSecretKey();
+
+    stripeSync = new StripeSync({
+      poolConfig: {
+        connectionString: process.env.DATABASE_URL!,
+        max: 2,
+      },
+      stripeSecretKey: secretKey,
+    });
+  }
+  return stripeSync;
+}

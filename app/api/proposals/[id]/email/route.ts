@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { storage } from '@/lib/services/storage';
+import { billingService } from '@/lib/services/billingService';
 import { sendProposalEmail } from '@/lib/services/emailService';
-import { db } from '@/server/db';
+import { db } from '@/lib/services/db';
 import { mobileJobDrafts } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
@@ -14,7 +15,7 @@ export async function POST(
 ) {
   try {
     const userId = await getRequestUserId(request);
-    
+
     if (!userId) {
       return NextResponse.json(
         { message: 'Unauthorized' },
@@ -25,9 +26,9 @@ export async function POST(
     const { id } = await params;
     const proposalId = parseInt(id);
     const body = await request.json();
-    
+
     const { recipientEmail, recipientName, message, runId } = body;
-    
+
     if (!recipientEmail) {
       return NextResponse.json(
         { message: 'Recipient email is required' },
@@ -55,6 +56,19 @@ export async function POST(
     // Get user info for sender details
     const user = await storage.getUser(userId);
 
+    // Check if proposal is unlocked - no credit deduction here
+    // Credits are deducted via /unlock endpoint for free users
+    // or at creation time for Pro users
+    if (!proposal.isUnlocked) {
+      return NextResponse.json(
+        {
+          message: 'Proposal must be unlocked first',
+          requiresUnlock: true,
+        },
+        { status: 402 }
+      );
+    }
+
     // Generate public token if not exists
     let publicToken: string | null = proposal.publicToken;
     if (!publicToken) {
@@ -63,9 +77,14 @@ export async function POST(
     }
 
     // Build public URL
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
-                    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
-                    'http://localhost:3000';
+    // Build public URL
+    // Prioritize the request origin to matches the user's current domain (fixes Vercel auth issues on previews)
+    const requestOrigin = request.headers.get('origin') ||
+      (request.headers.get('host') ? `https://${request.headers.get('host')}` : null);
+
+    const baseUrl = requestOrigin ||
+      process.env.NEXT_PUBLIC_APP_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
     const proposalUrl = publicToken ? `${baseUrl}/p/${publicToken}` : undefined;
 
     // Calculate total price (average of range)
@@ -74,11 +93,11 @@ export async function POST(
     // Generate deterministic PDF attachment from the canonical proposal id.
     const companyInfo = user
       ? {
-          companyName: user.companyName,
-          companyAddress: user.companyAddress,
-          companyPhone: user.companyPhone,
-          licenseNumber: user.licenseNumber,
-        }
+        companyName: user.companyName,
+        companyAddress: user.companyAddress,
+        companyPhone: user.companyPhone,
+        licenseNumber: user.licenseNumber,
+      }
       : null;
 
     const { pdfBytes, filename } = buildProposalPdf({
@@ -93,8 +112,8 @@ export async function POST(
       proposalTitle: proposal.jobTypeName,
       clientName: proposal.clientName,
       totalPrice,
-      senderName: user?.firstName || user?.lastName 
-        ? `${user.firstName || ''} ${user.lastName || ''}`.trim() 
+      senderName: user?.firstName || user?.lastName
+        ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
         : undefined,
       senderCompany: user?.companyName || undefined,
       customMessage: message,
@@ -117,9 +136,9 @@ export async function POST(
         error: result.error,
       });
       return NextResponse.json(
-        { 
+        {
           message: "Couldn't send email. Please try again.",
-          publicUrl: proposalUrl 
+          publicUrl: proposalUrl
         },
         { status: 500 }
       );

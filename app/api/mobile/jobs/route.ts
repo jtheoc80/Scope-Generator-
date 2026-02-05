@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { requireMobileAuth } from "@/src/lib/mobile/auth";
 import { createMobileJobRequestSchema } from "@/src/lib/mobile/types";
 import { storage } from "@/lib/services/storage";
-import { db } from "@/server/db";
+import { db } from "@/lib/services/db";
 import { proposalTemplates } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { getRequestId, jsonError, logEvent, withRequestId } from "@/src/lib/mobile/observability";

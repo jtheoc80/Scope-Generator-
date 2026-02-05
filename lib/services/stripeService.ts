@@ -32,37 +32,36 @@ export class StripeService {
   }
 
   async createOneTimeCheckoutSession(
-    customerId: string, 
+    customerId: string,
     productType: 'starter' | 'single' | 'pack',
-    successUrl: string, 
-    cancelUrl: string, 
+    successUrl: string,
+    cancelUrl: string,
     userId: string
   ) {
     const stripe = getUncachableStripeClient();
-    
-    // New pricing: Starter = $9 per proposal
-    // Legacy support: single = $9, pack = $39 (10 credits)
+
+    // Pricing: Starter = $12 per proposal, Pack = $39 (15 credits)
     let priceData: { unit_amount: number; currency: string };
     let productName: string;
     let description: string;
     let credits: number;
-    
+
     switch (productType) {
       case 'starter':
       case 'single':
-        priceData = { unit_amount: 900, currency: 'usd' };
+        priceData = { unit_amount: 1200, currency: 'usd' };
         productName = 'Starter - Single Proposal';
         description = 'Unlock 1 professional proposal';
         credits = 1;
         break;
       case 'pack':
         priceData = { unit_amount: 3900, currency: 'usd' };
-        productName = 'Proposal Pack (10 Credits)';
-        description = '10 proposal credits for active contractors';
-        credits = 10;
+        productName = 'Proposal Pack (15 Credits)';
+        description = '15 proposal credits for active contractors';
+        credits = 15;
         break;
     }
-    
+
     return await stripe.checkout.sessions.create({
       customer: customerId || undefined,
       client_reference_id: userId,
@@ -81,7 +80,7 @@ export class StripeService {
       mode: 'payment',
       success_url: successUrl,
       cancel_url: cancelUrl,
-      metadata: { 
+      metadata: {
         userId,
         productType,
         credits: credits.toString(),
@@ -97,13 +96,13 @@ export class StripeService {
     userId: string
   ) {
     const stripe = getUncachableStripeClient();
-    
+
     // Pro = $29/month (15 proposals), Crew = $79/month (50 proposals)
     let priceData: { unit_amount: number; currency: string };
     let productName: string;
     let description: string;
     let proposalsPerMonth: number;
-    
+
     switch (planType) {
       case 'pro':
         priceData = { unit_amount: 2900, currency: 'usd' };
@@ -118,7 +117,7 @@ export class StripeService {
         proposalsPerMonth = 50;
         break;
     }
-    
+
     return await stripe.checkout.sessions.create({
       customer: customerId || undefined,
       client_reference_id: userId,
@@ -140,7 +139,7 @@ export class StripeService {
       mode: 'subscription',
       success_url: successUrl,
       cancel_url: cancelUrl,
-      metadata: { 
+      metadata: {
         userId,
         planType,
         proposalsPerMonth: proposalsPerMonth.toString(),
@@ -241,10 +240,10 @@ export class StripeService {
     successUrl: string,
     userStripeSecretKey?: string | null
   ) {
-    const stripe = userStripeSecretKey 
+    const stripe = userStripeSecretKey
       ? createStripeClientWithKey(userStripeSecretKey)
       : getUncachableStripeClient();
-    
+
     const paymentLink = await stripe.paymentLinks.create({
       line_items: [
         {

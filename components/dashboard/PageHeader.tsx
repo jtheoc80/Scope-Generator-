@@ -6,7 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Camera, Calendar, Plus, Crown } from "lucide-react";
+import { Camera, Calendar, Plus, Crown, Users } from "lucide-react";
 
 export type DashboardDateRange = "7d" | "30d" | "90d" | "all";
 
@@ -22,6 +22,7 @@ export function DashboardPageHeader({
   title,
   subtitle,
   isPro,
+  subscriptionPlan,
   newProposalLabel = "New Proposal",
   scopeScanLabel = "ScopeScan",
   manageTemplatesLabel = "Manage Templates",
@@ -30,10 +31,13 @@ export function DashboardPageHeader({
   onDateRangeChange,
   onUpgrade,
   language,
+  hasActiveAccess,
+  trialDaysRemaining,
 }: {
   title: string;
   subtitle: string;
   isPro?: boolean;
+  subscriptionPlan?: string | null;
   newProposalLabel?: string;
   scopeScanLabel?: string;
   manageTemplatesLabel?: string;
@@ -42,7 +46,12 @@ export function DashboardPageHeader({
   onDateRangeChange?: (range: DashboardDateRange) => void;
   onUpgrade?: () => void;
   language?: string;
+  hasActiveAccess?: boolean;
+  trialDaysRemaining?: number;
 }) {
+  const es = language === "es";
+  const isCrew = subscriptionPlan === 'crew';
+
   return (
     <div className="border-b border-slate-200 bg-white">
       <div className="container mx-auto px-4 py-6">
@@ -52,25 +61,48 @@ export function DashboardPageHeader({
               <h1 className="truncate text-2xl font-semibold text-slate-900 md:text-3xl">
                 {title}
               </h1>
-              {isPro ? (
-                <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-700">
+              {isCrew ? (
+                <span className="rounded-full border border-purple-200 bg-purple-50 px-2 py-0.5 text-xs font-semibold text-purple-700 shadow-sm animate-in fade-in zoom-in">
+                  CREW
+                </span>
+              ) : isPro ? (
+                <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-700 shadow-sm animate-in fade-in zoom-in">
                   PRO
                 </span>
+              ) : hasActiveAccess ? (
+                <span className="rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-semibold text-green-700 shadow-sm animate-in fade-in zoom-in">
+                  ACTIVE
+                </span>
               ) : null}
+              {trialDaysRemaining !== undefined && trialDaysRemaining > 0 && !isPro && !isCrew && (
+                <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 uppercase tracking-tight animate-pulse">
+                  {trialDaysRemaining} {es ? "días de prueba" : "days left"}
+                </span>
+              )}
             </div>
             <p className="mt-1 truncate text-sm text-slate-500">{subtitle}</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 md:justify-end">
-            {/* Upgrade Button - Only shown for non-Pro users */}
-            {!isPro && onUpgrade && (
-              <Button 
+            {/* Upgrade Button - Only shown for non-Pro/non-Crew users */}
+            {!isPro && !isCrew && onUpgrade && (
+              <Button
                 onClick={onUpgrade}
-                className="gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600"
+                className="gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 cursor-pointer shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200"
                 data-testid="button-upgrade"
               >
                 <Crown className="h-4 w-4" />
                 {upgradeLabel}
+              </Button>
+            )}
+
+            {/* Team Button - Only shown for Crew users */}
+            {isCrew && (
+              <Button asChild variant="outline" className="gap-2 border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 hover:text-purple-800">
+                <Link href="/crew">
+                  <Users className="h-4 w-4" />
+                  Team
+                </Link>
               </Button>
             )}
 
@@ -99,7 +131,7 @@ export function DashboardPageHeader({
               </DropdownMenu>
             ) : null}
 
-            <Button asChild className="gap-2 bg-orange-600 text-white hover:bg-orange-700 border border-orange-600">
+            <Button asChild className="gap-2 bg-orange-600 text-white hover:bg-orange-700 border border-orange-600 shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200">
               <Link href="/app" data-testid="button-new-proposal">
                 <Plus className="h-4 w-4" />
                 {newProposalLabel}

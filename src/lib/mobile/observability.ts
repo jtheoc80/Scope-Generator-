@@ -6,6 +6,8 @@ export type ApiErrorCode =
   | "NOT_FOUND"
   | "CONFLICT"
   | "FAILED_PRECONDITION"
+  | "PAYMENT_REQUIRED"
+  | "PAYLOAD_TOO_LARGE"
   | "INTERNAL";
 
 export function getRequestId(headers: Headers) {

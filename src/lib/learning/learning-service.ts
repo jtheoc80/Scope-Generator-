@@ -6,18 +6,18 @@
  * that improve over time based on user behavior and geographic patterns.
  */
 
-import { db } from "@/server/db";
-import { 
-  userActionLog, 
+import { db } from "../../../lib/db";
+import {
+  userActionLog,
   geographicPatterns,
   photoCategorization,
   scopeItemPatterns,
   pricingPatterns,
   type UserActionType,
   type ProposalPhotoCategory,
-} from "@shared/schema";
+} from "../../../shared/schema";
 import { eq, and, desc, sql, count } from "drizzle-orm";
-import { logger } from "@/lib/logger";
+import { logger } from "../../../lib/logger";
 
 // ==========================================
 // Types
@@ -108,7 +108,7 @@ export async function updateActionOutcomes(
   try {
     await db
       .update(userActionLog)
-      .set({ 
+      .set({
         outcomeType: outcome,
         outcomeValue: finalValue ?? null,
       })
@@ -174,10 +174,10 @@ export async function suggestPhotoCategory(
     6: { category: 'existing', confidence: 50, reason: 'Sixth photo usually shows existing conditions' },
   };
 
-  const defaultSuggestion = defaults[photoOrder] || { 
-    category: 'other' as ProposalPhotoCategory, 
-    confidence: 40, 
-    reason: 'Additional documentation photo' 
+  const defaultSuggestion = defaults[photoOrder] || {
+    category: 'other' as ProposalPhotoCategory,
+    confidence: 40,
+    reason: 'Additional documentation photo'
   };
 
   try {
@@ -299,7 +299,7 @@ export async function recordScopeAction(
         eq(scopeItemPatterns.tradeId, context.tradeId || ''),
         eq(scopeItemPatterns.jobTypeId, context.jobTypeId || ''),
         eq(scopeItemPatterns.scopeItem, scopeItem),
-        context.zipcode 
+        context.zipcode
           ? eq(scopeItemPatterns.zipcode, context.zipcode)
           : sql`${scopeItemPatterns.zipcode} IS NULL`,
       ))
@@ -369,7 +369,7 @@ export async function getScopeSuggestions(
     for (const pattern of patterns) {
       const isInCurrentScope = currentScopeLower.has(pattern.scopeItem.toLowerCase());
       const totalActions = pattern.addedCount + pattern.removedCount;
-      
+
       if (totalActions < 5) continue; // Not enough data
 
       const addRate = pattern.addedCount / totalActions;
@@ -430,7 +430,7 @@ export async function recordPricingAdjustment(
 ): Promise<void> {
   const suggestedMid = (suggestedLow + suggestedHigh) / 2;
   const finalMid = (finalLow + finalHigh) / 2;
-  const adjustmentPercent = suggestedMid > 0 
+  const adjustmentPercent = suggestedMid > 0
     ? Math.round(((finalMid - suggestedMid) / suggestedMid) * 100)
     : 0;
 
@@ -514,7 +514,7 @@ export async function getPricingSuggestion(
       adjustment = userPatterns[0].avgAdjustment || 0;
       confidence = Math.min(90, 60 + (userPatterns[0].count * 3));
       reason = `Based on your pricing history (${userPatterns[0].count} similar jobs)`;
-    } 
+    }
     // Fall back to local patterns
     else if (localPatterns && localPatterns.length > 0 && localPatterns[0].count >= 5) {
       adjustment = localPatterns[0].avgAdjustment || 0;
@@ -523,7 +523,7 @@ export async function getPricingSuggestion(
     }
 
     const adjustmentMultiplier = 1 + (adjustment / 100);
-    
+
     return {
       suggestedLow: Math.round(basePriceLow * adjustmentMultiplier),
       suggestedHigh: Math.round(basePriceHigh * adjustmentMultiplier),
@@ -612,7 +612,7 @@ export async function getLearnedPreferences(
     scopeSuggestions,
   ] = await Promise.all([
     // Get photo suggestions for first 6 photos
-    Promise.all([1, 2, 3, 4, 5, 6].map(order => 
+    Promise.all([1, 2, 3, 4, 5, 6].map(order =>
       suggestPhotoCategory(context, order).then(s => ({ order, suggestion: s }))
     )),
     // Get scope suggestions (need current scope from caller)
@@ -656,7 +656,7 @@ export async function updateAggregatedPatterns(): Promise<void> {
   // This would be run as a cron job to aggregate patterns
   // from the raw action log into the pattern tables
   logger.info('Updating aggregated patterns...');
-  
+
   try {
     // 1. Update Scope Item Patterns
     // Move frequent additions from raw logs to patterns table
@@ -704,26 +704,26 @@ export const learningService = {
   // Action tracking
   logUserAction,
   updateActionOutcomes,
-  
+
   // Photo learning
   recordPhotoCategory,
   suggestPhotoCategory,
   getCommonCaptions,
-  
+
   // Scope learning
   recordScopeAction,
   getScopeSuggestions,
-  
+
   // Pricing learning
   recordPricingAdjustment,
   getPricingSuggestion,
-  
+
   // Geographic learning
   getGeographicInsights,
-  
+
   // Aggregated
   getLearnedPreferences,
-  
+
   // Maintenance
   updateAggregatedPatterns,
 };

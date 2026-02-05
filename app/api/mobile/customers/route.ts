@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireMobileAuth } from "@/src/lib/mobile/auth";
-import { db } from "@/server/db";
+import { db } from "@/lib/services/db";
 import { savedCustomers } from "@shared/schema";
 import { eq, desc, sql } from "drizzle-orm";
 import { z } from "zod";

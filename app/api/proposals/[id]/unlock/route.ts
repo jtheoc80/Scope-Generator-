@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { storage } from '@/lib/services/storage';
+import { billingService } from '@/lib/services/billingService';
+import { USER_SESSION_COOKIE } from '@/lib/user-session';
 
 export async function POST(
   request: NextRequest,
@@ -8,7 +10,7 @@ export async function POST(
 ) {
   try {
     const { userId } = await auth();
-    
+
     if (!userId) {
       return NextResponse.json(
         { message: 'Unauthorized' },
@@ -18,7 +20,7 @@ export async function POST(
 
     const { id } = await params;
     const proposalId = parseInt(id);
-    
+
     const user = await storage.getUser(userId);
     if (!user) {
       return NextResponse.json(
@@ -35,36 +37,53 @@ export async function POST(
       );
     }
 
+    // Already unlocked
     if (proposal.isUnlocked) {
       return NextResponse.json(proposal);
     }
 
-    const hasValidCredits = user.proposalCredits > 0 && 
-      (!user.creditsExpireAt || new Date() < user.creditsExpireAt);
+    // ========================================
+    // Tier-based access control for unlock
+    // ========================================
+    const billingStatus = await billingService.getBillingStatus(userId);
+    const now = new Date();
 
-    if (!hasValidCredits) {
-      return NextResponse.json(
-        { 
-          message: 'No credits available',
-          requiresPayment: true 
-        },
-        { status: 402 }
-      );
+    let creditDeducted = false;
+
+    // 1. Trial users (3-day): Free unlock
+    if (user.trialEndsAt && new Date(user.trialEndsAt) > now) {
+      // Allow - trial period active
     }
-
-    const updatedUser = await storage.deductProposalCredit(userId);
-    if (!updatedUser) {
+    // 2. Pro/Crew subscribers: Free unlock (included in subscription)
+    else if (billingStatus.hasActiveSubscription) {
+      // Allow - subscription includes unlock
+    }
+    // 3. Free users with credits: Deduct 1 credit
+    else if (billingStatus.availableCredits > 0) {
+      const updatedUser = await storage.deductProposalCredit(userId);
+      if (!updatedUser) {
+        return NextResponse.json(
+          { message: 'Failed to deduct credit', requiresPayment: true },
+          { status: 402 }
+        );
+      }
+      creditDeducted = true;
+    }
+    // 4. No access
+    else {
       return NextResponse.json(
-        { 
-          message: 'Failed to deduct credit',
-          requiresPayment: true 
+        {
+          message: 'No credits available. Purchase credits or subscribe to Pro.',
+          requiresPayment: true,
+          noCredits: true,
+          requiresUpgrade: true,
         },
         { status: 402 }
       );
     }
 
     const unlocked = await storage.unlockProposal(proposalId, userId);
-    
+
     if (!unlocked) {
       return NextResponse.json(
         { message: 'Failed to unlock proposal' },
@@ -72,10 +91,24 @@ export async function POST(
       );
     }
 
-    return NextResponse.json({
+    // Fetch updated billing status for response
+    const updatedBillingStatus = creditDeducted
+      ? await billingService.getBillingStatus(userId)
+      : billingStatus;
+
+    const response = NextResponse.json({
       ...unlocked,
-      remainingCredits: updatedUser.proposalCredits
+      remainingCredits: updatedBillingStatus.availableCredits,
+      creditDeducted,
     });
+
+    // Clear user session cookie cache if credit was deducted
+    // This forces the dashboard to fetch fresh user data with updated credits
+    if (creditDeducted) {
+      response.cookies.delete(USER_SESSION_COOKIE);
+    }
+
+    return response;
   } catch (error) {
     console.error('Error unlocking proposal:', error);
     return NextResponse.json(
@@ -84,3 +117,4 @@ export async function POST(
     );
   }
 }
+

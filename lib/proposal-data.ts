@@ -88,8 +88,8 @@ export const templates: Template[] = [
             items: [
               "Site protection including floor covering and dust barriers.",
               "Protect adjacent finishes and fixtures from damage."
-            ]
-          },
+              ]
+            },
           {
             title: "Demolition",
             items: [
@@ -2581,6 +2581,7 @@ export const templates: Template[] = [
       }
     ]
   },
+  /* === COMMENTED OUT - NON-CORE TRADES ===
   {
     id: "flooring",
     trade: "Flooring",
@@ -3522,6 +3523,7 @@ export const templates: Template[] = [
       }
     ]
   },
+  === END COMMENTED OUT NON-CORE TRADES === */
   {
     id: "hvac",
     trade: "HVAC",
@@ -4375,6 +4377,7 @@ export const templates: Template[] = [
       }
     ]
   },
+  /* === COMMENTED OUT - NON-CORE TRADES (BLOCK 2) ===
   {
     id: "landscaping",
     trade: "Landscaping",
@@ -6068,6 +6071,7 @@ export const templates: Template[] = [
       }
     ]
   }
+  === END COMMENTED OUT NON-CORE TRADES (BLOCK 2) === */
 ];
 
 // Spanish translations for electrical job types
@@ -7783,10 +7787,10 @@ type SpanishTranslation = {
   baseScope: string[];
   warranty?: string;
   exclusions?: string[];
-  options: Record<string, { 
-    label: string; 
-    scopeAddition?: string; 
-    choices?: { value: string; label: string; scopeAddition?: string }[] 
+  options: Record<string, {
+    label: string;
+    scopeAddition?: string;
+    choices?: { value: string; label: string; scopeAddition?: string }[]
   }>;
 };
 

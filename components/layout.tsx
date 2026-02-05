@@ -2,27 +2,26 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Hammer, Menu, X, Camera } from "lucide-react";
-import { LanguageSwitcher } from "@/components/language-switcher";
+import { Hammer, Menu, X, Camera, ChevronDown } from "lucide-react";
+// Language switching disabled - English only
+// import { LanguageSwitcher } from "@/components/language-switcher";
 import { useLanguage } from "@/hooks/useLanguage";
-import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 import { OnboardingModal } from "@/components/onboarding-modal";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const location = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { t } = useLanguage();
 
-  const { data: user } = useQuery({
-    queryKey: ["/api/auth/user"],
-    enabled: typeof window !== "undefined",
-    queryFn: async () => {
-      const res = await fetch("/api/auth/user");
-      if (!res.ok) return null;
-      return res.json();
-    },
-    retry: false,
-  });
+  const { user, isLoading } = useAuth();
 
   const showOnboarding = Boolean(user && !user.onboardingCompleted);
 
@@ -43,7 +42,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </Link>
 
           {/* Desktop Navigation - Alphabetical Order */}
-          <nav className="hidden md:flex items-center gap-4 lg:gap-6">
+          <nav className="hidden xl:flex items-center gap-2 lg:gap-6">
             <Link
               href="/calculator"
               className="text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
@@ -75,38 +74,71 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             >
               {t.pricing.title}
             </Link>
-            {(user?.subscriptionPlan === 'pro' || user?.subscriptionPlan === 'crew') && (
-              <Link
-                href="/pricing-insights"
-                className="text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
-              >
-                {t.nav.pricingInsights}
-              </Link>
+
+            {isLoading ? (
+              <>
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-4 w-16" />
+              </>
+            ) : (
+              <>
+                {(user?.subscriptionPlan === 'pro' || user?.subscriptionPlan === 'crew') && (
+                  <>
+                    {/* For Crew users, use a dropdown for tools to save space */}
+                    {user?.subscriptionPlan === 'crew' ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger className="flex items-center gap-1 text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors outline-none">
+                          Tools <ChevronDown className="h-3 w-3" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
+                            <Link href="/pricing-insights" className="w-full cursor-pointer">
+                              {t.nav.pricingInsights}
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href="/search-console" className="w-full cursor-pointer">
+                              {t.nav.searchConsole}
+                            </Link>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    ) : (
+                      /* Pro users only see Pricing Insights directly */
+                      <Link
+                        href="/pricing-insights"
+                        className="text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
+                      >
+                        {t.nav.pricingInsights}
+                      </Link>
+                    )}
+                  </>
+                )}
+
+                <Link
+                  href="/settings"
+                  className="text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
+                >
+                  {t.nav.settings}
+                </Link>
+
+                {user?.subscriptionPlan === 'crew' && (
+                  <Link
+                    href="/crew"
+                    className="text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
+                  >
+                    {t.nav.team}
+                  </Link>
+                )}
+              </>
             )}
-            {user?.subscriptionPlan === 'crew' && (
-              <Link
-                href="/search-console"
-                className="text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
-              >
-                {t.nav.searchConsole}
-              </Link>
-            )}
-            <Link
-              href="/settings"
-              className="text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
-            >
-              {t.nav.settings}
-            </Link>
-            {user?.subscriptionPlan === 'crew' && (
-              <Link
-                href="/crew"
-                className="text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
-              >
-                {t.nav.team}
-              </Link>
-            )}
-            <LanguageSwitcher />
-            {user ? (
+
+            {/* Language switching disabled - English only */}
+
+            {isLoading ? (
+              <Skeleton className="h-4 w-16" />
+            ) : user ? (
               <Link
                 href="/sign-out"
                 className="text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
@@ -121,9 +153,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 {t.nav.signIn}
               </Link>
             )}
-            {user && (
-              <Link 
-                href="/m/create" 
+
+            {user && !isLoading && (
+              <Link
+                href="/m/create"
                 className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition-colors"
                 title="Start ScopeScan™"
                 data-testid="nav-photo-capture"
@@ -131,6 +164,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <Camera className="h-5 w-5" />
               </Link>
             )}
+
             {location === "/" && (
               <Link
                 href="/app"
@@ -143,7 +177,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
           {/* Mobile Menu Button */}
           <button
-            className="md:hidden p-2 -mr-2 text-slate-600 hover:text-primary transition-colors"
+            className="xl:hidden p-2 -mr-2 text-slate-600 hover:text-primary transition-colors"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle menu"
             data-testid="button-mobile-menu"
@@ -154,11 +188,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
         {/* Mobile Navigation - Alphabetical Order */}
         {mobileMenuOpen && (
-          <nav className="md:hidden border-t border-border bg-white animate-in slide-in-from-top-2 duration-200">
+          <nav className="xl:hidden border-t border-border bg-white animate-in slide-in-from-top-2 duration-200">
             <div className="container mx-auto px-4 py-4 flex flex-col gap-4">
               {/* ScopeScan - Featured prominently */}
-              <Link 
-                href="/m/create" 
+              <Link
+                href="/m/create"
                 className="flex items-center gap-3 text-base font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-3 py-3 hover:bg-orange-100 transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
                 data-testid="nav-photo-capture-mobile"
@@ -169,45 +203,45 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   <span className="text-xs text-orange-600 font-normal">Snap a few photos → we generate a scope + estimate</span>
                 </div>
               </Link>
-              <Link 
-                href="/calculator" 
+              <Link
+                href="/calculator"
                 className="text-base font-medium text-slate-700 hover:text-primary transition-colors py-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Calculator
               </Link>
-              <Link 
-                href="/dashboard" 
+              <Link
+                href="/dashboard"
                 className="text-base font-medium text-slate-700 hover:text-primary transition-colors py-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {t.nav.dashboard}
               </Link>
-              <Link 
-                href="/#how-it-works" 
+              <Link
+                href="/#how-it-works"
                 className="text-base font-medium text-slate-700 hover:text-primary transition-colors py-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {t.nav.howItWorks}
               </Link>
-              <Link 
-                href="/market-pricing" 
+              <Link
+                href="/market-pricing"
                 className="text-base font-medium text-slate-700 hover:text-primary transition-colors py-2"
                 onClick={() => setMobileMenuOpen(false)}
                 data-testid="nav-market-pricing-mobile"
               >
                 {t.nav.marketPricing}
               </Link>
-              <Link 
-                href="/#pricing" 
+              <Link
+                href="/#pricing"
                 className="text-base font-medium text-slate-700 hover:text-primary transition-colors py-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {t.pricing.title}
               </Link>
               {(user?.subscriptionPlan === 'pro' || user?.subscriptionPlan === 'crew') && (
-                <Link 
-                  href="/pricing-insights" 
+                <Link
+                  href="/pricing-insights"
                   className="text-base font-medium text-slate-700 hover:text-primary transition-colors py-2"
                   onClick={() => setMobileMenuOpen(false)}
                 >
@@ -215,24 +249,24 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 </Link>
               )}
               {user?.subscriptionPlan === 'crew' && (
-                <Link 
-                  href="/search-console" 
+                <Link
+                  href="/search-console"
                   className="text-base font-medium text-slate-700 hover:text-primary transition-colors py-2"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   {t.nav.searchConsole}
                 </Link>
               )}
-              <Link 
-                href="/settings" 
+              <Link
+                href="/settings"
                 className="text-base font-medium text-slate-700 hover:text-primary transition-colors py-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {t.nav.settings}
               </Link>
               {user?.subscriptionPlan === 'crew' && (
-                <Link 
-                  href="/crew" 
+                <Link
+                  href="/crew"
                   className="text-base font-medium text-slate-700 hover:text-primary transition-colors py-2"
                   onClick={() => setMobileMenuOpen(false)}
                 >
@@ -256,11 +290,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   {t.nav.signIn}
                 </Link>
               )}
-              <div className="py-2">
-                <LanguageSwitcher />
-              </div>
-              <Link 
-                href="/app" 
+              {/* Language switching disabled - English only */}
+              <Link
+                href="/app"
                 className="bg-orange-500 text-white px-4 py-3 rounded-md text-base font-semibold hover:bg-orange-600 transition-colors text-center mt-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -289,7 +321,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 {t.footer.builtFor}
               </p>
             </div>
-            
+
             {/* Tools Column */}
             <div>
               <h4 className="text-white font-bold mb-4">Tools</h4>
@@ -307,7 +339,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <ul className="space-y-2 text-sm">
                 <li><Link href="/bathroom-remodel-estimate-template" className="hover:text-white transition-colors">Bathroom Estimate</Link></li>
                 <li><Link href="/kitchen-remodel-estimate-template" className="hover:text-white transition-colors">Kitchen Estimate</Link></li>
-                <li><Link href="/roofing-estimate-template" className="hover:text-white transition-colors">Roofing Estimate</Link></li>
+                <li><Link href="/painting-estimate-template" className="hover:text-white transition-colors">Painting Estimate</Link></li>
                 <li><Link href="/hvac-estimate-template" className="hover:text-white transition-colors">HVAC Estimate</Link></li>
                 <li><Link href="/plumbing-estimate-template" className="hover:text-white transition-colors">Plumbing Estimate</Link></li>
                 <li><Link href="/electrical-estimate-template" className="hover:text-white transition-colors">Electrical Estimate</Link></li>
@@ -320,7 +352,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <ul className="space-y-2 text-sm">
                 <li><Link href="/for/bathroom-remodeling" className="hover:text-white transition-colors">Bathroom Remodeling</Link></li>
                 <li><Link href="/for/kitchen-remodeling" className="hover:text-white transition-colors">Kitchen Remodeling</Link></li>
-                <li><Link href="/for/roofing" className="hover:text-white transition-colors">Roofing</Link></li>
+                <li><Link href="/for/painting" className="hover:text-white transition-colors">Painting</Link></li>
                 <li><Link href="/for/hvac" className="hover:text-white transition-colors">HVAC</Link></li>
                 <li><Link href="/for/plumbing" className="hover:text-white transition-colors">Plumbing</Link></li>
                 <li><Link href="/for/electrical" className="hover:text-white transition-colors">Electrical</Link></li>
@@ -356,29 +388,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* More Templates Row */}
-          <div className="border-t border-slate-800 pt-8 mb-8">
-            <h4 className="text-white font-bold mb-4">More Estimate Templates</h4>
-            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-              <Link href="/flooring-estimate-template" className="hover:text-white transition-colors">Flooring</Link>
-              <Link href="/painting-estimate-template" className="hover:text-white transition-colors">Painting</Link>
-              <Link href="/drywall-estimate-template" className="hover:text-white transition-colors">Drywall</Link>
-              <Link href="/for/landscaping" className="hover:text-white transition-colors">Landscaping</Link>
-              <Link href="/for/flooring" className="hover:text-white transition-colors">Flooring</Link>
-              <Link href="/for/siding" className="hover:text-white transition-colors">Siding</Link>
-              <Link href="/for/drywall" className="hover:text-white transition-colors">Drywall</Link>
-              <Link href="/for/window-installation" className="hover:text-white transition-colors">Windows</Link>
-              <Link href="/for/deck-building" className="hover:text-white transition-colors">Decks</Link>
-              <Link href="/for/fence-installation" className="hover:text-white transition-colors">Fencing</Link>
-              <Link href="/for/concrete" className="hover:text-white transition-colors">Concrete</Link>
-              <Link href="/for/tile-installation" className="hover:text-white transition-colors">Tile</Link>
-            </div>
-          </div>
+
 
           {/* CTA Row */}
           <div className="border-t border-slate-800 pt-8 mb-8 text-center">
             <h4 className="text-white font-bold mb-4">{t.hero.cta}</h4>
-            <Link 
-              href="/app" 
+            <Link
+              href="/app"
               className="inline-block bg-secondary text-slate-900 px-6 py-3 rounded font-bold text-sm hover:bg-secondary/90 transition-colors"
             >
               {t.hero.cta}
@@ -392,7 +408,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </footer>
 
-      <OnboardingModal open={showOnboarding} userName={user?.firstName} />
+      <OnboardingModal open={showOnboarding} userName={user?.firstName ?? undefined} />
     </div>
   );
 }

@@ -262,6 +262,11 @@ export interface BillingStatus {
   // Cancellation
   cancelAtPeriodEnd: boolean;
   
+  // Payment status flags
+  isPastDue?: boolean;
+  hasGracePeriodAccess?: boolean;
+  isCanceledButActive?: boolean;
+  
   // For debugging/display
   stripeCustomerId: string | null;
 }
@@ -269,8 +274,33 @@ export interface BillingStatus {
 /**
  * Check if a subscription status grants access
  */
+/**
+ * Determine if subscription status grants active access
+ * 
+ * CRITICAL: This is the source of truth for subscription access.
+ * Only 'active' and 'trialing' grant full access.
+ * 'past_due' may have grace period access (handled separately).
+ */
 export function isActiveSubscriptionStatus(status: SubscriptionStatus | 'none'): boolean {
   return status === 'active' || status === 'trialing';
+}
+
+/**
+ * Determine if subscription has grace period access (past_due but still within grace period)
+ * This allows users with failed payments to retain access temporarily
+ */
+export function hasGracePeriodAccess(
+  status: SubscriptionStatus | 'none',
+  currentPeriodEnd: Date | null
+): boolean {
+  if (status !== 'past_due') return false;
+  if (!currentPeriodEnd) return false;
+  
+  // Grace period: 3 days after period end
+  const gracePeriodEnd = new Date(currentPeriodEnd);
+  gracePeriodEnd.setDate(gracePeriodEnd.getDate() + 3);
+  
+  return new Date() < gracePeriodEnd;
 }
 
 /**
@@ -289,15 +319,31 @@ export function calculateBillingStatus(
   // Check trial
   const isInTrial = !!user.trialEndsAt && new Date(user.trialEndsAt) > now;
   
-  // Determine status
+  // CRITICAL: subscriptions.status is the PRIMARY source of truth
+  // Always derive access from subscription status, not from user.is_pro flag
   const status = subscription?.status as SubscriptionStatus || 'none';
   const hasActiveSubscription = isActiveSubscriptionStatus(status);
   
+  // Check grace period access (past_due but within grace period)
+  const hasGraceAccess = hasGracePeriodAccess(status, subscription?.currentPeriodEnd || null);
+  
+  // Check if subscription is canceled but still in billing period (cancel_at_period_end)
+  const isCanceledButActive = status === 'active' && subscription?.cancelAtPeriodEnd === true;
+  const hasCanceledAccess = isCanceledButActive && subscription?.currentPeriodEnd 
+    ? new Date(subscription.currentPeriodEnd) > now
+    : false;
+  
   // Can access premium if:
-  // 1. Has active subscription
-  // 2. Has available credits
-  // 3. Is in trial period
-  const canAccessPremiumFeatures = hasActiveSubscription || availableCredits > 0 || isInTrial;
+  // 1. Has active subscription (active or trialing)
+  // 2. Has grace period access (past_due within 3 days)
+  // 3. Has canceled but still in billing period
+  // 4. Has available credits
+  // 5. Is in trial period
+  const canAccessPremiumFeatures = hasActiveSubscription 
+    || hasGraceAccess 
+    || hasCanceledAccess
+    || availableCredits > 0 
+    || isInTrial;
   
   return {
     hasActiveSubscription,
@@ -311,5 +357,9 @@ export function calculateBillingStatus(
     creditsExpireAt: user.creditsExpireAt ? new Date(user.creditsExpireAt) : null,
     cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd || false,
     stripeCustomerId: subscription?.stripeCustomerId || null,
+    // Additional status flags
+    isPastDue: status === 'past_due',
+    hasGracePeriodAccess: hasGraceAccess,
+    isCanceledButActive: hasCanceledAccess,
   };
 }

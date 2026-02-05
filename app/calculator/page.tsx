@@ -1,13 +1,12 @@
 'use client';
 import { useState, useEffect, useMemo } from "react";
-import Layout from "@/components/layout";
+import LayoutWrapper from "@/components/layout-wrapper";
 import Link from "next/link";
-import { 
-  Calculator, Loader2, Sparkles, Bath, ChefHat, Home as HomeIcon, 
-  Paintbrush, Plug, Wrench, Thermometer, TreePine, ArrowRight, 
-  Share2, Copy, Check, Twitter, Facebook, Linkedin, Code, 
-  DollarSign, Clock, Hammer, Building2, Layers, Grid3X3, 
-  Fence, CircleDot, Palette, MapPin
+import {
+  Calculator, Loader2, Sparkles, Bath, ChefHat, Home as HomeIcon,
+  Paintbrush, Plug, Wrench, Thermometer, TreePine, ArrowRight,
+  Share2, Copy, Check, Twitter, Facebook, Linkedin, Code,
+  DollarSign, Clock, Hammer, MapPin
 } from "lucide-react";
 import { regionalMultipliers } from "@/lib/regional-pricing";
 import { buildEstimateParams } from "@/app/m/lib/estimate-params";
@@ -43,21 +42,7 @@ const calculatorTrades = [
       { id: "island-addition", name: "Kitchen Island Addition", low: 8000, high: 20000, days: [5, 10] },
     ]
   },
-  {
-    id: "roofing",
-    name: "Roofing",
-    icon: HomeIcon,
-    materialsRatio: 0.40,
-    laborRatio: 0.60,
-    jobTypes: [
-      { id: "full-roof", name: "Full Roof Replacement", low: 12000, high: 25000, days: [3, 7] },
-      { id: "roof-repair", name: "Roof Repair", low: 500, high: 2500, days: [1, 2] },
-      { id: "gutter-install", name: "Gutter Install/Replace", low: 1200, high: 3000, days: [1, 2] },
-      { id: "metal-roof", name: "Metal Roof Installation", low: 18000, high: 45000, days: [5, 10] },
-      { id: "flat-roof", name: "Flat Roof / TPO / EPDM", low: 8000, high: 18000, days: [3, 5] },
-      { id: "skylight", name: "Skylight Installation", low: 1500, high: 4000, days: [1, 2] },
-    ]
-  },
+
   {
     id: "painting",
     name: "Painting",
@@ -118,148 +103,6 @@ const calculatorTrades = [
       { id: "heat-pump", name: "Heat Pump Installation", low: 5000, high: 12000, days: [1, 3] },
     ]
   },
-  {
-    id: "landscaping",
-    name: "Landscaping",
-    icon: TreePine,
-    materialsRatio: 0.45,
-    laborRatio: 0.55,
-    jobTypes: [
-      { id: "lawn-install", name: "Lawn Installation", low: 2000, high: 6000, days: [2, 5] },
-      { id: "patio", name: "Patio / Walkway", low: 4000, high: 15000, days: [3, 7] },
-      { id: "tree-work", name: "Tree Removal / Trimming", low: 400, high: 3500, days: [1, 2] },
-      { id: "irrigation", name: "Irrigation System", low: 2500, high: 6000, days: [2, 4] },
-      { id: "retaining-wall", name: "Retaining Wall", low: 3000, high: 10000, days: [3, 7] },
-      { id: "outdoor-lighting", name: "Outdoor Lighting", low: 1500, high: 5000, days: [1, 3] },
-    ]
-  },
-  {
-    id: "flooring",
-    name: "Flooring",
-    icon: Layers,
-    materialsRatio: 0.50,
-    laborRatio: 0.50,
-    jobTypes: [
-      { id: "hardwood", name: "Hardwood Installation", low: 4000, high: 12000, days: [3, 7] },
-      { id: "lvp", name: "LVP / Vinyl Plank", low: 2500, high: 6000, days: [2, 4] },
-      { id: "tile-floor", name: "Tile Flooring", low: 3500, high: 10000, days: [3, 7] },
-      { id: "carpet", name: "Carpet Installation", low: 1500, high: 5000, days: [1, 3] },
-      { id: "refinish", name: "Hardwood Refinishing", low: 2000, high: 5000, days: [3, 5] },
-      { id: "subfloor", name: "Subfloor Repair", low: 1000, high: 4000, days: [2, 4] },
-    ]
-  },
-  {
-    id: "siding",
-    name: "Siding",
-    icon: Building2,
-    materialsRatio: 0.45,
-    laborRatio: 0.55,
-    jobTypes: [
-      { id: "vinyl-siding", name: "Vinyl Siding Installation", low: 8000, high: 18000, days: [5, 10] },
-      { id: "fiber-cement", name: "Fiber Cement Siding", low: 15000, high: 35000, days: [7, 14] },
-      { id: "siding-repair", name: "Siding Repair", low: 500, high: 2500, days: [1, 2] },
-      { id: "wood-siding", name: "Wood Siding", low: 12000, high: 28000, days: [7, 14] },
-      { id: "stone-veneer", name: "Stone Veneer", low: 8000, high: 20000, days: [5, 10] },
-    ]
-  },
-  {
-    id: "drywall",
-    name: "Drywall",
-    icon: Grid3X3,
-    materialsRatio: 0.30,
-    laborRatio: 0.70,
-    jobTypes: [
-      { id: "full-room", name: "Full Room Drywall", low: 1500, high: 4000, days: [3, 5] },
-      { id: "patch-repair", name: "Patch & Repair", low: 200, high: 800, days: [1, 1] },
-      { id: "basement-finish", name: "Basement Finishing", low: 5000, high: 15000, days: [7, 14] },
-      { id: "ceiling-repair", name: "Ceiling Repair", low: 300, high: 1200, days: [1, 2] },
-      { id: "texture", name: "Texture Application", low: 500, high: 2000, days: [1, 3] },
-    ]
-  },
-  {
-    id: "windows",
-    name: "Window Installation",
-    icon: Grid3X3,
-    materialsRatio: 0.60,
-    laborRatio: 0.40,
-    jobTypes: [
-      { id: "single-window", name: "Single Window Replacement", low: 400, high: 1200, days: [1, 1] },
-      { id: "whole-house", name: "Whole House Windows", low: 8000, high: 25000, days: [3, 7] },
-      { id: "bay-window", name: "Bay Window Installation", low: 2000, high: 5000, days: [1, 2] },
-      { id: "sliding-door", name: "Sliding Door Install", low: 1500, high: 4000, days: [1, 2] },
-      { id: "storm-windows", name: "Storm Windows", low: 200, high: 600, days: [1, 1] },
-    ]
-  },
-  {
-    id: "deck",
-    name: "Deck Building",
-    icon: Hammer,
-    materialsRatio: 0.45,
-    laborRatio: 0.55,
-    jobTypes: [
-      { id: "wood-deck", name: "Wood Deck Construction", low: 8000, high: 20000, days: [5, 10] },
-      { id: "composite", name: "Composite Deck", low: 15000, high: 35000, days: [5, 12] },
-      { id: "deck-repair", name: "Deck Repair", low: 500, high: 3000, days: [1, 3] },
-      { id: "railing", name: "Railing Installation", low: 1000, high: 5000, days: [1, 3] },
-      { id: "pergola", name: "Pergola / Cover", low: 3000, high: 10000, days: [3, 7] },
-    ]
-  },
-  {
-    id: "fence",
-    name: "Fence Installation",
-    icon: Fence,
-    materialsRatio: 0.50,
-    laborRatio: 0.50,
-    jobTypes: [
-      { id: "wood-fence", name: "Wood Privacy Fence", low: 2500, high: 8000, days: [2, 5] },
-      { id: "chain-link", name: "Chain Link Fence", low: 1500, high: 4000, days: [1, 3] },
-      { id: "vinyl-fence", name: "Vinyl Fence", low: 3500, high: 10000, days: [2, 5] },
-      { id: "iron-fence", name: "Iron / Aluminum Fence", low: 4000, high: 12000, days: [2, 5] },
-      { id: "fence-repair", name: "Fence Repair", low: 200, high: 1000, days: [1, 1] },
-    ]
-  },
-  {
-    id: "concrete",
-    name: "Concrete",
-    icon: CircleDot,
-    materialsRatio: 0.40,
-    laborRatio: 0.60,
-    jobTypes: [
-      { id: "driveway", name: "Driveway Replacement", low: 5000, high: 15000, days: [3, 7] },
-      { id: "sidewalk", name: "Sidewalk / Path", low: 1500, high: 5000, days: [2, 4] },
-      { id: "patio-slab", name: "Patio Slab", low: 2500, high: 8000, days: [2, 5] },
-      { id: "foundation-repair", name: "Foundation Repair", low: 5000, high: 20000, days: [3, 10] },
-      { id: "stamped", name: "Stamped Concrete", low: 4000, high: 12000, days: [3, 7] },
-    ]
-  },
-  {
-    id: "tile",
-    name: "Tile Installation",
-    icon: Grid3X3,
-    materialsRatio: 0.45,
-    laborRatio: 0.55,
-    jobTypes: [
-      { id: "floor-tile", name: "Floor Tile Installation", low: 2500, high: 8000, days: [3, 7] },
-      { id: "shower-tile", name: "Shower Tile", low: 3000, high: 8000, days: [4, 8] },
-      { id: "backsplash-tile", name: "Backsplash Tile", low: 1000, high: 3500, days: [1, 3] },
-      { id: "fireplace-tile", name: "Fireplace Tile Surround", low: 800, high: 3000, days: [1, 3] },
-      { id: "outdoor-tile", name: "Outdoor / Patio Tile", low: 3000, high: 10000, days: [3, 7] },
-    ]
-  },
-  {
-    id: "cabinets",
-    name: "Cabinet Installation",
-    icon: Palette,
-    materialsRatio: 0.60,
-    laborRatio: 0.40,
-    jobTypes: [
-      { id: "kitchen-cabinets", name: "Kitchen Cabinets (Stock)", low: 5000, high: 12000, days: [3, 5] },
-      { id: "custom-cabinets", name: "Custom Cabinets", low: 15000, high: 40000, days: [7, 14] },
-      { id: "bathroom-vanity", name: "Bathroom Vanity Install", low: 800, high: 2500, days: [1, 2] },
-      { id: "garage-cabinets", name: "Garage Cabinets", low: 2000, high: 6000, days: [1, 3] },
-      { id: "cabinet-hardware", name: "Cabinet Hardware Update", low: 200, high: 800, days: [1, 1] },
-    ]
-  },
 ];
 
 const sizeMultipliers = {
@@ -293,15 +136,12 @@ const faqs = [
 ];
 
 const popularProjects = [
-  { name: "Bathroom Remodeling", slug: "bathroom-remodeling-proposal", range: "$1,800 - $28,000" },
-  { name: "Kitchen Remodeling", slug: "kitchen-remodeling-proposal", range: "$8,000 - $85,000" },
-  { name: "Roofing", slug: "roofing-proposal", range: "$3,500 - $45,000" },
-  { name: "Painting", slug: "painting-proposal", range: "$450 - $15,000" },
-  { name: "HVAC", slug: "hvac-proposal", range: "$99 - $12,000" },
-  { name: "Electrical", slug: "electrical-proposal", range: "$150 - $15,000" },
-  { name: "Plumbing", slug: "plumbing-proposal", range: "$150 - $15,000" },
-  { name: "Flooring", slug: "flooring-proposal", range: "$1,500 - $12,000" },
-  { name: "Landscaping", slug: "landscaping-proposal", range: "$400 - $15,000" },
+  { name: "Bathroom Remodeling", slug: "bathroom-remodeling", range: "$1,800 - $28,000" },
+  { name: "Kitchen Remodeling", slug: "kitchen-remodeling", range: "$8,000 - $85,000" },
+  { name: "Painting", slug: "painting", range: "$450 - $15,000" },
+  { name: "HVAC", slug: "hvac", range: "$99 - $12,000" },
+  { name: "Electrical", slug: "electrical", range: "$150 - $15,000" },
+  { name: "Plumbing", slug: "plumbing", range: "$150 - $15,000" },
 ];
 
 export default function CalculatorPage() {
@@ -421,36 +261,6 @@ export default function CalculatorPage() {
     }).format(price);
   };
 
-  const copyShareLink = () => {
-    const url = `${window.location.origin}/calculator?trade=${selectedTrade}&job=${selectedJobType}&size=${selectedSize}`;
-    navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const copyEmbedCode = () => {
-    const code = `<iframe src="https://scopegenerator.com/calculator" width="100%" height="700" style="border:none;border-radius:12px;" title="Free Contractor Price Calculator"></iframe>`;
-    navigator.clipboard.writeText(code);
-    setEmbedCopied(true);
-    setTimeout(() => setEmbedCopied(false), 2000);
-  };
-
-  const shareOnTwitter = () => {
-    const text = `Just got an estimate for my ${trade?.name} project: ${formatPrice(animatedLow)} - ${formatPrice(animatedHigh)}. Free calculator:`;
-    const url = `${window.location.origin}/calculator`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
-  };
-
-  const shareOnFacebook = () => {
-    const url = `${window.location.origin}/calculator`;
-    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
-  };
-
-  const shareOnLinkedIn = () => {
-    const url = `${window.location.origin}/calculator`;
-    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank');
-  };
-
   const TradeIcon = trade?.icon || Calculator;
 
   // Build proposal handoff URL with current estimate state
@@ -467,7 +277,7 @@ export default function CalculatorPage() {
   }, [selectedTrade, selectedJobType, selectedSize, zipCode, customSqFt]);
 
   return (
-    <Layout>
+    <LayoutWrapper>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
         <section className="bg-slate-900 text-white py-12 sm:py-16">
           <div className="container mx-auto px-4 text-center">
@@ -498,7 +308,7 @@ export default function CalculatorPage() {
                 </div>
               </div>
 
-              <div className="p-6 sm:p-8 space-y-6">
+              <div className="p-4 sm:p-8 space-y-6">
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">1. What type of project?</label>
                   <select
@@ -539,11 +349,10 @@ export default function CalculatorPage() {
                         data-testid={`button-size-${key}`}
                         onClick={() => setSelectedSize(key)}
                         disabled={!selectedJobType}
-                        className={`py-3 px-4 rounded-xl border-2 transition-all text-center disabled:opacity-50 disabled:cursor-not-allowed ${
-                          selectedSize === key
-                            ? "border-primary bg-primary/10 text-slate-900 font-bold"
-                            : "border-slate-200 hover:border-slate-300 text-slate-600"
-                        }`}
+                        className={`py-3 px-4 rounded-xl border-2 transition-all text-center disabled:opacity-50 disabled:cursor-not-allowed ${selectedSize === key
+                          ? "border-primary bg-primary/10 text-slate-900 font-bold"
+                          : "border-slate-200 hover:border-slate-300 text-slate-600"
+                          }`}
                       >
                         <div className="font-semibold">{value.label}</div>
                         <div className="text-xs text-slate-500">{value.sqftRange}</div>
@@ -592,13 +401,12 @@ export default function CalculatorPage() {
                   </div>
                 </div>
 
-                <div className={`mt-6 p-6 rounded-2xl transition-all duration-500 ${
-                  showPrice 
-                    ? "bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200" 
-                    : isCalculating
-                      ? "bg-slate-50 border-2 border-slate-200"
-                      : "bg-slate-50 border-2 border-dashed border-slate-300"
-                }`}>
+                <div className={`mt-6 p-6 rounded-2xl transition-all duration-500 ${showPrice
+                  ? "bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200"
+                  : isCalculating
+                    ? "bg-slate-50 border-2 border-slate-200"
+                    : "bg-slate-50 border-2 border-dashed border-slate-300"
+                  }`}>
                   {isCalculating ? (
                     <div className="flex items-center justify-center gap-3 py-4">
                       <Loader2 className="w-6 h-6 text-primary animate-spin" />
@@ -612,7 +420,7 @@ export default function CalculatorPage() {
                           <span className="text-sm font-semibold text-green-700 uppercase tracking-wide">Estimated Price Range</span>
                           <Sparkles className="w-5 h-5 text-secondary" />
                         </div>
-                        <div className="text-4xl sm:text-5xl font-heading font-bold text-slate-900" data-testid="text-price-range">
+                        <div className="text-3xl sm:text-5xl font-heading font-bold text-slate-900" data-testid="text-price-range">
                           {formatPrice(animatedLow)} – {formatPrice(animatedHigh)}
                         </div>
                         {detectedRegion && (
@@ -620,7 +428,7 @@ export default function CalculatorPage() {
                         )}
                       </div>
 
-                      <div className="grid grid-cols-3 gap-4 pt-4 border-t border-green-200">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-4 pt-4 border-t border-green-200">
                         <div className="text-center" data-testid="breakdown-materials">
                           <div className="flex items-center justify-center gap-1 text-slate-500 text-sm mb-1">
                             <DollarSign className="w-4 h-4" />
@@ -663,14 +471,6 @@ export default function CalculatorPage() {
                           Turn into a Proposal
                           <ArrowRight className="w-5 h-5" />
                         </Link>
-                        <button
-                          onClick={copyShareLink}
-                          data-testid="button-share-estimate"
-                          className="flex items-center justify-center gap-2 h-12 px-6 rounded-xl border-2 border-slate-200 text-slate-700 font-medium hover:bg-slate-50 transition-all"
-                        >
-                          {copied ? <Check className="w-5 h-5 text-green-600" /> : <Copy className="w-5 h-5" />}
-                          {copied ? "Link Copied!" : "Share This Estimate"}
-                        </button>
                       </div>
                     </div>
                   ) : (
@@ -684,65 +484,6 @@ export default function CalculatorPage() {
                 </div>
               </div>
             </div>
-
-            {showPrice && (
-              <div className="mt-8 bg-white rounded-xl shadow-lg border border-slate-200 p-6 sm:p-8 animate-in slide-in-from-bottom duration-500">
-                <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                  <Share2 className="w-5 h-5 text-primary" />
-                  Share This Calculator
-                </h3>
-                
-                <div className="flex flex-wrap gap-3 mb-6">
-                  <button
-                    onClick={shareOnTwitter}
-                    data-testid="button-share-twitter"
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#1DA1F2] text-white font-medium hover:bg-[#1a8cd8] transition-colors"
-                  >
-                    <Twitter className="w-4 h-4" />
-                    Twitter
-                  </button>
-                  <button
-                    onClick={shareOnFacebook}
-                    data-testid="button-share-facebook"
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#4267B2] text-white font-medium hover:bg-[#375695] transition-colors"
-                  >
-                    <Facebook className="w-4 h-4" />
-                    Facebook
-                  </button>
-                  <button
-                    onClick={shareOnLinkedIn}
-                    data-testid="button-share-linkedin"
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0A66C2] text-white font-medium hover:bg-[#084d94] transition-colors"
-                  >
-                    <Linkedin className="w-4 h-4" />
-                    LinkedIn
-                  </button>
-                </div>
-
-                <div className="border-t border-slate-200 pt-6">
-                  <h4 className="font-semibold text-slate-900 mb-2 flex items-center gap-2">
-                    <Code className="w-4 h-4" />
-                    Embed This Calculator
-                  </h4>
-                  <p className="text-sm text-slate-600 mb-3">
-                    Bloggers: Feel free to embed this calculator on your site!
-                  </p>
-                  <div className="relative">
-                    <pre className="bg-slate-100 rounded-lg p-4 text-sm text-slate-700 overflow-x-auto">
-                      {`<iframe src="https://scopegenerator.com/calculator" width="100%" height="700" style="border:none;border-radius:12px;" title="Free Contractor Price Calculator"></iframe>`}
-                    </pre>
-                    <button
-                      onClick={copyEmbedCode}
-                      data-testid="button-copy-embed"
-                      className="absolute top-2 right-2 flex items-center gap-1 px-3 py-1.5 rounded-md bg-white border border-slate-200 text-sm font-medium hover:bg-slate-50 transition-colors"
-                    >
-                      {embedCopied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
-                      {embedCopied ? "Copied!" : "Copy"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </section>
 
@@ -794,7 +535,7 @@ export default function CalculatorPage() {
               {popularProjects.map((project) => (
                 <Link
                   key={project.slug}
-                  href={`/${project.slug}`}
+                  href={`/for/${project.slug}`}
                   data-testid={`link-project-${project.slug}`}
                   className="bg-white rounded-xl p-5 shadow-sm border border-slate-200 hover:shadow-md hover:border-primary/30 transition-all group"
                 >
@@ -853,6 +594,6 @@ export default function CalculatorPage() {
           </div>
         </section>
       </div>
-    </Layout>
+    </LayoutWrapper>
   );
 }

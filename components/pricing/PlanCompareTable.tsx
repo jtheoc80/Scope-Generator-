@@ -68,27 +68,27 @@ export function PlanCompareTable({ t }: CompareTableProps) {
     recommended?: boolean;
     microcopy?: string;
   }> = [
-    {
-      key: "starter",
-      name: t.home.starterPlan,
-      tagline: "Pay as you go",
-      price: `${t.home.starterPrice} ${t.home.starterPriceLabel}`, // "$9 per proposal"
-    },
-    {
-      key: "pro",
-      name: t.home.proPlan,
-      tagline: "Best for solo operators",
-      price: `${t.home.proPrice}${t.home.proPriceLabel}`, // "$29/month"
-      recommended: true,
-      microcopy: "Most popular",
-    },
-    {
-      key: "crew",
-      name: t.home.crewPlan,
-      tagline: "Built for teams",
-      price: `${t.home.crewPrice}${t.home.crewPriceLabel}`, // "$79/month"
-    },
-  ];
+      {
+        key: "starter",
+        name: t.home.starterPlan,
+        tagline: "Pay as you go",
+        price: `${t.home.starterPrice} ${t.home.starterPriceLabel}`, // "$9 per proposal"
+      },
+      {
+        key: "pro",
+        name: t.home.proPlan,
+        tagline: "Best for solo operators",
+        price: `${t.home.proPrice}${t.home.proPriceLabel}`, // "$29/month"
+        recommended: true,
+        microcopy: "Most popular",
+      },
+      {
+        key: "crew",
+        name: t.home.crewPlan,
+        tagline: "Built for teams",
+        price: `${t.home.crewPrice}${t.home.crewPriceLabel}`, // "$79/month"
+      },
+    ];
 
   const groups: FeatureGroup[] = [
     {
@@ -228,7 +228,7 @@ export function PlanCompareTable({ t }: CompareTableProps) {
                 scope="col"
                 className={[
                   headerCellBase,
-                  "sticky left-0 z-30 min-w-[240px] bg-white",
+                  "sticky left-0 z-30 min-w-[140px] sm:min-w-[240px] bg-white",
                   "text-sm font-semibold text-slate-900",
                   "border-r border-slate-200",
                 ].join(" ")}
@@ -310,7 +310,7 @@ export function PlanCompareTable({ t }: CompareTableProps) {
                         role="rowheader"
                         className={[
                           bodyCellBase,
-                          "sticky left-0 z-20 min-w-[240px] bg-white",
+                          "sticky left-0 z-20 min-w-[140px] sm:min-w-[240px] bg-white",
                           "border-r border-slate-200",
                           "text-slate-900 font-semibold",
                         ].join(" ")}

@@ -12,10 +12,14 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from '@/components/ui/drawer';
+import { cn } from '@/lib/utils';
+import {
+  type CompanyInfo,
+  type ProposalPreviewData,
+} from './proposal-types';
 import ProposalPreview from '@/components/proposal-preview';
 import { type ProposalPhoto } from '@/components/proposal-photos';
 import { Eye, EyeOff, X, FileText, ChevronUp, Sparkles } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 /**
  * Premium loading skeleton for the proposal preview
@@ -79,67 +83,7 @@ function ProposalSkeleton() {
   );
 }
 
-interface CompanyInfo {
-  companyName?: string | null;
-  companyAddress?: string | null;
-  companyPhone?: string | null;
-  companyLogo?: string | null;
-  licenseNumber?: string | null;
-}
-
-/**
- * A section within the scope of work (for grouped display)
- */
-interface ScopeSection {
-  title: string;
-  items: string[];
-}
-
-interface LineItem {
-  serviceId: string;
-  tradeName: string;
-  jobTypeName: string;
-  scope: string[];
-  /** Optional: Grouped scope sections with headings */
-  scopeSections?: ScopeSection[];
-  /** Optional: Items that are explicitly included */
-  included?: string[];
-  /** Optional: Assumptions made for this scope */
-  assumptions?: string[];
-  /** Optional: Add-on items */
-  addons?: string[];
-  priceRange: { low: number; high: number };
-  estimatedDays: { low: number; high: number };
-  warranty?: string;
-  exclusions?: string[];
-}
-
-export interface ProposalPreviewData {
-  clientName?: string;
-  address?: string;
-  jobTypeName?: string;
-  scope?: string[];
-  /** Optional: Grouped scope sections with headings (preferred over scope for display) */
-  scopeSections?: ScopeSection[];
-  /** Optional: Items that are explicitly included */
-  included?: string[];
-  /** Optional: Assumptions made for this scope */
-  assumptions?: string[];
-  /** Optional: Add-on items */
-  addons?: string[];
-  priceRange?: { low: number; high: number };
-  estimatedDays?: { low: number; high: number };
-  warranty?: string;
-  exclusions?: string[];
-  regionalInfo?: {
-    state: string;
-    abbrev: string;
-    region: string;
-    multiplier: number;
-  } | null;
-  lineItems?: LineItem[];
-  photos?: ProposalPhoto[];
-}
+// Local interfaces removed in favor of shared types in ./proposal-types.ts
 
 interface ProposalPreviewPaneProps {
   /** Proposal data to display in preview */

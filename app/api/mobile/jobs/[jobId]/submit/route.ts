@@ -1,12 +1,15 @@
 import { NextRequest } from "next/server";
 import { requireMobileAuth } from "@/src/lib/mobile/auth";
 import { storage } from "@/lib/services/storage";
+import { billingService } from "@/lib/services/billingService";
 import { insertProposalSchema } from "@shared/schema";
 import { z } from "zod";
 import { getRequestId, jsonError, logEvent, withRequestId } from "@/src/lib/mobile/observability";
-import { db } from "@/server/db";
+import { db } from "@/lib/services/db";
 import { sql } from "drizzle-orm";
 import { createHash } from "crypto";
+import { logger } from "@/lib/logger";
+import { USER_SESSION_COOKIE } from "@/lib/user-session";
 
 // Log DB connection info on module load (masked for security)
 const logDbInfo = () => {
@@ -129,12 +132,105 @@ export async function POST(
       );
     }
 
-    // Create proposal in database
+    // Get billing status to determine unlock behavior and credit deduction
+    const user = await storage.getUser(authResult.userId);
+    if (!user) {
+      return jsonError(requestId, 404, "NOT_FOUND", "User not found");
+    }
+
+    const billingStatus = await billingService.getBillingStatus(authResult.userId);
+    const now = new Date();
+    
+    // Check if user is in trial
+    const isInTrial = user.trialEndsAt && new Date(user.trialEndsAt) > now;
+    
+    logger.debug('[mobile/submit] User billing status for proposal creation', {
+      userId: authResult.userId,
+      isInTrial,
+      hasActiveSubscription: billingStatus.hasActiveSubscription,
+      availableCredits: billingStatus.availableCredits,
+      trialEndsAt: user.trialEndsAt,
+      subscriptionPlan: user.subscriptionPlan,
+      isPro: user.isPro,
+    });
+    
+    // Determine if proposal should be auto-unlocked
+    let isUnlocked = false;
+    let creditDeducted = false;
+
+    // Priority 1: Pro/Crew subscribers - MUST deduct 1 credit and auto-unlock (even if in trial)
+    if (billingStatus.hasActiveSubscription) {
+      logger.info('[mobile/submit] Pro user creating proposal', {
+        userId: authResult.userId,
+        availableCredits: billingStatus.availableCredits,
+        hasActiveSubscription: billingStatus.hasActiveSubscription
+      });
+
+      // Pro users MUST have credits to create proposals - check first
+      if (billingStatus.availableCredits <= 0) {
+        logger.warn('[mobile/submit] Pro user has no credits', { userId: authResult.userId });
+        return jsonError(
+          requestId,
+          402,
+          "PAYMENT_REQUIRED",
+          "Insufficient credits. Please purchase more credits to create proposals."
+        );
+      }
+      
+      // Deduct credit for Pro users when creating proposal (atomic operation)
+      logger.debug('[mobile/submit] Attempting to deduct credit for Pro user', { userId: authResult.userId });
+      const updatedUser = await storage.deductProposalCredit(authResult.userId);
+      logger.debug('[mobile/submit] Credit deduction result', {
+        userId: authResult.userId,
+        success: !!updatedUser,
+        remainingCredits: updatedUser?.proposalCredits
+      });
+
+      if (!updatedUser) {
+        // Credit deduction failed (insufficient credits or expired)
+        logger.warn('[mobile/submit] Credit deduction failed for Pro user', { userId: authResult.userId });
+        return jsonError(
+          requestId,
+          402,
+          "PAYMENT_REQUIRED",
+          "Failed to deduct credit. Please check your credits or purchase more."
+        );
+      }
+      
+      // Credit deducted successfully - unlock the proposal
+      logger.info('[mobile/submit] Credit deducted successfully, unlocking proposal', {
+        userId: authResult.userId,
+        remainingCredits: updatedUser.proposalCredits,
+      });
+      isUnlocked = true;
+      creditDeducted = true;
+    }
+    // Priority 2: Trial users (if not Pro) - Free auto-unlock (no credit deduction)
+    else if (isInTrial) {
+      logger.debug('[mobile/submit] User is in trial - no credit deduction', { userId: authResult.userId });
+      isUnlocked = true;
+    }
+    // Priority 3: Free users (not in trial, not Pro) - Create as locked (they need to unlock via /unlock endpoint)
+    else {
+      logger.debug('[mobile/submit] Free user creating proposal - will be locked', { userId: authResult.userId });
+      isUnlocked = false;
+    }
+    
+    logger.debug('[mobile/submit] Final proposal state', {
+      userId: authResult.userId,
+      isUnlocked,
+      creditDeducted,
+    });
+
+    // Create proposal in database with isUnlocked flag
     // Note: Schema drift between code and DB can cause failures here (e.g., missing columns).
     // Always ensure migrations are applied before deploying code changes.
     let proposal;
     try {
-      proposal = await storage.createProposal(validation.data);
+      proposal = await storage.createProposal({
+        ...validation.data,
+        isUnlocked,
+      });
     } catch (dbError) {
       // Log detailed error for debugging schema drift or other DB issues
       const errMsg = dbError instanceof Error ? dbError.message : String(dbError);
@@ -215,10 +311,17 @@ export async function POST(
       ms: Date.now() - t0,
     });
 
-    return withRequestId(requestId, {
+    const response = withRequestId(requestId, {
       proposalId: proposal.id,
       webReviewUrl,
     });
+
+    // Clear user session cookie to force a refresh of user data (credits) if credit was deducted
+    if (creditDeducted) {
+      response.cookies.delete(USER_SESSION_COOKIE);
+    }
+
+    return response;
   } catch (error) {
     // Catch-all for unexpected errors (auth failures, network issues, etc.)
     // This ensures we NEVER return 200 when an error occurs.

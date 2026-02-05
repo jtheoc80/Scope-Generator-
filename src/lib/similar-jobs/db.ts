@@ -1,4 +1,4 @@
-import { db } from "@/server/db";
+import { db } from "@/lib/services/db";
 import { sql } from "drizzle-orm";
 import { parseS3Url } from "@/src/lib/mobile/storage/s3";
 

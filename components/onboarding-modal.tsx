@@ -1,6 +1,5 @@
-'use client';
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 interface OnboardingModalProps {
   open: boolean;
@@ -19,11 +19,8 @@ const TRADES = [
   { value: "kitchen", label: "Kitchen Renovation" },
   { value: "plumbing", label: "Plumbing" },
   { value: "electrical", label: "Electrical" },
-  { value: "roofing", label: "Roofing" },
   { value: "hvac", label: "HVAC" },
   { value: "painting", label: "Painting" },
-  { value: "flooring", label: "Flooring" },
-  { value: "general", label: "General Contracting" },
   { value: "other", label: "Other" },
 ];
 
@@ -43,7 +40,7 @@ const REFERRAL_SOURCES = [
 ];
 
 export function OnboardingModal({ open, userName }: OnboardingModalProps) {
-  const queryClient = useQueryClient();
+  const { refreshUser } = useAuth();
   const [formData, setFormData] = useState({
     phone: "",
     companyName: "",
@@ -64,8 +61,8 @@ export function OnboardingModal({ open, userName }: OnboardingModalProps) {
       if (!response.ok) throw new Error("Failed to complete onboarding");
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    onSuccess: async () => {
+      await refreshUser();
     },
   });
 

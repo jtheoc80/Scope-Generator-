@@ -1,4 +1,7 @@
 'use client';
+// Force dynamic rendering to prevent static generation errors
+// This page uses useQuery which requires QueryClientProvider
+export const dynamic = 'force-dynamic';
 
 import { useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -6,11 +9,12 @@ import { useQuery } from "@tanstack/react-query";
 import ProposalPreview from "@/components/proposal-preview";
 import { Button } from "@/components/ui/button";
 import EmailProposalModal from "@/components/email-proposal-modal";
+import PaywallModal from "@/components/paywall-modal";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Download, 
-  Loader2, 
-  FileWarning, 
+import {
+  Download,
+  Loader2,
+  FileWarning,
   ArrowLeft,
   Home,
   Edit,
@@ -55,6 +59,7 @@ export default function ProposalViewPage() {
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [lastSentAt, setLastSentAt] = useState<string | null>(null);
+  const [showPaywall, setShowPaywall] = useState(false);
   const { toast } = useToast();
 
   const { data: proposal, isLoading, error } = useQuery<Proposal>({
@@ -83,6 +88,13 @@ export default function ProposalViewPage() {
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
+        // Handle 402 Payment Required - show paywall
+        if (res.status === 402 && err.requiresPayment) {
+          setShowPaywall(true);
+          setIsDownloading(false);
+          setPdfStatus("idle");
+          return;
+        }
         throw new Error(err.message || "Failed to generate PDF");
       }
 
@@ -174,13 +186,14 @@ export default function ProposalViewPage() {
       high: proposal.estimatedDaysHigh,
     } : undefined,
     lineItems: proposal.lineItems?.map(item => ({
+      id: item.id,
       serviceId: item.id,
       tradeName: item.tradeName,
       jobTypeName: item.jobTypeName,
       scope: item.scope,
       scopeSections: item.scopeSections,
       priceRange: { low: item.priceLow, high: item.priceHigh },
-      estimatedDays: item.estimatedDaysLow && item.estimatedDaysHigh 
+      estimatedDays: item.estimatedDaysLow && item.estimatedDaysHigh
         ? { low: item.estimatedDaysLow, high: item.estimatedDaysHigh }
         : { low: 1, high: 3 },
     })),
@@ -193,9 +206,9 @@ export default function ProposalViewPage() {
       <div className="sticky top-0 z-50 bg-white border-b shadow-sm">
         <div className="max-w-[900px] mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => router.push("/dashboard")}
               className="gap-2"
             >
@@ -291,8 +304,15 @@ export default function ProposalViewPage() {
             setLastSentAt(info.sentAt);
             setPdfStatus("sent");
           }}
+          onRequiresPayment={() => setShowPaywall(true)}
         />
       )}
+
+      {/* Paywall Modal */}
+      <PaywallModal
+        isOpen={showPaywall}
+        onClose={() => setShowPaywall(false)}
+      />
     </div>
   );
 }

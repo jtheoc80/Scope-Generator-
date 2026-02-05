@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 const blurSvg = (w: number, h: number) =>
   `data:image/svg+xml;base64,${Buffer.from(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><rect width="100%" height="100%" fill="#e5e7eb"/></svg>`
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><rect width="100%" height="100%" fill="#ffffffff"/></svg>`
   ).toString("base64")}`;
 
 function SafeImage({

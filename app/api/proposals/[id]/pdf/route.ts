@@ -10,7 +10,7 @@ export async function GET(
   try {
     const { id } = await params;
     const proposalId = parseInt(id);
-    
+
     if (isNaN(proposalId)) {
       return NextResponse.json(
         { message: 'Invalid proposal ID' },
@@ -21,20 +21,22 @@ export async function GET(
     // Get proposal - allow public access if token is provided
     const { searchParams } = new URL(request.url);
     const token = searchParams.get('token');
-    
+
     let proposal;
     let companyInfo = null;
-    
+    let user;
+
     if (token) {
       // Public access via token
       proposal = await storage.getProposalByPublicToken(token);
       if (proposal) {
-        const user = await storage.getUser(proposal.userId);
+        user = await storage.getUser(proposal.userId);
         companyInfo = user ? {
           companyName: user.companyName,
           companyAddress: user.companyAddress,
           companyPhone: user.companyPhone,
           licenseNumber: user.licenseNumber,
+          companyLogo: user.companyLogo,
         } : null;
       }
     } else {
@@ -54,12 +56,27 @@ export async function GET(
         );
       }
       if (proposal) {
-        const user = await storage.getUser(userId);
+        user = await storage.getUser(userId);
+
+        // Check if proposal is unlocked - no credit deduction here
+        // Credits are deducted via /unlock endpoint for free users
+        // or at creation time for Pro users
+        if (!proposal.isUnlocked) {
+          return NextResponse.json(
+            {
+              message: 'Proposal must be unlocked first',
+              requiresUnlock: true
+            },
+            { status: 402 }
+          );
+        }
+
         companyInfo = user ? {
           companyName: user.companyName,
           companyAddress: user.companyAddress,
           companyPhone: user.companyPhone,
           licenseNumber: user.licenseNumber,
+          companyLogo: user.companyLogo,
         } : null;
       }
     }
@@ -72,11 +89,18 @@ export async function GET(
     }
 
     // Generate PDF (deterministic bytes + stable filename)
+    // Check if user is Pro (either the owner for public links, or the current user/owner for auth access)
+    // For authenticated access, 'user' is the current user (owner).
+    // For public access, 'user' was fetched above based on proposal.userId.
+    // In both cases, 'user' variable holds the owner's record.
+    const isPro = user?.isPro || false;
+
     const { pdfBytes, filename, sha256 } = buildProposalPdf({
       proposal: proposal as any,
       companyInfo,
+      isPro,
     });
-    
+
     const encodedFilename = encodeURIComponent(filename);
     const byteLength = Buffer.byteLength(Buffer.from(pdfBytes));
 

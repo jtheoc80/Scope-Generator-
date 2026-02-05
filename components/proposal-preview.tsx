@@ -2,53 +2,27 @@
 import { forwardRef, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Clock, Shield, AlertCircle, Layers, CheckCircle2, FileQuestion, Plus } from "lucide-react";
-import { 
-  HeroPhoto, 
-  ExistingConditionsGrid, 
-  ScopePhotoInline, 
+import { Clock, Shield, AlertCircle, Layers, CheckCircle2, FileQuestion, Plus, Lock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  HeroPhoto,
+  ExistingConditionsGrid,
+  ScopePhotoInline,
   AppendixGallery,
   organizePhotosForProposal,
   type ProposalPhoto,
 } from "@/components/proposal-photos";
+import {
+  type CompanyInfo,
+  type ScopeSection,
+  type LineItem,
+} from "./proposal-types";
 
-interface CompanyInfo {
-  companyName?: string | null;
-  companyAddress?: string | null;
-  companyPhone?: string | null;
-  companyLogo?: string | null;
-  licenseNumber?: string | null;
-}
-
-/**
- * A section within the scope of work (for grouped display)
- */
-interface ScopeSection {
-  title: string;
-  items: string[];
-}
-
-interface LineItem {
-  serviceId: string;
-  tradeName: string;
-  jobTypeName: string;
-  scope: string[];
-  /** Optional: Grouped scope sections with headings */
-  scopeSections?: ScopeSection[];
-  /** Optional: Items that are explicitly included */
-  included?: string[];
-  /** Optional: Assumptions made for this scope */
-  assumptions?: string[];
-  /** Optional: Add-on items */
-  addons?: string[];
-  priceRange: { low: number; high: number };
-  estimatedDays: { low: number; high: number };
-  warranty?: string;
-  exclusions?: string[];
-}
+// Local interfaces removed in favor of shared types in ./proposal-types.ts
 
 interface ProposalPreviewProps {
   data: {
+    id?: string;
     clientName?: string;
     address?: string;
     jobTypeName?: string;
@@ -80,10 +54,12 @@ interface ProposalPreviewProps {
   photos?: ProposalPhoto[];
   /** Whether to show photos in the proposal (default: true if photos provided) */
   showPhotos?: boolean;
+  /** Whether the user has Pro features (e-signature, custom logo) */
+  isPro?: boolean;
 }
 
 const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
-  ({ data, companyInfo, photos = [], showPhotos = true }, ref) => {
+  ({ data, companyInfo, photos = [], showPhotos = true, blurred = false, onUnlock, isPro = false }, ref) => {
     const today = new Date().toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
@@ -105,23 +81,23 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
 
     // Organize photos for display
     const organizedPhotos = useMemo(() => {
-      const allScopeItems = hasMultipleServices 
+      const allScopeItems = hasMultipleServices
         ? lineItems.flatMap(item => item.scope)
         : (data.scope || []);
       return organizePhotosForProposal(photos, allScopeItems);
     }, [photos, hasMultipleServices, lineItems, data.scope]);
-    
+
     const hasPhotos = showPhotos && photos.length > 0;
 
     return (
-      <div ref={ref} className="bg-white shadow-xl min-h-[800px] w-full max-w-[800px] mx-auto p-8 md:p-12 relative text-slate-800 text-sm leading-relaxed font-serif">
+      <div ref={ref} className="bg-white shadow-xl min-h-[800px] w-full max-w-[800px] mx-auto p-6 sm:p-8 md:p-12 relative text-slate-800 text-sm leading-relaxed font-serif">
 
         {/* Hero Photo Banner (if available) */}
         {hasPhotos && organizedPhotos.hero && (
           <div className="mb-6">
             <HeroPhoto
               photo={organizedPhotos.hero}
-              companyLogo={companyInfo?.companyLogo}
+              companyLogo={isPro ? companyInfo?.companyLogo : undefined}
               companyName={companyInfo?.companyName || "Your Company Name"}
               customerName={data.clientName}
               address={data.address}
@@ -137,14 +113,15 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
           </div>
           <div className="text-right flex items-start gap-4 justify-end">
             {/* Only show logo here if no hero photo (logo already in hero) */}
-            {companyInfo?.companyLogo && !organizedPhotos.hero && (
-              <Image 
-                src={companyInfo.companyLogo} 
-                alt="Company logo" 
+            {isPro && companyInfo?.companyLogo && !organizedPhotos.hero && (
+              <Image
+                src={companyInfo.companyLogo}
+                alt="Company logo"
                 width={64}
                 height={64}
                 className="w-16 h-16 object-contain"
                 data-testid="img-proposal-logo"
+                unoptimized
               />
             )}
             <div>
@@ -177,13 +154,13 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
         </div>
 
         {/* Client Info */}
-        <div className="grid grid-cols-2 gap-8 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-8">
           <div>
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Prepared For</h3>
             <div className="font-bold text-lg" data-testid="preview-client-name">{data.clientName || "Client Name"}</div>
             <div className="text-slate-600" data-testid="preview-address">{data.address || "123 Client Street"}</div>
           </div>
-          <div className="text-right">
+          <div className="sm:text-right">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Date</h3>
             <div>{today}</div>
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 mt-4">
@@ -191,7 +168,7 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
             </h3>
             <div className="font-medium" data-testid="preview-job-type">
               {hasMultipleServices ? (
-                <span className="flex items-center justify-end gap-1">
+                <span className="flex items-center sm:justify-end gap-1">
                   <Layers className="w-4 h-4" />
                   Multi-Service Proposal
                 </span>
@@ -209,7 +186,7 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
             <div>
               <span className="font-bold text-blue-900">Estimated Timeline: </span>
               <span className="text-blue-800">
-                {data.estimatedDays.low === data.estimatedDays.high 
+                {data.estimatedDays.low === data.estimatedDays.high
                   ? `${data.estimatedDays.low} working day${data.estimatedDays.low > 1 ? 's' : ''}`
                   : `${data.estimatedDays.low}-${data.estimatedDays.high} working days`
                 }
@@ -220,7 +197,7 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
 
         {/* Existing Conditions Photos (2-6 photos in grid) */}
         {hasPhotos && organizedPhotos.existingConditions.length > 0 && (
-          <ExistingConditionsGrid 
+          <ExistingConditionsGrid
             photos={organizedPhotos.existingConditions}
             maxPhotos={6}
           />
@@ -250,18 +227,23 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
                         <div className="text-xs text-slate-500">{item.tradeName}</div>
                       </td>
                       <td className="py-3 px-4 text-center text-slate-600">
-                        {item.estimatedDays.low === item.estimatedDays.high
-                          ? item.estimatedDays.low
-                          : `${item.estimatedDays.low}-${item.estimatedDays.high}`
-                        }
+                        {(() => {
+                          const low = item.estimatedDaysLow ?? item.estimatedDays.low;
+                          const high = item.estimatedDaysHigh ?? item.estimatedDays.high;
+                          return low === high ? low : `${low}-${high}`;
+                        })()}
                       </td>
                       <td className="py-3 px-4 text-right font-medium">
-                        ${Math.round((item.priceRange.low + item.priceRange.high) / 2).toLocaleString()}
+                        {(() => {
+                          const low = item.priceLow ?? item.priceRange.low;
+                          const high = item.priceHigh ?? item.priceRange.high;
+                          return `$${Math.round((low + high) / 2).toLocaleString()}`;
+                        })()}
                       </td>
                     </tr>
                   ))}
                 </tbody>
-                <tfoot className="bg-primary/10 border-t-2 border-primary">
+                <tfoot className="bg-blue-50 border-t-2 border-primary">
                   <tr>
                     <td className="py-3 px-4 font-bold text-slate-900">Total</td>
                     <td className="py-3 px-4 text-center font-bold text-slate-900">
@@ -284,7 +266,7 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
         {hasMultipleServices ? (
           <div className="mb-8">
             <h2 className="text-lg font-heading font-bold text-white bg-slate-900 px-3 py-1 inline-block mb-4">Detailed Scope of Work</h2>
-            
+
             <div className="space-y-6">
               <p className="italic text-slate-600">
                 We propose to furnish all materials and perform all labor necessary to complete the following:
@@ -300,7 +282,7 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
                 const servicePhotos = serviceScopeItems
                   .flatMap((scopeItem) => organizedPhotos.scopePhotos[scopeItem] || [])
                   .slice(0, 2); // Max 2 photos per service section
-                
+
                 return (
                   <div key={item.serviceId} className="border-l-4 border-l-secondary pl-4">
                     <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
@@ -313,8 +295,8 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
 
                     {/* Inline scope photos for this service */}
                     {hasPhotos && servicePhotos.length > 0 && (
-                      <ScopePhotoInline 
-                        photos={servicePhotos} 
+                      <ScopePhotoInline
+                        photos={servicePhotos}
                         variant={servicePhotos.length > 1 ? 'pair' : 'single'}
                       />
                     )}
@@ -351,7 +333,7 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
           /* Single Service Scope of Work */
           <div className="mb-8">
             <h2 className="text-lg font-heading font-bold text-white bg-slate-900 px-3 py-1 inline-block mb-4">Scope of Work</h2>
-            
+
             <div className="space-y-4">
               <p className="italic text-slate-600">
                 We propose to furnish all materials and perform all labor necessary to complete the following:
@@ -361,8 +343,8 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
               {hasPhotos && (() => {
                 const singleServicePhotos = Object.values(organizedPhotos.scopePhotos).flat().slice(0, 2);
                 return singleServicePhotos.length > 0 ? (
-                  <ScopePhotoInline 
-                    photos={singleServicePhotos} 
+                  <ScopePhotoInline
+                    photos={singleServicePhotos}
                     variant={singleServicePhotos.length > 1 ? 'pair' : 'single'}
                   />
                 ) : null;
@@ -373,7 +355,7 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
                 <div className="space-y-6" data-testid="preview-scope-sections">
                   {data.scopeSections.map((section, sectionIndex) => (
                     <div key={sectionIndex} className="scope-section">
-                      <h3 
+                      <h3
                         className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-2 border-b border-slate-200 pb-1"
                         data-testid={`preview-scope-section-heading-${sectionIndex}`}
                       >
@@ -487,7 +469,7 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
         {!hasMultipleServices && (
           <div className="mb-8 break-inside-avoid">
             <h2 className="text-lg font-heading font-bold text-white bg-slate-900 px-3 py-1 inline-block mb-4">Investment</h2>
-            
+
             <div className="border border-slate-200 rounded-lg p-6 bg-slate-50">
               <div className="flex justify-between items-end mb-2">
                 <span className="font-bold text-slate-700">Total Project Estimate</span>
@@ -529,23 +511,25 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
 
         {/* Photo Appendix Gallery (all remaining photos) */}
         {hasPhotos && organizedPhotos.appendix.length > 0 && (
-          <AppendixGallery 
+          <AppendixGallery
             photos={organizedPhotos.appendix}
             title="Photo Appendix"
           />
         )}
 
         {/* Footer/Signature */}
-        <div className="mt-12 pt-8 border-t border-slate-200 grid grid-cols-2 gap-12">
-          <div>
-            <div className="h-12 border-b border-slate-900 mb-2"></div>
-            <div className="text-xs font-bold uppercase text-slate-500">Contractor Signature</div>
+        {isPro && (
+          <div className="mt-12 pt-8 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-12">
+            <div>
+              <div className="h-12 border-b border-slate-900 mb-2"></div>
+              <div className="text-xs font-bold uppercase text-slate-500">Contractor Signature</div>
+            </div>
+            <div>
+              <div className="h-12 border-b border-slate-900 mb-2"></div>
+              <div className="text-xs font-bold uppercase text-slate-500">Client Signature</div>
+            </div>
           </div>
-          <div>
-            <div className="h-12 border-b border-slate-900 mb-2"></div>
-            <div className="text-xs font-bold uppercase text-slate-500">Client Signature</div>
-          </div>
-        </div>
+        )}
 
         {/* Acceptance Date */}
         <div className="mt-6 text-center text-xs text-slate-400">
@@ -553,11 +537,11 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
         </div>
 
         {/* Powered by ScopeGen Footer */}
-        <div 
+        <div
           data-testid="footer-powered-by"
           className="mt-8 pt-6 border-t border-slate-100 text-center"
         >
-          <Link 
+          <Link
             href="/"
             className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
           >
@@ -567,6 +551,26 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
             Professional proposals in seconds
           </p>
         </div>
+
+        {/* Blur Overlay for Unpaid Users */}
+        {blurred && (
+          <div className="absolute inset-0 bg-white/80 backdrop-blur-md flex flex-col items-center justify-center z-10 rounded-lg">
+            <div className="bg-white/90 p-8 rounded-xl shadow-lg max-w-md text-center">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Lock className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Upgrade to View Full Proposal</h3>
+              <p className="text-slate-600 mb-6">
+                Your trial has ended. Upgrade to Pro or purchase credits to unlock and download proposals.
+              </p>
+              {onUnlock && (
+                <Button onClick={onUnlock} className="bg-primary text-white px-8">
+                  Unlock Proposal
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     );
   }

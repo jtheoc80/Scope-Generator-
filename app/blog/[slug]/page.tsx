@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Layout from "@/components/layout";
+import LayoutWrapper from "@/components/layout-wrapper";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, ArrowRight, Calendar, Clock, User, RefreshCw } from "lucide-react";
@@ -24,6 +24,9 @@ interface PageProps {
 export async function generateStaticParams() {
   return Object.keys(blogPosts).map((slug) => ({ slug }));
 }
+
+// Force dynamic rendering to ensure QueryClientProvider is available
+export const dynamic = 'force-dynamic';
 
 // Generate metadata for SEO
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -290,7 +293,7 @@ export default async function BlogPostPage({ params }: PageProps) {
     post.faqs && post.faqs.length > 0 ? generateFAQSchema(post.faqs) : null;
 
   return (
-    <Layout>
+    <LayoutWrapper>
       {/* Structured Data */}
       <script
         type="application/ld+json"
@@ -535,6 +538,6 @@ export default async function BlogPostPage({ params }: PageProps) {
           />
         )}
       </article>
-    </Layout>
+    </LayoutWrapper>
   );
 }

@@ -72,20 +72,20 @@ export async function POST(request: NextRequest) {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
-        result = await billingService.handleCheckoutCompleted(session, event.id);
+        result = await billingService.handleCheckoutCompleted(session, event.id, body);
         break;
       }
 
       case 'customer.subscription.created':
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
-        result = await billingService.handleSubscriptionUpdated(subscription, event.id);
+        result = await billingService.handleSubscriptionUpdated(subscription, event.id, body);
         break;
       }
 
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
-        result = await billingService.handleSubscriptionDeleted(subscription, event.id);
+        result = await billingService.handleSubscriptionDeleted(subscription, event.id, body);
         break;
       }
 
@@ -139,14 +139,15 @@ async function handlePaymentSucceeded(
 
   // Handle proposal deposit payments
   const proposalId = paymentIntent.metadata?.proposalId;
-  
+  console.log("Proposal ID", proposalId);
+  console.log("Payment Intent", paymentIntent);
   if (proposalId && paymentIntent.metadata?.type === 'proposal_deposit') {
     await storage.updateProposalPaymentStatus(parseInt(proposalId), {
       paidAmount: paymentIntent.amount_received,
       paymentStatus: 'paid',
       stripePaymentIntentId: paymentIntent.id,
     });
-    
+
     logger.info('Stripe webhook: Payment received for proposal', { proposalId });
     return { success: true, message: `Payment received for proposal ${proposalId}` };
   }
@@ -167,13 +168,13 @@ async function handleInvoicePaid(
   }
 
   const subscriptionId = invoice.subscription as string;
-  
+
   if (subscriptionId) {
     // Subscription renewal - fetch and update subscription details
     try {
       const stripe = getStripeClient();
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-      
+
       await billingService.handleSubscriptionUpdated(subscription, eventId);
       return { success: true, message: 'Subscription renewed successfully' };
     } catch (error) {
@@ -187,6 +188,12 @@ async function handleInvoicePaid(
 
 /**
  * Handle invoice.payment_failed
+ * 
+ * CRITICAL: When payment fails, subscription status becomes 'past_due'
+ * We need to:
+ * 1. Update subscription status to past_due
+ * 2. Optionally limit access (grace period handled in billing status calculation)
+ * 3. Log for monitoring/notifications
  */
 async function handleInvoicePaymentFailed(
   invoice: Stripe.Invoice,
@@ -200,9 +207,32 @@ async function handleInvoicePaymentFailed(
   const subscriptionId = invoice.subscription as string;
   const customerId = invoice.customer as string;
 
-  logger.warn('Stripe webhook: Payment failed', { customerId, subscriptionId });
+  if (!subscriptionId) {
+    logger.warn('Stripe webhook: Payment failed but no subscription ID', { customerId });
+    return { success: true, message: 'Payment failed but no subscription to update' };
+  }
 
-  // The subscription status will be updated via customer.subscription.updated event
-  // Just log for now
-  return { success: true, message: 'Payment failure logged' };
+  try {
+    // Fetch subscription from Stripe to get latest status
+    const stripe = getStripeClient();
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+
+    // Update subscription via handleSubscriptionUpdated (which will set status to past_due)
+    await billingService.handleSubscriptionUpdated(subscription, eventId);
+
+    logger.warn('Stripe webhook: Payment failed - subscription updated to past_due', { 
+      customerId, 
+      subscriptionId,
+      status: subscription.status,
+      attemptCount: invoice.attempt_count 
+    });
+
+    // TODO: Send notification email to user about failed payment
+    // TODO: Track payment failure metrics
+
+    return { success: true, message: 'Payment failure processed - subscription marked as past_due' };
+  } catch (error) {
+    logger.error('Stripe webhook: Error handling payment failure', error as Error);
+    return { success: false, message: 'Failed to process payment failure' };
+  }
 }

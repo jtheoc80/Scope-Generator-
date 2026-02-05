@@ -41,6 +41,8 @@ export const getQueryFn: <T>(options: {
     return await res.json();
   };
 
+// Create QueryClient instance that works during SSR/SSG
+// This ensures QueryClientProvider always has a client available
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

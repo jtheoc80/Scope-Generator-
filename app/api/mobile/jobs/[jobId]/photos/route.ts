@@ -5,7 +5,7 @@ import { storage } from "@/lib/services/storage";
 import { getRequestId, jsonError, logEvent, withRequestId } from "@/src/lib/mobile/observability";
 import { ensureVisionWorker } from "@/src/lib/mobile/vision/worker";
 import { runVisionForPhoto } from "@/src/lib/mobile/vision/runner";
-import { db } from "@/server/db";
+import { db } from "@/lib/services/db";
 import { mobileJobPhotos } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { upsertPhotoRow } from "@/src/lib/similar-jobs/db";
@@ -34,13 +34,22 @@ export async function GET(
     if (!authResult.ok) return authResult.response;
 
     const photos = await storage.listMobileJobPhotos(id, authResult.userId);
+
+    // Presign URLs for private bucket access
+    const photosWithSignedUrls = await Promise.all(
+      photos.map(async (p) => ({
+        ...p,
+        publicUrl: await import("@/src/lib/mobile/storage/s3").then(m => m.presignGetObject(p.publicUrl))
+      }))
+    );
+
     logEvent("mobile.photos.list.ok", {
       requestId,
       jobId: id,
       count: photos.length,
       ms: Date.now() - t0,
     });
-    return withRequestId(requestId, { photos }, 200);
+    return withRequestId(requestId, { photos: photosWithSignedUrls }, 200);
   } catch (error) {
     console.error("Error listing mobile job photos:", error);
     return jsonError(requestId, 500, "INTERNAL", "Failed to list photos");

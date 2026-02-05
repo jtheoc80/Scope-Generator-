@@ -1,7 +1,11 @@
 'use client';
+// Force dynamic rendering to prevent static generation errors
+// This page uses useAuth() which requires QueryClientProvider
+export const dynamic = 'force-dynamic';
+
 import { useState } from "react";
 import Link from "next/link";
-import Layout from "@/components/layout";
+import LayoutWrapper from "@/components/layout-wrapper";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -188,11 +192,11 @@ export default function PricingInsights() {
 
   if (authLoading) {
     return (
-      <Layout>
+      <LayoutWrapper>
         <div className="flex items-center justify-center min-h-[60vh]">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
-      </Layout>
+      </LayoutWrapper>
     );
   }
 
@@ -200,7 +204,7 @@ export default function PricingInsights() {
 
   if (!hasAccess) {
     return (
-      <Layout>
+      <LayoutWrapper>
         <div className="bg-slate-50 min-h-screen pb-12">
           <div className="container mx-auto px-4 py-16">
             <div className="max-w-md mx-auto text-center">
@@ -223,12 +227,12 @@ export default function PricingInsights() {
             </div>
           </div>
         </div>
-      </Layout>
+      </LayoutWrapper>
     );
   }
 
   return (
-    <Layout>
+    <LayoutWrapper>
       <div className="bg-slate-50 min-h-screen pb-12">
         <div className="bg-white border-b border-slate-200">
           <div className="container mx-auto px-4 py-8">
@@ -688,6 +692,6 @@ export default function PricingInsights() {
           </Tabs>
         </div>
       </div>
-    </Layout>
+    </LayoutWrapper>
   );
 }

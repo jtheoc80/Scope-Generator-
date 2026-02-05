@@ -1,4 +1,4 @@
-import { db } from "@/server/db";
+import { db } from "@/lib/services/db";
 import { mobileJobPhotos } from "@shared/schema";
 import { and, desc, eq, isNull, lte, or } from "drizzle-orm";
 import { runVisionForPhoto } from "./runner";

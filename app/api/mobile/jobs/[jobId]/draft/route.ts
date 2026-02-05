@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireMobileAuth } from "@/src/lib/mobile/auth";
 import { storage } from "@/lib/services/storage";
-import { db } from "@/server/db";
+import { db } from "@/lib/services/db";
 import { mobileJobDrafts } from "@shared/schema";
 import { and, eq, desc } from "drizzle-orm";
 import { enqueueDraft, ensureDraftWorker } from "@/src/lib/mobile/draft/worker";

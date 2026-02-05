@@ -1,3 +1,7 @@
+// Force dynamic rendering to prevent static generation errors
+// The SignOutClient component uses useQueryClient which requires QueryClientProvider
+export const dynamic = 'force-dynamic';
+
 import Link from "next/link";
 import { isClerkConfigured } from "@/lib/authUtils";
 import SignOutClient from "./sign-out-client";

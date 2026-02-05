@@ -27,11 +27,15 @@ function stageDot(stage: PipelineStageKey) {
 export function PipelineBar({
   title,
   counts,
+  activeStage,
+  onStageClick,
   className,
   t,
 }: {
   title?: string;
   counts: Record<PipelineStageKey, number>;
+  activeStage?: PipelineStageKey | "all";
+  onStageClick?: (stage: PipelineStageKey) => void;
   className?: string;
   t?: (key: string) => string;
 }) {
@@ -41,7 +45,7 @@ export function PipelineBar({
 
   return (
     <Card className={cn("rounded-2xl border-slate-200 bg-white shadow-sm", className)}>
-      <CardHeader className="flex flex-row items-center justify-between px-6 py-5">
+      <CardHeader className="flex flex-row items-center justify-between px-4 sm:px-6 py-5">
         <div>
           <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             {pipelineTitle}
@@ -52,15 +56,27 @@ export function PipelineBar({
         </div>
       </CardHeader>
 
-      <CardContent className="px-6 pb-6">
-        <div className="overflow-x-auto">
-          <div className="min-w-[720px] rounded-2xl border border-slate-200 bg-white">
-            <div className="grid grid-cols-6 divide-x divide-slate-200">
-              {STAGES.map((s) => (
-                <div key={s.key} className="px-4 py-4">
+      <CardContent className="px-4 sm:px-6 pb-6">
+        <div className="rounded-2xl border border-slate-200 bg-slate-200 overflow-hidden">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px">
+            {STAGES.map((s) => {
+              const isActive = activeStage === s.key;
+              return (
+                <div
+                  key={s.key}
+                  className={cn(
+                    "bg-white px-4 py-4 transition-colors duration-200",
+                    onStageClick ? "cursor-pointer hover:bg-slate-50" : "",
+                    isActive ? "bg-slate-50 ring-inset ring-2 ring-primary/10" : ""
+                  )}
+                  onClick={() => onStageClick?.(s.key)}
+                >
                   <div className="flex items-center gap-2">
                     <span className={cn("h-2 w-2 rounded-full", stageDot(s.key))} />
-                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <div className={cn(
+                      "text-xs font-semibold uppercase tracking-wide",
+                      isActive ? "text-slate-900" : "text-slate-500"
+                    )}>
                       {s.label}
                     </div>
                   </div>
@@ -68,8 +84,8 @@ export function PipelineBar({
                     {(counts[s.key] || 0).toLocaleString()}
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         </div>
       </CardContent>

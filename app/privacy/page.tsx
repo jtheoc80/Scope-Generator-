@@ -1,6 +1,6 @@
 'use client';
 import { useEffect } from "react";
-import Layout from "@/components/layout";
+import LayoutWrapper from "@/components/layout-wrapper";
 import Link from "next/link";
 
 export default function PrivacyPolicy() {
@@ -13,7 +13,7 @@ export default function PrivacyPolicy() {
   }, []);
 
   return (
-    <Layout>
+    <LayoutWrapper>
       <div className="bg-slate-50 min-h-screen">
         <div className="max-w-4xl mx-auto px-4 py-16">
           <h1 className="text-3xl md:text-4xl font-heading font-bold text-slate-900 mb-8">
@@ -147,6 +147,6 @@ export default function PrivacyPolicy() {
           </div>
         </div>
       </div>
-    </Layout>
+    </LayoutWrapper>
   );
 }

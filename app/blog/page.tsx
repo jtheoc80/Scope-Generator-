@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import Layout from "@/components/layout";
+import LayoutWrapper from "@/components/layout-wrapper";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, Calendar, Clock, User } from "lucide-react";
@@ -61,7 +61,7 @@ export default function BlogIndex() {
   const categories = [...new Set(posts.map(p => p.category))];
 
   return (
-    <Layout>
+    <LayoutWrapper>
       {/* Structured Data */}
       <script
         type="application/ld+json"
@@ -293,6 +293,6 @@ export default function BlogIndex() {
           </div>
         </div>
       </section>
-    </Layout>
+    </LayoutWrapper>
   );
 }

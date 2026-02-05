@@ -1,4 +1,8 @@
 'use client';
+// Force dynamic rendering to prevent static generation errors
+// This page uses useQuery and useMutation which require QueryClientProvider
+export const dynamic = 'force-dynamic';
+
 import { useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -134,10 +138,10 @@ export default function PublicProposal() {
   const handleAcceptSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (acceptName.trim() && acceptEmail.trim() && signature) {
-      acceptMutation.mutate({ 
-        name: acceptName.trim(), 
+      acceptMutation.mutate({
+        name: acceptName.trim(),
         email: acceptEmail.trim(),
-        signature 
+        signature
       });
     }
   };
@@ -184,6 +188,7 @@ export default function PublicProposal() {
         ? { low: data.proposal.estimatedDaysLow, high: data.proposal.estimatedDaysHigh }
         : undefined,
     lineItems: data.proposal.lineItems?.map((item) => ({
+      id: item.id,
       serviceId: item.id,
       tradeName: item.tradeName,
       jobTypeName: item.jobTypeName,
@@ -260,7 +265,7 @@ export default function PublicProposal() {
                 Please provide your information and signature to accept
               </p>
             </div>
-            
+
             <form onSubmit={handleAcceptSubmit} className="space-y-4">
               <div>
                 <Label htmlFor="accept-name">Your Full Name</Label>
@@ -286,7 +291,7 @@ export default function PublicProposal() {
                   data-testid="input-accept-email"
                 />
               </div>
-              
+
               <div>
                 <Label>Your Signature</Label>
                 <p className="text-xs text-slate-500 mb-2">
@@ -302,13 +307,13 @@ export default function PublicProposal() {
                   </p>
                 )}
               </div>
-              
+
               {acceptMutation.isError && (
                 <p className="text-red-600 text-sm" data-testid="text-accept-error">
                   {acceptMutation.error?.message || t.proposal.failedToAccept}
                 </p>
               )}
-              
+
               <div className="flex gap-3 pt-2">
                 <Button
                   type="button"
@@ -365,9 +370,9 @@ export default function PublicProposal() {
                 <p className="text-sm font-medium text-green-800 mb-2">Signature:</p>
                 <div className="bg-white rounded-lg p-2 inline-block border border-green-200">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img 
-                    src={data.proposal.signature} 
-                    alt={t.proposal.clientSignature} 
+                  <img
+                    src={data.proposal.signature}
+                    alt={t.proposal.clientSignature}
                     className="max-h-20"
                     data-testid="img-signature"
                   />

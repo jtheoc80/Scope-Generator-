@@ -8,52 +8,21 @@
 import { db } from '@/lib/db';
 import { sql } from 'drizzle-orm';
 import type Stripe from 'stripe';
-import type {
-  SubscriptionStatus,
-  PlanType,
-  BillingStatus,
-  Subscription,
-  WebhookEvent,
-  InsertWebhookEvent,
+import {
+  isActiveSubscriptionStatus,
+  calculateBillingStatus,
+  type SubscriptionStatus,
+  type PlanType,
+  type BillingStatus,
+  type Subscription,
+  type WebhookEvent,
+  type InsertWebhookEvent,
 } from '@/shared/billing-schema';
 
 // ==========================================
 // Billing Types (imported from shared schema)
 // ==========================================
-function isActiveSubscriptionStatus(status: SubscriptionStatus | string): boolean {
-  return status === 'active' || status === 'trialing';
-}
 
-function calculateBillingStatus(
-  subscription: Subscription | null,
-  user: { proposalCredits?: number; creditsExpireAt?: Date | null; trialEndsAt?: Date | null }
-): BillingStatus {
-  const now = new Date();
-  
-  const creditsExpired = user.creditsExpireAt && new Date(user.creditsExpireAt) < now;
-  const availableCredits = creditsExpired ? 0 : (user.proposalCredits || 0);
-  
-  const isInTrial = user.trialEndsAt && new Date(user.trialEndsAt) > now;
-  
-  const status = (subscription?.status || 'none') as SubscriptionStatus;
-  const hasActiveSubscription = isActiveSubscriptionStatus(status);
-  
-  const canAccessPremiumFeatures = hasActiveSubscription || availableCredits > 0 || !!isInTrial;
-  
-  return {
-    hasActiveSubscription,
-    canAccessPremiumFeatures,
-    plan: (subscription?.plan as PlanType) || 'free',
-    status,
-    currentPeriodEnd: subscription?.currentPeriodEnd || null,
-    isTrialing: status === 'trialing',
-    trialEndsAt: user.trialEndsAt ? new Date(user.trialEndsAt) : null,
-    availableCredits,
-    creditsExpireAt: user.creditsExpireAt ? new Date(user.creditsExpireAt) : null,
-    cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd || false,
-    stripeCustomerId: subscription?.stripeCustomerId || null,
-  };
-}
 
 export class BillingService {
   // ==========================================
@@ -102,10 +71,20 @@ export class BillingService {
    * Get subscription by user ID
    */
   async getSubscriptionByUserId(userId: string): Promise<Subscription | null> {
-    const result = await db.execute(
-      sql`SELECT * FROM subscriptions WHERE user_id = ${userId} ORDER BY created_at DESC LIMIT 1`
-    );
-    return (result.rows[0] as Subscription) || null;
+    try {
+      const result = await db.execute(
+        sql`SELECT * FROM subscriptions WHERE user_id = ${userId} ORDER BY created_at DESC LIMIT 1`
+      );
+      return (result.rows[0] as Subscription) || null;
+    } catch (error: any) {
+      // Handle case where subscriptions table doesn't exist yet
+      if (error.message?.includes('relation "subscriptions" does not exist') ||
+        error.message?.includes('Failed query')) {
+        console.warn('[BillingService] subscriptions table not found - returning null');
+        return null;
+      }
+      throw error;
+    }
   }
 
   /**
@@ -122,10 +101,20 @@ export class BillingService {
    * Get subscription by Stripe subscription ID
    */
   async getSubscriptionByStripeId(stripeSubscriptionId: string): Promise<Subscription | null> {
-    const result = await db.execute(
-      sql`SELECT * FROM subscriptions WHERE stripe_subscription_id = ${stripeSubscriptionId} LIMIT 1`
-    );
-    return (result.rows[0] as Subscription) || null;
+    try {
+      const result = await db.execute(
+        sql`SELECT * FROM subscriptions WHERE stripe_subscription_id = ${stripeSubscriptionId} LIMIT 1`
+      );
+      return (result.rows[0] as Subscription) || null;
+    } catch (error: any) {
+      // Handle case where subscriptions table doesn't exist yet
+      if (error.message?.includes('relation "subscriptions" does not exist') ||
+        error.message?.includes('Failed query')) {
+        console.warn('[BillingService] subscriptions table not found in getSubscriptionByStripeId - returning null');
+        return null;
+      }
+      throw error;
+    }
   }
 
   /**
@@ -149,51 +138,61 @@ export class BillingService {
     },
     eventId: string,
     eventType: string
-  ): Promise<Subscription> {
-    // Try to find existing subscription
-    const existing = await this.getSubscriptionByStripeId(data.stripeSubscriptionId);
-    
-    if (existing) {
-      // Update existing subscription
-      const result = await db.execute(
-        sql`
-          UPDATE subscriptions SET
-            status = ${data.status},
-            plan = ${data.plan},
-            stripe_price_id = ${data.stripePriceId || null},
-            current_period_start = ${data.currentPeriodStart || null},
-            current_period_end = ${data.currentPeriodEnd || null},
-            trial_start = ${data.trialStart || null},
-            trial_end = ${data.trialEnd || null},
-            cancel_at_period_end = ${data.cancelAtPeriodEnd ?? false},
-            canceled_at = ${data.canceledAt || null},
-            last_webhook_event_id = ${eventId},
-            last_updated_by_event = ${eventType},
-            updated_at = NOW()
-          WHERE stripe_subscription_id = ${data.stripeSubscriptionId}
-          RETURNING *
-        `
-      );
-      return result.rows[0] as Subscription;
-    } else {
-      // Create new subscription
-      const result = await db.execute(
-        sql`
-          INSERT INTO subscriptions (
-            user_id, stripe_customer_id, stripe_subscription_id, stripe_price_id,
-            status, plan, current_period_start, current_period_end,
-            trial_start, trial_end, cancel_at_period_end, canceled_at,
-            last_webhook_event_id, last_updated_by_event
-          ) VALUES (
-            ${data.userId}, ${data.stripeCustomerId}, ${data.stripeSubscriptionId}, ${data.stripePriceId || null},
-            ${data.status}, ${data.plan}, ${data.currentPeriodStart || null}, ${data.currentPeriodEnd || null},
-            ${data.trialStart || null}, ${data.trialEnd || null}, ${data.cancelAtPeriodEnd ?? false}, ${data.canceledAt || null},
-            ${eventId}, ${eventType}
-          )
-          RETURNING *
-        `
-      );
-      return result.rows[0] as Subscription;
+  ): Promise<Subscription | null> {
+    try {
+      // Try to find existing subscription
+      const existing = await this.getSubscriptionByStripeId(data.stripeSubscriptionId);
+
+      if (existing) {
+        // Update existing subscription
+        const result = await db.execute(
+          sql`
+            UPDATE subscriptions SET
+              status = ${data.status},
+              plan = ${data.plan},
+              stripe_price_id = ${data.stripePriceId || null},
+              current_period_start = ${data.currentPeriodStart || null},
+              current_period_end = ${data.currentPeriodEnd || null},
+              trial_start = ${data.trialStart || null},
+              trial_end = ${data.trialEnd || null},
+              cancel_at_period_end = ${data.cancelAtPeriodEnd ?? false},
+              canceled_at = ${data.canceledAt || null},
+              last_webhook_event_id = ${eventId},
+              last_updated_by_event = ${eventType},
+              updated_at = NOW()
+            WHERE stripe_subscription_id = ${data.stripeSubscriptionId}
+            RETURNING *
+          `
+        );
+        return result.rows[0] as Subscription;
+      } else {
+        // Create new subscription
+        const result = await db.execute(
+          sql`
+            INSERT INTO subscriptions (
+              user_id, stripe_customer_id, stripe_subscription_id, stripe_price_id,
+              status, plan, current_period_start, current_period_end,
+              trial_start, trial_end, cancel_at_period_end, canceled_at,
+              last_webhook_event_id, last_updated_by_event
+            ) VALUES (
+              ${data.userId}, ${data.stripeCustomerId}, ${data.stripeSubscriptionId}, ${data.stripePriceId || null},
+              ${data.status}, ${data.plan}, ${data.currentPeriodStart || null}, ${data.currentPeriodEnd || null},
+              ${data.trialStart || null}, ${data.trialEnd || null}, ${data.cancelAtPeriodEnd ?? false}, ${data.canceledAt || null},
+              ${eventId}, ${eventType}
+            )
+            RETURNING *
+          `
+        );
+        return result.rows[0] as Subscription;
+      }
+    } catch (error: any) {
+      // Handle case where subscriptions table doesn't exist yet
+      if (error.message?.includes('relation "subscriptions" does not exist') ||
+        error.message?.includes('Failed query')) {
+        console.warn('[BillingService] subscriptions table not found in upsertSubscription - skipping subscription record');
+        return null;
+      }
+      throw error;
     }
   }
 
@@ -242,11 +241,11 @@ export class BillingService {
     const existingResult = await db.execute(
       sql`SELECT * FROM credit_transactions WHERE stripe_checkout_session_id = ${data.stripeCheckoutSessionId} LIMIT 1`
     );
-    
+
     if (existingResult.rows.length > 0) {
       return { transaction: existingResult.rows[0], alreadyProcessed: true };
     }
-    
+
     // Create transaction
     const result = await db.execute(
       sql`
@@ -260,7 +259,7 @@ export class BillingService {
         RETURNING *
       `
     );
-    
+
     return { transaction: result.rows[0], alreadyProcessed: false };
   }
 
@@ -275,14 +274,14 @@ export class BillingService {
   async getBillingStatus(userId: string): Promise<BillingStatus> {
     // Get subscription
     const subscription = await this.getSubscriptionByUserId(userId);
-    
+
     // Get user credits
     const userResult = await db.execute(
       sql`SELECT proposal_credits, credits_expire_at, trial_ends_at FROM users WHERE id = ${userId} LIMIT 1`
     );
-    
+
     const user = userResult.rows[0] as { proposal_credits?: number; credits_expire_at?: Date; trial_ends_at?: Date } | undefined;
-    
+
     return calculateBillingStatus(subscription, {
       proposalCredits: user?.proposal_credits,
       creditsExpireAt: user?.credits_expire_at,
@@ -308,7 +307,8 @@ export class BillingService {
    */
   async handleCheckoutCompleted(
     session: Stripe.Checkout.Session,
-    eventId: string
+    eventId: string,
+    rawPayload?: string
   ): Promise<{ success: boolean; message: string }> {
     // Check idempotency
     if (await this.isEventProcessed(eventId)) {
@@ -328,6 +328,7 @@ export class BillingService {
         stripeCustomerId: customerId,
         processingResult: 'failed',
         errorMessage: 'No userId in session metadata',
+        rawPayload,
       });
       return { success: false, message: 'No userId in session metadata' };
     }
@@ -337,12 +338,12 @@ export class BillingService {
       if (productType && ['starter', 'single', 'pack'].includes(productType)) {
         const credits = parseInt(session.metadata?.credits || '0');
         if (credits > 0) {
-          const expiresAt = productType === 'pack' 
+          const expiresAt = productType === 'pack'
             ? new Date(Date.now() + 6 * 30 * 24 * 60 * 60 * 1000)
             : null;
-          
+
           // Record credit transaction
-          await this.recordCreditPurchase({
+          const { alreadyProcessed } = await this.recordCreditPurchase({
             userId,
             stripeCheckoutSessionId: session.id,
             stripePaymentIntentId: session.payment_intent as string,
@@ -351,27 +352,46 @@ export class BillingService {
             amountPaid: session.amount_total || 0,
             expiresAt: expiresAt || undefined,
           });
-          
-          // Also update user's credit balance (for quick access)
-          await db.execute(
-            sql`
-              UPDATE users 
-              SET 
-                proposal_credits = proposal_credits + ${credits},
-                credits_expire_at = CASE 
-                  WHEN ${expiresAt}::timestamp IS NOT NULL AND (credits_expire_at IS NULL OR ${expiresAt}::timestamp > credits_expire_at)
-                  THEN ${expiresAt}::timestamp
-                  ELSE credits_expire_at
-                END,
-                updated_at = NOW()
-              WHERE id = ${userId}
-            `
-          );
+
+          // Only add credits in production environment
+          // In development, verify-session endpoint handles credit addition
+          const isProduction = process.env.NODE_ENV === 'production';
+
+          if (isProduction && !alreadyProcessed) {
+            // Update user's credit balance in production (webhook is the source of truth)
+            await db.execute(
+              sql`
+                UPDATE users 
+                SET 
+                  proposal_credits = proposal_credits + ${credits},
+                  credits_expire_at = CASE 
+                    WHEN ${expiresAt}::timestamp IS NOT NULL AND (credits_expire_at IS NULL OR ${expiresAt}::timestamp > credits_expire_at)
+                    THEN ${expiresAt}::timestamp
+                    ELSE credits_expire_at
+                  END,
+                  updated_at = NOW()
+                WHERE id = ${userId}
+              `
+            );
+            console.log('[webhook] Credits added via webhook (production mode)', { userId, sessionId: session.id, credits });
+          } else if (!isProduction) {
+            console.log('[webhook] Skipping credit addition in webhook (development mode - handled by verify-session)', {
+              userId,
+              sessionId: session.id,
+              alreadyProcessed
+            });
+          } else {
+            console.log('[webhook] Credit purchase already processed, skipping user update', { userId, sessionId: session.id });
+          }
         }
       }
 
       // Handle subscription creation
       if (planType && subscriptionId) {
+        // Check if subscription already exists BEFORE upserting (to detect if this is a new subscription)
+        const existingSubscription = await this.getSubscriptionByStripeId(subscriptionId);
+        const isNewSubscription = !existingSubscription;
+
         await this.upsertSubscription(
           {
             userId,
@@ -383,11 +403,34 @@ export class BillingService {
           eventId,
           'checkout.session.completed'
         );
-        
-        // Also update user's isPro flag (for backward compatibility)
-        await db.execute(
-          sql`UPDATE users SET stripe_customer_id = ${customerId}, stripe_subscription_id = ${subscriptionId}, is_pro = true, subscription_plan = ${planType}, updated_at = NOW() WHERE id = ${userId}`
-        );
+
+        // Grant initial credits based on plan type for NEW subscriptions only
+        // Pro = 15 credits/month, Crew = 50 credits/month
+        const creditsToGrant = planType === 'crew' ? 50 : 15;
+
+        if (isNewSubscription) {
+          // Grant initial credits for new subscription
+          await db.execute(
+            sql`
+              UPDATE users 
+              SET 
+                proposal_credits = proposal_credits + ${creditsToGrant},
+                stripe_customer_id = ${customerId}, 
+                stripe_subscription_id = ${subscriptionId}, 
+                is_pro = true, 
+                subscription_plan = ${planType}, 
+                updated_at = NOW() 
+              WHERE id = ${userId}
+            `
+          );
+          console.log(`[webhook] Granted ${creditsToGrant} credits for new ${planType} subscription`, { userId, sessionId: session.id, subscriptionId });
+        } else {
+          // Just update subscription info without adding credits (renewal handled separately)
+          await db.execute(
+            sql`UPDATE users SET stripe_customer_id = ${customerId}, stripe_subscription_id = ${subscriptionId}, is_pro = true, subscription_plan = ${planType}, updated_at = NOW() WHERE id = ${userId}`
+          );
+          console.log(`[webhook] Updated existing ${planType} subscription (no credits added)`, { userId, sessionId: session.id, subscriptionId });
+        }
       }
 
       // Record successful processing
@@ -398,6 +441,7 @@ export class BillingService {
         stripeSubscriptionId: subscriptionId,
         userId,
         processingResult: 'success',
+        rawPayload,
       });
 
       return { success: true, message: 'Checkout completed successfully' };
@@ -410,6 +454,7 @@ export class BillingService {
         userId,
         processingResult: 'failed',
         errorMessage,
+        rawPayload,
       });
       throw error;
     }
@@ -420,7 +465,8 @@ export class BillingService {
    */
   async handleSubscriptionUpdated(
     subscription: Stripe.Subscription,
-    eventId: string
+    eventId: string,
+    rawPayload?: string
   ): Promise<{ success: boolean; message: string }> {
     // Check idempotency
     if (await this.isEventProcessed(eventId)) {
@@ -429,7 +475,7 @@ export class BillingService {
 
     const customerId = subscription.customer as string;
     const userId = subscription.metadata?.userId;
-    
+
     // Find user by metadata or customer ID
     let targetUserId: string | undefined = userId;
     if (!targetUserId) {
@@ -447,6 +493,7 @@ export class BillingService {
         stripeSubscriptionId: subscription.id,
         processingResult: 'failed',
         errorMessage: 'Could not find user for subscription',
+        rawPayload,
       });
       return { success: false, message: 'Could not find user for subscription' };
     }
@@ -454,6 +501,31 @@ export class BillingService {
     try {
       const isActive = isActiveSubscriptionStatus(subscription.status);
       const planType = subscription.metadata?.planType || 'pro';
+
+      // Get existing subscription to detect renewals and plan changes
+      const existingSubscription = await this.getSubscriptionByStripeId(subscription.id);
+      const newPeriodStart = subscription.current_period_start
+        ? new Date(subscription.current_period_start * 1000)
+        : undefined;
+
+      // Detect if this is a renewal (new billing period started)
+      const isRenewal = existingSubscription &&
+        newPeriodStart &&
+        existingSubscription.currentPeriodStart &&
+        newPeriodStart.getTime() > existingSubscription.currentPeriodStart.getTime();
+
+      // Detect plan upgrade/downgrade
+      const oldPlan = existingSubscription?.plan as string | undefined;
+      const isPlanChange = oldPlan && oldPlan !== planType;
+      const isUpgrade = isPlanChange && (
+        (oldPlan === 'pro' && planType === 'crew') ||
+        (oldPlan === 'free' && (planType === 'pro' || planType === 'crew'))
+      );
+      const isDowngrade = isPlanChange && (
+        (oldPlan === 'crew' && planType === 'pro') ||
+        (oldPlan === 'crew' && planType === 'free') ||
+        (oldPlan === 'pro' && planType === 'free')
+      );
 
       // Update subscription record
       await this.upsertSubscription(
@@ -463,31 +535,93 @@ export class BillingService {
           stripeSubscriptionId: subscription.id,
           status: subscription.status,
           plan: planType,
-          currentPeriodStart: subscription.current_period_start 
-            ? new Date(subscription.current_period_start * 1000) 
+          currentPeriodStart: newPeriodStart,
+          currentPeriodEnd: subscription.current_period_end
+            ? new Date(subscription.current_period_end * 1000)
             : undefined,
-          currentPeriodEnd: subscription.current_period_end 
-            ? new Date(subscription.current_period_end * 1000) 
+          trialStart: subscription.trial_start
+            ? new Date(subscription.trial_start * 1000)
             : undefined,
-          trialStart: subscription.trial_start 
-            ? new Date(subscription.trial_start * 1000) 
-            : undefined,
-          trialEnd: subscription.trial_end 
-            ? new Date(subscription.trial_end * 1000) 
+          trialEnd: subscription.trial_end
+            ? new Date(subscription.trial_end * 1000)
             : undefined,
           cancelAtPeriodEnd: subscription.cancel_at_period_end,
-          canceledAt: subscription.canceled_at 
-            ? new Date(subscription.canceled_at * 1000) 
+          canceledAt: subscription.canceled_at
+            ? new Date(subscription.canceled_at * 1000)
             : null,
         },
         eventId,
         'customer.subscription.updated'
       );
 
-      // Update user's isPro flag (backward compatibility)
-      await db.execute(
-        sql`UPDATE users SET is_pro = ${isActive}, subscription_plan = ${isActive ? planType : null}, updated_at = NOW() WHERE id = ${targetUserId}`
-      );
+      // CRITICAL: Always sync user flags from subscription status (source of truth)
+      // subscriptions.status is PRIMARY, user.is_pro is derived
+      const shouldHaveProAccess = isActive || subscription.status === 'past_due' || subscription.status === 'trialing';
+
+      // Handle credit grants based on scenario
+      if (isActive && isRenewal) {
+        // Monthly renewal: Grant new month's credits
+        const creditsToGrant = planType === 'crew' ? 50 : 15;
+        await db.execute(
+          sql`
+            UPDATE users 
+            SET 
+              proposal_credits = proposal_credits + ${creditsToGrant},
+              is_pro = ${shouldHaveProAccess}, 
+              subscription_plan = ${shouldHaveProAccess ? planType : null}, 
+              updated_at = NOW() 
+            WHERE id = ${targetUserId}
+          `
+        );
+        console.log(`[webhook] Granted ${creditsToGrant} credits for ${planType} subscription renewal`, {
+          userId: targetUserId,
+          subscriptionId: subscription.id
+        });
+      } else if (isActive && isUpgrade) {
+        // Plan upgrade: Grant prorated credits or full month (business decision)
+        // For now: Grant full month credits on upgrade
+        const creditsToGrant = planType === 'crew' ? 50 : 15;
+        await db.execute(
+          sql`
+            UPDATE users 
+            SET 
+              proposal_credits = proposal_credits + ${creditsToGrant},
+              is_pro = ${shouldHaveProAccess}, 
+              subscription_plan = ${shouldHaveProAccess ? planType : null}, 
+              updated_at = NOW() 
+            WHERE id = ${targetUserId}
+          `
+        );
+        console.log(`[webhook] Granted ${creditsToGrant} credits for upgrade from ${oldPlan} to ${planType}`, {
+          userId: targetUserId,
+          subscriptionId: subscription.id
+        });
+      } else if (isActive && isDowngrade) {
+        // Plan downgrade: Keep existing credits, just update plan
+        // Note: User keeps their current credits (no refund, no reset)
+        await db.execute(
+          sql`UPDATE users SET is_pro = ${shouldHaveProAccess}, subscription_plan = ${shouldHaveProAccess ? planType : null}, updated_at = NOW() WHERE id = ${targetUserId}`
+        );
+        console.log(`[webhook] Plan downgraded from ${oldPlan} to ${planType} - credits retained`, {
+          userId: targetUserId,
+          subscriptionId: subscription.id
+        });
+      } else {
+        // Status update only (no renewal, no plan change)
+        // Update user flags to match subscription status
+        // Note: past_due subscriptions still grant access (grace period handled in billing status)
+        await db.execute(
+          sql`UPDATE users SET is_pro = ${shouldHaveProAccess}, subscription_plan = ${shouldHaveProAccess ? planType : null}, updated_at = NOW() WHERE id = ${targetUserId}`
+        );
+
+        if (subscription.status === 'past_due') {
+          console.log(`[webhook] Subscription marked as past_due - user retains access during grace period`, {
+            userId: targetUserId,
+            subscriptionId: subscription.id,
+            currentPeriodEnd: subscription.current_period_end
+          });
+        }
+      }
 
       await this.recordWebhookEvent({
         eventId,
@@ -496,6 +630,7 @@ export class BillingService {
         stripeSubscriptionId: subscription.id,
         userId: targetUserId,
         processingResult: 'success',
+        rawPayload,
       });
 
       return { success: true, message: 'Subscription updated successfully' };
@@ -509,6 +644,7 @@ export class BillingService {
         userId: targetUserId,
         processingResult: 'failed',
         errorMessage,
+        rawPayload,
       });
       throw error;
     }
@@ -519,7 +655,8 @@ export class BillingService {
    */
   async handleSubscriptionDeleted(
     subscription: Stripe.Subscription,
-    eventId: string
+    eventId: string,
+    rawPayload?: string
   ): Promise<{ success: boolean; message: string }> {
     // Check idempotency
     if (await this.isEventProcessed(eventId)) {
@@ -551,6 +688,7 @@ export class BillingService {
         stripeSubscriptionId: subscription.id,
         userId,
         processingResult: 'success',
+        rawPayload,
       });
 
       return { success: true, message: 'Subscription deleted successfully' };
@@ -563,6 +701,7 @@ export class BillingService {
         stripeSubscriptionId: subscription.id,
         processingResult: 'failed',
         errorMessage,
+        rawPayload,
       });
       throw error;
     }

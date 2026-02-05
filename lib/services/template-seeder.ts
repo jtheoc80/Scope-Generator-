@@ -2,7 +2,7 @@
  * Template seeder service - ensures active templates exist for mobile job types
  */
 
-import { db } from '@/server/db';
+import { db } from '@/lib/services/db';
 import { proposalTemplates, type TemplateJobOption } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 

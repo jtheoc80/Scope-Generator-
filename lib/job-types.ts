@@ -26,34 +26,27 @@ export const JOB_TYPE_DEFINITIONS: readonly JobTypeDefinition[] = [
   // Interior
   { id: "bathroom-remodel", label: "Bathroom", icon: "🛁", category: "interior" },
   { id: "kitchen-remodel", label: "Kitchen", icon: "🍳", category: "interior" },
-  { id: "flooring", label: "Flooring", icon: "🪵", category: "interior" },
+
   { id: "painting", label: "Painting", icon: "🎨", category: "interior" },
-  
-  // Exterior
-  { id: "roofing", label: "Roofing", icon: "🏠", category: "exterior" },
-  { id: "windows", label: "Windows", icon: "🪟", category: "exterior" },
-  { id: "siding", label: "Siding", icon: "🧱", category: "exterior" },
-  { id: "doors", label: "Doors", icon: "🚪", category: "exterior" },
-  { id: "fence", label: "Fence", icon: "🚧", category: "exterior" },
-  { id: "driveway", label: "Driveway", icon: "🚗", category: "exterior" },
-  
+
+
+
   // Systems
   { id: "hvac", label: "HVAC", icon: "❄️", category: "systems" },
   { id: "plumbing", label: "Plumbing", icon: "🔧", category: "systems" },
   { id: "electrical", label: "Electrical", icon: "⚡", category: "systems" },
-  
+
   // Bathroom sub-types
   { id: "shower-replacement", label: "Shower Replacement", icon: "🚿", category: "interior" },
   { id: "tub-to-shower", label: "Tub to Shower", icon: "🚿", category: "interior" },
   { id: "shower-remodel", label: "Shower Remodel", icon: "🚿", category: "interior" },
   { id: "walk-in-tub", label: "Walk-In Tub", icon: "🛁", category: "interior" },
-  
+
   // Kitchen sub-types
   { id: "cabinet-refacing", label: "Cabinet Refacing", icon: "🍳", category: "interior" },
   { id: "countertop-replacement", label: "Countertop Replacement", icon: "🍳", category: "interior" },
-  
-  // General
-  { id: "demo", label: "General Estimate", icon: "📋", category: "general" },
+
+
 ] as const;
 
 /**
@@ -110,12 +103,11 @@ export function isMeasurementTrade(jobTypeId: string): jobTypeId is MeasurementT
  */
 export const PRIMARY_JOB_TYPE_IDS = [
   "bathroom-remodel",
-  "kitchen-remodel", 
-  "roofing",
+  "kitchen-remodel",
+  "painting",
   "hvac",
   "plumbing",
-  "fence",
-  "driveway",
+  "electrical",
 ] as const;
 
 /**

@@ -6,12 +6,12 @@ export const metadata: Metadata = {
   description: "Get instant cost estimates for bathroom remodels, kitchen renovations, roofing, HVAC, plumbing, electrical, and 15+ more trades. Free contractor price calculator with regional pricing adjustments for all 50 states.",
   keywords: [
     "contractor price calculator",
-    "remodeling cost estimate", 
-    "construction cost calculator", 
-    "home improvement costs", 
+    "remodeling cost estimate",
+    "construction cost calculator",
+    "home improvement costs",
     "contractor pricing",
     "bathroom remodel cost",
-    "kitchen renovation cost", 
+    "kitchen renovation cost",
     "roofing estimate",
     "hvac installation cost",
     "plumbing cost calculator",
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://scopegenerator.com/calculator",
   },
-};
+};//{dsdsdsdsdsdsdsmbgsngsb jkdgsadbsakdgsdgjsbdjkgvasjdsadjsgvdisbdislcbs;oa dsan jknubgsjdkbsajbdsdbvshbcscbscbsajubgc}
 
 // FAQ data for schema
 const calculatorFAQs = [
@@ -75,7 +75,7 @@ export default function CalculatorLayout({
 }) {
   // Generate structured data
   const faqSchema = generateFAQSchema(calculatorFAQs);
-  
+
   const breadcrumbs = generateBreadcrumbSchema([
     { name: "Home", url: "/" },
     { name: "Calculator", url: "/calculator" },

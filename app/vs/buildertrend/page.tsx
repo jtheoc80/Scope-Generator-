@@ -1,6 +1,6 @@
 'use client';
 import { useEffect } from "react";
-import Layout from "@/components/layout";
+import LayoutWrapper from "@/components/layout-wrapper";
 import Link from "next/link";
 import { ArrowRight, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ export default function CompareBuildertrend() {
   }, []);
 
   return (
-    <Layout>
+    <LayoutWrapper>
       <article className="bg-white">
         <section className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-16 md:py-20">
           <div className="container mx-auto px-4">
@@ -197,6 +197,6 @@ export default function CompareBuildertrend() {
           </div>
         </section>
       </article>
-    </Layout>
+    </LayoutWrapper>
   );
 }

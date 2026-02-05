@@ -1,7 +1,7 @@
 'use client';
 
 import Link from "next/link";
-import Layout from "@/components/layout";
+import LayoutWrapper from "@/components/layout-wrapper";
 import { 
   ArrowRight, 
   CheckCircle2, 
@@ -35,7 +35,7 @@ export default function CityTradeLandingClient({
 }: CityTradeLandingClientProps) {
 
   return (
-    <Layout>
+    <LayoutWrapper>
       {/* Hero Section */}
       <section className="relative bg-slate-900 text-white overflow-hidden">
         <div className="absolute inset-0 z-0 opacity-10">
@@ -366,6 +366,6 @@ export default function CityTradeLandingClient({
           </Link>
         </div>
       </section>
-    </Layout>
+    </LayoutWrapper>
   );
 }

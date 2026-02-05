@@ -14,6 +14,9 @@ export async function generateStaticParams() {
   }));
 }
 
+// Force dynamic rendering to ensure QueryClientProvider is available
+export const dynamic = 'force-dynamic';
+
 // Generate metadata for SEO
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { trade: tradeSlug } = await params;

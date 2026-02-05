@@ -23,17 +23,17 @@ export default function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
       const response = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          productType: selectedOption 
+        body: JSON.stringify({
+          productType: selectedOption
         }),
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.message || 'Failed to start checkout');
       }
-      
+
       if (data.url) {
         window.location.href = data.url;
       } else {
@@ -51,8 +51,8 @@ export default function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg border-none shadow-2xl p-0 overflow-hidden" data-testid="paywall">
-        <div className="bg-slate-900 p-6 text-center text-white relative overflow-hidden">
+      <DialogContent className="sm:max-w-lg border-none shadow-2xl p-0 max-h-[90vh] overflow-y-auto [&>button]:text-slate-400 [&>button:hover]:text-white [&>button]:z-50 [&>button]:cursor-pointer [&>button:hover]:scale-110 [&>button]:transition-transform" data-testid="paywall">
+        <div className="bg-slate-900 p-6 text-center text-white relative overflow-hidden shrink-0">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-secondary to-transparent opacity-50"></div>
           <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
             <Lock className="w-8 h-8 text-secondary" />
@@ -65,14 +65,14 @@ export default function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
 
         {/* Error Banner */}
         {error && (
-          <div 
+          <div
             className="bg-red-50 border-l-4 border-red-400 p-4 flex items-start gap-3"
             data-testid="paywall-error"
           >
             <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
             <div className="flex-1">
               <p className="text-sm text-red-700">{error}</p>
-              <button 
+              <button
                 onClick={() => setError(null)}
                 className="text-sm text-red-600 underline mt-1 hover:text-red-800"
               >
@@ -84,16 +84,14 @@ export default function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
 
         <div className="p-6 bg-white">
           <div className="grid gap-4">
-            <div 
+            <div
               data-testid="option-single"
               onClick={() => setSelectedOption('single')}
-              className={`border rounded-xl p-5 flex items-start gap-4 hover:border-primary transition-all cursor-pointer group ${
-                selectedOption === 'single' ? 'border-primary bg-primary/5 shadow-md' : 'border-slate-200'
-              }`}
+              className={`border rounded-xl p-5 flex items-start gap-4 hover:border-primary transition-all cursor-pointer group ${selectedOption === 'single' ? 'border-primary bg-primary/5 shadow-md' : 'border-slate-200'
+                }`}
             >
-              <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${
-                selectedOption === 'single' ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600 group-hover:bg-primary/10'
-              }`}>
+              <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${selectedOption === 'single' ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600 group-hover:bg-primary/10'
+                }`}>
                 <Zap className="w-6 h-6" />
               </div>
               <div className="flex-1 min-w-0">
@@ -109,19 +107,17 @@ export default function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
               </div>
             </div>
 
-            <div 
+            <div
               data-testid="option-pack"
               onClick={() => setSelectedOption('pack')}
-              className={`border-2 rounded-xl p-5 flex items-start gap-4 relative cursor-pointer ${
-                selectedOption === 'pack' ? 'border-secondary bg-orange-50/50 shadow-lg' : 'border-secondary/40 bg-orange-50/20'
-              }`}
+              className={`border-2 rounded-xl p-5 flex items-start gap-4 relative cursor-pointer ${selectedOption === 'pack' ? 'border-secondary bg-orange-50/50 shadow-lg' : 'border-secondary/40 bg-orange-50/20'
+                }`}
             >
               <div className="absolute -top-3 left-4 bg-secondary text-secondary-foreground text-xs font-bold px-3 py-1 rounded-full shadow-sm">
-                BEST VALUE - SAVE 67%
+                BEST VALUE
               </div>
-              <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${
-                selectedOption === 'pack' ? 'bg-secondary text-white' : 'bg-orange-100 text-secondary'
-              }`}>
+              <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${selectedOption === 'pack' ? 'bg-secondary text-white' : 'bg-orange-100 text-secondary'
+                }`}>
                 <Package className="w-6 h-6" />
               </div>
               <div className="flex-1 min-w-0">
@@ -129,14 +125,14 @@ export default function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
                   <h4 className="font-bold text-slate-900 text-lg">Contractor Pack</h4>
                   <div className="text-right whitespace-nowrap">
                     <span className="font-heading font-bold text-2xl text-secondary">$39</span>
-                    <span className="text-sm text-muted-foreground ml-1 line-through">$120</span>
+                    <span className="text-sm text-muted-foreground ml-1 line-through">$180</span>
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground mt-1">
-                  <span className="font-semibold text-secondary">10 proposal credits</span> • Valid for 6 months
+                  <span className="font-semibold text-secondary">15 proposal credits</span> • Valid for 6 months
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Just $3.90 per proposal - ideal for busy contractors
+                  Just $2.60 per proposal - ideal for busy contractors
                 </p>
               </div>
             </div>
@@ -198,7 +194,7 @@ export default function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
             </div>
           </div>
 
-          <Button 
+          <Button
             data-testid="start-checkout"
             onClick={handleCheckout}
             disabled={checkoutLoading}
@@ -210,7 +206,7 @@ export default function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
                 Processing...
               </>
             ) : selectedOption === 'pack' ? (
-              'Get 10 Credits for $39'
+              'Get 15 Credits for $39'
             ) : (
               'Unlock for $12'
             )}
@@ -229,12 +225,12 @@ export default function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
               Try Again
             </Button>
           )}
-          
+
           <p className="text-center text-xs text-muted-foreground mt-4">
             Secure payment via Stripe. One-time purchase, no subscription.
           </p>
         </div>
       </DialogContent>
-    </Dialog>
+    </Dialog >
   );
 }

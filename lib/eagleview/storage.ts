@@ -5,7 +5,7 @@
  * Server-side only - uses Drizzle ORM.
  */
 
-import { db } from "../../server/db";
+import { db } from "@/lib/services/db";
 import { eagleviewRoofOrders, type RoofingMeasurements } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 

@@ -10,7 +10,7 @@ const anthropic = new Anthropic({
 export class AIServiceError extends Error {
   code: string;
   userMessage: string;
-  
+
   constructor(message: string, code: string, userMessage: string) {
     super(message);
     this.name = 'AIServiceError';
@@ -119,11 +119,11 @@ Example: ["Line item 1.", "Line item 2.", "Line item 3."]`;
 
   try {
     const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-3-5-sonnet-20240620",
       max_tokens: 4096,
       messages: [
         {
-          role: "user",
+          role: "user", 
           content: prompt,
         },
       ],
@@ -133,12 +133,12 @@ Example: ["Line item 1.", "Line item 2.", "Line item 3."]`;
     if (content.type === "text") {
       // Try to extract JSON from the response (handle potential markdown wrapping)
       let textContent = content.text.trim();
-      
+
       // Remove markdown code blocks if present
       if (textContent.startsWith('```')) {
         textContent = textContent.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
       }
-      
+
       try {
         const parsed = JSON.parse(textContent);
         if (Array.isArray(parsed) && parsed.every(item => typeof item === 'string')) {
@@ -147,7 +147,7 @@ Example: ["Line item 1.", "Line item 2.", "Line item 3."]`;
             enhancedScope: parsed,
           };
         }
-        
+
         return {
           success: false,
           enhancedScope: baseScope,
@@ -168,7 +168,7 @@ Example: ["Line item 1.", "Line item 2.", "Line item 3."]`;
         };
       }
     }
-    
+
     return {
       success: false,
       enhancedScope: baseScope,
@@ -179,7 +179,7 @@ Example: ["Line item 1.", "Line item 2.", "Line item 3."]`;
     };
   } catch (error: unknown) {
     logger.error('Error enhancing scope with AI', error as Error);
-    
+
     // Handle specific error types
     if (error instanceof Error) {
       if (error.message.includes('rate_limit') || error.message.includes('429')) {
@@ -192,7 +192,7 @@ Example: ["Line item 1.", "Line item 2.", "Line item 3."]`;
           },
         };
       }
-      
+
       if (error.message.includes('authentication') || error.message.includes('401')) {
         return {
           success: false,
@@ -203,7 +203,7 @@ Example: ["Line item 1.", "Line item 2.", "Line item 3."]`;
           },
         };
       }
-      
+
       if (error.message.includes('timeout') || error.message.includes('ETIMEDOUT')) {
         return {
           success: false,
@@ -215,7 +215,7 @@ Example: ["Line item 1.", "Line item 2.", "Line item 3."]`;
         };
       }
     }
-    
+
     return {
       success: false,
       enhancedScope: baseScope,
@@ -267,7 +267,7 @@ Example: ["Repair of existing water damage", "Permit fees", "Structural modifica
 
   try {
     const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-3-5-sonnet-20240620",
       max_tokens: 1024,
       messages: [{ role: "user", content: prompt }],
     });
@@ -278,13 +278,13 @@ Example: ["Repair of existing water damage", "Permit fees", "Structural modifica
       if (textContent.startsWith('```')) {
         textContent = textContent.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
       }
-      
+
       const parsed = JSON.parse(textContent);
       if (Array.isArray(parsed) && parsed.every(item => typeof item === 'string')) {
         return { success: true, exclusions: parsed };
       }
     }
-    
+
     return {
       success: false,
       exclusions: [],

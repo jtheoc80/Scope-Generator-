@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Layout from "@/components/layout";
+import LayoutWrapper from "@/components/layout-wrapper";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Calculator, FileText, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,11 @@ interface PageProps {
 export async function generateStaticParams() {
   return getLandingPageSlugs().map((slug) => ({ slug }));
 }
+
+// Force dynamic rendering to ensure QueryClientProvider is available
+// This prevents "No QueryClient set" errors during static generation
+// The Layout component uses useAuth() which requires QueryClientProvider
+export const dynamic = 'force-dynamic';
 
 // Generate metadata for SEO
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -91,7 +96,7 @@ export default async function LandingPage({ params }: PageProps) {
   };
 
   return (
-    <Layout>
+    <LayoutWrapper>
       {/* Structured Data */}
       <script
         type="application/ld+json"
@@ -111,18 +116,18 @@ export default async function LandingPage({ params }: PageProps) {
       />
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-16 md:py-24">
-        <div className="container mx-auto px-4">
+      <section className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-12 md:py-20 lg:py-24">
+        <div className="container mx-auto px-4 sm:px-6">
           <div className="max-w-4xl mx-auto text-center">
             <div className="flex justify-center mb-6">
               <div className="w-16 h-16 bg-orange-500 rounded-2xl flex items-center justify-center">
                 <FileText className="w-8 h-8 text-white" />
               </div>
             </div>
-            <h1 className="text-3xl md:text-5xl font-display font-bold mb-6">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-display font-bold mb-6">
               {page.h1}
             </h1>
-            <p className="text-xl text-slate-300 mb-8 max-w-3xl mx-auto">
+            <p className="text-lg md:text-xl text-slate-300 mb-8 max-w-3xl mx-auto">
               {page.heroSubtitle}
             </p>
             {page.priceRange !== "Varies by project" && (
@@ -149,7 +154,7 @@ export default async function LandingPage({ params }: PageProps) {
 
       {/* What's Included Section */}
       <section className="py-16 bg-white">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 sm:px-6">
           <div className="max-w-4xl mx-auto">
             <h2 className="text-2xl md:text-3xl font-display font-bold text-slate-900 mb-6">
               What&apos;s Included in Your Estimate
@@ -168,9 +173,9 @@ export default async function LandingPage({ params }: PageProps) {
 
       {/* Main Content Section */}
       <section className="py-16 bg-slate-50">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 sm:px-6">
           <div className="max-w-4xl mx-auto">
-            <div className="prose prose-lg prose-slate max-w-none">
+            <div className="prose prose-slate md:prose-lg max-w-none">
               <p className="text-lg text-slate-700 leading-relaxed mb-8">
                 {page.content.intro}
               </p>
@@ -202,7 +207,7 @@ export default async function LandingPage({ params }: PageProps) {
 
       {/* Common Projects Section */}
       <section className="py-16 bg-white">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 sm:px-6">
           <div className="max-w-4xl mx-auto">
             <h2 className="text-2xl md:text-3xl font-display font-bold text-slate-900 mb-8">
               Common Project Price Ranges
@@ -224,7 +229,7 @@ export default async function LandingPage({ params }: PageProps) {
 
       {/* FAQ Section */}
       <section className="py-16 bg-slate-50">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 sm:px-6">
           <div className="max-w-4xl mx-auto">
             <h2 className="text-2xl md:text-3xl font-display font-bold text-slate-900 mb-8">
               Frequently Asked Questions
@@ -248,10 +253,10 @@ export default async function LandingPage({ params }: PageProps) {
 
       {/* Related Pages Section */}
       <section className="py-12 bg-white border-t">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 sm:px-6">
           <div className="max-w-4xl mx-auto">
             <h2 className="text-xl font-bold text-slate-900 mb-6">Related Tools & Templates</h2>
-            <div className="grid sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {page.relatedPages.map((relatedSlug) => {
                 const relatedPage = getLandingPageBySlug(relatedSlug);
                 if (!relatedPage) return null;
@@ -277,7 +282,7 @@ export default async function LandingPage({ params }: PageProps) {
 
       {/* CTA Section */}
       <section className="py-16 bg-gradient-to-br from-orange-500 to-orange-600">
-        <div className="container mx-auto px-4 text-center">
+        <div className="container mx-auto px-4 sm:px-6 text-center">
           <h2 className="text-2xl md:text-3xl font-display font-bold text-white mb-4">
             Ready to Create Your Estimate?
           </h2>
@@ -298,6 +303,6 @@ export default async function LandingPage({ params }: PageProps) {
           </div>
         </div>
       </section>
-    </Layout>
+    </LayoutWrapper>
   );
 }

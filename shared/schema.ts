@@ -144,8 +144,8 @@ export const auditLogActions = [
 ] as const;
 export type AuditLogAction = typeof auditLogActions[number];
 
-// Option value type - can be boolean, string, or nested object (e.g., __mobile metadata)
-export type OptionValue = boolean | string | Record<string, unknown>;
+// Option value type - can be boolean, string, number, or nested object (e.g., __mobile metadata)
+export type OptionValue = boolean | string | number | Record<string, unknown>;
 
 // Structured scope sections (grouped display)
 export interface ScopeSection {
@@ -163,22 +163,22 @@ export interface ProposalLineItem {
   jobTypeId: string;
   jobTypeName: string;
   jobSize: number;
-  homeArea?: string;
-  footage?: number;
+  homeArea?: string | null;
+  footage?: number | null;
   scope: string[];
-  scopeSections?: ScopeSection[];
+  scopeSections?: ScopeSection[] | null;
   options: Record<string, OptionValue>;
   priceLow: number;
   priceHigh: number;
-  estimatedDaysLow?: number;
-  estimatedDaysHigh?: number;
-  warranty?: string;
-  exclusions?: string[];
+  estimatedDaysLow?: number | null;
+  estimatedDaysHigh?: number | null;
+  warranty?: string | null;
+  exclusions?: string[] | null;
   // Window-specific fields (for window-replacement job type)
-  windowQuantity?: number;
-  windowSizePreset?: string;
-  windowWidthIn?: number;
-  windowHeightIn?: number;
+  windowQuantity?: number | null;
+  windowSizePreset?: string | null;
+  windowWidthIn?: number | null;
+  windowHeightIn?: number | null;
 }
 
 // Proposals table
@@ -1125,9 +1125,10 @@ export type PricingPattern = typeof pricingPatterns.$inferSelect;
 
 // Zod schemas for line items
 // Line item options can contain boolean, string, or nested objects
-const lineItemOptionValueSchema: z.ZodType<boolean | string | Record<string, unknown>> = z.union([
+const lineItemOptionValueSchema: z.ZodType<boolean | string | number | Record<string, unknown>> = z.union([
   z.boolean(),
   z.string(),
+  z.number(),
   z.record(z.string(), z.unknown()),
 ]);
 
@@ -1143,22 +1144,22 @@ export const proposalLineItemSchema = z.object({
   jobTypeId: z.string(),
   jobTypeName: z.string(),
   jobSize: z.number().min(1).max(3),
-  homeArea: z.string().optional(),
-  footage: z.number().optional(),
+  homeArea: z.string().nullish(),
+  footage: z.number().nullish(),
   scope: z.array(z.string()),
   scopeSections: z.array(scopeSectionSchema).optional(),
   // Window-specific fields (for window-replacement job type)
-  windowQuantity: z.number().min(1).max(50).optional(),
-  windowSizePreset: z.string().optional(),
-  windowWidthIn: z.number().min(12).max(120).optional(),
-  windowHeightIn: z.number().min(12).max(120).optional(),
+  windowQuantity: z.number().min(1).max(50).nullish(),
+  windowSizePreset: z.string().nullish(),
+  windowWidthIn: z.number().min(12).max(120).nullish(),
+  windowHeightIn: z.number().min(12).max(120).nullish(),
   options: z.record(z.string(), lineItemOptionValueSchema),
   priceLow: z.number(),
   priceHigh: z.number(),
-  estimatedDaysLow: z.number().optional(),
-  estimatedDaysHigh: z.number().optional(),
-  warranty: z.string().optional(),
-  exclusions: z.array(z.string()).optional(),
+  estimatedDaysLow: z.number().nullish(),
+  estimatedDaysHigh: z.number().nullish(),
+  warranty: z.string().nullish(),
+  exclusions: z.array(z.string()).nullish(),
 });
 
 // Proposal source types
@@ -1167,9 +1168,10 @@ export type ProposalSource = typeof proposalSourceTypes[number];
 
 // Zod schemas
 // Options can contain boolean, string, or nested objects (e.g., __mobile metadata)
-const optionValueSchema: z.ZodType<boolean | string | Record<string, unknown>> = z.union([
+const optionValueSchema: z.ZodType<boolean | string | number | Record<string, unknown>> = z.union([
   z.boolean(),
   z.string(),
+  z.number(),
   z.record(z.string(), z.unknown()),
 ]);
 
@@ -1180,10 +1182,10 @@ export const insertProposalSchema = createInsertSchema(proposals).omit({
   scope: z.array(z.string()),
   scopeSections: z.array(scopeSectionSchema).optional(),
   options: z.record(z.string(), optionValueSchema).optional(),
-  lineItems: z.array(proposalLineItemSchema).optional(),
+  lineItems: z.array(proposalLineItemSchema).nullish(),
   isMultiService: z.boolean().optional(),
-  estimatedDaysLow: z.number().optional(),
-  estimatedDaysHigh: z.number().optional(),
+  estimatedDaysLow: z.number().nullish(),
+  estimatedDaysHigh: z.number().nullish(),
   source: z.enum(proposalSourceTypes).optional(),
   photoCount: z.number().optional(),
 });
@@ -1332,7 +1334,7 @@ export interface EnhancedProposalAnalytics {
   lostCount: number;
   acceptanceRate: number;
   winRate: number;
-  
+
   // Value metrics
   totalValueLow: number;
   totalValueHigh: number;
@@ -1342,25 +1344,25 @@ export interface EnhancedProposalAnalytics {
   avgPriceHigh: number;
   avgWonValueLow: number;
   avgWonValueHigh: number;
-  
+
   // Engagement metrics
   totalViews: number;
   avgViewsPerProposal: number;
   viewToAcceptRate: number;
-  
+
   // Time metrics (in hours)
   avgTimeToView: number | null;
   avgTimeToAccept: number | null;
-  
+
   // Breakdowns
   statusBreakdown: Record<string, number>;
-  tradeBreakdown: Record<string, { 
-    count: number; 
-    avgPriceLow: number; 
+  tradeBreakdown: Record<string, {
+    count: number;
+    avgPriceLow: number;
     avgPriceHigh: number;
     winRate: number;
   }>;
-  
+
   // Trends (last 30 days vs previous 30 days)
   trends: {
     proposalsChange: number; // percentage

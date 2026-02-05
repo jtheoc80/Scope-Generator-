@@ -20,25 +20,25 @@ function requireEnv(name: string) {
 export function isS3Configured(): { configured: boolean; missing: string[] } {
   const required = ["S3_BUCKET", "S3_PUBLIC_BASE_URL"];
   const missing = required.filter((name) => !process.env[name]);
-  
+
   // Also check for credentials (either AWS_* or S3_* or IAM role)
-  const hasCredentials = 
+  const hasCredentials =
     (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) ||
     (process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY) ||
     // IAM roles are available when running on AWS infrastructure
     process.env.AWS_EXECUTION_ENV;
-  
+
   if (!hasCredentials && !process.env.AWS_EXECUTION_ENV) {
     // Only warn about credentials if not in AWS environment
-    const credMissing = !process.env.AWS_ACCESS_KEY_ID && !process.env.S3_ACCESS_KEY_ID 
-      ? ["AWS_ACCESS_KEY_ID or S3_ACCESS_KEY_ID"] 
+    const credMissing = !process.env.AWS_ACCESS_KEY_ID && !process.env.S3_ACCESS_KEY_ID
+      ? ["AWS_ACCESS_KEY_ID or S3_ACCESS_KEY_ID"]
       : [];
     if (!process.env.AWS_SECRET_ACCESS_KEY && !process.env.S3_SECRET_ACCESS_KEY) {
       credMissing.push("AWS_SECRET_ACCESS_KEY or S3_SECRET_ACCESS_KEY");
     }
     missing.push(...credMissing);
   }
-  
+
   return { configured: missing.length === 0, missing };
 }
 
@@ -81,6 +81,8 @@ export function createS3Client() {
     endpoint: process.env.S3_ENDPOINT,
     credentials: getAwsCredentials() ?? undefined,
     forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true",
+    requestChecksumCalculation: "WHEN_REQUIRED",
+    responseChecksumValidation: "WHEN_REQUIRED",
   });
 }
 
@@ -181,21 +183,21 @@ export function parseS3Url(publicUrl: string): S3ObjectRef | null {
  */
 export async function fetchS3ObjectBytes(ref: S3ObjectRef): Promise<Uint8Array> {
   const client = createS3Client();
-  
+
   const command = new GetObjectCommand({
     Bucket: ref.bucket,
     Key: ref.key,
   });
 
   const response = await client.send(command);
-  
+
   if (!response.Body) {
     throw new Error("S3_EMPTY_RESPONSE: S3 returned no body for object");
   }
 
   // Convert the readable stream to bytes
   const bytes = await response.Body.transformToByteArray();
-  
+
   if (bytes.length === 0) {
     throw new Error("S3_EMPTY_OBJECT: S3 object is empty (0 bytes)");
   }
@@ -209,4 +211,26 @@ export async function fetchS3ObjectBytes(ref: S3ObjectRef): Promise<Uint8Array> 
  */
 export function getS3Bucket(): string {
   return requireEnv("S3_BUCKET");
+}
+
+/**
+ * Generate a presigned GET URL for an S3 object (or return the original if not S3).
+ * This is needed if the bucket is private.
+ */
+export async function presignGetObject(publicUrl: string): Promise<string> {
+  const ref = parseS3Url(publicUrl);
+  if (!ref) return publicUrl; // Not an S3 URL, return as is (e.g. blob: or external)
+
+  try {
+    const client = createS3Client();
+    const command = new GetObjectCommand({
+      Bucket: ref.bucket,
+      Key: ref.key,
+    });
+    // Sign for 1 hour
+    return await getSignedUrl(client, command, { expiresIn: 3600 });
+  } catch (e) {
+    console.warn("Failed to presign S3 URL", publicUrl, e);
+    return publicUrl;
+  }
 }

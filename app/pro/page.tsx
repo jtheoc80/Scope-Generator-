@@ -1,8 +1,12 @@
 'use client';
+// Force dynamic rendering to prevent static generation errors
+// This page uses useAuth() which requires QueryClientProvider
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Layout from "@/components/layout";
+import LayoutWrapper from "@/components/layout-wrapper";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -99,11 +103,11 @@ export default function ProDashboard() {
 
   if (authLoading) {
     return (
-      <Layout>
+      <LayoutWrapper>
         <div className="flex items-center justify-center min-h-[60vh]">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
-      </Layout>
+      </LayoutWrapper>
     );
   }
 
@@ -169,7 +173,7 @@ export default function ProDashboard() {
   ];
 
   return (
-    <Layout>
+    <LayoutWrapper>
       <div className="bg-slate-50 min-h-screen pb-12">
         {/* Header */}
         <div className="bg-white border-b border-slate-200">
@@ -434,6 +438,6 @@ export default function ProDashboard() {
           </Card>
         </div>
       </div>
-    </Layout>
+    </LayoutWrapper>
   );
 }

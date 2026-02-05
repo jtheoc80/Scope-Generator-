@@ -23,6 +23,7 @@ interface EmailProposalModalProps {
   publicToken?: string;
   onSuccess?: () => void;
   onSent?: (info: { sentAt: string; messageId?: string }) => void;
+  onRequiresPayment?: () => void;
 }
 
 export default function EmailProposalModal({
@@ -33,6 +34,7 @@ export default function EmailProposalModal({
   publicToken,
   onSuccess,
   onSent,
+  onRequiresPayment,
 }: EmailProposalModalProps) {
   const [recipientEmail, setRecipientEmail] = useState("");
   const [recipientName, setRecipientName] = useState(clientName);
@@ -73,6 +75,13 @@ export default function EmailProposalModal({
       const data = await res.json();
 
       if (!res.ok) {
+        // Handle 402 Payment Required - user needs credits
+        if (res.status === 402 && data.requiresPayment) {
+          onClose();
+          onRequiresPayment?.();
+          return;
+        }
+        
         // Store the share URL if provided for fallback
         if (data.publicUrl) {
           setShareUrl(data.publicUrl);

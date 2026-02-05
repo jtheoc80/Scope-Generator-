@@ -1,7 +1,11 @@
 'use client';
+// Force dynamic rendering to prevent static generation errors
+// This page uses useAuth() which requires QueryClientProvider
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Layout from "@/components/layout";
+import LayoutWrapper from "@/components/layout-wrapper";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -108,17 +112,17 @@ export default function Invite() {
 
   if (loading || authLoading) {
     return (
-      <Layout>
+      <LayoutWrapper>
         <div className="flex items-center justify-center min-h-[60vh]">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
-      </Layout>
+      </LayoutWrapper>
     );
   }
 
   if (error) {
     return (
-      <Layout>
+      <LayoutWrapper>
         <div className="container mx-auto px-4 py-12 max-w-md">
           <Card className="text-center">
             <CardHeader>
@@ -137,13 +141,13 @@ export default function Invite() {
             </CardContent>
           </Card>
         </div>
-      </Layout>
+      </LayoutWrapper>
     );
   }
 
   if (accepted) {
     return (
-      <Layout>
+      <LayoutWrapper>
         <div className="container mx-auto px-4 py-12 max-w-md">
           <Card className="text-center">
             <CardHeader>
@@ -157,12 +161,12 @@ export default function Invite() {
             </CardHeader>
           </Card>
         </div>
-      </Layout>
+      </LayoutWrapper>
     );
   }
 
   return (
-    <Layout>
+    <LayoutWrapper>
       <div className="container mx-auto px-4 py-12 max-w-md">
         <Card className="text-center">
           <CardHeader>
@@ -219,6 +223,6 @@ export default function Invite() {
           </CardContent>
         </Card>
       </div>
-    </Layout>
+    </LayoutWrapper>
   );
 }

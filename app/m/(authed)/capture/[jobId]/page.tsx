@@ -41,21 +41,21 @@ async function convertToJpeg(file: File, quality = 0.85): Promise<File> {
   try {
     // Create an image bitmap from the file
     const bmp = await createImageBitmap(file);
-    
+
     // Create a canvas to draw the image
     const canvas = document.createElement("canvas");
     canvas.width = bmp.width;
     canvas.height = bmp.height;
-    
+
     const ctx = canvas.getContext("2d");
     if (!ctx) {
       console.warn("Canvas not supported, returning original file");
       return file;
     }
-    
+
     // Draw the image onto the canvas
     ctx.drawImage(bmp, 0, 0);
-    
+
     // Convert to JPEG blob
     const blob: Blob = await new Promise((resolve, reject) => {
       canvas.toBlob(
@@ -64,11 +64,11 @@ async function convertToJpeg(file: File, quality = 0.85): Promise<File> {
         quality
       );
     });
-    
+
     // Create a new File with .jpg extension
     const newFileName = file.name.replace(/\.\w+$/, ".jpg");
     const convertedFile = new File([blob], newFileName, { type: "image/jpeg" });
-    
+
     console.log(`Converted ${file.name} (${file.type}) to JPEG: ${convertedFile.size} bytes`);
     return convertedFile;
   } catch (err) {
@@ -89,7 +89,7 @@ export default function CapturePhotosPage() {
   const [similarStatus, setSimilarStatus] = useState<"idle" | "loading" | "pending" | "ready">("idle");
   const [similarCount, setSimilarCount] = useState(0);
   const [similarUnavailable, setSimilarUnavailable] = useState(false);
-  
+
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -134,44 +134,35 @@ export default function CapturePhotosPage() {
         prev.map((p) => (p.id === photo.id ? { ...p, status: "uploading" as const } : p))
       );
 
-      // Get presigned URL
-      const presign = await mobileApiFetch<PresignResponse>(
-        `/api/mobile/jobs/${jobId}/photos/presign`,
+      // Create FormData
+      const formData = new FormData();
+      formData.append("file", file);
+
+      // Upload via proxy endpoint
+      const res = await mobileApiFetch<{
+        success: boolean;
+        uploadedPhotos: Array<{ id: number; publicUrl: string }>;
+        errors?: Array<{ filename: string; error: string }>;
+      }>(
+        `/api/mobile/jobs/${jobId}/photos/upload`,
         {
           method: "POST",
-          headers: { "Idempotency-Key": newIdempotencyKey() },
-          body: JSON.stringify({
-            contentType: file.type || "image/jpeg",
-            filename: file.name || "photo.jpg",
-          }),
+          body: formData,
         }
       );
 
-      // Upload to storage
-      const putResponse = await fetch(presign.uploadUrl, {
-        method: "PUT",
-        headers: {
-          "Content-Type": file.type || "image/jpeg",
-        },
-        body: file,
-      });
-
-      if (!putResponse.ok) {
-        throw new Error("Upload to storage failed");
+      if (!res.success || !res.uploadedPhotos || res.uploadedPhotos.length === 0) {
+        const errorMsg = res.errors?.[0]?.error || "Upload failed";
+        throw new Error(errorMsg);
       }
 
-      // Register photo with the API
-      await mobileApiFetch<{ photoId: number }>(`/api/mobile/jobs/${jobId}/photos`, {
-        method: "POST",
-        headers: { "Idempotency-Key": newIdempotencyKey() },
-        body: JSON.stringify({ url: presign.publicUrl, kind: "site" }),
-      });
+      const uploaded = res.uploadedPhotos[0];
 
       // Update status to uploaded
       setPhotos((prev) =>
         prev.map((p) =>
           p.id === photo.id
-            ? { ...p, status: "uploaded" as const, remoteUrl: presign.publicUrl }
+            ? { ...p, status: "uploaded" as const, remoteUrl: uploaded.publicUrl, serverId: uploaded.id }
             : p
         )
       );
@@ -225,11 +216,19 @@ export default function CapturePhotosPage() {
         // ignore
       }
     } catch (e) {
-      // Update status to error
+      console.error("Photo upload failed:", e);
+      // Update status to error with a more helpful message
+      let message = "Upload failed";
+      if (e instanceof Error) {
+        if (e.message.includes("fetch")) message = "Network error - check connection";
+        else if (e.message.includes("storage")) message = "Storage error - try again";
+        else message = e.message; // Keep it short for the UI
+      }
+
       setPhotos((prev) =>
         prev.map((p) =>
           p.id === photo.id
-            ? { ...p, status: "error" as const, error: e instanceof Error ? e.message : "Upload failed" }
+            ? { ...p, status: "error" as const, error: message }
             : p
         )
       );
@@ -294,7 +293,7 @@ export default function CapturePhotosPage() {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-    
+
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
       handleFiles(files);
@@ -415,7 +414,7 @@ export default function CapturePhotosPage() {
   }, [jobId, uploadedCount, uploadingCount]);
 
   return (
-    <div className="p-4 lg:px-8 lg:py-6 pb-24">
+    <div className="p-4 lg:px-8 lg:py-6 pb-24 min-h-[80vh]">
       <div className="mx-auto max-w-4xl space-y-4 lg:space-y-6">
         {/* Hidden file inputs */}
         <input
@@ -457,250 +456,248 @@ export default function CapturePhotosPage() {
           </p>
         </div>
 
-      {/* Error message */}
-      {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-start gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-          {error}
+        {/* Error message */}
+        {error && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            {error}
+          </div>
+        )}
+
+        {/* Photo capture buttons */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-4">
+          <Button
+            variant="outline"
+            className="h-16 sm:h-20 lg:h-24 flex-row sm:flex-col gap-3 sm:gap-2 justify-start sm:justify-center px-4"
+            onClick={() => cameraInputRef.current?.click()}
+          >
+            <Camera className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8" />
+            <span className="text-sm lg:text-base font-medium">Take Photo</span>
+          </Button>
+          <Button
+            variant="outline"
+            className="h-16 sm:h-20 lg:h-24 flex-row sm:flex-col gap-3 sm:gap-2 justify-start sm:justify-center px-4"
+            onClick={() => galleryInputRef.current?.click()}
+          >
+            <ImagePlus className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8" />
+            <span className="text-sm lg:text-base font-medium">From Gallery</span>
+          </Button>
+          <Button
+            variant="outline"
+            className="h-16 sm:h-20 lg:h-24 flex-row sm:flex-col gap-3 sm:gap-2 justify-start sm:justify-center px-4"
+            onClick={() => setPhoneUploadOpen(true)}
+          >
+            <Smartphone className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8" />
+            <span className="text-sm lg:text-base font-medium">Upload from Phone</span>
+          </Button>
         </div>
-      )}
 
-      {/* Photo capture buttons */}
-      <div className="grid grid-cols-3 gap-3 lg:gap-4">
-        <Button
-          variant="outline"
-          className="h-20 lg:h-24 flex-col gap-2"
-          onClick={() => cameraInputRef.current?.click()}
-        >
-          <Camera className="w-6 h-6 lg:w-8 lg:h-8" />
-          <span className="text-sm lg:text-base">Take Photo</span>
-        </Button>
-        <Button
-          variant="outline"
-          className="h-20 lg:h-24 flex-col gap-2"
-          onClick={() => galleryInputRef.current?.click()}
-        >
-          <ImagePlus className="w-6 h-6 lg:w-8 lg:h-8" />
-          <span className="text-sm lg:text-base">From Gallery</span>
-        </Button>
-        <Button
-          variant="outline"
-          className="h-20 lg:h-24 flex-col gap-2"
-          onClick={() => setPhoneUploadOpen(true)}
-        >
-          <Smartphone className="w-6 h-6 lg:w-8 lg:h-8" />
-          <span className="text-sm lg:text-base">Upload from Phone</span>
-        </Button>
-      </div>
+        {/* Phone Upload Dialog */}
+        <PhoneUploadDialog
+          open={phoneUploadOpen}
+          onOpenChange={setPhoneUploadOpen}
+          jobId={parseInt(jobId)}
+          onPhotosUploaded={() => {
+            // Optionally trigger a refresh of photos here
+            // For now, we rely on manual refresh or realtime updates
+          }}
+        />
 
-      {/* Phone Upload Dialog */}
-      <PhoneUploadDialog
-        open={phoneUploadOpen}
-        onOpenChange={setPhoneUploadOpen}
-        jobId={parseInt(jobId)}
-        onPhotosUploaded={() => {
-          // Optionally trigger a refresh of photos here
-          // For now, we rely on manual refresh or realtime updates
-        }}
-      />
-
-      {/* Photo count summary */}
-      {photos.length > 0 && (
-        <div className="flex flex-wrap gap-2 text-xs">
-          {uploadedCount > 0 && (
-            <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full flex items-center gap-1">
-              <CheckCircle className="w-3 h-3" />
-              {uploadedCount} uploaded
-            </span>
-          )}
-          {uploadingCount > 0 && (
-            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full flex items-center gap-1">
-              <Loader2 className="w-3 h-3 animate-spin" />
-              {uploadingCount} uploading
-            </span>
-          )}
-          {errorCount > 0 && (
-            <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full flex items-center gap-1">
-              <AlertCircle className="w-3 h-3" />
-              {errorCount} failed
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Similar-job suggestions status (non-blocking) */}
-      {(uploadedCount > 0 || uploadingCount > 0) && (
-        <Card className="border-primary/20 bg-primary/5">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-primary" />
-                Similar-job suggestions
+        {/* Photo count summary */}
+        {photos.length > 0 && (
+          <div className="flex flex-wrap gap-2 text-xs">
+            {uploadedCount > 0 && (
+              <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full flex items-center gap-1">
+                <CheckCircle className="w-3 h-3" />
+                {uploadedCount} uploaded
               </span>
-              {similarStatus !== "ready" ? (
-                <span className="text-xs text-slate-500 flex items-center gap-2">
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                  Generating…
+            )}
+            {uploadingCount > 0 && (
+              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full flex items-center gap-1">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                {uploadingCount} uploading
+              </span>
+            )}
+            {errorCount > 0 && (
+              <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
+                {errorCount} failed
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Similar-job suggestions status (non-blocking) */}
+        {(uploadedCount > 0 || uploadingCount > 0) && (
+          <Card className="border-primary/20 bg-primary/5">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  Similar-job suggestions
                 </span>
-              ) : (
-                <span className="text-xs text-slate-600">{similarCount} ready</span>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-xs text-slate-600">
-            {similarUnavailable
-              ? "Suggestions unavailable — continue without them."
-              : "Suggestions show up on the next step so nothing slows down uploads."}
-          </CardContent>
-        </Card>
-      )}
+                {similarStatus !== "ready" ? (
+                  <span className="text-xs text-slate-500 flex items-center gap-2">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Generating…
+                  </span>
+                ) : (
+                  <span className="text-xs text-slate-600">{similarCount} ready</span>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-xs text-slate-600">
+              {similarUnavailable
+                ? "Suggestions unavailable — continue without them."
+                : "Suggestions show up on the next step so nothing slows down uploads."}
+            </CardContent>
+          </Card>
+        )}
 
-      {/* Photo grid */}
-      {photos.length > 0 ? (
-        <div 
-          className={`relative rounded-lg transition-colors ${
-            isDragging ? "ring-2 ring-primary ring-offset-2" : ""
-          }`}
-          onDragEnter={handleDragEnter}
-          onDragLeave={handleDragLeave}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-        >
-          {/* Drop overlay when dragging */}
-          {isDragging && (
-            <div className="absolute inset-0 bg-primary/10 border-2 border-dashed border-primary rounded-lg z-10 flex items-center justify-center">
-              <div className="text-center">
-                <ImagePlus className="w-12 h-12 text-primary mx-auto mb-2" />
-                <p className="text-primary font-medium">Drop to add more photos</p>
-              </div>
-            </div>
-          )}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-4">
-            {photos.map((photo, index) => (
-              <Card key={photo.id} className="overflow-hidden">
-                <div className="relative aspect-square bg-slate-100">
-                  {/* Use native img for blob URLs - more reliable on mobile browsers */}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={photo.remoteUrl ?? photo.localUrl}
-                    alt={`Photo ${index + 1}`}
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-
-                  {/* Status overlay */}
-                  {photo.status === "uploading" && (
-                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                      <Loader2 className="w-8 h-8 text-white animate-spin" />
-                    </div>
-                  )}
-
-                  {photo.status === "uploaded" && (
-                    <div className="absolute top-2 left-2">
-                      <CheckCircle className="w-5 h-5 text-green-500 drop-shadow" />
-                    </div>
-                  )}
-
-                  {photo.status === "error" && (
-                    <div className="absolute inset-0 bg-red-500/80 flex flex-col items-center justify-center p-2 text-white text-center">
-                      <AlertCircle className="w-6 h-6 mb-1" />
-                      <p className="text-xs">{photo.error}</p>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="mt-2 h-7 text-xs"
-                        onClick={() => retryPhoto(photo.id)}
-                      >
-                        Remove
-                      </Button>
-                    </div>
-                  )}
-
-                  {/* Delete button */}
-                  {photo.status !== "uploading" && photo.status !== "error" && (
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      className="absolute top-2 right-2 h-7 w-7"
-                      onClick={() => removePhoto(photo.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  )}
-
-                  {/* Photo number */}
-                  <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
-                    #{index + 1}
-                  </div>
+        {/* Photo grid */}
+        {photos.length > 0 ? (
+          <div
+            className={`relative rounded-lg transition-colors ${isDragging ? "ring-2 ring-primary ring-offset-2" : ""
+              }`}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+          >
+            {/* Drop overlay when dragging */}
+            {isDragging && (
+              <div className="absolute inset-0 bg-primary/10 border-2 border-dashed border-primary rounded-lg z-10 flex items-center justify-center">
+                <div className="text-center">
+                  <ImagePlus className="w-12 h-12 text-primary mx-auto mb-2" />
+                  <p className="text-primary font-medium">Drop to add more photos</p>
                 </div>
-              </Card>
-            ))}
+              </div>
+            )}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-4">
+              {photos.map((photo, index) => (
+                <Card key={photo.id} className="overflow-hidden">
+                  <div className="relative aspect-square bg-slate-100">
+                    {/* Use native img for blob URLs - more reliable on mobile browsers */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={photo.remoteUrl ?? photo.localUrl}
+                      alt={`Photo ${index + 1}`}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+
+                    {/* Status overlay */}
+                    {photo.status === "uploading" && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <Loader2 className="w-8 h-8 text-white animate-spin" />
+                      </div>
+                    )}
+
+                    {photo.status === "uploaded" && (
+                      <div className="absolute top-2 left-2">
+                        <CheckCircle className="w-5 h-5 text-green-500 drop-shadow" />
+                      </div>
+                    )}
+
+                    {photo.status === "error" && (
+                      <div className="absolute inset-0 bg-red-500/90 flex flex-col items-center justify-center p-3 text-white text-center">
+                        <AlertCircle className="w-6 h-6 mb-2 shrink-0" />
+                        <p className="text-xs font-medium line-clamp-3 break-words w-full mb-2">
+                          {photo.error}
+                        </p>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="h-7 text-xs px-3 shadow-sm hover:bg-white/90"
+                          onClick={() => retryPhoto(photo.id)}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Delete button */}
+                    {photo.status !== "uploading" && photo.status !== "error" && (
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-2 right-2 h-7 w-7"
+                        onClick={() => removePhoto(photo.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+
+                    {/* Photo number */}
+                    <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                      #{index + 1}
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <Card
+            className={`border-dashed border-2 transition-colors cursor-pointer ${isDragging
+              ? "border-primary bg-primary/5"
+              : "border-slate-300 hover:border-slate-400"
+              }`}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+            onClick={() => galleryInputRef.current?.click()}
+          >
+            <CardContent className="p-8 lg:p-12 text-center">
+              <Camera className={`w-12 h-12 lg:w-16 lg:h-16 mx-auto mb-3 transition-colors ${isDragging ? "text-primary" : "text-slate-400"
+                }`} />
+              <p className={`font-medium lg:text-lg transition-colors ${isDragging ? "text-primary" : "text-slate-600"
+                }`}>
+                {isDragging ? "Drop photos here" : "No photos yet"}
+              </p>
+              <p className="text-sm lg:text-base text-slate-500 mt-1">
+                {isDragging
+                  ? "Release to upload your photos"
+                  : "Drag & drop photos here, or use the buttons above"}
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Tips */}
+        {photos.length === 0 && (
+          <Card className="bg-blue-50 border-blue-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-blue-900">📸 Photo Tips</CardTitle>
+            </CardHeader>
+            <CardContent className="text-xs text-blue-800 space-y-1">
+              <p>• First photo becomes the proposal cover image</p>
+              <p>• Include wide shots and close-ups of problem areas</p>
+              <p>• Capture existing conditions for before/after documentation</p>
+              <p>• More photos = more accurate AI-generated scope items</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Fixed bottom action button */}
+        <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-white border-t border-slate-200 safe-area-inset-bottom">
+          <div className="mx-auto max-w-4xl lg:px-8">
+            <Button
+              className="w-full h-12 text-base gap-2"
+              onClick={handleAnalyzePhotos}
+              disabled={uploadedCount === 0 || uploadingCount > 0}
+            >
+              <Sparkles className="w-5 h-5" />
+              Analyze & Select Issues
+            </Button>
+            {uploadingCount > 0 && (
+              <p className="text-xs text-center text-slate-500 mt-2">
+                Waiting for {uploadingCount} photo{uploadingCount > 1 ? "s" : ""} to upload...
+              </p>
+            )}
           </div>
         </div>
-      ) : (
-        <Card 
-          className={`border-dashed border-2 transition-colors cursor-pointer ${
-            isDragging 
-              ? "border-primary bg-primary/5" 
-              : "border-slate-300 hover:border-slate-400"
-          }`}
-          onDragEnter={handleDragEnter}
-          onDragLeave={handleDragLeave}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-          onClick={() => galleryInputRef.current?.click()}
-        >
-          <CardContent className="p-8 lg:p-12 text-center">
-            <Camera className={`w-12 h-12 lg:w-16 lg:h-16 mx-auto mb-3 transition-colors ${
-              isDragging ? "text-primary" : "text-slate-400"
-            }`} />
-            <p className={`font-medium lg:text-lg transition-colors ${
-              isDragging ? "text-primary" : "text-slate-600"
-            }`}>
-              {isDragging ? "Drop photos here" : "No photos yet"}
-            </p>
-            <p className="text-sm lg:text-base text-slate-500 mt-1">
-              {isDragging 
-                ? "Release to upload your photos" 
-                : "Drag & drop photos here, or use the buttons above"}
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Tips */}
-      {photos.length === 0 && (
-        <Card className="bg-blue-50 border-blue-200">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-blue-900">📸 Photo Tips</CardTitle>
-          </CardHeader>
-          <CardContent className="text-xs text-blue-800 space-y-1">
-            <p>• First photo becomes the proposal cover image</p>
-            <p>• Include wide shots and close-ups of problem areas</p>
-            <p>• Capture existing conditions for before/after documentation</p>
-            <p>• More photos = more accurate AI-generated scope items</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Fixed bottom action button */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-200 safe-area-inset-bottom">
-        <div className="mx-auto max-w-4xl lg:px-8">
-          <Button
-            className="w-full h-12 text-base gap-2"
-            onClick={handleAnalyzePhotos}
-            disabled={uploadedCount === 0 || uploadingCount > 0}
-          >
-            <Sparkles className="w-5 h-5" />
-            Analyze & Select Issues
-          </Button>
-          {uploadingCount > 0 && (
-            <p className="text-xs text-center text-slate-500 mt-2">
-              Waiting for {uploadingCount} photo{uploadingCount > 1 ? "s" : ""} to upload...
-            </p>
-          )}
-        </div>
       </div>
-    </div>
     </div>
   );
 }

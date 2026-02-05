@@ -100,7 +100,17 @@ export default function RootLayout({
 
   // Only wrap with ClerkProvider if Clerk is fully configured
   if (isClerkConfigured()) {
-    return <ClerkProvider>{content}</ClerkProvider>;
+    return (
+      <ClerkProvider
+        signInUrl="/sign-in"
+        signUpUrl="/sign-up"
+        signInFallbackRedirectUrl="/dashboard"
+        signUpFallbackRedirectUrl="/dashboard"
+        afterSignOutUrl="/"
+      >
+        {content}
+      </ClerkProvider>
+    );
   }
 
   return content;

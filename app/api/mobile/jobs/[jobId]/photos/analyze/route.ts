@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { requireMobileAuth } from "@/src/lib/mobile/auth";
 import { storage } from "@/lib/services/storage";
-import { db } from "@/server/db";
+import { db } from "@/lib/services/db";
 import { mobileJobPhotos } from "@shared/schema";
 import { and, desc, eq, isNull, lte, or } from "drizzle-orm";
 import { getRequestId, jsonError, logEvent, withRequestId } from "@/src/lib/mobile/observability";

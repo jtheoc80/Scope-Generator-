@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
 
     // Verify authentication
     const { userId } = await auth();
-    
+
     if (!userId) {
       return NextResponse.json(
         { message: 'Unauthorized' },
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     }
 
     const user = await storage.getUser(userId);
-    
+
     if (!user?.stripeCustomerId) {
       return NextResponse.json(
         { message: 'No Stripe customer found' },
@@ -34,10 +34,10 @@ export async function POST(request: NextRequest) {
     }
 
     const origin = request.headers.get('origin') || 'http://localhost:3000';
-    
+
     const session = await stripeService.createCustomerPortalSession(
       user.stripeCustomerId,
-      `${origin}/dashboard`
+      `${origin}/settings`
     );
 
     return NextResponse.json({ url: session.url });

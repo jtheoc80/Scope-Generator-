@@ -1,6 +1,6 @@
 // Email service using Resend integration
 import { Resend } from 'resend';
-import { db } from '@/server/db';
+import { db } from '@/lib/services/db';
 import { emailOutbox, type EmailOutboxAttachment } from '@shared/schema';
 import { logger } from '@/lib/logger';
 
@@ -31,11 +31,11 @@ function getCredentials(): { apiKey: string; fromEmail: string } {
 
 function getResendClient(): { client: Resend; fromEmail: string } {
   const { apiKey, fromEmail } = getCredentials();
-  
+
   if (!resendClient) {
     resendClient = new Resend(apiKey);
   }
-  
+
   return { client: resendClient, fromEmail };
 }
 
@@ -102,7 +102,7 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
     const { client, fromEmail } = getResendClient();
     const emailAddress = fromEmail;
     const defaultFrom = `ScopeGen <${emailAddress}>`;
-    
+
     const result = await client.emails.send({
       from: options.from || defaultFrom,
       to: [options.to],
@@ -111,8 +111,8 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
       html: options.html,
       attachments: options.attachments?.map((a) => ({
         filename: a.filename,
-        content: typeof a.content === 'string' 
-          ? a.content 
+        content: typeof a.content === 'string'
+          ? a.content
           : Buffer.from(a.content instanceof ArrayBuffer ? new Uint8Array(a.content) : a.content),
       })),
     });
@@ -148,9 +148,9 @@ export async function testConnection(): Promise<{ success: boolean; fromEmail?: 
 
     const { fromEmail } = getCredentials();
     logger.info('Connection test successful', { fromEmail });
-    return { 
-      success: true, 
-      fromEmail 
+    return {
+      success: true,
+      fromEmail
     };
   } catch (error: unknown) {
     const err = error as Error;
@@ -180,11 +180,11 @@ export async function sendProposalEmail(data: ProposalEmailData): Promise<{ succ
     currency: 'USD',
     maximumFractionDigits: 0
   }).format(amount);
-  
+
   const formattedPrice = formatCurrency(data.totalPrice);
 
   const subject = `Proposal: ${data.proposalTitle} for ${data.clientName}`;
-  
+
   const text = `
 Hi ${data.recipientName || 'there'},
 
@@ -269,16 +269,16 @@ ${data.senderCompany || ''}
 
   try {
     const emailAddress = process.env.EMAIL_MODE === 'test' ? getFromEmail() : getCredentials().fromEmail;
-    const fromAddress = data.senderName 
-      ? `${data.senderName} via ScopeGen <${emailAddress}>` 
+    const fromAddress = data.senderName
+      ? `${data.senderName} via ScopeGen <${emailAddress}>`
       : `ScopeGen <${emailAddress}>`;
-      
+
     logger.info('Sending proposal email', {
       to: data.recipientEmail,
       project: data.proposalTitle,
       client: data.clientName,
     });
-      
+
     return sendEmail({
       to: data.recipientEmail,
       subject,
@@ -484,29 +484,29 @@ Time to get to work! You can reach out to ${data.acceptedByName} at ${data.clien
         <div class="amount">${formattedPrice}</div>
         
         <div class="row">
-          <span class="label">Client</span>
+          <span class="label">Client:</span>
           <span class="value">${data.clientName}</span>
         </div>
         <div class="row">
-          <span class="label">Accepted By</span>
+          <span class="label">Accepted By:</span>
           <span class="value">${data.acceptedByName}</span>
         </div>
         <div class="row">
-          <span class="label">Contact Email</span>
+          <span class="label">Contact Email:</span>
           <span class="value">${data.clientEmail}</span>
         </div>
         <div class="row">
-          <span class="label">Project</span>
+          <span class="label">Project:</span>
           <span class="value">${data.projectTitle}</span>
         </div>
         ${data.projectAddress ? `
         <div class="row">
-          <span class="label">Address</span>
+          <span class="label">Address:</span>
           <span class="value">${data.projectAddress}</span>
         </div>
         ` : ''}
         <div class="row">
-          <span class="label">Accepted</span>
+          <span class="label">Accepted:</span>
           <span class="value">${timestamp}</span>
         </div>
         
@@ -665,16 +665,16 @@ ${data.contractorCompany || data.contractorName || 'Your Contractor'}
 
   try {
     const emailAddress = process.env.EMAIL_MODE === 'test' ? getFromEmail() : getCredentials().fromEmail;
-    const fromAddress = data.contractorName 
-      ? `${data.contractorName} via ScopeGen <${emailAddress}>` 
+    const fromAddress = data.contractorName
+      ? `${data.contractorName} via ScopeGen <${emailAddress}>`
       : `ScopeGen <${emailAddress}>`;
-    
+
     logger.info('Sending completed proposal email', {
       to: data.clientEmail,
       project: data.projectTitle,
       client: data.clientName,
     });
-      
+
     return sendEmail({
       to: data.clientEmail,
       subject,
@@ -689,11 +689,94 @@ ${data.contractorCompany || data.contractorName || 'Your Contractor'}
   }
 }
 
+
+interface InviteEmailData {
+  recipientEmail: string;
+  inviterName: string;
+  companyName: string;
+  inviteLink: string;
+  role: string;
+}
+
+export async function sendInviteEmail(
+  data: InviteEmailData
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const subject = `You've been invited to join ${data.companyName} on ScopeGen`;
+
+  const text = `
+Hi there,
+
+${data.inviterName} has invited you to join the ${data.companyName} team on ScopeGen.
+
+To accept the invitation and join the team, please click the link below:
+${data.inviteLink}
+
+This invitation will expire in 7 days.
+
+Best regards,
+The ScopeGen Team
+`.trim();
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background: #f4f4f4; }
+    .container { max-width: 500px; margin: 20px auto; }
+    .card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .header { background: linear-gradient(135deg, #1e3a5f, #2d4a6f); color: white; padding: 25px; text-align: center; }
+    .header h1 { margin: 0; font-size: 22px; }
+    .header .emoji { font-size: 40px; margin-bottom: 10px; }
+    .content { padding: 25px; }
+    .button { display: block; background: #f97316; color: white; padding: 14px; text-align: center; text-decoration: none; border-radius: 8px; margin-top: 20px; font-weight: 600; }
+    .footer { text-align: center; padding: 15px; color: #999; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="header">
+        <div class="emoji">👋</div>
+        <h1>Team Invitation</h1>
+      </div>
+      <div class="content">
+        <p>Hi there,</p>
+        <p><strong>${data.inviterName}</strong> has invited you to join the <strong>${data.companyName}</strong> team on ScopeGen.</p>
+        
+        <p>As a member, you'll be able to collaborate on proposals and help grow the business.</p>
+        
+        <a href="${data.inviteLink}" class="button">
+          Accept Invitation
+        </a>
+        
+        <p style="margin-top: 20px; font-size: 14px; color: #666; text-align: center;">
+          This invitation expires in 7 days.
+        </p>
+      </div>
+    </div>
+    <div class="footer">
+      ScopeGen Team
+    </div>
+  </div>
+</body>
+</html>
+`.trim();
+
+  return sendEmail({
+    to: data.recipientEmail,
+    subject,
+    text,
+    html,
+  });
+}
+
 export const emailService = {
   sendEmail,
   sendProposalEmail,
   sendPurchaseNotification,
   sendProposalAcceptedNotification,
   sendCompletedProposalToClient,
+  sendInviteEmail,
   testConnection,
 };

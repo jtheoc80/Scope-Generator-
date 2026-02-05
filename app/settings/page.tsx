@@ -1,6 +1,10 @@
 'use client';
+// Force dynamic rendering to prevent static generation errors
+// This page uses useAuth() which requires QueryClientProvider
+export const dynamic = 'force-dynamic';
+
 import { useState, useRef, useEffect } from "react";
-import Layout from "@/components/layout";
+import LayoutWrapper from "@/components/layout-wrapper";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,13 +16,14 @@ import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
 import Link from "next/link";
-import { Loader2, Upload, X, Settings as SettingsIcon, Building2, CheckCircle, DollarSign, Wrench, CreditCard, AlertTriangle, Key, ExternalLink, Eye, EyeOff, Bell, Mail, MessageSquare } from "lucide-react";
+import { Loader2, Upload, X, Settings as SettingsIcon, Building2, CheckCircle, DollarSign, Wrench, CreditCard, AlertTriangle, Key, ExternalLink, Eye, EyeOff, Bell, Mail, MessageSquare, Crown, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { templates } from "@/lib/proposal-data";
 import CancelFeedbackModal from "@/components/cancel-feedback-modal";
+import DeleteAccountModal from "../../components/delete-account-modal";
 
 export default function Settings() {
-  const { user, isLoading: authLoading, refetch } = useAuth();
+  const { user, isLoading: authLoading, refetch, refreshUser } = useAuth();
   const { toast } = useToast();
   const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -42,6 +47,7 @@ export default function Settings() {
   const [emailNotificationsEnabled, setEmailNotificationsEnabled] = useState(true);
   const [smsNotificationsEnabled, setSmsNotificationsEnabled] = useState(false);
   const [savingNotifications, setSavingNotifications] = useState(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
 
   const allTradeIds = templates.map(t => t.id);
 
@@ -141,7 +147,7 @@ export default function Settings() {
         throw new Error(error.message || "Failed to save");
       }
 
-      await refetch();
+      await refreshUser();
       toast({
         title: t.settings.settingsSaved,
         description: t.settings.profileUpdated,
@@ -175,10 +181,10 @@ export default function Settings() {
         throw new Error(error.message || "Failed to save");
       }
 
-      await refetch();
+      await refreshUser();
       toast({
         title: t.settings.stripeSettingsSaved,
-        description: userStripeEnabled 
+        description: userStripeEnabled
           ? t.settings.paymentLinksNowEnabled
           : t.settings.stripeSettingsUpdated,
       });
@@ -211,7 +217,7 @@ export default function Settings() {
         throw new Error(error.message || "Failed to save");
       }
 
-      await refetch();
+      await refreshUser();
       toast({
         title: t.settings.notificationsSaved,
         description: t.settings.notificationsSavedDesc,
@@ -229,17 +235,17 @@ export default function Settings() {
 
   if (authLoading) {
     return (
-      <Layout>
+      <LayoutWrapper>
         <div className="flex items-center justify-center min-h-[60vh]">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
-      </Layout>
+      </LayoutWrapper>
     );
   }
 
   if (!user) {
     return (
-      <Layout>
+      <LayoutWrapper>
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
           <h2 className="text-2xl font-bold mb-4">{t.settings.signInRequired}</h2>
           <p className="text-muted-foreground mb-6">{t.settings.signInDesc}</p>
@@ -250,12 +256,12 @@ export default function Settings() {
             {t.settings.signInWithReplit}
           </Link>
         </div>
-      </Layout>
+      </LayoutWrapper>
     );
   }
 
   return (
-    <Layout>
+    <LayoutWrapper>
       <div className="bg-slate-50 min-h-screen pb-12">
         <div className="bg-white border-b border-slate-200">
           <div className="container mx-auto px-4 py-8">
@@ -331,18 +337,16 @@ export default function Settings() {
                     <p className="text-sm text-slate-500">
                       {t.settings.companyLogoDesc}
                     </p>
-                    {!companyLogo && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="mt-2"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={logoUploading}
-                      >
-                        {t.settings.chooseFile}
-                      </Button>
-                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={logoUploading}
+                    >
+                      {companyLogo ? (t.settings.changeLogo || "Change Logo") : t.settings.chooseFile}
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -573,41 +577,47 @@ export default function Settings() {
           </Card>
 
           {/* Subscription Management Card */}
-          {user.stripeCustomerId && (
-            <Card className="border-none shadow-sm mt-6">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CreditCard className="w-5 h-5" />
-                  {t.settings.subscription}
-                </CardTitle>
-                <CardDescription>
-                  {t.settings.subscriptionDesc}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {canceledMessage && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex gap-2">
-                    <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
-                    <p className="text-sm text-green-800">{canceledMessage}</p>
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-slate-900">{t.settings.currentPlan}</p>
-                    <p className="text-sm text-slate-500">
-                      {user.isPro ? t.settings.proPlan : t.settings.freePlan}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {user.isPro && (
-                      <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full font-medium">
-                        {t.settings.active}
-                      </span>
-                    )}
-                  </div>
+          <Card className="border-none shadow-sm mt-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="w-5 h-5" />
+                {t.settings.subscription}
+              </CardTitle>
+              <CardDescription>
+                {t.settings.subscriptionDesc}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {canceledMessage && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+                  <p className="text-sm text-green-800">{canceledMessage}</p>
                 </div>
+              )}
 
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+                <div>
+                  <p className="font-medium text-slate-900">{t.settings.currentPlan}</p>
+                  <p className="text-sm text-slate-500">
+                    {user.subscriptionPlan === 'crew'
+                      ? (t.settings.crewPlan || "Crew Plan - Active")
+                      : user.isPro
+                        ? t.settings.proPlan
+                        : t.settings.freePlan
+                    }
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {(user.isPro || user.subscriptionPlan === 'crew') && (
+                    <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full font-medium">
+                      {t.settings.active}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Billing Actions - Only if user has Stripe ID */}
+              {user.stripeCustomerId && (
                 <div className="flex flex-col sm:flex-row gap-3 pt-2">
                   <Button
                     variant="outline"
@@ -634,19 +644,116 @@ export default function Settings() {
                     {t.settings.manageBilling}
                   </Button>
 
-                  <Button
-                    variant="ghost"
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    onClick={() => setShowCancelModal(true)}
-                    data-testid="button-cancel-subscription"
-                  >
-                    <AlertTriangle className="w-4 h-4 mr-2" />
-                    {t.settings.cancelSubscription}
-                  </Button>
+                  {(user.isPro) && !user.cancelAtPeriodEnd && (
+                    <Button
+                      variant="ghost"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => setShowCancelModal(true)}
+                      data-testid="button-cancel-subscription"
+                    >
+                      <AlertTriangle className="w-4 h-4 mr-2" />
+                      {t.settings.cancelSubscription}
+                    </Button>
+                  )}
+
+                  {user.cancelAtPeriodEnd && user.currentPeriodEnd && (
+                    <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 px-3 py-2 rounded-md border border-amber-200">
+                      <AlertTriangle className="w-4 h-4" />
+                      <span>
+                        Subscription ends on {new Date(user.currentPeriodEnd).toLocaleDateString()}. Access valid until then.
+                      </span>
+                    </div>
+                  )}
                 </div>
-              </CardContent>
-            </Card>
-          )}
+              )}
+
+              {/* Available Upgrades Section */}
+              {(!user.isPro || user.subscriptionPlan !== 'crew') && (
+                <div className="pt-6 border-t border-slate-200 mt-4">
+                  <h3 className="font-semibold text-slate-900 mb-4">{t.settings.availableUpgrades || "Available Upgrades"}</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                    {!user.isPro && user.subscriptionPlan !== 'crew' && (
+                      <div className="border border-indigo-100 bg-indigo-50/50 rounded-xl p-4 hover:border-indigo-300 transition-colors">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-bold text-lg text-indigo-900">Pro Plan</span>
+                              <span className="text-xs font-semibold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">Recommended</span>
+                            </div>
+                            <p className="text-sm text-indigo-700 mb-3">
+                              Format professional proposals with custom branding and unlimited templates.
+                            </p>
+                          </div>
+                          <div className="h-8 w-8 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <Crown className="w-4 h-4 text-indigo-600" />
+                          </div>
+                        </div>
+                        <Button
+                          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+                          onClick={async () => {
+                            try {
+                              const res = await fetch('/api/stripe/checkout', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ productType: 'pro' }),
+                              });
+                              const data = await res.json();
+                              if (data.url) window.location.href = data.url;
+                            } catch (e) {
+                              toast({ title: "Error starting checkout", variant: "destructive" });
+                            }
+                          }}
+                        >
+                          Upgrade to Pro
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Upgrade to Crew
+                    {user.subscriptionPlan !== 'crew' && (
+                      <div className="border border-purple-100 bg-purple-50/50 rounded-xl p-4 hover:border-purple-300 transition-colors">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-bold text-lg text-purple-900">Crew Plan</span>
+                              <span className="text-xs font-semibold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">Best Value</span>
+                            </div>
+                            <p className="text-sm text-purple-700 mb-3">
+                              Everything in Pro, plus team management, unlimited proposals, and more seats.
+                            </p>
+                          </div>
+                          <div className="h-8 w-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <Users className="w-4 h-4 text-purple-600" />
+                          </div>
+                        </div>
+                        <Button
+                          className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                          onClick={async () => {
+                            try {
+                              const res = await fetch('/api/stripe/checkout', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ productType: 'crew' }),
+                              });
+                              const data = await res.json();
+                              if (data.url) window.location.href = data.url;
+                            } catch (e) {
+                              toast({ title: "Error starting checkout", variant: "destructive" });
+                            }
+                          }}
+                        >
+                          Upgrade to Crew
+                        </Button>
+                      </div>
+                    )} */}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Delete Account Modal is managed by state at component root */}
 
           {/* Stripe Integration Card - Payment Links */}
           <Card className="border-none shadow-sm mt-6">
@@ -680,6 +787,7 @@ export default function Settings() {
                       value={userStripeSecretKey}
                       onChange={(e) => setUserStripeSecretKey(e.target.value)}
                       className="pr-10"
+                      autoComplete="new-password"
                       data-testid="input-stripe-key"
                     />
                     <button
@@ -693,18 +801,18 @@ export default function Settings() {
                   </div>
                   <p className="text-xs text-slate-500">
                     {t.settings.findKeyInDashboard}{" "}
-                    <a 
-                      href="https://dashboard.stripe.com/apikeys" 
-                      target="_blank" 
+                    <a
+                      href="https://dashboard.stripe.com/apikeys"
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="text-primary hover:underline inline-flex items-center gap-1"
                     >
                       {t.settings.stripeDashboard} <ExternalLink className="w-3 h-3" />
                     </a>
                     . {t.settings.dontHaveStripe}{" "}
-                    <a 
-                      href="https://dashboard.stripe.com/register" 
-                      target="_blank" 
+                    <a
+                      href="https://dashboard.stripe.com/register"
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="text-primary hover:underline inline-flex items-center gap-1"
                     >
@@ -818,7 +926,18 @@ export default function Settings() {
                   <Switch
                     id="sms-notifications"
                     checked={smsNotificationsEnabled}
-                    onCheckedChange={setSmsNotificationsEnabled}
+                    onCheckedChange={(checked) => {
+                      if (checked && !companyPhone) {
+                        toast({
+                          title: t.common.error,
+                          description: t.settings.smsRequiresPhone,
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                      setSmsNotificationsEnabled(checked);
+                    }}
+                    disabled={!companyPhone}
                     data-testid="switch-sms-notifications"
                   />
                 </div>
@@ -846,8 +965,47 @@ export default function Settings() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Account Management Card - Available for ALL users */}
+          <Card className="border-none shadow-sm mt-6" data-testid="card-account-management">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-red-500" />
+                Account Management
+              </CardTitle>
+              <CardDescription>
+                Manage your account settings and data
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Danger Zone */}
+              <div className="bg-red-50 border border-red-100 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-red-900">Delete Account</p>
+                    <p className="text-sm text-red-700 mt-1">
+                      Permanently delete your account and all associated data. This action cannot be undone.
+                    </p>
+                  </div>
+                  <Button
+                    variant="destructive"
+                    onClick={() => setShowDeleteAccountModal(true)}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                    data-testid="button-delete-account"
+                  >
+                    Delete Account
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
+
+      <DeleteAccountModal
+        isOpen={showDeleteAccountModal}
+        onClose={() => setShowDeleteAccountModal(false)}
+      />
 
       <CancelFeedbackModal
         isOpen={showCancelModal}
@@ -859,6 +1017,6 @@ export default function Settings() {
           }
         }}
       />
-    </Layout>
+    </LayoutWrapper>
   );
 }

@@ -23,7 +23,7 @@ function getDefaultBaseUrl(): string {
 
 export function getStoredConfig(): MobileWebConfig | null {
   if (typeof window === "undefined") return null;
-  
+
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
@@ -41,7 +41,7 @@ export function getStoredConfig(): MobileWebConfig | null {
 
 export function saveConfig(cfg: MobileWebConfig): void {
   if (typeof window === "undefined") return;
-  
+
   localStorage.setItem(
     STORAGE_KEY,
     JSON.stringify({
@@ -60,7 +60,7 @@ export function clearConfig(): void {
 export function getConfig(): MobileWebConfig {
   const stored = getStoredConfig();
   if (stored) return stored;
-  
+
   return {
     baseUrl: getDefaultBaseUrl(),
   };
@@ -73,7 +73,7 @@ export async function mobileApiFetch<T>(
   const cfg = getConfig();
 
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    ...(init?.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
     ...(init?.headers as Record<string, string>),
   };
 

@@ -8,7 +8,6 @@
 import { spawn, execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
-
 interface BuildError {
   file: string;
   line?: number;

@@ -20,11 +20,13 @@ export default async function SignInPage({
 }) {
   const params = await searchParams;
   const redirectUrl = params?.redirect_url || "/dashboard";
+  console.log("Redirect URL:", redirectUrl);
 
   // Check if user is already signed in (skip in test mode)
   if (isClerkConfigured() && !isTestAuthMode()) {
     const { userId } = await auth();
     if (userId) {
+      console.log("User is already signed in");
       redirect(redirectUrl);
     }
   }
@@ -33,7 +35,7 @@ export default async function SignInPage({
   const testMode = isTestAuthMode();
 
   // In test mode, render a predictable test-friendly form
-  if (testMode) {
+  if (testMode) {   
     return (
       <div 
         className="min-h-screen flex items-center justify-center bg-slate-50 px-6"

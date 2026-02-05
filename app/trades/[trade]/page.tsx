@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import Layout from "@/components/layout";
+import LayoutWrapper from "@/components/layout-wrapper";
 import {
   getTradeDefinition,
   tradeDefinitions,
@@ -20,6 +20,9 @@ export async function generateStaticParams(): Promise<
     trade,
   }));
 }
+
+// Force dynamic rendering to ensure QueryClientProvider is available
+export const dynamic = 'force-dynamic';
 
 // Generate metadata for SEO
 export async function generateMetadata({
@@ -69,7 +72,7 @@ export default async function TradePage({ params }: PageProps) {
   if (!def) notFound();
 
   return (
-    <Layout>
+    <LayoutWrapper>
       {/* Hero */}
       <section className="relative bg-primary text-primary-foreground overflow-hidden">
         <div className="absolute inset-0 z-0 opacity-10">
@@ -180,6 +183,6 @@ export default async function TradePage({ params }: PageProps) {
           </Link>
         </div>
       </section>
-    </Layout>
+    </LayoutWrapper>
   );
 }

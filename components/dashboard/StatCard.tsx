@@ -25,7 +25,10 @@ export function StatCard({
   }[iconTone];
 
   return (
-    <Card className={cn("rounded-2xl border-slate-200 bg-white shadow-sm", className)}>
+    <Card className={cn(
+      "rounded-2xl border-slate-200 bg-white shadow-sm transition-all duration-200 hover:shadow-md cursor-default",
+      className
+    )}>
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">

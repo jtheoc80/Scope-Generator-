@@ -6,12 +6,12 @@
  * to deliver personalized suggestions.
  */
 
-import { 
+import {
   learningService,
   type LearningContext,
   type PhotoCategorySuggestion,
 } from './learning-service';
-import type { ProposalPhotoCategory } from '@shared/schema';
+import type { ProposalPhotoCategory } from '../../../shared/schema';
 
 // ==========================================
 // Types
@@ -95,7 +95,7 @@ export async function getSmartPhotoSuggestions(
   for (let i = 1; i <= photoCount; i++) {
     const baseSuggestion = await learningService.suggestPhotoCategory(context, i);
     const captionOptions = await learningService.getCommonCaptions(context, baseSuggestion.category);
-    
+
     // Generate explanation based on confidence
     let explanation: string;
     if (baseSuggestion.confidence >= 80) {
@@ -297,10 +297,10 @@ function findMissingEssentials(
   const missing: { item: string; reason: string }[] = [];
 
   for (const essential of jobEssentials) {
-    const hasItem = currentScope.some(item => 
+    const hasItem = currentScope.some(item =>
       essential.keywords.some(kw => item.toLowerCase().includes(kw))
     );
-    
+
     if (!hasItem) {
       missing.push({
         item: essential.item,
@@ -422,9 +422,9 @@ export async function getProposalRecommendations(
     getSmartPhotoSuggestions(context, currentData.photoCount),
     getSmartScopeSuggestions(context, currentData.scope),
     getSmartPricingRecommendation(
-      context, 
-      currentData.basePriceLow, 
-      currentData.basePriceHigh, 
+      context,
+      currentData.basePriceLow,
+      currentData.basePriceHigh,
       currentData.jobSize
     ),
   ]);
@@ -434,7 +434,7 @@ export async function getProposalRecommendations(
     ...photoSuggestions.map(p => p.confidence),
     pricingRecommendation?.adjustments.map(a => a.confidence) || [],
   ].flat();
-  
+
   const overallConfidence = confidenceScores.length > 0
     ? Math.round(confidenceScores.reduce((a, b) => a + b, 0) / confidenceScores.length)
     : 50;
@@ -488,8 +488,8 @@ export async function processFeedback(
   newValue?: unknown
 ): Promise<void> {
   // Log the feedback as an action
-  const actionType = feedbackType === 'accepted' 
-    ? 'price_accept_suggestion' 
+  const actionType = feedbackType === 'accepted'
+    ? 'price_accept_suggestion'
     : 'price_reject_suggestion';
 
   await learningService.logUserAction(actionType as any, context, {
@@ -504,16 +504,16 @@ export const recommendationEngine = {
   // Photos
   getSmartPhotoSuggestions,
   getSmartCaptionSuggestions,
-  
+
   // Scope
   getSmartScopeSuggestions,
-  
+
   // Pricing
   getSmartPricingRecommendation,
-  
+
   // Full proposal
   getProposalRecommendations,
-  
+
   // Feedback
   processFeedback,
 };

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { storage } from '@/server/storage';
+import { storage } from '@/lib/services/storage';
 
 // GET /api/analytics/insights - Get enhanced business insights
 export async function GET() {

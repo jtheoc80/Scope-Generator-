@@ -1,4 +1,4 @@
-import { db } from "@/server/db";
+import { db } from "@/lib/services/db";
 import { mobileJobDrafts, mobileJobs, mobileJobPhotos, proposalTemplates, users } from "@shared/schema";
 import { and, eq, isNull, lte, or, desc } from "drizzle-orm";
 import { generateMobileDraft } from "./pipeline";
@@ -75,7 +75,7 @@ export async function enqueueDraft(params: {
 
   // Build questions array with scope context
   const questions: string[] = params.selectedIssues?.map(i => i.label) ?? [];
-  
+
   // Add remedy selections for each issue
   if (params.selectedIssues) {
     for (const issue of params.selectedIssues) {
@@ -88,7 +88,7 @@ export async function enqueueDraft(params: {
       }
     }
   }
-  
+
   // Add scope selection context to questions for the draft generator
   if (params.scopeSelection) {
     if (params.scopeSelection.selectedTierId) {
@@ -106,7 +106,7 @@ export async function enqueueDraft(params: {
       questions.push(`MEASUREMENT:ceilingHeight=${params.scopeSelection.measurements.ceilingHeight}`);
     }
   }
-  
+
   const [created] = await db
     .insert(mobileJobDrafts)
     .values({
@@ -145,7 +145,7 @@ export function startDraftWorker() {
           workerId: WORKER_ID,
           message: errorMsg,
         });
-        
+
         // Log worker-level errors to persistent file
         logError({
           category: "UNKNOWN",
@@ -240,13 +240,13 @@ async function runDraft(draft: typeof mobileJobDrafts.$inferSelect) {
     // Build enhanced job notes with selected issues and scope context
     // The questions field temporarily stores selected issue labels and scope data from enqueueDraft
     const questionsData = draft.questions ?? [];
-    
+
     // Parse scope context from questions
     const issueLabels: string[] = [];
     const scopeContext: Record<string, string> = {};
     const measurements: Record<string, number> = {};
     let selectedTier: string | undefined;
-    
+
     for (const item of questionsData) {
       if (item.startsWith("SCOPE_TIER:")) {
         selectedTier = item.replace("SCOPE_TIER:", "");
@@ -260,10 +260,10 @@ async function runDraft(draft: typeof mobileJobDrafts.$inferSelect) {
         issueLabels.push(item);
       }
     }
-    
+
     // Build enhanced job notes
     let enhancedJobNotes = job.jobNotes ?? "";
-    
+
     // Add selected issues with remedy information
     if (issueLabels.length > 0) {
       // Parse any remedy data that was stored in the questions
@@ -274,7 +274,7 @@ async function runDraft(draft: typeof mobileJobDrafts.$inferSelect) {
           if (issueId && remedy) remedyData[issueId] = remedy;
         }
       }
-      
+
       // Build issue descriptions with remedy info
       const issueDescriptions = issueLabels.map((label, idx) => {
         // Try to find remedy for this issue by index (issues are stored in order)
@@ -285,13 +285,13 @@ async function runDraft(draft: typeof mobileJobDrafts.$inferSelect) {
         }
         return label;
       });
-      
+
       enhancedJobNotes += `\n\nSelected issues to address: ${issueDescriptions.join("; ")}`;
-      
+
       // Add explicit remedy instructions if any are specified
       const hasReplacementItems = Object.values(remedyData).some(r => r === "replace");
       const hasRepairItems = Object.values(remedyData).some(r => r === "repair");
-      
+
       if (hasReplacementItems || hasRepairItems) {
         enhancedJobNotes += `\n\nIMPORTANT: Scope ONLY includes`;
         const parts: string[] = [];
@@ -300,12 +300,12 @@ async function runDraft(draft: typeof mobileJobDrafts.$inferSelect) {
         enhancedJobNotes += ` ${parts.join(" and ")}. Generate appropriate scope items for each action type.`;
       }
     }
-    
+
     // Add scope context (critical for accurate pricing)
     if (selectedTier) {
       enhancedJobNotes += `\n\nCONFIRMED SCOPE TIER: ${selectedTier}`;
     }
-    
+
     // Add painting scope if selected
     if (scopeContext.paint_scope) {
       const scopeLabels: Record<string, string> = {
@@ -318,7 +318,7 @@ async function runDraft(draft: typeof mobileJobDrafts.$inferSelect) {
       enhancedJobNotes += `\n\nCONFIRMED PAINTING SCOPE: ${label}`;
       enhancedJobNotes += `\nIMPORTANT: Price ONLY for the confirmed scope above. Do NOT assume larger scope.`;
     }
-    
+
     // Add measurements if provided
     if (measurements.squareFeet) {
       enhancedJobNotes += `\n\nCONFIRMED MEASUREMENTS: ${measurements.squareFeet} sq ft`;
@@ -326,7 +326,7 @@ async function runDraft(draft: typeof mobileJobDrafts.$inferSelect) {
     if (measurements.ceilingHeight) {
       enhancedJobNotes += `\nCeiling height: ${measurements.ceilingHeight} ft`;
     }
-    
+
     // Add other scope answers
     const otherAnswers = Object.entries(scopeContext).filter(([k]) => k !== "paint_scope");
     if (otherAnswers.length > 0) {

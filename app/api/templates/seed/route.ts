@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/server/db';
+import { db } from '@/lib/services/db';
 import { proposalTemplates, type TemplateJobOption } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { db } from '@/server/db';
+import { db } from '@/lib/services/db';
 import { photoCategorization } from '@shared/schema';
 import { eq, and, desc, count, sql } from 'drizzle-orm';
 import type { ProposalPhotoCategory } from '@shared/schema';

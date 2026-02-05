@@ -1,4 +1,4 @@
-import Layout from "@/components/layout";
+import LayoutWrapper from "@/components/layout-wrapper";
 import Link from "next/link";
 import { ScopeExamples } from "@/components/scopescan/ScopeExamples";
 import type { Metadata } from "next";
@@ -95,7 +95,7 @@ export default function ScopeScanPage() {
   ];
 
   return (
-    <Layout>
+    <LayoutWrapper>
       <script
         type="application/ld+json"
         // JSON.stringify is safe here since we fully control the object contents.
@@ -279,6 +279,6 @@ export default function ScopeScanPage() {
           </div>
         </div>
       </section>
-    </Layout>
+    </LayoutWrapper>
   );
 }

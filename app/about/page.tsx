@@ -1,11 +1,11 @@
 'use client';
-import Layout from "@/components/layout";
+import LayoutWrapper from "@/components/layout-wrapper";
 import Link from "next/link";
 import { Building2, MapPin, Mail, Phone, Target, Users, Award } from "lucide-react";
 
 export default function About() {
   return (
-    <Layout>
+    <LayoutWrapper>
       {/* Hero Section */}
       <section className="bg-primary py-16 md:py-24">
         <div className="container mx-auto px-4 text-center">
@@ -124,6 +124,6 @@ export default function About() {
           </Link>
         </div>
       </section>
-    </Layout>
+    </LayoutWrapper>
   );
 }
