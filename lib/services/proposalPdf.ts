@@ -393,6 +393,24 @@ export function buildProposalPdf(params: {
       y += 10;
     });
 
+    // Calculate totals from line items
+    let totalPriceLow = 0;
+    let totalPriceHigh = 0;
+    let totalDaysLowCalc = 0;
+    let totalDaysHighCalc = 0;
+    
+    proposal.lineItems.forEach((item) => {
+      const priceLow = item.priceLow ?? item.priceRange?.low ?? 0;
+      const priceHigh = item.priceHigh ?? item.priceRange?.high ?? 0;
+      totalPriceLow += priceLow;
+      totalPriceHigh += priceHigh;
+      
+      const daysLow = item.estimatedDaysLow ?? item.estimatedDays?.low ?? 0;
+      const daysHigh = item.estimatedDaysHigh ?? item.estimatedDays?.high ?? 0;
+      totalDaysLowCalc += daysLow;
+      totalDaysHighCalc += daysHigh;
+    });
+
     // Total row
     setFillColorHex("#dbeafe");
     pdf.rect(margin, y - 1, contentWidth, 9, "F");
@@ -400,19 +418,51 @@ export function buildProposalPdf(params: {
     setFont("bold", 10);
     addText("TOTAL", margin + 3, y + 5);
 
-    const totalDaysLow = proposal.estimatedDaysLow ?? 0;
-    const totalDaysHigh = proposal.estimatedDaysHigh ?? 0;
     const totalDaysText =
-      totalDaysLow === totalDaysHigh ? `${totalDaysLow}` : `${totalDaysLow}-${totalDaysHigh}`;
+      totalDaysLowCalc === totalDaysHighCalc ? `${totalDaysLowCalc}` : `${totalDaysLowCalc}-${totalDaysHighCalc}`;
     addText(totalDaysText, margin + contentWidth * 0.65, y + 5);
 
-    const totalAvgPrice = Math.round((proposal.priceLow + proposal.priceHigh) / 2);
+    const totalAvgPrice = Math.round((totalPriceLow + totalPriceHigh) / 2);
     setFillColorHex(primaryColor);
     setTextColorHex(primaryColor);
     setFont("bold", 11);
     addText(formatCurrency(totalAvgPrice), margin + contentWidth * 0.82, y + 5);
 
     y += 15;
+
+    // --- INVESTMENT SECTION (for multi-service) ---
+    checkPageBreak(40);
+
+    setFillColorHex(primaryColor);
+    pdf.rect(margin, y, contentWidth, 8, "F");
+    pdf.setTextColor(255, 255, 255);
+    setFont("bold", 10);
+    addText("INVESTMENT", margin + 3, y + 5.5);
+    y += 14;
+
+    // Price box
+    setFillColorHex(sectionBg);
+    setDrawColorHex("#e2e8f0");
+    pdf.roundedRect(margin, y, contentWidth, 25, 2, 2, "FD");
+
+    setTextColorHex(lightGray);
+    setFont("normal", 9);
+    addText("Total Project Estimate (All Services)", margin + 5, y + 8);
+
+    setTextColorHex(textColor);
+    setFont("bold", 18);
+    const multiServicePriceStr = formatCurrency(totalAvgPrice);
+    addText(multiServicePriceStr, pageWidth - margin - 5 - pdf.getTextWidth(multiServicePriceStr), y + 16);
+
+    setTextColorHex(lightGray);
+    setFont("normal", 7);
+    addText(
+      "*Price includes all labor, materials, and taxes as specified above. Valid for 30 days.",
+      margin + 5,
+      y + 22,
+    );
+
+    y += 32;
   }
 
   // --- SCOPE OF WORK ---
