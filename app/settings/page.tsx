@@ -51,6 +51,9 @@ export default function Settings() {
 
   const allTradeIds = templates.map(t => t.id);
 
+  // Track if we've already synced this session to avoid duplicate calls
+  const [hasSynced, setHasSynced] = useState(false);
+
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('canceled') === 'true') {
@@ -58,6 +61,42 @@ export default function Settings() {
       window.history.replaceState({}, '', '/settings');
     }
   }, []);
+  
+  // Sync subscription data from Stripe when:
+  // 1. User has a Stripe subscription
+  // 2. Period data is missing (currentPeriodEnd is null) but should exist (cancelAtPeriodEnd is true, or user is Pro)
+  useEffect(() => {
+    if (hasSynced) return;
+    
+    const shouldSync = user?.stripeCustomerId && (
+      // Case 1: Subscription is set to cancel but we don't have period end date
+      (user?.cancelAtPeriodEnd && !user?.currentPeriodEnd) ||
+      // Case 2: User is Pro but we don't have period data (possibly incomplete initial sync)
+      (user?.isPro && user?.stripeSubscriptionId && !user?.currentPeriodEnd)
+    );
+    
+    if (shouldSync) {
+      console.log('[Settings] Syncing subscription data from Stripe...', {
+        cancelAtPeriodEnd: user.cancelAtPeriodEnd,
+        currentPeriodEnd: user.currentPeriodEnd,
+        isPro: user.isPro,
+      });
+      setHasSynced(true);
+      
+      fetch('/api/stripe/sync-subscription', {
+        method: 'POST',
+        credentials: 'include',
+      }).then((res) => res.json()).then((data) => {
+        console.log('[Settings] Sync response:', data);
+        if (data.success) {
+          // Force refresh user data to get updated period info
+          refreshUser();
+        }
+      }).catch((err) => {
+        console.error('[Settings] Failed to sync subscription:', err);
+      });
+    }
+  }, [user?.stripeCustomerId, user?.cancelAtPeriodEnd, user?.currentPeriodEnd, user?.isPro, user?.stripeSubscriptionId, refreshUser, hasSynced]);
 
   useEffect(() => {
     if (user) {

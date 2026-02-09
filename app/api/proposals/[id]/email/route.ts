@@ -82,9 +82,7 @@ export async function POST(
     const requestOrigin = request.headers.get('origin') ||
       (request.headers.get('host') ? `https://${request.headers.get('host')}` : null);
 
-    const baseUrl = requestOrigin ||
-      process.env.NEXT_PUBLIC_APP_URL ||
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+    const baseUrl = process.env.NEXT_PUBLIC_WEB_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
     const proposalUrl = publicToken ? `${baseUrl}/p/${publicToken}` : undefined;
 
     // Calculate total price (average of range)

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { trackGoogleAdsConversion } from '@/lib/analytics';
 
 /**
  * Checkout Success Component
@@ -85,6 +86,8 @@ export default function CheckoutSuccess({
         setState('already_processed');
       } else {
         setState('success');
+        // Track Google Ads conversion for new purchases
+        trackGoogleAdsConversion(sessionId, data.billingStatus?.availableCredits);
       }
 
       // Notify parent after short delay to let user see success
@@ -287,6 +290,10 @@ export function CheckoutSuccessBanner({
           const data = await response.json();
           setResult(data);
           setVerified(true);
+          // Track Google Ads conversion for new purchases
+          if (!data.alreadyProcessed) {
+            trackGoogleAdsConversion(sessionId, data.billingStatus?.availableCredits);
+          }
         }
       } catch (err) {
         console.error('Verification error:', err);
