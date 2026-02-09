@@ -227,7 +227,7 @@ export default function ProposalViewPage() {
           <div className="flex items-center gap-3">
             <Button
               variant="outline"
-              onClick={() => router.push("/app")}
+              onClick={() => router.push(`/app?edit=${proposal.id}`)}
             >
               <Edit className="w-4 h-4 mr-2" />
               Edit in App
