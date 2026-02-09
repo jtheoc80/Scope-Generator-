@@ -91,8 +91,9 @@ export async function POST(request: NextRequest) {
     });
 
     // Build session URL
+    // Priority: NEXT_PUBLIC_APP_URL > production domain > VERCEL_URL > localhost
     const baseUrl =
-      process.env.NEXT_PUBLIC_APP_URL ||
+      process.env.NEXT_PUBLIC_WEB_BASE_URL ||
       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
     const sessionUrl = `${baseUrl}/m/upload/${sessionId}?token=${rawToken}`;
 
