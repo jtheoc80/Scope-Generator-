@@ -1,4 +1,4 @@
-import { Metadata } from "next";
+// Metadata is defined in layout.tsx to avoid duplicate/conflicting exports.
 import LayoutWrapper from "@/components/layout-wrapper";
 import Link from "next/link";
 import Image from "next/image";
@@ -6,42 +6,6 @@ import { ArrowRight, Calendar, Clock, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { blogPosts } from "@/lib/blog-data";
 import { generateBreadcrumbSchema } from "@/lib/seo/jsonld";
-
-export const metadata: Metadata = {
-  title: "Contractor Blog | Proposal Tips & Business Advice | ScopeGenerator",
-  description: "Free resources for contractors: proposal writing tips, pricing guides, scope of work templates, and business advice to help you win more jobs.",
-  keywords: [
-    "contractor blog",
-    "proposal writing tips",
-    "contractor pricing guide",
-    "scope of work templates",
-    "contractor business advice",
-    "construction proposal tips",
-  ],
-  alternates: {
-    canonical: "https://scopegenerator.com/blog",
-  },
-  openGraph: {
-    title: "Contractor Blog | Proposal Tips & Business Advice | ScopeGenerator",
-    description: "Free resources for contractors: proposal writing tips, pricing guides, scope of work templates, and business advice to help you win more jobs.",
-    url: "https://scopegenerator.com/blog",
-    type: "website",
-    images: [
-      {
-        url: "/opengraph.jpg",
-        width: 1200,
-        height: 630,
-        alt: "ScopeGenerator Contractor Blog",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Contractor Blog | Proposal Tips & Business Advice",
-    description: "Free resources for contractors: proposal writing tips, pricing guides, and business advice.",
-    images: ["/opengraph.jpg"],
-  },
-};
 
 export default function BlogIndex() {
   const posts = Object.values(blogPosts).sort((a, b) => 

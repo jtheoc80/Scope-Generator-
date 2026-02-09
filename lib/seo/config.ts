@@ -27,6 +27,8 @@ export const seoConfig = {
       region: "TX",
       country: "US",
     },
+    // Add your social media profile URLs here for Google Knowledge Panel.
+    // Example: ['https://www.linkedin.com/company/scopegen', 'https://twitter.com/scopegen']
     socialProfiles: [] as string[],
   },
 
@@ -34,7 +36,7 @@ export const seoConfig = {
   defaults: {
     title: "ScopeGen - Professional Contractor Proposal Software",
     description:
-      "Generate professional proposals and scopes of work in seconds. Built for bathroom remodelers, kitchen contractors, roofers, HVAC specialists, plumbers, electricians, and more. Free to try.",
+      "Generate professional contractor proposals and scopes of work in 60 seconds. Built for remodelers, roofers, HVAC, plumbers, electricians, and more.",
     keywords: [
       "contractor proposal software",
       "scope of work generator",
@@ -76,9 +78,13 @@ export const seoConfig = {
     },
   },
 
-  // Verification Codes (replace with actual values)
+  // Verification Codes
+  // IMPORTANT: Replace with your real Google Search Console verification code.
+  // Without this, Google cannot verify site ownership — blocking sitemap
+  // submission, crawl monitoring, and indexing insights.
+  // Get your code at: https://search.google.com/search-console
   verification: {
-    google: "your-google-verification-code",
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || "",
   },
 
   // SEO Audit Thresholds
@@ -140,7 +146,7 @@ export const pagesSeoConfig: Record<
   "/": {
     title: "ScopeGen - Professional Contractor Proposal Software",
     description:
-      "Generate professional proposals and scopes of work in seconds. Built for contractors, remodelers, roofers, and more. Free to try.",
+      "Generate professional contractor proposals and scopes of work in 60 seconds. Built for remodelers, roofers, HVAC, plumbers, electricians, and more.",
     keywords: [
       "contractor proposal software",
       "scope of work generator",
@@ -270,6 +276,19 @@ export const pagesSeoConfig: Record<
       "contractor software comparison",
     ],
     ogType: "article",
+    priority: 0.8,
+    changeFrequency: "monthly",
+  },
+  "/scopescan": {
+    title: "ScopeScan - AI-Powered Photo Analysis for Contractors",
+    description:
+      "Turn job site photos into detailed proposals in minutes. ScopeScan uses AI to analyze photos and generate scope items, material lists, and pricing.",
+    keywords: [
+      "AI photo analysis contractor",
+      "job site photo to proposal",
+      "scope of work from photos",
+      "contractor AI tool",
+    ],
     priority: 0.8,
     changeFrequency: "monthly",
   },
