@@ -88,7 +88,20 @@ export async function POST(
     const proposalUrl = publicToken ? `${baseUrl}/p/${publicToken}` : undefined;
 
     // Calculate total price (average of range)
-    const totalPrice = Math.round((proposal.priceLow + proposal.priceHigh) / 2);
+    // For multi-service proposals, sum all line items; otherwise use main proposal fields
+    let totalPrice: number;
+    if (proposal.lineItems && proposal.lineItems.length > 1) {
+      // Multi-service: calculate total from all line items
+      let totalLow = 0;
+      let totalHigh = 0;
+      for (const item of proposal.lineItems) {
+        totalLow += item.priceLow ?? 0;
+        totalHigh += item.priceHigh ?? 0;
+      }
+      totalPrice = Math.round((totalLow + totalHigh) / 2);
+    } else {
+      totalPrice = Math.round((proposal.priceLow + proposal.priceHigh) / 2);
+    }
 
     // Generate deterministic PDF attachment from the canonical proposal id.
     const companyInfo = user

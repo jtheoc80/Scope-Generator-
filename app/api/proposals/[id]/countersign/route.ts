@@ -61,6 +61,20 @@ export async function POST(
             const baseUrl = `${protocol}://${host}`;
             const proposalUrl = countersignedProposal.publicToken ? `${baseUrl}/p/${countersignedProposal.publicToken}` : undefined;
 
+            // Calculate total price - for multi-service, sum all line items
+            let totalPrice: number;
+            if (countersignedProposal.lineItems && countersignedProposal.lineItems.length > 1) {
+                let totalLow = 0;
+                let totalHigh = 0;
+                for (const item of countersignedProposal.lineItems) {
+                    totalLow += item.priceLow ?? 0;
+                    totalHigh += item.priceHigh ?? 0;
+                }
+                totalPrice = Math.round((totalLow + totalHigh) / 2);
+            } else {
+                totalPrice = Math.round((countersignedProposal.priceLow + countersignedProposal.priceHigh) / 2);
+            }
+
             try {
                 await emailService.sendCompletedProposalToClient({
                     clientEmail: countersignedProposal.acceptedByEmail,
@@ -69,7 +83,7 @@ export async function POST(
                     contractorCompany: user?.companyName || undefined,
                     projectTitle: countersignedProposal.jobTypeName || 'Project',
                     projectAddress: countersignedProposal.address || undefined,
-                    totalPrice: Math.round((countersignedProposal.priceLow + countersignedProposal.priceHigh) / 2),
+                    totalPrice,
                     acceptedAt: countersignedProposal.acceptedAt!,
                     contractorSignedAt: countersignedProposal.contractorSignedAt!,
                     proposalUrl,

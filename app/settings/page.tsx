@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
 import Link from "next/link";
-import { Loader2, Upload, X, Settings as SettingsIcon, Building2, CheckCircle, DollarSign, Wrench, CreditCard, AlertTriangle, Key, ExternalLink, Eye, EyeOff, Bell, Mail, MessageSquare, Crown, Users } from "lucide-react";
+import { Loader2, Upload, X, Settings as SettingsIcon, Building2, CheckCircle, DollarSign, Wrench, CreditCard, AlertTriangle, Key, ExternalLink, Eye, EyeOff, Bell, Mail, MessageSquare, Crown, Users, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { templates } from "@/lib/proposal-data";
 import CancelFeedbackModal from "@/components/cancel-feedback-modal";
@@ -618,52 +618,108 @@ export default function Settings() {
 
               {/* Billing Actions - Only if user has Stripe ID */}
               {user.stripeCustomerId && (
-                <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                  <Button
-                    variant="outline"
-                    onClick={async () => {
-                      try {
-                        const res = await fetch("/api/stripe/portal", {
-                          method: "POST",
-                          credentials: "include",
-                        });
-                        const data = await res.json();
-                        if (data.url) {
-                          window.location.href = data.url;
-                        }
-                      } catch {
-                        toast({
-                          title: t.common.error,
-                          description: t.settings.couldNotOpenBilling,
-                          variant: "destructive",
-                        });
-                      }
-                    }}
-                    data-testid="button-manage-billing"
-                  >
-                    {t.settings.manageBilling}
-                  </Button>
+                <div className="space-y-4 pt-2">
+                  {/* Subscription Cancellation Notice - Full Width Banner */}
+                  {user.cancelAtPeriodEnd && user.currentPeriodEnd && (() => {
+                    const endDate = new Date(user.currentPeriodEnd);
+                    const now = new Date();
+                    const daysRemaining = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                    const isExpiringSoon = daysRemaining <= 7;
 
-                  {(user.isPro) && !user.cancelAtPeriodEnd && (
+                    return (
+                      <div className={`rounded-xl border-2 p-5 ${isExpiringSoon ? 'bg-red-50 border-red-300' : 'bg-amber-50 border-amber-300'}`}>
+                        <div className="flex items-start gap-4">
+                          <div className={`h-12 w-12 rounded-full flex items-center justify-center flex-shrink-0 ${isExpiringSoon ? 'bg-red-100' : 'bg-amber-100'}`}>
+                            <AlertTriangle className={`w-6 h-6 ${isExpiringSoon ? 'text-red-600' : 'text-amber-600'}`} />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <h3 className={`text-lg font-bold ${isExpiringSoon ? 'text-red-900' : 'text-amber-900'}`}>
+                                Subscription Ending Soon
+                              </h3>
+                              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold ${isExpiringSoon ? 'bg-red-200 text-red-800' : 'bg-amber-200 text-amber-800'}`}>
+                                <Clock className="w-4 h-4" />
+                                <span className="text-xl">{daysRemaining}</span>
+                                <span>{daysRemaining === 1 ? 'day' : 'days'} left</span>
+                              </div>
+                            </div>
+                            <p className={`text-sm mt-2 ${isExpiringSoon ? 'text-red-700' : 'text-amber-700'}`}>
+                              Your Pro plan will expire on <strong>{endDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong>
+                            </p>
+                            <p className={`text-xs mt-1 ${isExpiringSoon ? 'text-red-600' : 'text-amber-600'}`}>
+                              You'll retain full access until this date.
+                            </p>
+                            <div className="mt-4">
+                              <Button
+                                variant="outline"
+                                className={`${isExpiringSoon ? 'border-red-400 text-red-700 hover:bg-red-100' : 'border-amber-400 text-amber-700 hover:bg-amber-100'}`}
+                                onClick={async () => {
+                                  try {
+                                    const res = await fetch("/api/stripe/portal", {
+                                      method: "POST",
+                                      credentials: "include",
+                                    });
+                                    const data = await res.json();
+                                    if (data.url) {
+                                      window.location.href = data.url;
+                                    }
+                                  } catch {
+                                    toast({
+                                      title: t.common.error,
+                                      description: t.settings.couldNotOpenBilling,
+                                      variant: "destructive",
+                                    });
+                                  }
+                                }}
+                              >
+                                Reactivate Subscription
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Billing Action Buttons */}
+                  <div className="flex flex-col sm:flex-row gap-3">
                     <Button
-                      variant="ghost"
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      onClick={() => setShowCancelModal(true)}
-                      data-testid="button-cancel-subscription"
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          const res = await fetch("/api/stripe/portal", {
+                            method: "POST",
+                            credentials: "include",
+                          });
+                          const data = await res.json();
+                          if (data.url) {
+                            window.location.href = data.url;
+                          }
+                        } catch {
+                          toast({
+                            title: t.common.error,
+                            description: t.settings.couldNotOpenBilling,
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                      data-testid="button-manage-billing"
                     >
-                      <AlertTriangle className="w-4 h-4 mr-2" />
-                      {t.settings.cancelSubscription}
+                      {t.settings.manageBilling}
                     </Button>
-                  )}
 
-                  {user.cancelAtPeriodEnd && user.currentPeriodEnd && (
-                    <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 px-3 py-2 rounded-md border border-amber-200">
-                      <AlertTriangle className="w-4 h-4" />
-                      <span>
-                        Subscription ends on {new Date(user.currentPeriodEnd).toLocaleDateString()}. Access valid until then.
-                      </span>
-                    </div>
-                  )}
+                    {(user.isPro) && !user.cancelAtPeriodEnd && (
+                      <Button
+                        variant="ghost"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => setShowCancelModal(true)}
+                        data-testid="button-cancel-subscription"
+                      >
+                        <AlertTriangle className="w-4 h-4 mr-2" />
+                        {t.settings.cancelSubscription}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               )}
 

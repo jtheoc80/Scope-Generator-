@@ -8,6 +8,7 @@
 import { db } from '@/lib/db';
 import { sql } from 'drizzle-orm';
 import type Stripe from 'stripe';
+import { getStripeClient } from './stripeClient';
 import {
   isActiveSubscriptionStatus,
   calculateBillingStatus,
@@ -64,18 +65,52 @@ export class BillingService {
   }
 
   // ==========================================
-  // Subscription Operations
-  // ==========================================
+  /**
+   * Convert snake_case row from database to camelCase Subscription object
+   */
+  private mapRowToSubscription(row: Record<string, unknown>): Subscription {
+    return {
+      id: row.id as number,
+      userId: row.user_id as string,
+      stripeCustomerId: row.stripe_customer_id as string,
+      stripeSubscriptionId: row.stripe_subscription_id as string | null,
+      stripePriceId: row.stripe_price_id as string | null,
+      status: row.status as string,
+      plan: row.plan as string,
+      currentPeriodStart: row.current_period_start ? new Date(row.current_period_start as string) : null,
+      currentPeriodEnd: row.current_period_end ? new Date(row.current_period_end as string) : null,
+      trialStart: row.trial_start ? new Date(row.trial_start as string) : null,
+      trialEnd: row.trial_end ? new Date(row.trial_end as string) : null,
+      cancelAtPeriodEnd: row.cancel_at_period_end as boolean,
+      canceledAt: row.canceled_at ? new Date(row.canceled_at as string) : null,
+      lastWebhookEventId: row.last_webhook_event_id as string | null,
+      lastUpdatedByEvent: row.last_updated_by_event as string | null,
+      createdAt: row.created_at ? new Date(row.created_at as string) : null,
+      updatedAt: row.updated_at ? new Date(row.updated_at as string) : null,
+    };
+  }
 
   /**
    * Get subscription by user ID
+   * Prioritizes active subscriptions, then orders by most recently updated
    */
   async getSubscriptionByUserId(userId: string): Promise<Subscription | null> {
     try {
       const result = await db.execute(
-        sql`SELECT * FROM subscriptions WHERE user_id = ${userId} ORDER BY created_at DESC LIMIT 1`
+        sql`SELECT * FROM subscriptions 
+          WHERE user_id = ${userId} 
+          ORDER BY 
+            CASE status 
+              WHEN 'active' THEN 1 
+              WHEN 'trialing' THEN 2 
+              WHEN 'past_due' THEN 3 
+              ELSE 4 
+            END,
+            updated_at DESC NULLS LAST
+          LIMIT 1`
       );
-      return (result.rows[0] as Subscription) || null;
+      if (!result.rows[0]) return null;
+      return this.mapRowToSubscription(result.rows[0] as Record<string, unknown>);
     } catch (error: any) {
       // Handle case where subscriptions table doesn't exist yet
       if (error.message?.includes('relation "subscriptions" does not exist') ||
@@ -94,7 +129,8 @@ export class BillingService {
     const result = await db.execute(
       sql`SELECT * FROM subscriptions WHERE stripe_customer_id = ${customerId} ORDER BY created_at DESC LIMIT 1`
     );
-    return (result.rows[0] as Subscription) || null;
+    if (!result.rows[0]) return null;
+    return this.mapRowToSubscription(result.rows[0] as Record<string, unknown>);
   }
 
   /**
@@ -105,7 +141,8 @@ export class BillingService {
       const result = await db.execute(
         sql`SELECT * FROM subscriptions WHERE stripe_subscription_id = ${stripeSubscriptionId} LIMIT 1`
       );
-      return (result.rows[0] as Subscription) || null;
+      if (!result.rows[0]) return null;
+      return this.mapRowToSubscription(result.rows[0] as Record<string, unknown>);
     } catch (error: any) {
       // Handle case where subscriptions table doesn't exist yet
       if (error.message?.includes('relation "subscriptions" does not exist') ||
@@ -164,7 +201,8 @@ export class BillingService {
             RETURNING *
           `
         );
-        return result.rows[0] as Subscription;
+        if (!result.rows[0]) return null;
+        return this.mapRowToSubscription(result.rows[0] as Record<string, unknown>);
       } else {
         // Create new subscription
         const result = await db.execute(
@@ -183,7 +221,8 @@ export class BillingService {
             RETURNING *
           `
         );
-        return result.rows[0] as Subscription;
+        if (!result.rows[0]) return null;
+        return this.mapRowToSubscription(result.rows[0] as Record<string, unknown>);
       }
     } catch (error: any) {
       // Handle case where subscriptions table doesn't exist yet
@@ -304,14 +343,24 @@ export class BillingService {
 
   /**
    * Handle checkout.session.completed event
+   * 
+   * CRITICAL: This webhook is the SINGLE source of truth for:
+   * - Adding credits in PRODUCTION
+   * - Activating subscriptions
+   * 
+   * Idempotency is handled via webhook_events table (checked at start).
+   * Do NOT rely on credit_transactions for idempotency - verify-session may
+   * have already recorded a transaction, but credits should still be added here.
    */
   async handleCheckoutCompleted(
     session: Stripe.Checkout.Session,
     eventId: string,
     rawPayload?: string
   ): Promise<{ success: boolean; message: string }> {
-    // Check idempotency
+    // Check idempotency via webhook_events table
+    // This is the PRIMARY idempotency check - if this event was processed, skip everything
     if (await this.isEventProcessed(eventId)) {
+      console.log('[webhook] Event already processed, skipping', { eventId, sessionId: session.id });
       return { success: true, message: 'Event already processed' };
     }
 
@@ -320,6 +369,16 @@ export class BillingService {
     const subscriptionId = session.subscription as string;
     const productType = session.metadata?.productType;
     const planType = session.metadata?.planType;
+
+    console.log('[webhook] Processing checkout.session.completed', {
+      eventId,
+      sessionId: session.id,
+      userId,
+      customerId,
+      productType,
+      planType,
+      subscriptionId,
+    });
 
     if (!userId) {
       await this.recordWebhookEvent({
@@ -342,8 +401,10 @@ export class BillingService {
             ? new Date(Date.now() + 6 * 30 * 24 * 60 * 60 * 1000)
             : null;
 
-          // Record credit transaction
-          const { alreadyProcessed } = await this.recordCreditPurchase({
+          // Record credit transaction for audit trail
+          // NOTE: This may already exist if verify-session ran first - that's OK!
+          // We use webhook_events for idempotency, not credit_transactions
+          await this.recordCreditPurchase({
             userId,
             stripeCheckoutSessionId: session.id,
             stripePaymentIntentId: session.payment_intent as string,
@@ -353,12 +414,13 @@ export class BillingService {
             expiresAt: expiresAt || undefined,
           });
 
-          // Only add credits in production environment
-          // In development, verify-session endpoint handles credit addition
+          // ALWAYS add credits in production via webhook
+          // In development, verify-session handles this (webhooks may not be configured)
           const isProduction = process.env.NODE_ENV === 'production';
 
-          if (isProduction && !alreadyProcessed) {
-            // Update user's credit balance in production (webhook is the source of truth)
+          if (isProduction) {
+            // Webhook is the source of truth in production - add credits now
+            // Idempotency is guaranteed by webhook_events check at the top
             await db.execute(
               sql`
                 UPDATE users 
@@ -373,43 +435,85 @@ export class BillingService {
                 WHERE id = ${userId}
               `
             );
-            console.log('[webhook] Credits added via webhook (production mode)', { userId, sessionId: session.id, credits });
-          } else if (!isProduction) {
-            console.log('[webhook] Skipping credit addition in webhook (development mode - handled by verify-session)', {
-              userId,
-              sessionId: session.id,
-              alreadyProcessed
+            console.log('[webhook] Credits added via webhook (production mode)', { 
+              userId, 
+              sessionId: session.id, 
+              credits,
+              expiresAt 
             });
           } else {
-            console.log('[webhook] Credit purchase already processed, skipping user update', { userId, sessionId: session.id });
+            console.log('[webhook] Development mode - skipping credit addition (verify-session handles this)', {
+              userId,
+              sessionId: session.id,
+              credits
+            });
           }
         }
       }
 
       // Handle subscription creation
+      // CRITICAL: checkout.session.completed is the AUTHORITATIVE event for subscription purchases.
+      // It MUST always grant initial credits. Idempotency is handled by webhook_events check at the top.
+      // 
+      // NOTE: We do NOT use isNewSubscription check here because:
+      // - customer.subscription.created webhook often fires BEFORE checkout.session.completed
+      // - That creates the subscription record first
+      // - Then checkout.session.completed sees isNewSubscription=false and skips credits
+      // - This is a bug! checkout.session.completed IS the purchase confirmation.
       if (planType && subscriptionId) {
-        // Check if subscription already exists BEFORE upserting (to detect if this is a new subscription)
-        const existingSubscription = await this.getSubscriptionByStripeId(subscriptionId);
-        const isNewSubscription = !existingSubscription;
+        console.log('[webhook] Processing subscription purchase (checkout.session.completed)', {
+          userId,
+          planType,
+          subscriptionId,
+          customerId,
+          eventId,
+        });
 
+        // Fetch full subscription from Stripe to get period data
+        let stripeSubscription: Stripe.Subscription | null = null;
+        try {
+          const stripe = getStripeClient();
+          stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId);
+          console.log('[webhook] Fetched subscription from Stripe', {
+            status: stripeSubscription.status,
+            currentPeriodStart: stripeSubscription.current_period_start,
+            currentPeriodEnd: stripeSubscription.current_period_end,
+          });
+        } catch (error) {
+          console.warn('[webhook] Could not fetch subscription from Stripe:', error);
+        }
+
+        // Upsert subscription record (may already exist from customer.subscription.created)
         await this.upsertSubscription(
           {
             userId,
             stripeCustomerId: customerId,
             stripeSubscriptionId: subscriptionId,
-            status: 'active',
+            status: stripeSubscription?.status || 'active',
             plan: planType,
+            currentPeriodStart: stripeSubscription?.current_period_start
+              ? new Date(stripeSubscription.current_period_start * 1000)
+              : undefined,
+            currentPeriodEnd: stripeSubscription?.current_period_end
+              ? new Date(stripeSubscription.current_period_end * 1000)
+              : undefined,
+            cancelAtPeriodEnd: stripeSubscription?.cancel_at_period_end || false,
+            canceledAt: stripeSubscription?.canceled_at
+              ? new Date(stripeSubscription.canceled_at * 1000)
+              : null,
           },
           eventId,
           'checkout.session.completed'
         );
 
-        // Grant initial credits based on plan type for NEW subscriptions only
+        // Grant initial credits based on plan type
         // Pro = 15 credits/month, Crew = 50 credits/month
         const creditsToGrant = planType === 'crew' ? 50 : 15;
+        const isProduction = process.env.NODE_ENV === 'production';
 
-        if (isNewSubscription) {
-          // Grant initial credits for new subscription
+        if (isProduction) {
+          // PRODUCTION: checkout.session.completed is the source of truth for initial credits
+          // Idempotency is guaranteed by isEventProcessed() check at the start of this function
           await db.execute(
             sql`
               UPDATE users 
@@ -423,13 +527,23 @@ export class BillingService {
               WHERE id = ${userId}
             `
           );
-          console.log(`[webhook] Granted ${creditsToGrant} credits for new ${planType} subscription`, { userId, sessionId: session.id, subscriptionId });
+          console.log(`[webhook] ✅ Granted ${creditsToGrant} credits for ${planType} subscription (checkout.session.completed)`, { 
+            userId, 
+            sessionId: session.id, 
+            subscriptionId,
+            creditsToGrant,
+            eventId,
+          });
         } else {
-          // Just update subscription info without adding credits (renewal handled separately)
+          // DEVELOPMENT: Just update subscription info, verify-session handles credits
           await db.execute(
             sql`UPDATE users SET stripe_customer_id = ${customerId}, stripe_subscription_id = ${subscriptionId}, is_pro = true, subscription_plan = ${planType}, updated_at = NOW() WHERE id = ${userId}`
           );
-          console.log(`[webhook] Updated existing ${planType} subscription (no credits added)`, { userId, sessionId: session.id, subscriptionId });
+          console.log(`[webhook] Development mode - subscription info updated, verify-session handles credits`, { 
+            userId, 
+            sessionId: session.id, 
+            subscriptionId 
+          });
         }
       }
 
@@ -462,6 +576,10 @@ export class BillingService {
 
   /**
    * Handle customer.subscription.updated event
+   * 
+   * This handles subscription renewals, plan changes, cancellations, etc.
+   * The subscription object should have metadata set via subscription_data.metadata
+   * when the checkout session was created.
    */
   async handleSubscriptionUpdated(
     subscription: Stripe.Subscription,
@@ -470,22 +588,55 @@ export class BillingService {
   ): Promise<{ success: boolean; message: string }> {
     // Check idempotency
     if (await this.isEventProcessed(eventId)) {
+      console.log('[webhook] Subscription update event already processed', { eventId, subscriptionId: subscription.id });
       return { success: true, message: 'Event already processed' };
     }
 
     const customerId = subscription.customer as string;
+    // CRITICAL: userId should be in subscription.metadata (set via subscription_data.metadata)
     const userId = subscription.metadata?.userId;
+    const metadataPlanType = subscription.metadata?.planType;
+
+    console.log('[webhook] Processing subscription.updated', {
+      eventId,
+      subscriptionId: subscription.id,
+      customerId,
+      userIdFromMetadata: userId,
+      planTypeFromMetadata: metadataPlanType,
+      status: subscription.status,
+    });
 
     // Find user by metadata or customer ID
     let targetUserId: string | undefined = userId;
     if (!targetUserId) {
+      console.log('[webhook] No userId in subscription metadata, looking up by customer ID');
       const userResult = await db.execute(
         sql`SELECT id FROM users WHERE stripe_customer_id = ${customerId} LIMIT 1`
       );
       targetUserId = userResult.rows[0]?.id as string | undefined;
+      if (targetUserId) {
+        console.log('[webhook] Found user by customer ID', { targetUserId, customerId });
+      }
+    }
+
+    // If still no user, try looking up by subscription ID
+    if (!targetUserId) {
+      console.log('[webhook] No user found by customer ID, looking up by subscription ID');
+      const userResult = await db.execute(
+        sql`SELECT id FROM users WHERE stripe_subscription_id = ${subscription.id} LIMIT 1`
+      );
+      targetUserId = userResult.rows[0]?.id as string | undefined;
+      if (targetUserId) {
+        console.log('[webhook] Found user by subscription ID', { targetUserId, subscriptionId: subscription.id });
+      }
     }
 
     if (!targetUserId) {
+      console.error('[webhook] Could not find user for subscription update', {
+        customerId,
+        subscriptionId: subscription.id,
+        metadata: subscription.metadata,
+      });
       await this.recordWebhookEvent({
         eventId,
         eventType: 'customer.subscription.updated',
@@ -500,7 +651,14 @@ export class BillingService {
 
     try {
       const isActive = isActiveSubscriptionStatus(subscription.status);
-      const planType = subscription.metadata?.planType || 'pro';
+      // Use metadata planType if available, otherwise try to infer from existing subscription
+      let planType = metadataPlanType;
+      if (!planType) {
+        // Try to get from existing subscription record
+        const existingSub = await this.getSubscriptionByStripeId(subscription.id);
+        planType = existingSub?.plan || 'pro';
+        console.log('[webhook] No planType in metadata, using existing or default', { planType });
+      }
 
       // Get existing subscription to detect renewals and plan changes
       const existingSubscription = await this.getSubscriptionByStripeId(subscription.id);
@@ -652,6 +810,11 @@ export class BillingService {
 
   /**
    * Handle customer.subscription.deleted event
+   * 
+   * This is called when a subscription is fully canceled (not just cancel_at_period_end).
+   * We need to:
+   * 1. Mark subscription as canceled
+   * 2. Remove pro access from user
    */
   async handleSubscriptionDeleted(
     subscription: Stripe.Subscription,
@@ -660,25 +823,85 @@ export class BillingService {
   ): Promise<{ success: boolean; message: string }> {
     // Check idempotency
     if (await this.isEventProcessed(eventId)) {
+      console.log('[webhook] Subscription deleted event already processed', { eventId, subscriptionId: subscription.id });
       return { success: true, message: 'Event already processed' };
     }
 
     const customerId = subscription.customer as string;
+    const metadataUserId = subscription.metadata?.userId;
+
+    console.log('[webhook] Processing subscription.deleted', {
+      eventId,
+      subscriptionId: subscription.id,
+      customerId,
+      userIdFromMetadata: metadataUserId,
+    });
 
     try {
-      // Cancel subscription
-      await this.cancelSubscription(subscription.id, eventId);
+      // Find user - try multiple methods (need userId before upserting)
+      let userId: string | undefined = metadataUserId;
+      
+      if (!userId) {
+        // Try by customer ID
+        const userResult = await db.execute(
+          sql`SELECT id FROM users WHERE stripe_customer_id = ${customerId} LIMIT 1`
+        );
+        userId = userResult.rows[0]?.id as string | undefined;
+      }
 
-      // Find user and update isPro flag
-      const userResult = await db.execute(
-        sql`SELECT id FROM users WHERE stripe_customer_id = ${customerId} LIMIT 1`
+      if (!userId) {
+        // Try by subscription ID
+        const userResult = await db.execute(
+          sql`SELECT id FROM users WHERE stripe_subscription_id = ${subscription.id} LIMIT 1`
+        );
+        userId = userResult.rows[0]?.id as string | undefined;
+      }
+
+      if (!userId) {
+        // Try from existing subscription record
+        const existingSub = await this.getSubscriptionByStripeId(subscription.id);
+        userId = existingSub?.userId;
+      }
+
+      // Get existing subscription to preserve period data if not in Stripe object
+      const existingSubscription = await this.getSubscriptionByStripeId(subscription.id);
+
+      // Use upsertSubscription to properly update ALL fields including period dates
+      // This preserves current_period_start and current_period_end which are needed
+      // to show when the subscription access ends
+      await this.upsertSubscription(
+        {
+          userId: userId || existingSubscription?.userId || '',
+          stripeCustomerId: customerId,
+          stripeSubscriptionId: subscription.id,
+          status: 'canceled',
+          plan: existingSubscription?.plan || subscription.metadata?.planType || 'pro',
+          // Preserve period dates from Stripe subscription, or fall back to existing record
+          currentPeriodStart: subscription.current_period_start
+            ? new Date(subscription.current_period_start * 1000)
+            : existingSubscription?.currentPeriodStart ?? undefined,
+          currentPeriodEnd: subscription.current_period_end
+            ? new Date(subscription.current_period_end * 1000)
+            : existingSubscription?.currentPeriodEnd ?? undefined,
+          cancelAtPeriodEnd: subscription.cancel_at_period_end,
+          canceledAt: subscription.canceled_at
+            ? new Date(subscription.canceled_at * 1000)
+            : new Date(),
+        },
+        eventId,
+        'customer.subscription.deleted'
       );
-      const userId = userResult.rows[0]?.id as string | undefined;
 
       if (userId) {
         await db.execute(
           sql`UPDATE users SET is_pro = false, subscription_plan = NULL, stripe_subscription_id = NULL, updated_at = NOW() WHERE id = ${userId}`
         );
+        console.log('[webhook] User pro access revoked', { userId, subscriptionId: subscription.id });
+      } else {
+        console.warn('[webhook] Could not find user to revoke pro access', { 
+          customerId, 
+          subscriptionId: subscription.id 
+        });
       }
 
       await this.recordWebhookEvent({

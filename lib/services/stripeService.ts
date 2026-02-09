@@ -139,10 +139,20 @@ export class StripeService {
       mode: 'subscription',
       success_url: successUrl,
       cancel_url: cancelUrl,
+      // Session metadata (for checkout.session.completed webhook)
       metadata: {
         userId,
         planType,
         proposalsPerMonth: proposalsPerMonth.toString(),
+      },
+      // CRITICAL: Set metadata on the subscription itself so subscription webhooks can access it
+      // Without this, subscription.updated/deleted webhooks can't find userId or planType
+      subscription_data: {
+        metadata: {
+          userId,
+          planType,
+          proposalsPerMonth: proposalsPerMonth.toString(),
+        },
       },
     });
   }
