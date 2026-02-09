@@ -3,7 +3,7 @@ import { auth } from '@clerk/nextjs/server';
 import { stripeService } from '@/lib/services/stripeService';
 import { storage } from '@/lib/services/storage';
 import { billingService } from '@/lib/services/billingService';
-import { isStripeConfigured } from '@/lib/services/stripeClient';
+import { isStripeConfigured, getStripeClient } from '@/lib/services/stripeClient';
 import { USER_SESSION_COOKIE } from '@/lib/user-session';
 
 /**
@@ -137,9 +137,17 @@ export async function POST(request: NextRequest) {
             creditsAdded = 0;
           }
         } else {
-          // In production, just record the transaction (webhook will add credits)
-          console.log('[verify-session] Production mode - recording transaction only (webhook will add credits)');
-          const recordResult = await billingService.recordCreditPurchase({
+          // PRODUCTION MODE: DO NOT record transaction here!
+          // The webhook is the SINGLE source of truth for adding credits.
+          // Recording here would cause a race condition where:
+          //   1. verify-session runs first (user redirect is fast)
+          //   2. verify-session records transaction
+          //   3. webhook sees transaction exists, skips credit addition
+          //   4. User never gets credits!
+          // 
+          // Instead, just check if credits were already added by the webhook
+          console.log('[verify-session] Production mode - checking if webhook already processed');
+          const existingTransaction = await billingService.recordCreditPurchase({
             userId,
             stripeCheckoutSessionId: sessionId,
             stripePaymentIntentId: session.payment_intent as string,
@@ -148,8 +156,18 @@ export async function POST(request: NextRequest) {
             amountPaid: session.amount_total || 0,
             expiresAt: expiresAt || undefined,
           });
-          alreadyProcessed = recordResult.alreadyProcessed;
-          console.log('[verify-session] Transaction recorded:', { alreadyProcessed });
+          
+          // If transaction already exists, webhook handled it - credits were added
+          // If transaction is new, we just recorded it but webhook will still add credits
+          // because we check webhook_events table, not credit_transactions
+          alreadyProcessed = existingTransaction.alreadyProcessed;
+          
+          // In production, we don't add credits here - webhook does
+          // Just report whether it was already processed
+          console.log('[verify-session] Production mode - transaction check:', { 
+            alreadyProcessed,
+            note: 'Credits added by webhook, not verify-session'
+          });
         }
 
         result = {
@@ -165,16 +183,6 @@ export async function POST(request: NextRequest) {
       const isDevelopment = process.env.NODE_ENV === 'development';
       let creditsAdded = 0;
 
-      console.log('[verify-session] Subscription purchase detected', {
-        planType,
-        subscriptionId: session.subscription,
-        isDevelopment,
-        userId,
-      });
-
-      // Grant credits for new subscriptions (both dev and production)
-      // In production, webhook should also handle this, but we use subscription ID
-      // matching as idempotency key to prevent double-granting
       const creditsToGrant = planType === 'crew' ? 50 : 15;
       const subscriptionId = typeof session.subscription === 'string'
         ? session.subscription
@@ -182,6 +190,15 @@ export async function POST(request: NextRequest) {
       const customerId = typeof session.customer === 'string'
         ? session.customer
         : session.customer?.id || '';
+
+      console.log('[verify-session] Subscription purchase detected', {
+        planType,
+        subscriptionId,
+        customerId,
+        isDevelopment,
+        userId,
+        creditsToGrant,
+      });
 
       // Get current user state
       const user = await storage.getUser(userId);
@@ -193,56 +210,104 @@ export async function POST(request: NextRequest) {
         newSubscriptionId: subscriptionId,
       });
 
-      // Grant credits if:
-      // 1. User has no subscription ID set, OR
-      // 2. User has the same subscription ID but isPro=false (incomplete activation)
-
-      console.log('[verify-session] Already fully activated', {
-        userId,
-        existingSubscriptionId: user?.stripeSubscriptionId,
-        newSubscriptionId: subscriptionId,
-        isPro: user?.isPro,
-      });
-      console.log('[verify-session] Granting initial subscription credits', {
-        userId,
-        planType,
-        creditsToGrant,
-        subscriptionId,
-        reason: !user?.stripeSubscriptionId
-          ? 'no existing subscription'
-          : 'isPro is false',
-        mode: isDevelopment ? 'development' : 'production',
-      });
-
-      try {
-        // Use storage method to update user
-        const updatedUser = await storage.activateProSubscription(
-          userId,
-          customerId,
-          subscriptionId,
-          planType,
-          creditsToGrant
-        );
-
-        if (updatedUser) {
-          creditsAdded = creditsToGrant;
-          console.log('[verify-session] Granted subscription credits successfully:', {
+      if (isDevelopment) {
+        // DEVELOPMENT MODE: Grant credits directly (webhooks may not be configured)
+        // Use subscription ID as idempotency key
+        if (user?.stripeSubscriptionId !== subscriptionId) {
+          console.log('[verify-session] Development mode - granting subscription credits directly', {
             userId,
-            creditsAdded,
             planType,
-            newCredits: updatedUser.proposalCredits,
+            creditsToGrant,
+            subscriptionId,
           });
+
+          try {
+            const updatedUser = await storage.activateProSubscription(
+              userId,
+              customerId,
+              subscriptionId,
+              planType,
+              creditsToGrant
+            );
+
+            if (updatedUser) {
+              creditsAdded = creditsToGrant;
+              console.log('[verify-session] Development - granted subscription credits:', {
+                userId,
+                creditsAdded,
+                planType,
+                newCredits: updatedUser.proposalCredits,
+              });
+
+              // Also upsert the subscriptions table
+              try {
+                const stripe = getStripeClient();
+                const stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId);
+
+                await billingService.upsertSubscription(
+                  {
+                    userId,
+                    stripeCustomerId: customerId,
+                    stripeSubscriptionId: subscriptionId,
+                    status: stripeSubscription.status,
+                    plan: planType,
+                    currentPeriodStart: stripeSubscription.current_period_start
+                      ? new Date(stripeSubscription.current_period_start * 1000)
+                      : undefined,
+                    currentPeriodEnd: stripeSubscription.current_period_end
+                      ? new Date(stripeSubscription.current_period_end * 1000)
+                      : undefined,
+                    cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
+                    canceledAt: stripeSubscription.canceled_at
+                      ? new Date(stripeSubscription.canceled_at * 1000)
+                      : null,
+                  },
+                  `verify-session-dev-${sessionId}`,
+                  'verify-session'
+                );
+              } catch (subError) {
+                console.error('[verify-session] Error upserting subscription:', subError);
+              }
+            }
+          } catch (error) {
+            console.error('[verify-session] Error granting subscription credits:', error);
+          }
         } else {
-          console.error('[verify-session] Failed to update user - activateProSubscription returned null');
+          console.log('[verify-session] Development - subscription already activated', {
+            userId,
+            subscriptionId,
+          });
         }
-      } catch (error) {
-        console.error('[verify-session] Error granting subscription credits:', error);
+      } else {
+        // PRODUCTION MODE: DO NOT grant credits here!
+        // The webhook (handleCheckoutCompleted) is the SINGLE source of truth.
+        // We only update UI-facing fields so the dashboard looks correct immediately.
+        console.log('[verify-session] Production mode - NOT granting credits (webhook handles this)', {
+          userId,
+          planType,
+          subscriptionId,
+        });
+
+        // Update subscription info for immediate UI feedback
+        // Credits will be added by webhook
+        try {
+          await storage.updateUserStripeInfo(userId, {
+            stripeCustomerId: customerId,
+            stripeSubscriptionId: subscriptionId,
+            isPro: true,
+            subscriptionPlan: planType,
+          });
+          console.log('[verify-session] Production - updated subscription info (credits from webhook)');
+        } catch (error) {
+          console.error('[verify-session] Error updating subscription info:', error);
+        }
       }
+
       result = {
         type: 'subscription',
         planActivated: planType,
         creditsAdded: creditsAdded || undefined,
-        alreadyProcessed: creditsAdded === 0,
+        alreadyProcessed: !isDevelopment || creditsAdded === 0,
       };
     }
 

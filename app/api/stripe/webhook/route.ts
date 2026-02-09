@@ -19,12 +19,22 @@ export const dynamic = 'force-dynamic';
  * - Backward compatibility with user fields
  */
 export async function POST(request: NextRequest) {
+  // Log immediately when webhook is hit - this helps debug if webhook is even reaching the server
+  console.log('[webhook] 🔔 Webhook endpoint hit at', new Date().toISOString());
+  
   try {
     const body = await request.text();
     const headersList = await headers();
     const signature = headersList.get('stripe-signature');
 
+    console.log('[webhook] Request received', {
+      hasBody: !!body,
+      bodyLength: body?.length,
+      hasSignature: !!signature,
+    });
+
     if (!signature) {
+      console.error('[webhook] ❌ Missing stripe-signature header');
       logger.error('Stripe webhook: Missing stripe-signature header');
       return NextResponse.json(
         { message: 'Missing stripe-signature header' },
@@ -49,7 +59,9 @@ export async function POST(request: NextRequest) {
     // Verify webhook signature
     try {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+      console.log('[webhook] ✅ Signature verified successfully');
     } catch (err: any) {
+      console.error('[webhook] ❌ Signature verification FAILED:', err.message);
       logger.error('Stripe webhook: Signature verification failed', { error: err.message });
       return NextResponse.json(
         { message: `Webhook signature verification failed: ${err.message}` },
@@ -57,22 +69,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log('[webhook] 📦 Processing event:', { eventType: event.type, eventId: event.id });
     logger.info('Stripe webhook: Processing event', { eventType: event.type, eventId: event.id });
 
     // Check idempotency - skip if already processed
     const alreadyProcessed = await billingService.isEventProcessed(event.id);
     if (alreadyProcessed) {
+      console.log('[webhook] ⏭️ Event already processed, skipping', { eventId: event.id });
       logger.debug('Stripe webhook: Event already processed, skipping', { eventId: event.id });
       return NextResponse.json({ received: true, skipped: true });
     }
+
+    console.log('[webhook] 🆕 New event, processing...', { eventType: event.type });
 
     // Handle the event
     let result: { success: boolean; message: string };
 
     switch (event.type) {
       case 'checkout.session.completed': {
+        console.log('[webhook] 🛒 Handling checkout.session.completed');
         const session = event.data.object as Stripe.Checkout.Session;
+        console.log('[webhook] Session details:', {
+          sessionId: session.id,
+          customerId: session.customer,
+          subscriptionId: session.subscription,
+          userId: session.metadata?.userId || session.client_reference_id,
+          planType: session.metadata?.planType,
+          productType: session.metadata?.productType,
+        });
         result = await billingService.handleCheckoutCompleted(session, event.id, body);
+        console.log('[webhook] handleCheckoutCompleted result:', result);
         break;
       }
 
@@ -114,9 +140,11 @@ export async function POST(request: NextRequest) {
         result = { success: true, message: `Unhandled event type: ${event.type}` };
     }
 
+    console.log('[webhook] ✅ Event processed successfully', { eventType: event.type, result });
     logger.info('Stripe webhook: Event processed', { eventType: event.type, result });
     return NextResponse.json({ received: true, ...result });
   } catch (error) {
+    console.error('[webhook] ❌ Handler error:', error);
     logger.error('Stripe webhook: Handler error', error as Error);
     return NextResponse.json(
       { message: 'Webhook handler failed', error: error instanceof Error ? error.message : 'Unknown error' },

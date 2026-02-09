@@ -63,7 +63,19 @@ export async function POST(
     // Send notification to contractor (non-blocking)
     const user = await storage.getUser(proposal.userId);
     if (user?.email) {
-      const totalPrice = Math.round((proposal.priceLow + proposal.priceHigh) / 2);
+      // Calculate total price - for multi-service, sum all line items
+      let totalPrice: number;
+      if (proposal.lineItems && proposal.lineItems.length > 1) {
+        let totalLow = 0;
+        let totalHigh = 0;
+        for (const item of proposal.lineItems) {
+          totalLow += item.priceLow ?? 0;
+          totalHigh += item.priceHigh ?? 0;
+        }
+        totalPrice = Math.round((totalLow + totalHigh) / 2);
+      } else {
+        totalPrice = Math.round((proposal.priceLow + proposal.priceHigh) / 2);
+      }
       
       sendProposalAcceptedNotification({
         contractorEmail: user.email,
