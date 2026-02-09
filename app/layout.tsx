@@ -6,6 +6,7 @@ import {
 import { isClerkConfigured } from "@/lib/authUtils";
 import { VercelAnalytics } from "@/components/VercelAnalytics";
 import { GoogleAnalytics } from "@/components/GoogleAnalytics";
+import { GoogleTagManagerScript, GoogleTagManagerNoScript } from "@/components/GoogleTagManager";
 import { Providers } from "@/components/providers";
 import { OrganizationJsonLd } from "@/components/JsonLd";
 import "./globals.css";
@@ -85,10 +86,12 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <GoogleAnalytics />
+        <GoogleTagManagerScript />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <GoogleTagManagerNoScript />
         <OrganizationJsonLd type="SoftwareApplication" />
         <Providers>
           {children}
