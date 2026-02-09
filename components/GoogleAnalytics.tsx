@@ -10,6 +10,9 @@ const GA_MEASUREMENT_ID =
   process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? 
   (process.env.NODE_ENV === 'production' ? FALLBACK_PRODUCTION_GA_ID : undefined);
 
+// Google Ads ID for conversion tracking
+const GOOGLE_ADS_ID = process.env.NEXT_PUBLIC_GOOGLE_ADS_ID;
+
 export function GoogleAnalytics() {
   if (!GA_MEASUREMENT_ID) {
     return null;
@@ -29,6 +32,7 @@ export function GoogleAnalytics() {
           gtag('config', '${GA_MEASUREMENT_ID}', {
             page_path: window.location.pathname
           });
+          ${GOOGLE_ADS_ID ? `gtag('config', '${GOOGLE_ADS_ID}');` : ''}
         `}
       </Script>
     </>

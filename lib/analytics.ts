@@ -42,3 +42,35 @@ export const trackEvent = (action: string, category: string, label?: string, val
     value: value,
   });
 };
+
+// Google Ads Conversion Tracking
+const GOOGLE_ADS_CONVERSION_LABEL = process.env.NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_LABEL;
+
+/**
+ * Track a Google Ads purchase conversion
+ * Call this after a successful Stripe checkout/purchase
+ * @param transactionId - Optional transaction ID (e.g., Stripe session ID) for deduplication
+ * @param value - Optional conversion value in dollars
+ * @param currency - Currency code (defaults to USD)
+ */
+export const trackGoogleAdsConversion = (
+  transactionId?: string,
+  value?: number,
+  currency: string = 'USD'
+) => {
+  if (!GOOGLE_ADS_CONVERSION_LABEL) {
+    return;
+  }
+
+  if (!window.gtag) {
+    console.warn('Google Ads conversion tracking: gtag not available');
+    return;
+  }
+
+  window.gtag('event', 'conversion', {
+    send_to: GOOGLE_ADS_CONVERSION_LABEL,
+    transaction_id: transactionId || '',
+    value: value,
+    currency: currency,
+  });
+};
