@@ -156,6 +156,8 @@ export function generateOrganizationSchema(): OrganizationSchema {
       email: seoConfig.organization.email,
       contactType: "customer service",
     },
+    // TODO: Populate socialProfiles in seo/config.ts with real URLs
+    // (LinkedIn, Twitter/X, Facebook, etc.) to enable Google Knowledge Panel.
     sameAs: seoConfig.organization.socialProfiles,
   };
 }
@@ -178,6 +180,9 @@ export function generateSoftwareApplicationSchema(): SoftwareApplicationSchema {
       priceCurrency: "USD",
       description: "Free tier available",
     },
+    // WARNING: aggregateRating MUST reflect real, collected user reviews.
+    // Google may issue a manual action (penalty) for fabricated review data.
+    // Remove this block if ratings are not based on verified reviews.
     aggregateRating: {
       "@type": "AggregateRating",
       ratingValue: "4.9",

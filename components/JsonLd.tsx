@@ -1,4 +1,10 @@
-import Script from 'next/script';
+/**
+ * JSON-LD Structured Data Components
+ *
+ * IMPORTANT: These use server-rendered <script> tags (not next/script with
+ * strategy="afterInteractive") so that Googlebot can read them on the initial
+ * HTML response without executing JavaScript.
+ */
 
 interface OrganizationJsonLdProps {
   type?: 'Organization' | 'SoftwareApplication';
@@ -24,6 +30,8 @@ export function OrganizationJsonLd({ type = 'Organization' }: OrganizationJsonLd
       email: 'support@scopegenerator.com',
       contactType: 'customer service',
     },
+    // TODO: Add your social media profile URLs here for Google Knowledge Panel.
+    // Example: ['https://www.linkedin.com/company/scopegen', 'https://twitter.com/scopegen']
     sameAs: [],
   };
 
@@ -41,6 +49,9 @@ export function OrganizationJsonLd({ type = 'Organization' }: OrganizationJsonLd
       priceCurrency: 'USD',
       description: 'Free tier available',
     },
+    // WARNING: aggregateRating must reflect real, collected user reviews.
+    // Google may issue a manual action (penalty) for fabricated review data.
+    // Remove this block if ratings are not based on verified reviews.
     aggregateRating: {
       '@type': 'AggregateRating',
       ratingValue: '4.9',
@@ -59,12 +70,12 @@ export function OrganizationJsonLd({ type = 'Organization' }: OrganizationJsonLd
 
   const data = type === 'SoftwareApplication' ? softwareData : organizationData;
 
+  // Use a plain <script> tag so the JSON-LD is in the initial HTML response
+  // and visible to search engine crawlers that don't execute JavaScript.
   return (
-    <Script
-      id={`jsonld-${type.toLowerCase()}`}
+    <script
       type="application/ld+json"
       dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
-      strategy="afterInteractive"
     />
   );
 }
@@ -103,18 +114,14 @@ export function WebPageJsonLd({ title, description, url, breadcrumbs }: WebPageJ
 
   return (
     <>
-      <Script
-        id="jsonld-webpage"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageData) }}
-        strategy="afterInteractive"
       />
       {breadcrumbData && (
-        <Script
-          id="jsonld-breadcrumbs"
+        <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }}
-          strategy="afterInteractive"
         />
       )}
     </>
@@ -166,11 +173,9 @@ export function ArticleJsonLd({
   };
 
   return (
-    <Script
-      id="jsonld-article"
+    <script
       type="application/ld+json"
       dangerouslySetInnerHTML={{ __html: JSON.stringify(articleData) }}
-      strategy="afterInteractive"
     />
   );
 }
@@ -194,11 +199,9 @@ export function FAQJsonLd({ questions }: FAQJsonLdProps) {
   };
 
   return (
-    <Script
-      id="jsonld-faq"
+    <script
       type="application/ld+json"
       dangerouslySetInnerHTML={{ __html: JSON.stringify(faqData) }}
-      strategy="afterInteractive"
     />
   );
 }
@@ -234,11 +237,9 @@ export function ProductJsonLd({
   };
 
   return (
-    <Script
-      id="jsonld-product"
+    <script
       type="application/ld+json"
       dangerouslySetInnerHTML={{ __html: JSON.stringify(productData) }}
-      strategy="afterInteractive"
     />
   );
 }

@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     default: "ScopeGen - Professional Contractor Proposal Software",
     template: "%s | ScopeGen",
   },
-  description: "Generate professional proposals and scopes of work in seconds. Built for bathroom remodelers, kitchen contractors, roofers, HVAC specialists, plumbers, electricians, and more. Free to try.",
+  description: "Generate professional contractor proposals and scopes of work in 60 seconds. Built for remodelers, roofers, HVAC, plumbers, electricians, and more.",
   keywords: ["contractor proposal software", "scope of work generator", "construction proposal", "remodeling proposal", "contractor estimates", "roofing proposal", "HVAC proposal", "plumbing proposal", "electrical proposal"],
   authors: [{ name: "ScopeGen" }],
   creator: "ScopeGen",
@@ -73,7 +73,9 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    google: "your-google-verification-code",
+    // Set via NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION env var
+    // Get your code at: https://search.google.com/search-console
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || "",
   },
 };
 

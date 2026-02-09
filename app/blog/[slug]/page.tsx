@@ -20,13 +20,12 @@ interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
-// Generate static paths for all blog posts
-export async function generateStaticParams() {
-  return Object.keys(blogPosts).map((slug) => ({ slug }));
-}
-
 // Force dynamic rendering to ensure QueryClientProvider is available
 export const dynamic = 'force-dynamic';
+
+// Note: generateStaticParams is defined in layout.tsx.
+// Using force-dynamic here overrides static generation, but the layout
+// still uses generateStaticParams for metadata generation.
 
 // Generate metadata for SEO
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {

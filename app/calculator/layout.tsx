@@ -3,7 +3,7 @@ import { generateFAQSchema, generateBreadcrumbSchema } from "@/lib/seo/jsonld";
 
 export const metadata: Metadata = {
   title: "Free Contractor Price Calculator 2025 - Instant Cost Estimates",
-  description: "Get instant cost estimates for bathroom remodels, kitchen renovations, roofing, HVAC, plumbing, electrical, and 15+ more trades. Free contractor price calculator with regional pricing adjustments for all 50 states.",
+  description: "Get instant cost estimates for bathroom, kitchen, roofing, HVAC, plumbing, electrical, and 15+ trades. Free calculator with regional pricing.",
   keywords: [
     "contractor price calculator",
     "remodeling cost estimate",
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://scopegenerator.com/calculator",
   },
-};//{dsdsdsdsdsdsdsmbgsngsb jkdgsadbsakdgsdgjsbdjkgvasjdsadjsgvdisbdislcbs;oa dsan jknubgsjdkbsajbdsdbvshbcscbscbsajubgc}
+};
 
 // FAQ data for schema
 const calculatorFAQs = [
