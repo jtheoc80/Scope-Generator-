@@ -612,6 +612,8 @@ export default function Dashboard() {
           subscriptionPlan={user.subscriptionPlan}
           hasActiveAccess={user.hasActiveAccess}
           trialDaysRemaining={user.trialDaysRemaining}
+          cancelAtPeriodEnd={user.cancelAtPeriodEnd}
+          currentPeriodEnd={user.currentPeriodEnd}
           dateRange={dateRange}
           onDateRangeChange={setDateRange}
           onUpgrade={() => setShowPaywall(true)}

@@ -697,13 +697,28 @@ export default function Home() {
                 </li>
               </ul>
               {user?.isPro ? (
-                <button
-                  disabled
-                  className="block w-full text-center py-4 lg:py-5 bg-green-500 text-white rounded-xl font-bold text-lg lg:text-xl opacity-90 cursor-default"
-                  data-testid="button-current-plan-pro"
-                >
-                  Current Plan
-                </button>
+                <div className="space-y-2">
+                  {user?.cancelAtPeriodEnd && user?.currentPeriodEnd && (() => {
+                    const endDate = new Date(user.currentPeriodEnd);
+                    const now = new Date();
+                    const daysRemaining = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                    const isExpiringSoon = daysRemaining <= 7;
+
+                    return (
+                      <div className={`rounded-lg p-3 text-center text-sm ${isExpiringSoon ? 'bg-red-500/20 text-red-200' : 'bg-amber-500/20 text-amber-200'}`}>
+                        <p className="font-semibold">Ending in {daysRemaining} {daysRemaining === 1 ? 'day' : 'days'}</p>
+                        <p className="text-xs opacity-80">{endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                      </div>
+                    );
+                  })()}
+                  <button
+                    disabled
+                    className="block w-full text-center py-4 lg:py-5 bg-green-500 text-white rounded-xl font-bold text-lg lg:text-xl opacity-90 cursor-default"
+                    data-testid="button-current-plan-pro"
+                  >
+                    Current Plan
+                  </button>
+                </div>
               ) : (
                 <button
                   onClick={() => handleCheckout('pro')}

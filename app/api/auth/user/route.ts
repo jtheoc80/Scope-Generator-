@@ -35,18 +35,46 @@ export async function GET(request: NextRequest) {
         // Remove internal cache fields before sending to client
         const { cachedAt, expiresAt, ...clientData } = cachedData;
 
-        // Note: companyLogo is too large for cookie cache (base64 images can be 100KB+)
-        // If logo is missing from cache, do a quick DB lookup just for the logo
-        if (!clientData.companyLogo) {
-          const dbUser = await storage.getUser(userId);
-          if (dbUser?.companyLogo) {
-            clientData.companyLogo = dbUser.companyLogo;
-          }
+        // CRITICAL: Fetch trialEndsAt and credits FRESH from database
+        // Cached values may be stale if database was modified directly
+        const dbUser = await storage.getUser(userId);
+        const now = new Date();
+        const trialEndsAt = dbUser?.trialEndsAt ? new Date(dbUser.trialEndsAt) : null;
+        const isInTrial = (trialEndsAt && trialEndsAt > now) || false;
+        const trialDaysRemaining = trialEndsAt && trialEndsAt > now
+          ? Math.ceil((trialEndsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+          : 0;
+
+        // Check credits from DB too for accurate hasActiveAccess
+        const creditsExpired = dbUser?.creditsExpireAt && new Date(dbUser.creditsExpireAt) < now;
+        const hasCredits = (dbUser?.proposalCredits || 0) > 0 && !creditsExpired;
+
+        // Also fetch subscription data fresh for cancelAtPeriodEnd status
+        const subscription = await billingService.getSubscriptionByUserId(userId);
+
+        // Override cached values with fresh DB values
+        clientData.isInTrial = isInTrial;
+        clientData.trialDaysRemaining = trialDaysRemaining;
+        clientData.trialEndsAt = dbUser?.trialEndsAt || null;
+        clientData.proposalCredits = dbUser?.proposalCredits || 0;
+        clientData.hasActiveAccess = clientData.isPro || isInTrial || hasCredits;
+        clientData.cancelAtPeriodEnd = subscription?.cancelAtPeriodEnd || false;
+        clientData.currentPeriodEnd = subscription?.currentPeriodEnd
+          ? new Date(subscription.currentPeriodEnd).toISOString()
+          : null;
+
+        // Also get companyLogo if missing
+        if (!clientData.companyLogo && dbUser?.companyLogo) {
+          clientData.companyLogo = dbUser.companyLogo;
         }
 
-        console.log(`[AUTH] Serving user ${userId} from secure cookie cache`, {
-          hasCompanyLogo: !!clientData.companyLogo,
-          companyLogoSize: clientData.companyLogo ? clientData.companyLogo.length : 0,
+        console.log(`[AUTH] Serving user ${userId} from cache (trial/credits/subscription fresh from DB)`, {
+          isInTrial,
+          trialDaysRemaining,
+          trialEndsAt: trialEndsAt?.toISOString(),
+          proposalCredits: clientData.proposalCredits,
+          cancelAtPeriodEnd: clientData.cancelAtPeriodEnd,
+          currentPeriodEnd: clientData.currentPeriodEnd,
         });
         return NextResponse.json(clientData);
       }

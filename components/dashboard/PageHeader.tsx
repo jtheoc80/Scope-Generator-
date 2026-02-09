@@ -6,7 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Camera, Calendar, Plus, Crown, Users } from "lucide-react";
+import { Camera, Calendar, Plus, Crown, Users, Clock, AlertTriangle } from "lucide-react";
 
 export type DashboardDateRange = "7d" | "30d" | "90d" | "all";
 
@@ -33,6 +33,8 @@ export function DashboardPageHeader({
   language,
   hasActiveAccess,
   trialDaysRemaining,
+  cancelAtPeriodEnd,
+  currentPeriodEnd,
 }: {
   title: string;
   subtitle: string;
@@ -48,6 +50,8 @@ export function DashboardPageHeader({
   language?: string;
   hasActiveAccess?: boolean;
   trialDaysRemaining?: number;
+  cancelAtPeriodEnd?: boolean;
+  currentPeriodEnd?: string | null;
 }) {
   const es = language === "es";
   const isCrew = subscriptionPlan === 'crew';
@@ -79,6 +83,23 @@ export function DashboardPageHeader({
                   {trialDaysRemaining} {es ? "días de prueba" : "days left"}
                 </span>
               )}
+              {/* Subscription Expiration Badge */}
+              {cancelAtPeriodEnd && currentPeriodEnd && (isPro || isCrew) && (() => {
+                const endDate = new Date(currentPeriodEnd);
+                const now = new Date();
+                const daysRemaining = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                const isExpiringSoon = daysRemaining <= 7;
+
+                return (
+                  <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-tight ${isExpiringSoon
+                      ? 'border-red-300 bg-red-50 text-red-700 animate-pulse'
+                      : 'border-amber-300 bg-amber-50 text-amber-700'
+                    }`}>
+                    <AlertTriangle className="w-3 h-3" />
+                    {daysRemaining} {es ? "días restantes" : "days left"}
+                  </span>
+                );
+              })()}
             </div>
             <p className="mt-1 truncate text-sm text-slate-500">{subtitle}</p>
           </div>

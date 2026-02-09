@@ -398,13 +398,13 @@ export function buildProposalPdf(params: {
     let totalPriceHigh = 0;
     let totalDaysLowCalc = 0;
     let totalDaysHighCalc = 0;
-    
+
     proposal.lineItems.forEach((item) => {
       const priceLow = item.priceLow ?? item.priceRange?.low ?? 0;
       const priceHigh = item.priceHigh ?? item.priceRange?.high ?? 0;
       totalPriceLow += priceLow;
       totalPriceHigh += priceHigh;
-      
+
       const daysLow = item.estimatedDaysLow ?? item.estimatedDays?.low ?? 0;
       const daysHigh = item.estimatedDaysHigh ?? item.estimatedDays?.high ?? 0;
       totalDaysLowCalc += daysLow;
@@ -493,7 +493,7 @@ export function buildProposalPdf(params: {
 
       // Service header
       setFillColorHex(secondaryColor);
-      pdf.rect(margin, y - 1, 4, 8, "F");
+      pdf.circle(margin + 4, y + 2.2 , 1.2, "F");
       setTextColorHex(textColor);
       setFont("bold", 10);
       const titleText = `${serviceIndex + 1}. ${item.jobTypeName}`;
@@ -518,7 +518,7 @@ export function buildProposalPdf(params: {
 
         // Bullet point
         setFillColorHex(secondaryColor);
-        pdf.circle(margin + 4, y - 1, 1.2, "F");
+        pdf.circle(margin + 4, y - 1.5, 1.2, "F");
 
         // Text
         const lineHeight = addText(scopeItem, margin + 10, y, { maxWidth: contentWidth - 10 });
@@ -547,7 +547,7 @@ export function buildProposalPdf(params: {
         for (const item of section.items) {
           checkPageBreak(8);
           setFillColorHex(secondaryColor);
-          pdf.circle(margin + 2, y - 1, 1.2, "F");
+          pdf.circle(margin + 2, y - 2, 1.2, "F");
           const lineHeight = addText(item, margin + 7, y, { maxWidth: contentWidth - 7 });
           y += Math.max(lineHeight, 5) + 1.5;
         }
@@ -561,7 +561,7 @@ export function buildProposalPdf(params: {
 
         // Bullet point
         setFillColorHex(secondaryColor);
-        pdf.circle(margin + 2, y - 1, 1.5, "F");
+        pdf.circle(margin + 2, y - 2, 1.5, "F");
 
         // Text
         const lineHeight = addText(item, margin + 7, y, { maxWidth: contentWidth - 7 });

@@ -247,13 +247,21 @@ const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(
                   <tr>
                     <td className="py-3 px-4 font-bold text-slate-900">Total</td>
                     <td className="py-3 px-4 text-center font-bold text-slate-900">
-                      {data.estimatedDays?.low === data.estimatedDays?.high
-                        ? data.estimatedDays?.low
-                        : `${data.estimatedDays?.low}-${data.estimatedDays?.high}`
-                      }
+                      {(() => {
+                        const totalDaysLow = lineItems.reduce((sum, item) => sum + (item.estimatedDaysLow ?? item.estimatedDays.low), 0);
+                        const totalDaysHigh = lineItems.reduce((sum, item) => sum + (item.estimatedDaysHigh ?? item.estimatedDays.high), 0);
+                        return totalDaysLow === totalDaysHigh ? totalDaysLow : `${totalDaysLow}-${totalDaysHigh}`;
+                      })()}
                     </td>
                     <td className="py-3 px-4 text-right font-bold text-lg text-primary">
-                      ${Math.round(((data.priceRange?.low ?? 0) + (data.priceRange?.high ?? 0)) / 2).toLocaleString()}
+                      ${(() => {
+                        const totalPrice = lineItems.reduce((sum, item) => {
+                          const low = item.priceLow ?? item.priceRange.low;
+                          const high = item.priceHigh ?? item.priceRange.high;
+                          return sum + Math.round((low + high) / 2);
+                        }, 0);
+                        return totalPrice.toLocaleString();
+                      })()}
                     </td>
                   </tr>
                 </tfoot>
