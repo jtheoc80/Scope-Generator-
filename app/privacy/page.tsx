@@ -1,17 +1,10 @@
-'use client';
-import { useEffect } from "react";
+// Server component — metadata is handled by layout.tsx.
+// Removed 'use client' and useEffect document.title overrides that were
+// interfering with server-side metadata (invisible to Googlebot).
 import LayoutWrapper from "@/components/layout-wrapper";
 import Link from "next/link";
 
 export default function PrivacyPolicy() {
-  useEffect(() => {
-    document.title = "Privacy Policy | ScopeGen";
-    const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) {
-      metaDesc.setAttribute("content", "ScopeGen privacy policy. Learn how we collect, use, and protect your personal information.");
-    }
-  }, []);
-
   return (
     <LayoutWrapper>
       <div className="bg-slate-50 min-h-screen">

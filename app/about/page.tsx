@@ -1,4 +1,6 @@
-'use client';
+// Server component — metadata is handled by layout.tsx.
+// No client-side hooks needed; rendering as server component ensures
+// Google receives fully-rendered HTML on the initial crawl.
 import LayoutWrapper from "@/components/layout-wrapper";
 import Link from "next/link";
 import { Building2, MapPin, Mail, Phone, Target, Users, Award } from "lucide-react";

@@ -1,19 +1,12 @@
-'use client';
-import { useEffect } from "react";
+// Server component — metadata is handled by layout.tsx.
+// Removed 'use client' and useEffect document.title overrides that were
+// interfering with server-side metadata (invisible to Googlebot).
 import LayoutWrapper from "@/components/layout-wrapper";
 import Link from "next/link";
 import { ArrowRight, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function CompareHouzz() {
-  useEffect(() => {
-    document.title = "ScopeGen vs Houzz Pro: Which Proposal Software is Right for You?";
-    const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) {
-      metaDesc.setAttribute("content", "Compare ScopeGen vs Houzz Pro for contractor proposals. See the differences in pricing, features, and find out which tool is best for your business.");
-    }
-  }, []);
-
   return (
     <LayoutWrapper>
       <article className="bg-white">

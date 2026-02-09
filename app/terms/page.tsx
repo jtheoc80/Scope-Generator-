@@ -1,17 +1,10 @@
-'use client';
-import { useEffect } from "react";
+// Server component — metadata is handled by layout.tsx.
+// Removed 'use client' and useEffect document.title overrides that were
+// interfering with server-side metadata (invisible to Googlebot).
 import LayoutWrapper from "@/components/layout-wrapper";
 import Link from "next/link";
 
 export default function TermsOfService() {
-  useEffect(() => {
-    document.title = "Terms of Service | ScopeGen";
-    const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) {
-      metaDesc.setAttribute("content", "ScopeGen terms of service. Read our terms and conditions for using our contractor proposal software.");
-    }
-  }, []);
-
   return (
     <LayoutWrapper>
       <div className="bg-slate-50 min-h-screen">
