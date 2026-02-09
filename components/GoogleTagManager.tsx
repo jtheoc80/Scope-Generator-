@@ -3,7 +3,7 @@ import Script from "next/script";
 // Google Tag Manager container ID
 // Env-var override supported; falls back to the hard-coded production container.
 const GTM_ID =
-  process.env.NEXT_PUBLIC_GTM_ID ?? "GTM-M7KN2BNP";
+  process.env.NEXT_PUBLIC_GTM_ID ?? "GTM-M7KNZBNP";
 
 /**
  * GTM <head> script — place inside <head> in the root layout.
