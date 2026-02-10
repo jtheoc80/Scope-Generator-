@@ -1601,12 +1601,6 @@ export const translations = {
       // CTA buttons
       tryFreeProposal: "Pruebe una Propuesta Gratis",
       viewSampleProposal: "Ver Propuesta de Ejemplo",
-      // Free trial
-      freeTrialBadge: "Prueba Gratis de 3 Días",
-      freeTrialHeroNote: "Comience su prueba gratis de 3 días — sin tarjeta de crédito",
-      freeTrialPricingNote: "Pruebe gratis por 3 días, luego",
-      startFreeTrial: "Comenzar Prueba Gratis",
-      freeTrialCtaNote: "Comience su prueba gratis de 3 días hoy. Sin tarjeta de crédito.",
     },
   },
 } as const;

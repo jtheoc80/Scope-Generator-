@@ -754,7 +754,6 @@ export default function Home() {
               <h3 className="text-2xl lg:text-3xl font-bold text-slate-900 mb-3">{t.home.crewPlan}</h3>
               <p className="text-muted-foreground text-base lg:text-lg mb-8">{t.home.crewDesc}</p>
               <div className="text-5xl lg:text-6xl font-heading font-bold text-slate-900 mb-2">{t.home.crewPrice}<span className="text-xl lg:text-2xl font-normal text-muted-foreground">{t.home.crewPriceLabel}</span></div>
-              <p className="text-sm text-orange-600 mb-2">{t.home.freeTrialPricingNote} {t.home.crewPrice}{t.home.crewPriceLabel}</p>
               <p className="text-muted-foreground text-base lg:text-lg mb-8">{t.home.crewFeature1}</p>
               <ul className="space-y-4 lg:space-y-5 mb-10 flex-grow">
                 <li className="flex items-center gap-3 text-base lg:text-lg text-slate-600" data-testid="crew-esignature-feature">
