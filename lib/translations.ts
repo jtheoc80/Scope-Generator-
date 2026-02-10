@@ -797,6 +797,12 @@ export const translations = {
       // CTA buttons
       tryFreeProposal: "Try a Free Proposal",
       viewSampleProposal: "View Sample Proposal",
+      // Free trial
+      freeTrialBadge: "3-Day Free Trial",
+      freeTrialHeroNote: "Start your 3-day free trial — no credit card required",
+      freeTrialPricingNote: "Try free for 3 days, then",
+      startFreeTrial: "Start Free Trial",
+      freeTrialCtaNote: "Start your 3-day free trial today. No credit card needed.",
     },
   },
   es: {
@@ -1595,6 +1601,12 @@ export const translations = {
       // CTA buttons
       tryFreeProposal: "Pruebe una Propuesta Gratis",
       viewSampleProposal: "Ver Propuesta de Ejemplo",
+      // Free trial
+      freeTrialBadge: "Prueba Gratis de 3 Días",
+      freeTrialHeroNote: "Comience su prueba gratis de 3 días — sin tarjeta de crédito",
+      freeTrialPricingNote: "Pruebe gratis por 3 días, luego",
+      startFreeTrial: "Comenzar Prueba Gratis",
+      freeTrialCtaNote: "Comience su prueba gratis de 3 días hoy. Sin tarjeta de crédito.",
     },
   },
 } as const;

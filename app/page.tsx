@@ -338,6 +338,14 @@ export default function Home() {
 
         <div className="container mx-auto px-4 py-20 md:py-32 relative z-10 grid md:grid-cols-2 gap-12 items-center">
           <div className="space-y-6 animate-in slide-in-from-left duration-700">
+            <div className="inline-flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 text-orange-300 text-sm font-medium px-4 py-1.5 rounded-full">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+              </span>
+              {t.home.freeTrialBadge}
+            </div>
+
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-heading font-bold leading-[1.1] tracking-tight">
               {t.home.heroTitle1} <br />
               <span className="text-orange-500">{t.home.heroTitle2}</span>
@@ -353,7 +361,7 @@ export default function Home() {
                 data-testid="button-try-free-proposal"
                 className="inline-flex items-center justify-center h-12 sm:h-14 px-6 sm:px-8 rounded-md bg-orange-500 text-white font-bold text-base sm:text-lg hover:bg-orange-600 transition-all hover:scale-105 shadow-[0_0_20px_rgba(249,115,22,0.3)] whitespace-nowrap"
               >
-                {t.home.tryFreeProposal}
+                {t.home.startFreeTrial}
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Link>
               <a
@@ -364,6 +372,8 @@ export default function Home() {
                 {t.home.viewSampleProposal}
               </a>
             </div>
+
+            <p className="text-sm text-slate-400">{t.home.freeTrialHeroNote}</p>
 
           </div>
 
@@ -678,6 +688,7 @@ export default function Home() {
               <h3 className="text-2xl lg:text-3xl font-bold text-white mb-3">{t.home.proPlan}</h3>
               <p className="text-slate-300 text-base lg:text-lg mb-8">{t.home.proDesc}</p>
               <div className="text-5xl lg:text-6xl font-heading font-bold text-white mb-2">{t.home.proPrice}<span className="text-xl lg:text-2xl font-normal">{t.home.proPriceLabel}</span></div>
+              <p className="text-sm text-orange-300 mb-2">{t.home.freeTrialPricingNote} {t.home.proPrice}{t.home.proPriceLabel}</p>
               <p className="text-slate-400 text-base lg:text-lg mb-8">{t.home.proFeature1}</p>
               <ul className="space-y-4 lg:space-y-5 mb-10 flex-grow">
                 <li className="flex items-center gap-3 text-base lg:text-lg text-white" data-testid="pro-esignature-feature">
@@ -731,7 +742,7 @@ export default function Home() {
                       <Loader2 className="w-5 h-5 animate-spin" /> {t.home.processing}
                     </span>
                   ) : (
-                    t.home.subscribePro
+                    t.home.startFreeTrial
                   )}
                 </button>
               )}
@@ -743,6 +754,7 @@ export default function Home() {
               <h3 className="text-2xl lg:text-3xl font-bold text-slate-900 mb-3">{t.home.crewPlan}</h3>
               <p className="text-muted-foreground text-base lg:text-lg mb-8">{t.home.crewDesc}</p>
               <div className="text-5xl lg:text-6xl font-heading font-bold text-slate-900 mb-2">{t.home.crewPrice}<span className="text-xl lg:text-2xl font-normal text-muted-foreground">{t.home.crewPriceLabel}</span></div>
+              <p className="text-sm text-orange-600 mb-2">{t.home.freeTrialPricingNote} {t.home.crewPrice}{t.home.crewPriceLabel}</p>
               <p className="text-muted-foreground text-base lg:text-lg mb-8">{t.home.crewFeature1}</p>
               <ul className="space-y-4 lg:space-y-5 mb-10 flex-grow">
                 <li className="flex items-center gap-3 text-base lg:text-lg text-slate-600" data-testid="crew-esignature-feature">
@@ -792,9 +804,9 @@ export default function Home() {
             data-testid="button-create-first-proposal-cta"
             className="inline-block bg-orange-500 text-white font-bold text-base sm:text-lg px-8 sm:px-10 py-3 sm:py-4 rounded-md hover:bg-orange-600 transition-colors shadow-lg"
           >
-            {t.home.createFirstProposal}
+            {t.home.startFreeTrial}
           </Link>
-          <p className="mt-3 sm:mt-4 text-slate-400 text-xs sm:text-sm">{t.home.tryFreeThenUnlock}</p>
+          <p className="mt-3 sm:mt-4 text-slate-400 text-xs sm:text-sm">{t.home.freeTrialCtaNote}</p>
         </div>
       </section>
     </LayoutWrapper>
