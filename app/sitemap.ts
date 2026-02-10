@@ -9,6 +9,7 @@ import {
 } from '@/lib/seo';
 import { getTradeKeys, cityKeys, tradeSupportsCities } from '@/lib/trade-data';
 import { getLandingPageSlugs } from '@/lib/landing-pages-data';
+import { tradeDefinitions, type TradeKey } from '@/lib/trades/tradeDefinitions';
 
 /**
  * Sitemap Generation
@@ -61,6 +62,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     }
   }
 
+  // Trade-specific detail pages (/trades/[trade])
+  const tradeDetailPages: MetadataRoute.Sitemap = (Object.keys(tradeDefinitions) as TradeKey[]).map((tradeKey) => ({
+    url: `${baseUrl}/trades/${tradeKey}`,
+    lastModified: currentDate,
+    changeFrequency: 'monthly' as const,
+    priority: 0.75,
+  }));
+
   // SEO Landing Pages (estimate templates, generators)
   const landingPages: MetadataRoute.Sitemap = getLandingPageSlugs().map((slug) => ({
     url: `${baseUrl}/${slug}`,
@@ -89,6 +98,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
   
   // Add trade pages
   for (const page of tradePages) {
+    if (!allPaths.has(page.url)) {
+      allPaths.add(page.url);
+      result.push(page);
+    }
+  }
+
+  // Add trade detail pages (/trades/[trade])
+  for (const page of tradeDetailPages) {
     if (!allPaths.has(page.url)) {
       allPaths.add(page.url);
       result.push(page);

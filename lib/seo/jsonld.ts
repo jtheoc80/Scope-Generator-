@@ -180,16 +180,10 @@ export function generateSoftwareApplicationSchema(): SoftwareApplicationSchema {
       priceCurrency: "USD",
       description: "Free tier available",
     },
-    // WARNING: aggregateRating MUST reflect real, collected user reviews.
-    // Google may issue a manual action (penalty) for fabricated review data.
-    // Remove this block if ratings are not based on verified reviews.
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: "4.9",
-      ratingCount: "500",
-      bestRating: "5",
-      worstRating: "1",
-    },
+    // aggregateRating intentionally omitted — Google requires ratings to be
+    // based on real, verified user reviews.  Adding fabricated data risks a
+    // manual action (penalty) that can suppress the entire site from search.
+    // Re-enable once a genuine review-collection system is in place.
     featureList: [
       "60-second proposal generation",
       "17+ trade templates",

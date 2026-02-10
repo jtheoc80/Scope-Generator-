@@ -99,9 +99,12 @@ export const seoConfig = {
 
   // Pages that should NOT be indexed
   // Note: All protected routes that require authentication should be here
-  // to prevent "Page with redirect" issues in Google Search Console
+  // to prevent "Page with redirect" issues in Google Search Console.
+  // Middleware redirects unauthenticated visitors to /sign-in for these
+  // routes, which Google reports as "Page with redirect" (not-indexed).
   noIndexPages: [
     "/api/",
+    "/app",          // Protected by middleware — redirects to /sign-in
     "/dashboard",
     "/settings",
     "/crew",
@@ -112,9 +115,11 @@ export const seoConfig = {
     "/sign-out",
     "/seo-dashboard",
     "/search-console",
-    "/pricing-insights",  // Protected route - redirects to login
-    "/proposals/", // Individual proposal pages
-    "/m/", // Mobile app routes
+    "/pricing-insights",  // Protected route — redirects to login
+    "/proposals/",        // Individual proposal pages
+    "/pro",               // Authenticated dashboard — client-side redirect
+    "/m/",                // Mobile app routes
+    "/admin",             // Admin routes
   ],
 
   // High-priority pages for sitemap
@@ -157,19 +162,9 @@ export const pagesSeoConfig: Record<
     priority: 1.0,
     changeFrequency: "weekly",
   },
-  "/app": {
-    title: "Create Proposal - ScopeGen App",
-    description:
-      "Create professional contractor proposals in 60 seconds. Choose from 17+ trade templates including bathroom, kitchen, roofing, HVAC, plumbing, and electrical.",
-    keywords: [
-      "create proposal",
-      "proposal generator",
-      "contractor app",
-      "scope of work template",
-    ],
-    priority: 0.9,
-    changeFrequency: "weekly",
-  },
+  // /app is excluded from the sitemap — it's a protected route behind
+  // Clerk middleware that redirects unauthenticated visitors to /sign-in,
+  // causing "Page with redirect" in Google Search Console.
   "/calculator": {
     title: "Free Contractor Price Calculator 2025 - Instant Cost Estimates",
     description:
@@ -305,19 +300,8 @@ export const pagesSeoConfig: Record<
     priority: 0.8,
     changeFrequency: "weekly",
   },
-  "/pro": {
-    title: "ScopeGen Pro - Advanced Contractor Proposal Software",
-    description:
-      "Upgrade to ScopeGen Pro for advanced features including unlimited proposals, custom templates, e-signatures, and priority support.",
-    keywords: [
-      "ScopeGen Pro",
-      "professional proposal software",
-      "contractor software upgrade",
-      "premium features",
-    ],
-    priority: 0.7,
-    changeFrequency: "monthly",
-  },
+  // /pro is excluded from the sitemap — it's an authenticated dashboard
+  // that client-side redirects non-Pro users, causing indexing issues.
   // New SEO Landing Pages
   "/contractor-estimate-generator": {
     title: "Free Contractor Estimate Generator | Create Estimates in 60 Seconds",
