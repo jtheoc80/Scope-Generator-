@@ -61,6 +61,10 @@ export const metadata: Metadata = {
     description: "Generate professional proposals and scopes of work in seconds.",
     images: ["/scopegen-og-dark.png"],
   },
+  icons: {
+    icon: "/favicon.png",
+    apple: "/icon-192.png",
+  },
   robots: {
     index: true,
     follow: true,
