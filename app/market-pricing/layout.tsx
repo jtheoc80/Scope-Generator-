@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/opengraph.jpg",
+        url: "/scopegen-og-dark.png",
         width: 1200,
         height: 630,
         alt: "Contractor Market Pricing Data",
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Market Pricing Data - Regional Contractor Rates",
     description: "Access real-time market pricing data for contractors.",
-    images: ["/opengraph.jpg"],
+    images: ["/scopegen-og-dark.png"],
   },
   alternates: {
     canonical: "https://scopegenerator.com/market-pricing",

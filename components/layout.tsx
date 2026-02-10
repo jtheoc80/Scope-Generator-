@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Hammer, Menu, X, Camera, ChevronDown } from "lucide-react";
+import { Menu, X, Camera, ChevronDown } from "lucide-react";
 // Language switching disabled - English only
 // import { LanguageSwitcher } from "@/components/language-switcher";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -33,11 +33,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             href="/"
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-secondary">
-              <Hammer className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="text-lg sm:text-xl font-heading font-bold text-primary uppercase tracking-tight leading-none">
-              ScopeGen
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/scopegen-logo.png"
+              alt="ScopeGen logo"
+              className="h-8 w-8 rounded-md"
+            />
+            <span className="text-lg sm:text-xl font-heading font-bold tracking-tight leading-none">
+              <span className="text-slate-900">Scope</span>
+              <span className="text-orange-500">Gen</span>
+              <span className="text-orange-500">.</span>
             </span>
           </Link>
 
@@ -314,8 +319,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             {/* Brand Column */}
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-2 mb-4">
-                <Hammer className="w-5 h-5 text-secondary" />
-                <span className="text-lg font-heading font-bold text-white uppercase">ScopeGen</span>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/scopegen-logo.png"
+                  alt="ScopeGen logo"
+                  className="h-6 w-6 rounded-sm"
+                />
+                <span className="text-lg font-heading font-bold">
+                  <span className="text-white">Scope</span>
+                  <span className="text-orange-500">Gen</span>
+                  <span className="text-orange-500">.</span>
+                </span>
               </div>
               <p className="text-sm leading-relaxed">
                 {t.footer.builtFor}

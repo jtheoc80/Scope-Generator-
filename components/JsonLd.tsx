@@ -17,7 +17,7 @@ export function OrganizationJsonLd({ type = 'Organization' }: OrganizationJsonLd
     name: 'ScopeGen',
     alternateName: 'Lead Ledger Pro LLC',
     url: 'https://scopegenerator.com',
-    logo: 'https://scopegenerator.com/opengraph.jpg',
+    logo: 'https://scopegenerator.com/scopegen-og-dark.png',
     description: 'Professional contractor proposal software. Generate proposals and scopes of work in seconds.',
     address: {
       '@type': 'PostalAddress',
@@ -163,7 +163,7 @@ export function ArticleJsonLd({
       url: 'https://scopegenerator.com',
       logo: {
         '@type': 'ImageObject',
-        url: 'https://scopegenerator.com/opengraph.jpg',
+        url: 'https://scopegenerator.com/scopegen-og-dark.png',
       },
     },
     mainEntityOfPage: {

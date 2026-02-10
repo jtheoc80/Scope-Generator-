@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: BlogPostLayoutProps): Promise
     ? `https://scopegenerator.com${post.ogImage}`
     : post.heroImage 
       ? `https://scopegenerator.com${post.heroImage}`
-      : "https://scopegenerator.com/opengraph.jpg";
+      : "https://scopegenerator.com/scopegen-og-dark.png";
 
   return {
     title: `${post.metaTitle} | ScopeGenerator`,

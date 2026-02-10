@@ -46,9 +46,9 @@ export const metadata: Metadata = {
     siteName: "ScopeGen",
     images: [
       {
-        url: "/opengraph.jpg",
+        url: "/scopegen-og-dark.png",
         width: 1200,
-        height: 630,
+        height: 628,
         alt: "ScopeGen - Contractor Proposal Software",
       },
     ],
@@ -59,7 +59,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "ScopeGen - Professional Contractor Proposals",
     description: "Generate professional proposals and scopes of work in seconds.",
-    images: ["/opengraph.jpg"],
+    images: ["/scopegen-og-dark.png"],
   },
   robots: {
     index: true,

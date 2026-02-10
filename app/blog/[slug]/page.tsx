@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
-  const ogImageUrl = post.ogImage || post.heroImage || "/opengraph.jpg";
+  const ogImageUrl = post.ogImage || post.heroImage || "/scopegen-og-dark.png";
 
   return {
     title: `${post.metaTitle} | ScopeGenerator`,
