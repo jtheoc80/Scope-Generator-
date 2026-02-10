@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/opengraph.jpg",
+        url: "/scopegen-og-dark.png",
         width: 1200,
         height: 630,
         alt: "Free Contractor Price Calculator - Instant Cost Estimates",
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Free Contractor Price Calculator 2025",
     description: "Get instant cost estimates for any remodeling or construction project. No signup required.",
-    images: ["/opengraph.jpg"],
+    images: ["/scopegen-og-dark.png"],
   },
   alternates: {
     canonical: "https://scopegenerator.com/calculator",

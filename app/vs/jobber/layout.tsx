@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     type: "article",
     images: [
       {
-        url: "/opengraph.jpg",
+        url: "/scopegen-og-dark.png",
         width: 1200,
         height: 630,
         alt: "ScopeGen vs Jobber Comparison",
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "ScopeGen vs Jobber: Contractor Software Comparison",
     description: "Compare ScopeGen vs Jobber for contractor proposals. Free tier available vs $49/month.",
-    images: ["/opengraph.jpg"],
+    images: ["/scopegen-og-dark.png"],
   },
   alternates: {
     canonical: "https://scopegenerator.com/vs/jobber",

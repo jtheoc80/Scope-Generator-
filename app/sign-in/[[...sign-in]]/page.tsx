@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { isClerkConfigured } from "@/lib/authUtils";
-import { Hammer, CheckCircle2, UserPlus, HelpCircle, ArrowRight } from "lucide-react";
+import { CheckCircle2, UserPlus, HelpCircle, ArrowRight } from "lucide-react";
 import { TestSignInForm } from "./test-signin-form";
 
 /**
@@ -109,10 +109,13 @@ export default async function SignInPage({
       <div className="hidden lg:flex lg:w-1/2 bg-slate-900 text-white p-12 flex-col justify-between">
         <div>
           <Link href="/" className="flex items-center gap-2 mb-12">
-            <div className="bg-orange-500 p-2 rounded-lg">
-              <Hammer className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-2xl font-bold tracking-tight">ScopeGen</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/scopegen-logo.png" alt="ScopeGen logo" className="h-10 w-10 rounded-lg" />
+            <span className="text-2xl font-bold tracking-tight">
+              <span className="text-slate-900">Scope</span>
+              <span className="text-orange-500">Gen</span>
+              <span className="text-orange-500">.</span>
+            </span>
           </Link>
           
           <h1 className="text-4xl font-bold mb-6">
@@ -168,10 +171,13 @@ export default async function SignInPage({
         {/* Mobile logo */}
         <div className="lg:hidden mb-8">
           <Link href="/" className="flex items-center gap-2">
-            <div className="bg-orange-500 p-2 rounded-lg">
-              <Hammer className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold text-slate-900 tracking-tight">ScopeGen</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/scopegen-logo.png" alt="ScopeGen logo" className="h-8 w-8 rounded-lg" />
+            <span className="text-xl font-bold tracking-tight">
+              <span className="text-slate-900">Scope</span>
+              <span className="text-orange-500">Gen</span>
+              <span className="text-orange-500">.</span>
+            </span>
           </Link>
         </div>
         

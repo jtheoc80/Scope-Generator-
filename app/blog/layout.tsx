@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/opengraph.jpg",
+        url: "/scopegen-og-dark.png",
         width: 1200,
         height: 630,
         alt: "ScopeGen Contractor Blog",
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Contractor Blog - Proposal Tips & Business Advice",
     description: "Free resources for contractors: proposal writing tips, pricing guides, and business advice.",
-    images: ["/opengraph.jpg"],
+    images: ["/scopegen-og-dark.png"],
   },
   alternates: {
     canonical: "https://scopegenerator.com/blog",

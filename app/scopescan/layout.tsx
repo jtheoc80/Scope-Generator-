@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/opengraph.jpg",
+        url: "/scopegen-og-dark.png",
         width: 1200,
         height: 630,
         alt: "ScopeScan - AI Photo Analysis for Contractors",
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "ScopeScan - AI-Powered Photo Analysis for Contractors",
     description: "Turn job site photos into detailed proposals in minutes with AI.",
-    images: ["/opengraph.jpg"],
+    images: ["/scopegen-og-dark.png"],
   },
   alternates: {
     canonical: "https://scopegenerator.com/scopescan",

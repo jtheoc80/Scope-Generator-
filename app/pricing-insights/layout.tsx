@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/opengraph.jpg",
+        url: "/scopegen-og-dark.png",
         width: 1200,
         height: 630,
         alt: "ScopeGen Pricing Insights",
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Pricing Insights | ScopeGen",
     description: "Access pricing analytics and industry benchmarks to optimize your contractor proposals.",
-    images: ["/opengraph.jpg"],
+    images: ["/scopegen-og-dark.png"],
   },
 };
 
