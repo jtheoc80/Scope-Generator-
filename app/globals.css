@@ -3,7 +3,7 @@
 @theme inline {
   --font-sans: var(--font-geist-sans), "Inter", sans-serif;
   --font-mono: var(--font-geist-mono), monospace;
-  --font-heading: "Barlow Condensed", sans-serif;
+  --font-heading: var(--font-barlow-condensed), "Barlow Condensed", sans-serif;
 
   --radius-sm: 4px;
   --radius-md: 6px;
