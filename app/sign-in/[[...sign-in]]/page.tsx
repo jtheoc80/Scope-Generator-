@@ -111,10 +111,8 @@ export default async function SignInPage({
           <Link href="/" className="flex items-center gap-2 mb-12">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/scopegen-logo.png" alt="ScopeGen logo" className="h-10 w-10 rounded-lg" />
-            <span className="text-2xl font-bold tracking-tight">
-              <span className="text-slate-900">Scope</span>
-              <span className="text-orange-500">Gen</span>
-              <span className="text-orange-500">.</span>
+            <span className="text-2xl font-bold tracking-tight" style={{ color: '#ffffff' }}>
+              Scope<span style={{ color: '#f97316' }}>Gen.</span>
             </span>
           </Link>
           
@@ -173,10 +171,8 @@ export default async function SignInPage({
           <Link href="/" className="flex items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/scopegen-logo.png" alt="ScopeGen logo" className="h-8 w-8 rounded-lg" />
-            <span className="text-xl font-bold tracking-tight">
-              <span className="text-slate-900">Scope</span>
-              <span className="text-orange-500">Gen</span>
-              <span className="text-orange-500">.</span>
+            <span className="text-xl font-bold tracking-tight" style={{ color: '#0f172a' }}>
+              Scope<span style={{ color: '#f97316' }}>Gen.</span>
             </span>
           </Link>
         </div>

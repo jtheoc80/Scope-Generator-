@@ -39,10 +39,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               alt="ScopeGen logo"
               className="h-8 w-8 rounded-md"
             />
-            <span className="text-lg sm:text-xl font-heading font-bold tracking-tight leading-none">
-              <span className="text-slate-900">Scope</span>
-              <span className="text-orange-500">Gen</span>
-              <span className="text-orange-500">.</span>
+            <span className="text-lg sm:text-xl font-heading font-bold tracking-tight leading-none" style={{ color: '#0f172a' }}>
+              Scope<span style={{ color: '#f97316' }}>Gen.</span>
             </span>
           </Link>
 
@@ -325,10 +323,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   alt="ScopeGen logo"
                   className="h-6 w-6 rounded-sm"
                 />
-                <span className="text-lg font-heading font-bold">
-                  <span className="text-white">Scope</span>
-                  <span className="text-orange-500">Gen</span>
-                  <span className="text-orange-500">.</span>
+                <span className="text-lg font-heading font-bold" style={{ color: '#ffffff' }}>
+                  Scope<span style={{ color: '#f97316' }}>Gen.</span>
                 </span>
               </div>
               <p className="text-sm leading-relaxed">
