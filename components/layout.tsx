@@ -31,15 +31,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="container mx-auto px-4 h-14 md:h-16 flex items-center justify-between">
           <Link
             href="/"
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            className="flex items-center hover:opacity-80 transition-opacity"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/scopegen-logo.png"
-              alt="ScopeGen logo"
-              className="h-8 w-8 rounded-md"
-            />
-            <span className="text-lg sm:text-xl font-heading font-bold tracking-tight leading-none" style={{ color: '#0f172a' }}>
+            <span className="text-xl sm:text-2xl font-heading font-bold tracking-tight leading-none" style={{ color: '#0f172a' }}>
               Scope<span style={{ color: '#f97316' }}>Gen.</span>
             </span>
           </Link>
@@ -316,14 +310,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div className="grid grid-cols-2 md:grid-cols-6 gap-8 mb-12">
             {/* Brand Column */}
             <div className="col-span-2 md:col-span-1">
-              <div className="flex items-center gap-2 mb-4">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/scopegen-logo.png"
-                  alt="ScopeGen logo"
-                  className="h-6 w-6 rounded-sm"
-                />
-                <span className="text-lg font-heading font-bold" style={{ color: '#ffffff' }}>
+              <div className="flex items-center mb-4">
+                <span className="text-xl font-heading font-bold" style={{ color: '#ffffff' }}>
                   Scope<span style={{ color: '#f97316' }}>Gen.</span>
                 </span>
               </div>
