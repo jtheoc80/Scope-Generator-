@@ -1,5 +1,5 @@
 'use client';
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X, Camera, ChevronDown } from "lucide-react";
@@ -22,12 +22,31 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const { t } = useLanguage();
 
   const { user, isLoading } = useAuth();
+  const [scrollProgress, setScrollProgress] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      if (docHeight > 0) {
+        setScrollProgress(Math.min((scrollTop / docHeight) * 100, 100));
+      }
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const showOnboarding = Boolean(user && !user.onboardingCompleted);
 
   return (
     <div className="min-h-screen flex flex-col font-sans">
       <header className="border-b border-border bg-white sticky top-0 z-50">
+        {/* Scroll progress indicator */}
+        <div
+          className="absolute bottom-0 left-0 h-[2px] bg-orange-500 transition-[width] duration-100 ease-out z-50"
+          style={{ width: `${scrollProgress}%` }}
+          aria-hidden="true"
+        />
         <div className="container mx-auto px-4 h-14 md:h-16 flex items-center justify-between">
           <Link
             href="/"
@@ -304,7 +323,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
-      <footer className="bg-slate-900 text-slate-400 py-12 border-t border-slate-800">
+      <footer className="bg-slate-900 text-slate-400 py-12 pb-24 xl:pb-12 border-t border-slate-800">
         <div className="container mx-auto px-4">
           {/* Main Footer Grid */}
           <div className="grid grid-cols-2 md:grid-cols-6 gap-8 mb-12">

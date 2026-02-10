@@ -6,11 +6,13 @@ export const dynamic = 'force-dynamic';
 import { useState, useEffect } from "react";
 import LayoutWrapper from "@/components/layout-wrapper";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, ArrowRight, Clock, DollarSign, FileCheck, Loader2, Bath, ChefHat, Home as HomeIcon, Paintbrush, Plug, Wrench, Thermometer, TreePine, Calculator, Sparkles, Star, Users, TrendingUp, Target, FileText } from "lucide-react";
+import { CheckCircle2, ArrowRight, Clock, DollarSign, FileCheck, Loader2, Bath, ChefHat, Home as HomeIcon, Paintbrush, Plug, Wrench, Thermometer, TreePine, Calculator, Sparkles, Star, Users, TrendingUp, Target, FileText, HardHat, UserCheck, Building2, ChevronDown } from "lucide-react";
 import { ScopeScanTeaser } from "@/components/marketing/ScopeScanTeaser";
 import { ProposalPreviewSection } from "@/components/marketing/ProposalPreviewSection";
 import { PlanCompareTable } from "@/components/pricing/PlanCompareTable";
+import { FAQJsonLd } from "@/components/JsonLd";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useQuery } from "@tanstack/react-query";
 
@@ -281,6 +283,41 @@ function InstantPriceCalculator({ t }: { t: any }) {
   );
 }
 
+/**
+ * Sticky CTA bar for mobile visitors.
+ * Appears after the user scrolls past the hero section, giving them
+ * an easy tap target to convert before they bounce.
+ */
+function StickyMobileCTA({ label }: { label: string }) {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      // Show after scrolling 600px (past the hero)
+      setVisible(window.scrollY > 600);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  if (!visible) return null;
+
+  return (
+    <div
+      className="fixed bottom-0 left-0 right-0 z-50 xl:hidden bg-slate-900/95 backdrop-blur-sm border-t border-slate-700 px-4 py-3 safe-area-inset-bottom animate-in slide-in-from-bottom duration-300"
+      data-testid="sticky-mobile-cta"
+    >
+      <Link
+        href="/app"
+        className="flex items-center justify-center w-full h-12 rounded-lg bg-orange-500 text-white font-bold text-base hover:bg-orange-600 transition-colors shadow-lg"
+      >
+        {label}
+        <ArrowRight className="ml-2 w-5 h-5" />
+      </Link>
+    </div>
+  );
+}
+
 export default function Home() {
   const { t } = useLanguage();
   const router = useRouter();
@@ -420,12 +457,14 @@ export default function Home() {
                 </p>
               </div>
               <div className="order-1 md:order-2">
-                <div className="w-full h-72 md:h-80 rounded-xl shadow-lg overflow-hidden">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                <div className="relative w-full h-72 md:h-80 rounded-xl shadow-lg overflow-hidden">
+                  <Image
                     src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&h=400&fit=crop&crop=center"
                     alt="Modern bathroom renovation with white tiles and fixtures"
-                    className="w-full h-full object-cover"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                    className="object-cover"
+                    loading="lazy"
                   />
                 </div>
               </div>
@@ -792,6 +831,99 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Who Is ScopeGen For - Audience Qualifier */}
+      <section className="py-16 sm:py-20 bg-white border-t border-slate-100" data-testid="section-audience">
+        <div className="container mx-auto px-4">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl sm:text-4xl font-heading font-bold text-slate-900 mb-4">
+                {t.home.whoIsItFor}
+              </h2>
+              <p className="text-slate-600 text-lg max-w-2xl mx-auto">
+                {t.home.whoIsItForSubtitle}
+              </p>
+            </div>
+            <div className="grid md:grid-cols-3 gap-8">
+              <div className="text-center p-6 rounded-2xl bg-slate-50 border border-slate-200" data-testid="audience-solo">
+                <div className="w-14 h-14 bg-orange-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <HardHat className="w-7 h-7 text-orange-600" />
+                </div>
+                <h3 className="font-bold text-slate-900 text-lg mb-2">{t.home.audience1Title}</h3>
+                <p className="text-slate-600 text-base leading-relaxed">{t.home.audience1Desc}</p>
+              </div>
+              <div className="text-center p-6 rounded-2xl bg-slate-50 border border-slate-200" data-testid="audience-crew">
+                <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <UserCheck className="w-7 h-7 text-blue-600" />
+                </div>
+                <h3 className="font-bold text-slate-900 text-lg mb-2">{t.home.audience2Title}</h3>
+                <p className="text-slate-600 text-base leading-relaxed">{t.home.audience2Desc}</p>
+              </div>
+              <div className="text-center p-6 rounded-2xl bg-slate-50 border border-slate-200" data-testid="audience-growing">
+                <div className="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <Building2 className="w-7 h-7 text-green-600" />
+                </div>
+                <h3 className="font-bold text-slate-900 text-lg mb-2">{t.home.audience3Title}</h3>
+                <p className="text-slate-600 text-base leading-relaxed">{t.home.audience3Desc}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section with Structured Data */}
+      <FAQJsonLd questions={[
+        { question: t.home.faq1Q, answer: t.home.faq1A },
+        { question: t.home.faq2Q, answer: t.home.faq2A },
+        { question: t.home.faq3Q, answer: t.home.faq3A },
+        { question: t.home.faq4Q, answer: t.home.faq4A },
+        { question: t.home.faq5Q, answer: t.home.faq5A },
+      ]} />
+      <section className="py-16 sm:py-20 bg-slate-50 border-t border-slate-100" data-testid="section-faq">
+        <div className="container mx-auto px-4">
+          <div className="max-w-3xl mx-auto">
+            <div className="text-center mb-10">
+              <h2 className="text-3xl sm:text-4xl font-heading font-bold text-slate-900 mb-4">
+                {t.home.faqTitle}
+              </h2>
+              <p className="text-slate-600 text-lg">{t.home.faqSubtitle}</p>
+            </div>
+            <div className="space-y-3">
+              {[
+                { q: t.home.faq1Q, a: t.home.faq1A },
+                { q: t.home.faq2Q, a: t.home.faq2A },
+                { q: t.home.faq3Q, a: t.home.faq3A },
+                { q: t.home.faq4Q, a: t.home.faq4A },
+                { q: t.home.faq5Q, a: t.home.faq5A },
+              ].map((faq, index) => (
+                <details
+                  key={index}
+                  className="bg-white rounded-xl border border-slate-200 overflow-hidden group"
+                  data-testid={`faq-${index}`}
+                >
+                  <summary className="px-6 py-4 cursor-pointer font-semibold text-slate-900 hover:bg-slate-50 transition-colors list-none flex items-center justify-between gap-4">
+                    <span>{faq.q}</span>
+                    <ChevronDown className="w-5 h-5 text-slate-400 flex-shrink-0 group-open:rotate-180 transition-transform" />
+                  </summary>
+                  <div className="px-6 pb-4 text-slate-600 leading-relaxed">
+                    {faq.a}
+                  </div>
+                </details>
+              ))}
+            </div>
+            <div className="text-center mt-8">
+              <p className="text-slate-500 text-sm mb-4">Still have questions?</p>
+              <Link
+                href="/app"
+                className="inline-flex items-center justify-center h-12 px-8 rounded-lg bg-slate-900 text-white font-bold text-base hover:bg-slate-800 transition-colors"
+              >
+                Try It Free — See For Yourself
+                <ArrowRight className="ml-2 w-5 h-5" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Banner */}
       <section className="bg-slate-900 py-12 sm:py-20">
         <div className="container mx-auto px-4 text-center">
@@ -808,6 +940,9 @@ export default function Home() {
           <p className="mt-3 sm:mt-4 text-slate-400 text-xs sm:text-sm">{t.home.freeTrialCtaNote}</p>
         </div>
       </section>
+
+      {/* Sticky Mobile CTA Bar - shown after scrolling past hero */}
+      <StickyMobileCTA label={t.home.stickyCta} />
     </LayoutWrapper>
   );
 }
