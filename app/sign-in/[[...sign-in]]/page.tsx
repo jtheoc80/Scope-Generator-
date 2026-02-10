@@ -108,13 +108,9 @@ export default async function SignInPage({
       {/* Left side - Branding and benefits */}
       <div className="hidden lg:flex lg:w-1/2 bg-slate-900 text-white p-12 flex-col justify-between">
         <div>
-          <Link href="/" className="flex items-center gap-2 mb-12">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/scopegen-logo.png" alt="ScopeGen logo" className="h-10 w-10 rounded-lg" />
-            <span className="text-2xl font-bold tracking-tight">
-              <span className="text-slate-900">Scope</span>
-              <span className="text-orange-500">Gen</span>
-              <span className="text-orange-500">.</span>
+          <Link href="/" className="flex items-center mb-12">
+            <span className="text-3xl font-heading font-bold tracking-tight" style={{ color: '#ffffff' }}>
+              Scope<span style={{ color: '#f97316' }}>Gen.</span>
             </span>
           </Link>
           
@@ -170,13 +166,9 @@ export default async function SignInPage({
       <div className="flex-1 flex flex-col items-center justify-center bg-slate-50 p-6 lg:p-12">
         {/* Mobile logo */}
         <div className="lg:hidden mb-8">
-          <Link href="/" className="flex items-center gap-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/scopegen-logo.png" alt="ScopeGen logo" className="h-8 w-8 rounded-lg" />
-            <span className="text-xl font-bold tracking-tight">
-              <span className="text-slate-900">Scope</span>
-              <span className="text-orange-500">Gen</span>
-              <span className="text-orange-500">.</span>
+          <Link href="/" className="flex items-center">
+            <span className="text-2xl font-heading font-bold tracking-tight" style={{ color: '#0f172a' }}>
+              Scope<span style={{ color: '#f97316' }}>Gen.</span>
             </span>
           </Link>
         </div>
