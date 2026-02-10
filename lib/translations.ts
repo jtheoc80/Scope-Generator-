@@ -797,6 +797,12 @@ export const translations = {
       // CTA buttons
       tryFreeProposal: "Try a Free Proposal",
       viewSampleProposal: "View Sample Proposal",
+      // Free trial
+      freeTrialBadge: "3-Day Free Trial",
+      freeTrialHeroNote: "Start your 3-day free trial — no credit card required",
+      freeTrialPricingNote: "Try free for 3 days, then",
+      startFreeTrial: "Start Free Trial",
+      freeTrialCtaNote: "Start your 3-day free trial today. No credit card needed.",
     },
   },
   es: {
