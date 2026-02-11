@@ -340,14 +340,6 @@ export default function Home() {
 
         <div className="container mx-auto px-4 py-20 md:py-32 relative z-10 grid md:grid-cols-2 gap-12 items-center">
           <div className="space-y-6 animate-in slide-in-from-left duration-700">
-            <div className="inline-flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 text-orange-300 text-sm font-medium px-4 py-1.5 rounded-full">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
-              </span>
-              {t.home.freeTrialBadge}
-            </div>
-
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-heading font-bold leading-[1.1] tracking-tight">
               {t.home.heroTitle1} <br />
               <span className="text-orange-500">{t.home.heroTitle2}</span>
