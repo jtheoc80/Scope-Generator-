@@ -43,7 +43,8 @@ export const seoConfig = {
       "construction proposal",
       "remodeling proposal",
       "contractor estimates",
-      "roofing proposal",
+      "kitchen proposal",
+      "electrical proposal",
       "HVAC proposal",
       "plumbing proposal",
       "electrical proposal",
@@ -160,7 +161,7 @@ export const pagesSeoConfig: Record<
   "/app": {
     title: "Create Proposal - ScopeGen App",
     description:
-      "Create professional contractor proposals in 60 seconds. Choose from 17+ trade templates including bathroom, kitchen, roofing, HVAC, plumbing, and electrical.",
+      "Create professional contractor proposals in 60 seconds. Choose from 17+ trade templates including kitchen, bathroom, electrical, HVAC, plumbing, and painting.",
     keywords: [
       "create proposal",
       "proposal generator",
@@ -173,7 +174,7 @@ export const pagesSeoConfig: Record<
   "/calculator": {
     title: "Free Contractor Price Calculator 2025 - Instant Cost Estimates",
     description:
-      "Get instant cost estimates for bathroom remodels, kitchen renovations, roofing, HVAC, plumbing, electrical, and 15+ more trades. Free contractor price calculator with regional pricing.",
+      "Get instant cost estimates for kitchen renovations, bathroom remodels, electrical, HVAC, plumbing, painting, and 15+ more trades. Free contractor price calculator with regional pricing.",
     keywords: [
       "contractor price calculator",
       "remodeling cost calculator",
@@ -322,7 +323,7 @@ export const pagesSeoConfig: Record<
   "/contractor-estimate-generator": {
     title: "Free Contractor Estimate Generator | Create Estimates in 60 Seconds",
     description:
-      "Generate professional contractor estimates instantly. Free estimate generator for bathroom, kitchen, roofing, HVAC, plumbing, electrical, and 15+ trades.",
+      "Generate professional contractor estimates instantly. Free estimate generator for kitchen, bathroom, electrical, HVAC, plumbing, painting, and 15+ trades.",
     keywords: [
       "contractor estimate generator",
       "free estimate generator",

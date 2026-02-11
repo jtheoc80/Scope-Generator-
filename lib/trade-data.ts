@@ -116,7 +116,7 @@ export const cityData: Record<string, CityData> = {
 };
 
 // Trade routes that support city-specific pages
-export const tradeCityRoutes = ["bathroom-remodeling", "kitchen-remodeling", "roofing", "hvac", "plumbing", "electrical"];
+export const tradeCityRoutes = ["kitchen-remodeling", "bathroom-remodeling", "electrical", "hvac", "plumbing", "roofing"];
 export const cityKeys = Object.keys(cityData);
 
 export const tradeData: Record<string, TradeData> = {
