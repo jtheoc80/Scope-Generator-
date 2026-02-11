@@ -10,22 +10,22 @@ import { CheckCircle2 } from "lucide-react";
 export function ScopeExamples() {
   const exampleProjects = [
     {
-      src: "/images/scopescan/projects/bathroom-real.jpg",
-      alt: "Bathroom remodel project analyzed by ScopeScan",
-      label: "Bathroom Remodel",
-      output: "Scope generated: 12 line items",
-    },
-    {
       src: "/images/scopescan/projects/kitchen-real.jpg",
       alt: "Kitchen renovation project analyzed by ScopeScan",
       label: "Kitchen Renovation",
       output: "Scope generated: 18 line items",
     },
     {
-      src: "/images/scopescan/projects/roof-real.jpg",
-      alt: "Roof replacement project analyzed by ScopeScan",
-      label: "Roof Replacement",
-      output: "Scope generated: 9 line items",
+      src: "/images/scopescan/projects/bathroom-real.jpg",
+      alt: "Bathroom remodel project analyzed by ScopeScan",
+      label: "Bathroom Remodel",
+      output: "Scope generated: 12 line items",
+    },
+    {
+      src: "/images/scopescan/projects/electrical-real.jpg",
+      alt: "Electrical panel upgrade project analyzed by ScopeScan",
+      label: "Electrical Panel Upgrade",
+      output: "Scope generated: 8 line items",
     },
   ];
 

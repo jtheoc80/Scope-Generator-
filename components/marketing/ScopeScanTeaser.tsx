@@ -171,8 +171,8 @@ export function ScopeScanTeaser() {
                     <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-100 shadow-sm">
                       <div className="relative aspect-[4/3]">
                         <SafeImage
-                          src="/images/scopescan/hero/hero-exterior.jpg"
-                          alt="Roof repair crew working on a house exterior"
+                          src="/images/scopescan/hero/hero-kitchen.jpg"
+                          alt="Modern kitchen renovation in progress with new cabinets and countertops"
                           sizes="(max-width: 1024px) 100vw, 560px"
                           priority
                         />
@@ -186,18 +186,18 @@ export function ScopeScanTeaser() {
                     <div className="grid grid-cols-3 gap-3 sm:gap-4">
                       <PhotoTile
                         src="/images/scopescan/hero/tile-bathroom.jpg"
-                        alt="Dated bathroom vanity before remodel"
+                        alt="Bathroom remodel with new vanity and fixtures"
                         label="Bathroom Remodel"
                       />
                       <PhotoTile
-                        src="/images/scopescan/hero/tile-kitchen.jpg"
-                        alt="Kitchen during demolition phase"
-                        label="Kitchen Reno"
+                        src="/images/scopescan/hero/tile-electrical.jpg"
+                        alt="Electrical panel upgrade and wiring work"
+                        label="Electrical"
                       />
                       <PhotoTile
-                        src="/images/scopescan/hero/tile-exterior.jpg"
-                        alt="House exterior siding damage needing repair"
-                        label="Exterior Repair"
+                        src="/images/scopescan/hero/tile-hvac.jpg"
+                        alt="HVAC system installation and ductwork"
+                        label="HVAC Install"
                       />
                     </div>
                   </div>
