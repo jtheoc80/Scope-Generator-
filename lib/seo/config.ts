@@ -100,8 +100,8 @@ export const seoConfig = {
   // Pages that should NOT be indexed
   // Note: All protected routes that require authentication should be here
   // to prevent "Page with redirect" issues in Google Search Console.
-  // Middleware redirects unauthenticated visitors to /sign-in for these
-  // routes, which Google reports as "Page with redirect" (not-indexed).
+  // When Clerk is configured, middleware redirects unauthenticated visitors
+  // to /sign-in for these routes, which Google reports as "Page with redirect" (not-indexed).
   noIndexPages: [
     "/api/",
     "/app",          // Protected by middleware — redirects to /sign-in
