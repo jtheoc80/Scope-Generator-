@@ -86,12 +86,10 @@ function generateJsonLd(tradeSlug: string) {
       priceCurrency: "USD",
       description: "Free to preview, paid plans for full features",
     },
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: "4.9",
-      ratingCount: "127",
-      bestRating: "5",
-    },
+    // aggregateRating intentionally omitted — Google requires ratings to be
+    // based on real, verified user reviews. Adding fabricated data risks a
+    // manual action (penalty) that can suppress the entire site from search.
+    // Re-enable once a genuine review-collection system is in place.
   };
 
   return { faqStructuredData, softwareStructuredData };
