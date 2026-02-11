@@ -131,7 +131,7 @@ export default async function SignUpPage({
               <CheckCircle2 className="w-6 h-6 text-orange-500 flex-shrink-0 mt-0.5" />
               <div>
                 <p className="font-semibold text-white">Trade-specific templates</p>
-                <p className="text-slate-400">Built for bathroom, kitchen, roofing, HVAC, and more</p>
+                <p className="text-slate-400">Built for kitchen, bathroom, electrical, HVAC, and more</p>
               </div>
             </div>
             <div className="flex items-start gap-4">

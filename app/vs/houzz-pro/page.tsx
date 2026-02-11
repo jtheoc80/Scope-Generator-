@@ -83,7 +83,7 @@ export default function CompareHouzz() {
                   What is ScopeGen?
                 </h2>
                 <p className="text-slate-600 mb-8">
-                  ScopeGen is a proposal generator built specifically for contractors who need professional proposals fast. With pre-built scope templates for 17+ trades including roofing, HVAC, plumbing, electrical, remodeling, and more, you can create a complete proposal in about 60 seconds. There&apos;s no complex setup, no training required, and a free tier available to get started immediately.
+                  ScopeGen is a proposal generator built specifically for contractors who need professional proposals fast. With pre-built scope templates for 17+ trades including kitchen, bathroom, electrical, HVAC, plumbing, and more, you can create a complete proposal in about 60 seconds. There&apos;s no complex setup, no training required, and a free tier available to get started immediately.
                 </p>
 
                 <h2 className="text-3xl font-display font-bold text-slate-900 mb-4" data-testid="h2-what-is-houzz">
@@ -137,7 +137,7 @@ export default function CompareHouzz() {
                   </li>
                   <li className="flex items-start gap-3 text-slate-600">
                     <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-1" />
-                    You focus on remodeling, roofing, HVAC, plumbing, electrical, or similar trades
+                    You focus on remodeling, electrical, HVAC, plumbing, painting, or similar trades
                   </li>
                   <li className="flex items-start gap-3 text-slate-600">
                     <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-1" />

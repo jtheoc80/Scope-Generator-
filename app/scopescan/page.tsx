@@ -34,10 +34,10 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/images/scopescan/hero/hero-exterior.jpg",
+        url: "/images/scopescan/hero/hero-kitchen.jpg",
         width: 1200,
         height: 630,
-        alt: "Contractor quoting on-site with ScopeScan",
+        alt: "Kitchen renovation — contractor quoting on-site with ScopeScan",
       },
     ],
   },
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Close More Deals With Same-Visit Quotes | ScopeScan",
     description: metadataDescription,
-    images: ["/images/scopescan/hero/hero-exterior.jpg"],
+    images: ["/images/scopescan/hero/hero-kitchen.jpg"],
   },
 };
 

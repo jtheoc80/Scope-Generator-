@@ -18,17 +18,6 @@ import { useQuery } from "@tanstack/react-query";
 
 const calculatorTrades = [
   {
-    id: "bathroom",
-    name: "Bathroom Remodel",
-    icon: Bath,
-    jobTypes: [
-      { id: "tub-to-shower", name: "Tub-to-Shower Conversion", low: 8500, high: 12000 },
-      { id: "full-gut", name: "Full Bathroom Remodel", low: 18000, high: 28000 },
-      { id: "half-bath", name: "Half Bath / Powder Room", low: 6500, high: 9500 },
-      { id: "vanity-refresh", name: "Vanity & Faucet Replacement", low: 1800, high: 3500 },
-    ]
-  },
-  {
     id: "kitchen",
     name: "Kitchen Remodel",
     icon: ChefHat,
@@ -39,23 +28,14 @@ const calculatorTrades = [
     ]
   },
   {
-    id: "painting",
-    name: "Painting",
-    icon: Paintbrush,
+    id: "bathroom",
+    name: "Bathroom Remodel",
+    icon: Bath,
     jobTypes: [
-      { id: "single-room", name: "Single Room (Interior)", low: 450, high: 850 },
-      { id: "whole-house", name: "Whole House Interior", low: 3500, high: 8000 },
-      { id: "exterior", name: "Exterior House Painting", low: 4000, high: 12000 },
-    ]
-  },
-  {
-    id: "plumbing",
-    name: "Plumbing",
-    icon: Wrench,
-    jobTypes: [
-      { id: "water-heater", name: "Water Heater Replacement", low: 1800, high: 3500 },
-      { id: "repipe", name: "Whole House Repipe", low: 8000, high: 15000 },
-      { id: "drain-cleaning", name: "Drain Cleaning", low: 150, high: 500 },
+      { id: "tub-to-shower", name: "Tub-to-Shower Conversion", low: 8500, high: 12000 },
+      { id: "full-gut", name: "Full Bathroom Remodel", low: 18000, high: 28000 },
+      { id: "half-bath", name: "Half Bath / Powder Room", low: 6500, high: 9500 },
+      { id: "vanity-refresh", name: "Vanity & Faucet Replacement", low: 1800, high: 3500 },
     ]
   },
   {
@@ -76,6 +56,26 @@ const calculatorTrades = [
       { id: "ac-install", name: "AC Unit Installation", low: 4500, high: 12000 },
       { id: "furnace", name: "Furnace Replacement", low: 3500, high: 8000 },
       { id: "maintenance", name: "Maintenance / Tune-Up", low: 99, high: 299 },
+    ]
+  },
+  {
+    id: "plumbing",
+    name: "Plumbing",
+    icon: Wrench,
+    jobTypes: [
+      { id: "water-heater", name: "Water Heater Replacement", low: 1800, high: 3500 },
+      { id: "repipe", name: "Whole House Repipe", low: 8000, high: 15000 },
+      { id: "drain-cleaning", name: "Drain Cleaning", low: 150, high: 500 },
+    ]
+  },
+  {
+    id: "painting",
+    name: "Painting",
+    icon: Paintbrush,
+    jobTypes: [
+      { id: "single-room", name: "Single Room (Interior)", low: 450, high: 850 },
+      { id: "whole-house", name: "Whole House Interior", low: 3500, high: 8000 },
+      { id: "exterior", name: "Exterior House Painting", low: 4000, high: 12000 },
     ]
   },
 ];
@@ -578,16 +578,16 @@ export default function Home() {
               Proposal Templates for Every Trade
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              ScopeGen offers specialized proposal templates for plumbing, electrical, HVAC, bathroom, kitchen, and painting contractors.
+              ScopeGen offers specialized proposal templates for kitchen, bathroom, electrical, HVAC, plumbing, and painting contractors.
             </p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 max-w-5xl mx-auto">
             {[
-              { slug: "bathroom-remodeling", name: "Bathroom", icon: Bath },
               { slug: "kitchen-remodeling", name: "Kitchen", icon: ChefHat },
+              { slug: "bathroom-remodeling", name: "Bathroom", icon: Bath },
+              { slug: "electrical", name: "Electrical", icon: Plug },
               { slug: "hvac", name: "HVAC", icon: Thermometer },
               { slug: "plumbing", name: "Plumbing", icon: Wrench },
-              { slug: "electrical", name: "Electrical", icon: Plug },
               { slug: "painting", name: "Painting", icon: Paintbrush },
             ].map((trade) => (
               <Link
