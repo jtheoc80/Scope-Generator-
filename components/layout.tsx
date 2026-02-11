@@ -47,12 +47,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           style={{ width: `${scrollProgress}%` }}
           aria-hidden="true"
         />
-        <div className="container mx-auto px-4 h-14 md:h-16 flex items-center justify-between">
+        <div className="container mx-auto px-4 h-16 md:h-20 flex items-center justify-between">
           <Link
             href="/"
             className="flex items-center hover:opacity-80 transition-opacity"
           >
-            <span className="text-xl sm:text-2xl font-heading font-bold tracking-tight leading-none" style={{ color: '#0f172a' }}>
+            <span className="text-2xl sm:text-3xl md:text-4xl font-heading font-bold tracking-tight leading-none" style={{ color: '#0f172a' }}>
               Scope<span style={{ color: '#f97316' }}>Gen.</span>
             </span>
           </Link>
@@ -330,7 +330,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             {/* Brand Column */}
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center mb-4">
-                <span className="text-xl font-heading font-bold" style={{ color: '#ffffff' }}>
+                <span className="text-2xl sm:text-3xl font-heading font-bold" style={{ color: '#ffffff' }}>
                   Scope<span style={{ color: '#f97316' }}>Gen.</span>
                 </span>
               </div>
