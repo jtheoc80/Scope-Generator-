@@ -50,21 +50,21 @@ async function convertToJpeg(file: File, quality = 0.85): Promise<File> {
   try {
     // Create an image bitmap from the file
     const bmp = await createImageBitmap(file);
-    
+
     // Create a canvas to draw the image
     const canvas = document.createElement("canvas");
     canvas.width = bmp.width;
     canvas.height = bmp.height;
-    
+
     const ctx = canvas.getContext("2d");
     if (!ctx) {
       console.warn("Canvas not supported, returning original file");
       return file;
     }
-    
+
     // Draw the image onto the canvas
     ctx.drawImage(bmp, 0, 0);
-    
+
     // Convert to JPEG blob
     const blob: Blob = await new Promise((resolve, reject) => {
       canvas.toBlob(
@@ -73,11 +73,11 @@ async function convertToJpeg(file: File, quality = 0.85): Promise<File> {
         quality
       );
     });
-    
+
     // Create a new File with .jpg extension
     const newFileName = file.name.replace(/\.\w+$/, ".jpg");
     const convertedFile = new File([blob], newFileName, { type: "image/jpeg" });
-    
+
     console.log(`Converted ${file.name} (${file.type}) to JPEG: ${convertedFile.size} bytes`);
     return convertedFile;
   } catch (err) {
@@ -165,10 +165,10 @@ export default function MobileUploadPage() {
           prev.map((p) =>
             p.id === photo.id
               ? {
-                  ...p,
-                  status: "uploaded" as const,
-                  remoteId: data.uploadedPhotos?.[0]?.id,
-                }
+                ...p,
+                status: "uploaded" as const,
+                remoteId: data.uploadedPhotos?.[0]?.id,
+              }
               : p
           )
         );
@@ -178,10 +178,10 @@ export default function MobileUploadPage() {
           prev.map((p) =>
             p.id === photo.id
               ? {
-                  ...p,
-                  status: "error" as const,
-                  error: e instanceof Error ? e.message : "Upload failed",
-                }
+                ...p,
+                status: "error" as const,
+                error: e instanceof Error ? e.message : "Upload failed",
+              }
               : p
           )
         );
@@ -202,6 +202,20 @@ export default function MobileUploadPage() {
 
       for (const file of Array.from(files)) {
         if (!file.type.startsWith("image/")) continue;
+
+        if (file.size > 2 * 1024 * 1024) {
+          // For the session upload page, we can't easily show a global error from inside the loop 
+          // without potentially spamming. We'll add a simple alert or just skip.
+          // Better UX: add a 'error' status photo that says "Too large"
+          const photo: UploadedPhoto = {
+            id: generateId(),
+            localUrl: "", // No URL needed for error state
+            status: "error",
+            error: "File too large (max 2MB)",
+          };
+          setPhotos((prev) => [...prev, photo]);
+          continue;
+        }
 
         // Convert to JPEG for compatibility
         const convertedFile = await convertToJpeg(file);
@@ -362,12 +376,18 @@ export default function MobileUploadPage() {
             {photos.map((photo, index) => (
               <Card key={photo.id} className="overflow-hidden">
                 <div className="relative aspect-square bg-slate-100">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={photo.localUrl}
-                    alt={`Photo ${index + 1}`}
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
+                  {photo.localUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={photo.localUrl}
+                      alt={`Photo ${index + 1}`}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center bg-slate-100">
+                      <AlertCircle className="w-8 h-8 text-red-300" />
+                    </div>
+                  )}
 
                   {/* Status overlay */}
                   {photo.status === "uploading" && (

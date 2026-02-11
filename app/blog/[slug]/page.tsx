@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button";
 import { blogPosts, getRelatedPosts } from "@/lib/blog-data";
 import { generateArticleSchema, generateBreadcrumbSchema, generateFAQSchema } from "@/lib/seo/jsonld";
 import { processMarkdownToSafeHtml } from "@/lib/sanitize";
-import { 
-  TableOfContents, 
+import {
+  TableOfContents,
   AuthorCard,
   InlineCTA,
   RelatedPosts,
@@ -203,11 +203,10 @@ function renderContent(content: string[], inlineCTAIndex: number) {
               return (
                 <li key={j} className="flex items-start gap-3">
                   <span
-                    className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center mt-0.5 ${
-                      isChecked
+                    className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center mt-0.5 ${isChecked
                         ? "bg-green-500 border-green-500"
                         : "border-slate-300 bg-white"
-                    }`}
+                      }`}
                   >
                     {isChecked && (
                       <svg
@@ -336,7 +335,7 @@ export default async function BlogPostPage({ params }: PageProps) {
                 {post.title}
               </h1>
               <p className="text-lg text-slate-300">{post.excerpt}</p>
-              
+
               {/* Author Byline - E-E-A-T Signal */}
               <div className="mt-6 pt-6 border-t border-slate-700 flex items-center gap-4">
                 <div className="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center">
@@ -479,7 +478,7 @@ export default async function BlogPostPage({ params }: PageProps) {
                       key={index}
                       className="bg-white rounded-lg border p-4 group"
                     >
-                      <summary 
+                      <summary
                         className="font-semibold text-slate-900 cursor-pointer list-none flex items-center justify-between"
                         aria-label="Toggle FAQ answer"
                       >

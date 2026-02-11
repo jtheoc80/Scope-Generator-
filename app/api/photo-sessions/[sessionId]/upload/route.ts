@@ -13,7 +13,7 @@ import sharp from "sharp";
 export const runtime = "nodejs";
 
 // Max file size: 10MB
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_FILE_SIZE = 2 * 1024 * 1024;
 // Max files per request (avoid oversized multipart payloads/timeouts)
 const MAX_FILES = 20;
 // Rekognition supports JPEG/PNG; we accept these directly
@@ -37,7 +37,7 @@ async function ensureJpegOrPng(
     buffer[5] === 0x74 && // 't'
     buffer[6] === 0x79 && // 'y'
     buffer[7] === 0x70;   // 'p'
-  
+
   const isWebp = buffer.length >= 12 &&
     buffer[0] === 0x52 && // 'R'
     buffer[1] === 0x49 && // 'I'
@@ -47,21 +47,21 @@ async function ensureJpegOrPng(
     buffer[9] === 0x45 && // 'E'
     buffer[10] === 0x42 && // 'B'
     buffer[11] === 0x50;   // 'P'
-  
+
   const isJpeg = buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF;
   const isPng = buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47;
-  
+
   // If already JPEG or PNG, return as-is
   if (isJpeg || isPng) {
     return { buffer, contentType: isJpeg ? "image/jpeg" : "image/png", converted: false };
   }
-  
+
   // If HEIC or WebP (by bytes or content-type), convert to JPEG
   if (isHeic || isWebp || CONVERTIBLE_TYPES.has(originalType.toLowerCase())) {
     const converted = await sharp(buffer).jpeg({ quality: 85 }).toBuffer();
     return { buffer: converted, contentType: "image/jpeg", converted: true };
   }
-  
+
   // Unknown format - return as-is and let downstream handle it
   return { buffer, contentType: originalType, converted: false };
 }
@@ -121,7 +121,7 @@ export async function POST(
   { params }: { params: Promise<{ sessionId: string }> }
 ) {
   const t0 = Date.now();
-  
+
   try {
     // Check S3 configuration
     const s3Status = isS3Configured();
@@ -138,7 +138,7 @@ export async function POST(
     // Parse multipart form data
     const formData = await request.formData();
     const token = formData.get("token") as string | null;
-    
+
     if (!token) {
       return NextResponse.json(
         { success: false, error: "Token is required" },
@@ -212,7 +212,7 @@ export async function POST(
 
         // Validate file size before reading buffer
         if (file.size > MAX_FILE_SIZE) {
-          errors.push({ filename: file.name, error: "File too large (max 10MB)" });
+          errors.push({ filename: file.name, error: "File too large (max 2MB)" });
           continue;
         }
 
@@ -220,7 +220,7 @@ export async function POST(
         const rawBuffer = Buffer.from(await file.arrayBuffer());
         let contentType = originalContentType;
         let processedBuffer: Buffer = rawBuffer;
-        
+
         // Auto-convert HEIC/WebP to JPEG for Rekognition compatibility.
         // This runs server-side so mobile users don't need to convert manually.
         if (!SUPPORTED_TYPES.has(originalContentType) || CONVERTIBLE_TYPES.has(originalContentType)) {
@@ -228,7 +228,7 @@ export async function POST(
             const result = await ensureJpegOrPng(rawBuffer, originalContentType);
             processedBuffer = result.buffer;
             contentType = result.contentType;
-            
+
             if (result.converted) {
               console.log(`Photo session ${sessionId}: Converted ${file.name} from ${originalContentType} to ${contentType}`);
             }

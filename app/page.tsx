@@ -762,7 +762,7 @@ export default function Home() {
                 </li>
               </ul>
               <button
-                className="block w-full text-center py-4 lg:py-5 bg-slate-900 text-white rounded-xl font-bold text-lg lg:text-xl hover:bg-slate-800 transition-colors disabled:opacity-50 hover:cursor-pointer"
+                className="block w-full text-center py-4 lg:py-5 bg-slate-900 text-white rounded-xl font-bold text-lg lg:text-xl hover:bg-slate-800 transition-colors disabled:opacity-50"
                 data-testid="button-subscribe-crew"
               >
                 Coming soon...

@@ -246,6 +246,11 @@ export default function CapturePhotosPage() {
     for (const file of Array.from(files)) {
       if (!file.type.startsWith("image/")) continue;
 
+      if (file.size > 2 * 1024 * 1024) {
+        setError(`File ${file.name} is too large (max 2MB)`);
+        continue;
+      }
+
       // CRITICAL: Convert HEIC/WEBP and other formats to JPEG before upload.
       // AWS Rekognition only supports JPEG/PNG. iPhones often capture as HEIC.
       const convertedFile = await convertToJpeg(file);
@@ -300,15 +305,36 @@ export default function CapturePhotosPage() {
     }
   }, [handleFiles]);
 
-  const removePhoto = (id: string) => {
+  const removePhoto = async (id: string) => {
     setError(null); // Clear any previous error
+
+    // 1. Optimistically remove from UI
+    let photoToRemove: UploadedPhoto | undefined;
     setPhotos((prev) => {
-      const photo = prev.find((p) => p.id === id);
-      if (photo?.localUrl.startsWith("blob:")) {
-        URL.revokeObjectURL(photo.localUrl);
+      photoToRemove = prev.find((p) => p.id === id);
+      if (photoToRemove?.localUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(photoToRemove.localUrl);
       }
       return prev.filter((p) => p.id !== id);
     });
+
+    // 2. If it was uploaded to server, attempt to delete it
+    if (photoToRemove?.serverId) {
+      try {
+        const res = await mobileApiFetch<{ success: boolean }>(
+          `/api/mobile/jobs/${jobId}/photos/${photoToRemove.serverId}`,
+          { method: "DELETE" }
+        );
+        if (!res.success) {
+          throw new Error("Failed to delete photo from server");
+        }
+      } catch (err) {
+        console.error("Failed to delete photo:", err);
+        setError("Failed to delete photo. Please try again.");
+        // Revert optimistic update
+        setPhotos((prev) => [...prev, photoToRemove!]);
+      }
+    }
   };
 
   const retryPhoto = (id: string) => {
@@ -577,13 +603,19 @@ export default function CapturePhotosPage() {
               {photos.map((photo, index) => (
                 <Card key={photo.id} className="overflow-hidden">
                   <div className="relative aspect-square bg-slate-100">
-                    {/* Use native img for blob URLs - more reliable on mobile browsers */}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={photo.remoteUrl ?? photo.localUrl}
-                      alt={`Photo ${index + 1}`}
-                      className="absolute inset-0 w-full h-full object-cover"
-                    />
+                    {(photo.remoteUrl || photo.localUrl) ? (
+                      // Use native img for blob URLs - more reliable on mobile browsers
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={photo.remoteUrl ?? photo.localUrl}
+                        alt={`Photo ${index + 1}`}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center bg-slate-100">
+                        <AlertCircle className="w-8 h-8 text-red-300" />
+                      </div>
+                    )}
 
                     {/* Status overlay */}
                     {photo.status === "uploading" && (

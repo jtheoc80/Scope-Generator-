@@ -243,6 +243,8 @@ export interface IStorage {
 
   listMobileJobPhotos(jobId: number, userId: string): Promise<(typeof mobileJobPhotos.$inferSelect)[]>;
 
+  deleteMobileJobPhoto(photoId: number, jobId: number, userId: string): Promise<boolean>;
+
   createMobileJobDraft(jobId: number, userId: string, draft: {
     status: "pending" | "processing" | "ready" | "failed";
     payload?: unknown;
@@ -1856,6 +1858,26 @@ export class DatabaseStorage implements IStorage {
       .from(auditLog)
       .orderBy(desc(auditLog.createdAt))
       .limit(limit);
+  }
+
+  async deleteMobileJobPhoto(photoId: number, jobId: number, userId: string): Promise<boolean> {
+    // 1. Verify job ownership
+    const [job] = await db
+      .select()
+      .from(mobileJobs)
+      .where(and(eq(mobileJobs.id, jobId), eq(mobileJobs.userId, userId)));
+
+    if (!job) {
+      return false;
+    }
+
+    // 2. Delete photo
+    const [deleted] = await db
+      .delete(mobileJobPhotos)
+      .where(and(eq(mobileJobPhotos.id, photoId), eq(mobileJobPhotos.jobId, jobId)))
+      .returning();
+
+    return !!deleted;
   }
 }
 
