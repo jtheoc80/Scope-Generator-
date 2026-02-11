@@ -41,7 +41,7 @@ export function OrganizationJsonLd({ type = 'Organization' }: OrganizationJsonLd
     name: 'ScopeGen',
     applicationCategory: 'BusinessApplication',
     operatingSystem: 'Web',
-    description: 'Professional contractor proposal software. Generate proposals and scopes of work in seconds for bathroom remodels, roofing, HVAC, plumbing, electrical, and more.',
+    description: 'Professional contractor proposal software. Generate proposals and scopes of work in seconds for kitchen and bathroom remodels, electrical, HVAC, plumbing, and more.',
     url: 'https://scopegenerator.com',
     offers: {
       '@type': 'Offer',

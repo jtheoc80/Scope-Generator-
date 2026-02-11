@@ -3,19 +3,18 @@ import { generateFAQSchema, generateBreadcrumbSchema } from "@/lib/seo/jsonld";
 
 export const metadata: Metadata = {
   title: "Free Contractor Price Calculator 2025 - Instant Cost Estimates",
-  description: "Get instant cost estimates for bathroom, kitchen, roofing, HVAC, plumbing, electrical, and 15+ trades. Free calculator with regional pricing.",
+  description: "Get instant cost estimates for kitchen, bathroom, electrical, HVAC, plumbing, painting, and 15+ trades. Free calculator with regional pricing.",
   keywords: [
     "contractor price calculator",
     "remodeling cost estimate",
     "construction cost calculator",
     "home improvement costs",
     "contractor pricing",
-    "bathroom remodel cost",
     "kitchen renovation cost",
-    "roofing estimate",
+    "bathroom remodel cost",
+    "electrical estimate",
     "hvac installation cost",
     "plumbing cost calculator",
-    "electrical estimate",
     "flooring cost calculator",
   ],
   authors: [{ name: "ScopeGen" }],

@@ -34,7 +34,7 @@ const SAMPLE_PROPOSALS: Proposal[] = [
     id: 2,
     customerName: 'Johnson Residence',
     address: '4587 Maple Ave',
-    trade: 'Roofing',
+    trade: 'Electrical',
     amount: 4225,
     status: 'draft',
     createdAt: 'Dec 30, 2024',

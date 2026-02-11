@@ -374,13 +374,13 @@ export default function TradeLandingPageClient({
           </div>
           <div className="flex flex-wrap justify-center gap-3 max-w-4xl mx-auto">
             {[
-              { slug: "bathroom-remodeling", name: "Bathroom Remodeling" },
               { slug: "kitchen-remodeling", name: "Kitchen Remodeling" },
-              { slug: "roofing", name: "Roofing" },
+              { slug: "bathroom-remodeling", name: "Bathroom Remodeling" },
+              { slug: "electrical", name: "Electrical" },
               { slug: "hvac", name: "HVAC" },
               { slug: "plumbing", name: "Plumbing" },
-              { slug: "electrical", name: "Electrical" },
               { slug: "painting", name: "Painting" },
+              { slug: "roofing", name: "Roofing" },
               { slug: "landscaping", name: "Landscaping" },
             ]
               .filter(t => t.slug !== tradeSlug)
