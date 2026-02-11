@@ -7,7 +7,6 @@ import { useState, useEffect } from "react";
 import LayoutWrapper from "@/components/layout-wrapper";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { CheckCircle2, ArrowRight, Clock, DollarSign, FileCheck, Loader2, Bath, ChefHat, Home as HomeIcon, Paintbrush, Plug, Wrench, Thermometer, TreePine, Calculator, Sparkles, Star, Users, TrendingUp, Target, FileText, HardHat, UserCheck, Building2, ChevronDown } from "lucide-react";
 import { ScopeScanTeaser } from "@/components/marketing/ScopeScanTeaser";
 import { ProposalPreviewSection } from "@/components/marketing/ProposalPreviewSection";
@@ -308,7 +307,7 @@ function StickyMobileCTA({ label }: { label: string }) {
       data-testid="sticky-mobile-cta"
     >
       <Link
-        href="/app"
+        href="/free-trial"
         className="flex items-center justify-center w-full h-12 rounded-lg bg-orange-500 text-white font-bold text-base hover:bg-orange-600 transition-colors shadow-lg"
       >
         {label}
@@ -320,9 +319,6 @@ function StickyMobileCTA({ label }: { label: string }) {
 
 export default function Home() {
   const { t } = useLanguage();
-  const router = useRouter();
-  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
-
   // Check if user is logged in
   const { data: user } = useQuery({
     queryKey: ["/api/auth/user"],
@@ -334,37 +330,6 @@ export default function Home() {
     },
     retry: false,
   });
-
-  const handleCheckout = async (productType: 'starter' | 'pro' | 'crew') => {
-    // If user is not logged in, redirect to sign-up with the plan
-    if (!user) {
-      const redirectUrl = `/dashboard?checkout=${productType}`;
-      router.push(`/sign-up?plan=${productType}&redirect_url=${encodeURIComponent(redirectUrl)}`);
-      return;
-    }
-
-    setCheckoutLoading(productType);
-    try {
-      const response = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productType }),
-      });
-
-      const data = await response.json();
-
-      if (data.url) {
-        window.location.href = data.url;
-      } else if (data.message) {
-        alert(data.message);
-      }
-    } catch (error) {
-      console.error('Checkout error:', error);
-      alert('Something went wrong. Please try again.');
-    } finally {
-      setCheckoutLoading(null);
-    }
-  };
 
   return (
     <LayoutWrapper>
@@ -394,7 +359,7 @@ export default function Home() {
 
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4">
               <Link
-                href="/app"
+                href="/free-trial"
                 data-testid="button-try-free-proposal"
                 className="inline-flex items-center justify-center h-12 sm:h-14 px-6 sm:px-8 rounded-md bg-orange-500 text-white font-bold text-base sm:text-lg hover:bg-orange-600 transition-all hover:scale-105 shadow-[0_0_20px_rgba(249,115,22,0.3)] whitespace-nowrap"
               >
@@ -684,7 +649,8 @@ export default function Home() {
               <h3 className="text-2xl lg:text-3xl font-bold text-slate-900 mb-3">{t.home.starterPlan}</h3>
               <p className="text-muted-foreground text-base lg:text-lg mb-8">{t.home.starterDesc}</p>
               <div className="text-5xl lg:text-6xl font-heading font-bold text-slate-900 mb-2">{t.home.starterPrice}</div>
-              <p className="text-muted-foreground text-base lg:text-lg mb-8">{t.home.starterPriceLabel}</p>
+              <p className="text-muted-foreground text-base lg:text-lg mb-2">{t.home.starterPriceLabel}</p>
+              <p className="text-sm text-orange-600 mb-8">{t.home.freeTrialPricingNote} {t.home.starterPrice}/{t.home.starterPriceLabel}</p>
               <ul className="space-y-4 lg:space-y-5 mb-10 flex-grow">
                 <li className="flex items-center gap-3 text-base lg:text-lg text-slate-600">
                   <CheckCircle2 className="w-5 h-5 lg:w-6 lg:h-6 text-green-500 flex-shrink-0" /> {t.home.starterFeature1}
@@ -705,20 +671,13 @@ export default function Home() {
                   <span className="w-5 h-5 lg:w-6 lg:h-6 flex items-center justify-center text-slate-300">—</span> {t.home.starterFeature6}
                 </li>
               </ul>
-              <button
-                onClick={() => handleCheckout('starter')}
-                disabled={checkoutLoading === 'starter'}
-                className="block w-full text-center py-4 lg:py-5 border-2 border-slate-300 rounded-xl font-bold text-lg lg:text-xl hover:bg-slate-50 transition-colors disabled:opacity-50  hover:cursor-pointer"
+              <Link
+                href="/free-trial"
+                className="block w-full text-center py-4 lg:py-5 bg-orange-500 text-white rounded-xl font-bold text-lg lg:text-xl hover:bg-orange-600 transition-colors"
                 data-testid="button-get-started"
               >
-                {checkoutLoading === 'starter' ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <Loader2 className="w-5 h-5 animate-spin" /> {t.home.processing}
-                  </span>
-                ) : (
-                  t.home.getStarted
-                )}
-              </button>
+                {t.home.startFreeTrial}
+              </Link>
             </div>
 
             {/* Pro - Most Popular */}
@@ -770,20 +729,13 @@ export default function Home() {
                   </button>
                 </div>
               ) : (
-                <button
-                  onClick={() => handleCheckout('pro')}
-                  disabled={checkoutLoading === 'pro'}
-                  className="block w-full text-center py-4 lg:py-5 bg-orange-500 text-white rounded-xl font-bold text-lg lg:text-xl hover:bg-orange-600 transition-colors disabled:opacity-50  hover:cursor-pointer"
+                <Link
+                  href="/free-trial"
+                  className="block w-full text-center py-4 lg:py-5 bg-orange-500 text-white rounded-xl font-bold text-lg lg:text-xl hover:bg-orange-600 transition-colors"
                   data-testid="button-subscribe-pro"
                 >
-                  {checkoutLoading === 'pro' ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 className="w-5 h-5 animate-spin" /> {t.home.processing}
-                    </span>
-                  ) : (
-                    t.home.startFreeTrial
-                  )}
-                </button>
+                  {t.home.startFreeTrial}
+                </Link>
               )}
             </div>
 
@@ -913,7 +865,7 @@ export default function Home() {
             <div className="text-center mt-8">
               <p className="text-slate-500 text-sm mb-4">Still have questions?</p>
               <Link
-                href="/app"
+                href="/free-trial"
                 className="inline-flex items-center justify-center h-12 px-8 rounded-lg bg-slate-900 text-white font-bold text-base hover:bg-slate-800 transition-colors"
               >
                 Try It Free — See For Yourself
@@ -931,7 +883,7 @@ export default function Home() {
             {t.home.readyToLookLikePro}
           </h2>
           <Link
-            href="/app"
+            href="/free-trial"
             data-testid="button-create-first-proposal-cta"
             className="inline-block bg-orange-500 text-white font-bold text-base sm:text-lg px-8 sm:px-10 py-3 sm:py-4 rounded-md hover:bg-orange-600 transition-colors shadow-lg"
           >
