@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
       {
         // Tell search engines not to index authenticated/internal routes
         // even if robots.txt or meta-robots are somehow missed.
-        source: "/(dashboard|settings|crew|pro|admin|pricing-insights|search-console)(.*)",
+        source: "/(dashboard|settings|crew|pro|admin|pricing-insights|search-console|app|invite|p)(.*)",
         headers: [
           {
             key: "X-Robots-Tag",
