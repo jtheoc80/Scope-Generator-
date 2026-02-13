@@ -31,10 +31,10 @@ export interface BlogPost {
 
 // Category hero image defaults
 export const categoryHeroImages: Record<string, string> = {
-  'Proposal Writing': '/images/blog/categories/proposal-writing-hero.jpg',
-  'Business Tips': '/images/blog/categories/business-tips-hero.jpg',
-  'Templates': '/images/blog/categories/templates-hero.jpg',
-  'Pricing': '/images/blog/categories/pricing-hero.jpg',
+  'Proposal Writing': '/images/blog/categories/proposal-writing-hero.svg',
+  'Business Tips': '/images/blog/categories/business-tips-hero.svg',
+  'Templates': '/images/blog/categories/templates-hero.svg',
+  'Pricing': '/images/blog/categories/pricing-hero.svg',
 };
 
 export const blogPosts: Record<string, BlogPost> = {
@@ -53,7 +53,7 @@ export const blogPosts: Record<string, BlogPost> = {
     tags: ["bathroom remodel", "scope of work", "proposal template", "bid winning"],
     metaTitle: "How to Write a Bathroom Remodel Proposal | Contractor Guide 2026",
     metaDescription: "Line-by-line bathroom remodel proposal template from a 15-year contractor. Includes scope examples, pricing breakdown, and the exact format that wins jobs.",
-    heroImage: "/images/blog/bathroom-remodel/hero.jpg",
+    heroImage: "/images/blog/bathroom-remodel/hero.svg",
     heroImageAlt: "Bathroom remodel in progress showing tile installation",
     content: [
       "Last month I lost a $28,000 bathroom job to a guy who charged $4,000 more than me. The homeowner told me later: \"His proposal just felt more professional.\" That stung—but it taught me everything I know about writing proposals that close.",
@@ -287,7 +287,7 @@ export const blogPosts: Record<string, BlogPost> = {
     tags: ["scope of work", "contract template", "change orders", "project management"],
     metaTitle: "Scope of Work Templates for Contractors | Free Examples 2026",
     metaDescription: "Free scope of work templates that prevent disputes. Includes bathroom, kitchen, roofing, and painting examples with exact language to protect your jobs.",
-    heroImage: "/images/blog/scope-templates/hero.jpg",
+    heroImage: "/images/blog/scope-templates/hero.svg",
     heroImageAlt: "Contractor reviewing scope document with homeowner",
     content: [
       "The worst phone call I ever got was at 7am on a Saturday. Homeowner was furious because the painting crew \"didn't do the closets.\" I pulled up the scope: \"Paint all walls and ceilings in master bedroom.\" Technically correct. Practically? A disaster. We ate $400 to paint those closets and save the relationship.",
@@ -407,7 +407,7 @@ export const blogPosts: Record<string, BlogPost> = {
     tags: ["sales", "close rate", "proposals", "customer service"],
     metaTitle: "How to Win More Contractor Bids | 5 Strategies That Work",
     metaDescription: "Contractor went from 20% to 45% close rate without lowering prices. Here are the 5 specific changes that made the difference, with real examples.",
-    heroImage: "/images/blog/win-bids/hero.jpg",
+    heroImage: "/images/blog/win-bids/hero.svg",
     heroImageAlt: "Contractor presenting proposal to homeowners",
     content: [
       "Two years ago I was bidding 10 jobs a month and winning maybe 2. The math was brutal: all those free estimates, site visits, proposal writing—and 80% of the time I got ghosted or lost to someone else.",
