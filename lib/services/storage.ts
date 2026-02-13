@@ -288,22 +288,48 @@ export class DatabaseStorage implements IStorage {
     const trialEndsAt = new Date();
     trialEndsAt.setDate(trialEndsAt.getDate() + 3);
 
-    const [user] = await db
-      .insert(users)
-      .values({
-        ...userData,
-        trialEndsAt, // Set trial end date for new users
-      })
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
+    try {
+      const [user] = await db
+        .insert(users)
+        .values({
           ...userData,
-          updatedAt: new Date(),
-          // Don't override existing trialEndsAt on update
-        },
-      })
-      .returning();
-    return user;
+          trialEndsAt, // Set trial end date for new users
+        })
+        .onConflictDoUpdate({
+          target: users.id,
+          set: {
+            ...userData,
+            updatedAt: new Date(),
+            // Don't override existing trialEndsAt on update
+          },
+        })
+        .returning();
+      return user;
+    } catch (error: any) {
+      // Handle email uniqueness conflict: another user row has the same email
+      // but a different Clerk ID (e.g., user switched OAuth providers).
+      // Update the existing row to use the new Clerk user ID, preserving all data.
+      const cause = error?.cause ?? error;
+      if (cause?.code === '23505' && cause?.constraint === 'users_email_unique' && userData.email) {
+        logger.info('Email conflict detected, updating existing user row', {
+          newId: userData.id,
+          email: userData.email,
+        });
+        const [existing] = await db
+          .update(users)
+          .set({
+            id: userData.id,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            profileImageUrl: userData.profileImageUrl,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.email, userData.email))
+          .returning();
+        if (existing) return existing;
+      }
+      throw error;
+    }
   }
 
   // Proposal operations
