@@ -3,32 +3,50 @@ import { notFound } from "next/navigation";
 import LayoutWrapper from "@/components/layout-wrapper";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, ArrowRight, Calendar, Clock, User, RefreshCw } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Calendar,
+  Clock,
+  User,
+  RefreshCw,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { blogPosts, getRelatedPosts } from "@/lib/blog-data";
-import { generateArticleSchema, generateBreadcrumbSchema, generateFAQSchema } from "@/lib/seo/jsonld";
+import {
+  generateArticleSchema,
+  generateBreadcrumbSchema,
+  generateFAQSchema,
+} from "@/lib/seo/jsonld";
 import { processMarkdownToSafeHtml } from "@/lib/sanitize";
-import { 
-  TableOfContents, 
+import {
+  TableOfContents,
   AuthorCard,
   InlineCTA,
   RelatedPosts,
-  extractTOC
+  extractTOC,
 } from "@/components/blog";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
+function toIsoOrUndefined(value: string): string | undefined {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+}
+
 // Force dynamic rendering to ensure QueryClientProvider is available
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 // Note: generateStaticParams is defined in layout.tsx.
 // Using force-dynamic here overrides static generation, but the layout
 // still uses generateStaticParams for metadata generation.
 
 // Generate metadata for SEO
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const post = blogPosts[slug];
 
@@ -39,6 +57,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const ogImageUrl = post.ogImage || post.heroImage || "/scopegen-og-dark.png";
+  const publishedTime = toIsoOrUndefined(post.datePublished);
+  const modifiedTime = toIsoOrUndefined(post.dateModified);
 
   return {
     title: `${post.metaTitle} | ScopeGenerator`,
@@ -51,15 +71,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     ],
     authors: [{ name: post.author.name }],
     alternates: {
-      canonical: post.canonical || `https://scopegenerator.com/blog/${post.slug}`,
+      canonical:
+        post.canonical || `https://scopegenerator.com/blog/${post.slug}`,
     },
     openGraph: {
       title: post.metaTitle,
       description: post.metaDescription,
       url: `https://scopegenerator.com/blog/${post.slug}`,
       type: "article",
-      publishedTime: new Date(post.datePublished).toISOString(),
-      modifiedTime: new Date(post.dateModified).toISOString(),
+      publishedTime,
+      modifiedTime,
       authors: [post.author.name],
       section: post.category,
       tags: post.tags,
@@ -98,22 +119,28 @@ function renderContent(content: string[], inlineCTAIndex: number) {
     // Headings
     if (block.startsWith("## ")) {
       const text = block.replace("## ", "");
-      const id = text.toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+      const id = text
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^\w-]/g, "");
       elements.push(
         <h2 key={i} id={id} className="scroll-mt-24">
           {text}
-        </h2>
+        </h2>,
       );
       continue;
     }
 
     if (block.startsWith("### ")) {
       const text = block.replace("### ", "");
-      const id = text.toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+      const id = text
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^\w-]/g, "");
       elements.push(
         <h3 key={i} id={id} className="scroll-mt-24">
           {text}
-        </h3>
+        </h3>,
       );
       continue;
     }
@@ -122,9 +149,12 @@ function renderContent(content: string[], inlineCTAIndex: number) {
     if (block.startsWith("```")) {
       const codeContent = block.replace(/^```\w*\n?/, "").replace(/```$/, "");
       elements.push(
-        <pre key={i} className="bg-slate-900 text-slate-100 rounded-lg p-4 overflow-x-auto text-sm">
+        <pre
+          key={i}
+          className="bg-slate-900 text-slate-100 rounded-lg p-4 overflow-x-auto text-sm"
+        >
           <code>{codeContent}</code>
-        </pre>
+        </pre>,
       );
       continue;
     }
@@ -133,9 +163,9 @@ function renderContent(content: string[], inlineCTAIndex: number) {
     if (block.includes("|") && block.includes("\n")) {
       const lines = block.trim().split("\n");
       const headerRow = lines[0].split("|").filter((cell) => cell.trim());
-      const dataRows = lines.slice(2).map((line) =>
-        line.split("|").filter((cell) => cell.trim())
-      );
+      const dataRows = lines
+        .slice(2)
+        .map((line) => line.split("|").filter((cell) => cell.trim()));
 
       elements.push(
         <div key={i} className="my-6 overflow-x-auto">
@@ -168,7 +198,7 @@ function renderContent(content: string[], inlineCTAIndex: number) {
               ))}
             </tbody>
           </table>
-        </div>
+        </div>,
       );
       continue;
     }
@@ -186,14 +216,16 @@ function renderContent(content: string[], inlineCTAIndex: number) {
               }}
             />
           ))}
-        </ul>
+        </ul>,
       );
       continue;
     }
 
     // Checkbox lists (special rendering)
     if (block.includes("- [ ]") || block.includes("- [x]")) {
-      const items = block.split("\n").filter((line) => line.match(/^- \[[x ]\]/));
+      const items = block
+        .split("\n")
+        .filter((line) => line.match(/^- \[[x ]\]/));
       elements.push(
         <div key={i} className="my-6 p-5 bg-slate-50 rounded-lg border">
           <ul className="space-y-2">
@@ -228,7 +260,7 @@ function renderContent(content: string[], inlineCTAIndex: number) {
               );
             })}
           </ul>
-        </div>
+        </div>,
       );
       continue;
     }
@@ -246,7 +278,7 @@ function renderContent(content: string[], inlineCTAIndex: number) {
         dangerouslySetInnerHTML={{
           __html: processMarkdownToSafeHtml(block),
         }}
-      />
+      />,
     );
   }
 
@@ -270,8 +302,8 @@ export default async function BlogPostPage({ params }: PageProps) {
     headline: post.title,
     description: post.metaDescription || post.excerpt,
     url: `https://scopegenerator.com/blog/${post.slug}`,
-    datePublished: new Date(post.datePublished).toISOString(),
-    dateModified: new Date(post.dateModified).toISOString(),
+    datePublished: toIsoOrUndefined(post.datePublished) ?? post.datePublished,
+    dateModified: toIsoOrUndefined(post.dateModified) ?? post.dateModified,
     author: post.author.name,
     type: "BlogPosting",
     image: post.heroImage
@@ -314,7 +346,11 @@ export default async function BlogPostPage({ params }: PageProps) {
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto">
               <Link href="/blog">
-                <Button variant="ghost" className="text-slate-300 hover:text-white mb-6 -ml-4" data-testid="blog-back">
+                <Button
+                  variant="ghost"
+                  className="text-slate-300 hover:text-white mb-6 -ml-4"
+                  data-testid="blog-back"
+                >
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back to Blog
                 </Button>
@@ -332,11 +368,14 @@ export default async function BlogPostPage({ params }: PageProps) {
                   {post.readTime}
                 </span>
               </div>
-              <h1 className="text-3xl md:text-4xl font-display font-bold mb-4" data-testid="blog-post-title">
+              <h1
+                className="text-3xl md:text-4xl font-display font-bold mb-4"
+                data-testid="blog-post-title"
+              >
                 {post.title}
               </h1>
               <p className="text-lg text-slate-300">{post.excerpt}</p>
-              
+
               {/* Author Byline - E-E-A-T Signal */}
               <div className="mt-6 pt-6 border-t border-slate-700 flex items-center gap-4">
                 <div className="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center">
@@ -344,7 +383,9 @@ export default async function BlogPostPage({ params }: PageProps) {
                 </div>
                 <div>
                   <p className="font-medium text-white">{post.author.name}</p>
-                  <p className="text-sm text-slate-400">Construction Industry Expert</p>
+                  <p className="text-sm text-slate-400">
+                    Construction Industry Expert
+                  </p>
                 </div>
               </div>
             </div>
@@ -367,7 +408,8 @@ export default async function BlogPostPage({ params }: PageProps) {
                   />
                 </div>
                 <p className="text-center text-sm text-slate-500 mt-3 italic">
-                  Pricing confidence comes from knowing your numbers and presenting them clearly.
+                  Pricing confidence comes from knowing your numbers and
+                  presenting them clearly.
                 </p>
               </div>
             </div>
@@ -479,7 +521,7 @@ export default async function BlogPostPage({ params }: PageProps) {
                       key={index}
                       className="bg-white rounded-lg border p-4 group"
                     >
-                      <summary 
+                      <summary
                         className="font-semibold text-slate-900 cursor-pointer list-none flex items-center justify-between"
                         aria-label="Toggle FAQ answer"
                       >

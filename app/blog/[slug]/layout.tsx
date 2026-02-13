@@ -6,6 +6,11 @@ interface BlogPostLayoutProps {
   params: Promise<{ slug: string }>;
 }
 
+function toIsoOrUndefined(value: string): string | undefined {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+}
+
 export async function generateMetadata({ params }: BlogPostLayoutProps): Promise<Metadata> {
   const { slug } = await params;
   const post = blogPosts[slug];
@@ -23,6 +28,8 @@ export async function generateMetadata({ params }: BlogPostLayoutProps): Promise
     : post.heroImage 
       ? `https://scopegenerator.com${post.heroImage}`
       : "https://scopegenerator.com/scopegen-og-dark.png";
+  const publishedTime = toIsoOrUndefined(post.datePublished);
+  const modifiedTime = toIsoOrUndefined(post.dateModified);
 
   return {
     title: `${post.metaTitle} | ScopeGenerator`,
@@ -40,8 +47,8 @@ export async function generateMetadata({ params }: BlogPostLayoutProps): Promise
       description: post.metaDescription,
       url: `https://scopegenerator.com/blog/${post.slug}`,
       type: "article",
-      publishedTime: new Date(post.datePublished).toISOString(),
-      modifiedTime: new Date(post.dateModified).toISOString(),
+      publishedTime,
+      modifiedTime,
       authors: [post.author.name],
       section: post.category,
       tags: post.tags,
