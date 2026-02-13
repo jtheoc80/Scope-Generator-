@@ -82,7 +82,7 @@
     "googleapis": "^168.0.0",
     "html2canvas": "^1.4.1",
     "input-otp": "^1.4.2",
-    "isomorphic-dompurify": "^2.35.0",
+    "isomorphic-dompurify": "^2.36.0",
     "jspdf": "^4.0.0",
     "lucide-react": "^0.454.0",
     "memoizee": "^0.4.17",
