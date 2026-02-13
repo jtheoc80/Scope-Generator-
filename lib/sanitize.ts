@@ -1,17 +1,17 @@
 /**
  * HTML Sanitization Utility
  * 
- * Uses DOMPurify to sanitize HTML and prevent XSS attacks.
- * Works in both server and client environments (isomorphic).
+ * Uses sanitize-html to sanitize HTML and prevent XSS attacks.
+ * Pure Node.js — no jsdom dependency, works reliably on Vercel.
  */
-import DOMPurify, { Config } from 'isomorphic-dompurify';
+import sanitize from 'sanitize-html';
 
 /**
  * Configuration for allowed HTML elements and attributes.
  * This is a restrictive allowlist for blog content.
  */
-const BLOG_CONTENT_CONFIG: Config = {
-  ALLOWED_TAGS: [
+const BLOG_CONTENT_CONFIG: sanitize.IOptions = {
+  allowedTags: [
     'strong', 'b', 'em', 'i', 'u', 's',
     'a', 'code', 'pre', 'br',
     'p', 'span', 'div',
@@ -20,16 +20,11 @@ const BLOG_CONTENT_CONFIG: Config = {
     'table', 'thead', 'tbody', 'tr', 'th', 'td',
     'blockquote', 'hr',
   ],
-  ALLOWED_ATTR: [
-    'href', 'target', 'rel', 'class', 'id',
-    'style', // Allow inline styles for tables
-  ],
-  // Force all links to open in new tab with safe attributes
-  ADD_ATTR: ['target', 'rel'],
-  // Don't allow data: or javascript: URLs
-  ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|tel):|[^a-z]|[a-z+.-]+(?:[^a-z+.-:]|$))/i,
-  // Return string instead of TrustedHTML
-  RETURN_TRUSTED_TYPE: false,
+  allowedAttributes: {
+    'a': ['href', 'target', 'rel'],
+    '*': ['class', 'id', 'style'],
+  },
+  allowedSchemes: ['http', 'https', 'mailto', 'tel'],
 };
 
 /**
@@ -44,7 +39,7 @@ const BLOG_CONTENT_CONFIG: Config = {
  * ```
  */
 export function sanitizeHtml(html: string): string {
-  return DOMPurify.sanitize(html, BLOG_CONTENT_CONFIG) as string;
+  return sanitize(html, BLOG_CONTENT_CONFIG);
 }
 
 /**
@@ -63,5 +58,5 @@ export function processMarkdownToSafeHtml(text: string): string {
     // Inline code `code`
     .replace(/`([^`]+)`/g, '<code class="bg-slate-100 px-1.5 py-0.5 rounded text-sm">$1</code>');
   
-  return DOMPurify.sanitize(processed, BLOG_CONTENT_CONFIG) as string;
+  return sanitize(processed, BLOG_CONTENT_CONFIG);
 }
