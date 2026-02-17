@@ -3,9 +3,7 @@ import Script from "next/script";
 // Microsoft Clarity Project ID
 // Env-var override supported; falls back to the hard-coded production project ID.
 const CLARITY_PROJECT_ID =
-  process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID ??
-  (process.env.NODE_ENV === "production" ? "ujpegdu2bh" : undefined);
-
+  process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID ?? "ujpegdu2bh";
 /**
  * Microsoft Clarity tracking script.
  * Place inside <head> in the root layout alongside other analytics scripts.
