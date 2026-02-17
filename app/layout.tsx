@@ -7,6 +7,7 @@ import { isClerkConfigured } from "@/lib/authUtils";
 import { VercelAnalytics } from "@/components/VercelAnalytics";
 import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import { GoogleTagManagerScript, GoogleTagManagerNoScript } from "@/components/GoogleTagManager";
+import { MicrosoftClarity } from "@/components/MicrosoftClarity";
 import { Providers } from "@/components/providers";
 import { OrganizationJsonLd } from "@/components/JsonLd";
 import "./globals.css";
@@ -100,6 +101,7 @@ export default function RootLayout({
       <head>
         <GoogleAnalytics />
         <GoogleTagManagerScript />
+        <MicrosoftClarity />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${barlowCondensed.variable} antialiased`}
