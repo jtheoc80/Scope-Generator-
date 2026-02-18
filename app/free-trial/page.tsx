@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import LayoutWrapper from "@/components/layout-wrapper";
@@ -21,6 +21,7 @@ import {
   Crown,
   Users,
 } from "lucide-react";
+import { trackEvent } from "@/lib/analytics";
 
 type PlanOption = 'starter' | 'pro' | 'crew';
 
@@ -145,6 +146,11 @@ export default function FreeTrialPage() {
   const [selectedPlan, setSelectedPlan] = useState<PlanOption>('pro');
   const [checkoutLoading, setCheckoutLoading] = useState(false);
 
+  // Track free trial page view on mount
+  useEffect(() => {
+    trackEvent('free_trial_page_view', 'free_trial', 'page_load');
+  }, []);
+
   // Check if user is logged in
   const { data: user } = useQuery({
     queryKey: ["/api/auth/user"],
@@ -158,8 +164,11 @@ export default function FreeTrialPage() {
   });
 
   const handleStartTrial = async () => {
+    trackEvent('free_trial_start_click', 'free_trial', selectedPlan);
+
     // If user is not logged in, redirect to sign-up with the plan
     if (!user) {
+      trackEvent('free_trial_redirect_signup', 'free_trial', selectedPlan);
       const redirectUrl = `/dashboard?checkout=${selectedPlan}`;
       router.push(
         `/sign-up?plan=${selectedPlan}&redirect_url=${encodeURIComponent(redirectUrl)}`
@@ -286,7 +295,10 @@ export default function FreeTrialPage() {
                   key={plan.id}
                   {...plan}
                   selected={selectedPlan === plan.id}
-                  onSelect={setSelectedPlan}
+                  onSelect={(id) => {
+                    setSelectedPlan(id);
+                    trackEvent('free_trial_plan_select', 'free_trial', id);
+                  }}
                 />
               ))}
             </div>
