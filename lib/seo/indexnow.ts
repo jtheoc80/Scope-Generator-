@@ -51,11 +51,40 @@ export async function submitUrl(url: string): Promise<IndexNowSubmission> {
         method: "GET",
       });
 
+      const isSuccess =
+        response.ok || response.status === 200 || response.status === 202;
+
+      let message = getStatusMessage(response.status);
+
+      if (!isSuccess) {
+        let errorBody = "";
+        try {
+          errorBody = await response.text();
+        } catch {
+          // Ignore errors while reading response body
+        }
+
+        const statusText = response.statusText || message;
+
+        if (errorBody) {
+          message = `${statusText} - Response body: ${errorBody}`;
+        } else {
+          message = statusText;
+        }
+
+        if (process.env.NODE_ENV !== "production") {
+          console.error(
+            `[IndexNow] Submission failed for endpoint ${endpoint}: ${statusText}`,
+            errorBody ? `Response body: ${errorBody}` : undefined
+          );
+        }
+      }
+
       results.push({
         endpoint,
         status: response.status,
-        ok: response.ok || response.status === 200 || response.status === 202,
-        message: getStatusMessage(response.status),
+        ok: isSuccess,
+        message,
       });
     } catch (error) {
       results.push({
