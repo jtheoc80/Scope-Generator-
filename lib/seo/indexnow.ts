@@ -32,11 +32,67 @@ function getKeyLocation(): string {
 }
 
 /**
+ * Normalize and validate a URL for IndexNow submission.
+ * - Accepts absolute HTTP(S) URLs.
+ * - Accepts relative URLs that start with '/' and resolves them against seoConfig.site.url.
+ * Throws an error if the URL is invalid or uses an unsupported scheme.
+ */
+function normalizeIndexNowUrl(input: string): string {
+  const url = input.trim();
+
+  // Absolute URL: must be valid HTTP(S)
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    let parsed: URL;
+    try {
+      parsed = new URL(url);
+    } catch {
+      throw new Error("Invalid absolute URL provided for IndexNow submission.");
+    }
+
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      throw new Error("Only HTTP(S) URLs can be submitted to IndexNow.");
+    }
+
+    return parsed.toString();
+  }
+
+  // Relative URL: must start with '/'
+  if (url.startsWith("/")) {
+    try {
+      return new URL(url, seoConfig.site.url).toString();
+    } catch {
+      throw new Error("Invalid relative URL provided for IndexNow submission.");
+    }
+  }
+
+  throw new Error(
+    "URL must be an absolute HTTP(S) URL or a relative URL starting with '/'.",
+  );
+}
+
+/**
  * Submit a single URL to IndexNow search engines.
  */
 export async function submitUrl(url: string): Promise<IndexNowSubmission> {
-  const fullUrl = url.startsWith("http") ? url : `${seoConfig.site.url}${url}`;
+  let fullUrl: string;
 
+  try {
+    fullUrl = normalizeIndexNowUrl(url);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Invalid URL provided.";
+
+    return {
+      urlCount: 0,
+      results: INDEXNOW_ENDPOINTS.map((endpoint) => ({
+        endpoint,
+        status: 0,
+        ok: false,
+        message,
+      })),
+      submitted: false,
+    };
+  }
   const results: IndexNowResult[] = [];
 
   for (const endpoint of INDEXNOW_ENDPOINTS) {
