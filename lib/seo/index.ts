@@ -7,3 +7,4 @@ export * from "./config";
 export * from "./metadata";
 export * from "./audit";
 export * from "./jsonld";
+export * from "./indexnow";

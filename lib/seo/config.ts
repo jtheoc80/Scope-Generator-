@@ -88,6 +88,14 @@ export const seoConfig = {
     google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || "",
   },
 
+  // IndexNow - Instant search engine URL submission
+  // Protocol: https://www.indexnow.org
+  // Supported by: Bing, Yandex, Seznam, Naver
+  indexNow: {
+    apiKey: process.env.INDEXNOW_API_KEY || "",
+    enabled: process.env.INDEXNOW_ENABLED !== "false",
+  },
+
   // SEO Audit Thresholds
   audit: {
     titleMinLength: 30,
