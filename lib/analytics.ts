@@ -5,10 +5,15 @@ declare global {
   }
 }
 
+// Keep in sync with the fallback in components/GoogleAnalytics.tsx so trackEvent
+// is never a no-op when GA is running via the production fallback ID.
+const FALLBACK_PRODUCTION_GA_ID = "G-2S3Z6LCF7K";
+
 const GA_MEASUREMENT_ID =
   process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ??
   // Back-compat for Vite-era env naming (only works if exposed as NEXT_PUBLIC_*)
-  process.env.NEXT_PUBLIC_VITE_GA_MEASUREMENT_ID;
+  process.env.NEXT_PUBLIC_VITE_GA_MEASUREMENT_ID ??
+  (process.env.NODE_ENV === 'production' ? FALLBACK_PRODUCTION_GA_ID : undefined);
 
 export const initGA = () => {
   if (!GA_MEASUREMENT_ID) {
