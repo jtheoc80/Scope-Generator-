@@ -197,7 +197,7 @@ export async function submitUrls(urls: string[]): Promise<IndexNowSubmission> {
       results.push({
         endpoint,
         status: response.status,
-        ok: response.ok || response.status === 200 || response.status === 202,
+        ok: response.ok,
         message: getStatusMessage(response.status),
       });
     } catch (error) {
