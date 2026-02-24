@@ -24,14 +24,10 @@ declare global {
  */
 export function AnalyticsIdentify() {
   const { user, isLoading } = useAuth();
-  const lastIdentifiedUserId = useRef<string | null>(null);
+  const lastIdentifiedPropsKey = useRef<string | null>(null);
 
   useEffect(() => {
     if (isLoading || !user) return;
-
-    // Avoid re-identifying the same user on every render
-    if (lastIdentifiedUserId.current === user.id) return;
-    lastIdentifiedUserId.current = user.id;
 
     // Build common properties
     const billingStatus = user.isPro
@@ -41,6 +37,22 @@ export function AnalyticsIdentify() {
         : 'free';
 
     const plan = user.subscriptionPlan || (user.isInTrial ? 'trial' : 'none');
+
+    // Track a fingerprint of all sent properties so that any change
+    // (e.g. trial→paid, days remaining decrement, onboarding completion)
+    // triggers a re-send rather than only tracking the user ID.
+    const propsKey = [
+      user.id,
+      billingStatus,
+      plan,
+      String(user.isInTrial),
+      String(user.trialDaysRemaining),
+      String(user.onboardingCompleted ?? false),
+      user.trialEndsAt ?? '',
+    ].join('|');
+
+    if (lastIdentifiedPropsKey.current === propsKey) return;
+    lastIdentifiedPropsKey.current = propsKey;
 
     // ── Microsoft Clarity ─────────────────────────────────
     if (typeof window.clarity === 'function') {
