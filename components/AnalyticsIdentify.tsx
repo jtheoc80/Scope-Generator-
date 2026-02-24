@@ -5,8 +5,8 @@ import { useAuth } from '@/hooks/useAuth';
 
 declare global {
   interface Window {
-    clarity: ((...args: unknown[]) => void) & { q?: unknown[] };
-    gtag: (...args: unknown[]) => void;
+    clarity?: ((...args: unknown[]) => void) & { q?: unknown[] };
+    gtag?: (...args: unknown[]) => void;
   }
 }
 
