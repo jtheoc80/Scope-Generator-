@@ -108,7 +108,7 @@ export default function RootLayout({
       >
         <GoogleTagManagerNoScript />
         <OrganizationJsonLd type="SoftwareApplication" />
-        <Providers>
+        <Providers clerkEnabled={isClerkConfigured()}>
           {children}
         </Providers>
         <VercelAnalytics />
