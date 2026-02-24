@@ -7,9 +7,14 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toaster";
 import { AnalyticsIdentify } from "@/components/AnalyticsIdentify";
 
+interface ProvidersProps {
+  children: React.ReactNode;
+  clerkEnabled?: boolean;
+}
+
 // Ensure QueryClientProvider always has a client, even during SSR/SSG
 // This prevents "No QueryClient set" errors during static generation
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({ children, clerkEnabled = false }: ProvidersProps) {
   // Use the shared queryClient instance
   // This ensures QueryClientProvider is always available during static generation
   const client: QueryClient = queryClient;
@@ -19,7 +24,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <LanguageProvider>
         <TooltipProvider>
           <Toaster />
-          <AnalyticsIdentify />
+          {clerkEnabled && <AnalyticsIdentify />}
           {children}
         </TooltipProvider>
       </LanguageProvider>
