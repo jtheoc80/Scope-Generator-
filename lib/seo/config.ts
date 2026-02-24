@@ -92,7 +92,7 @@ export const seoConfig = {
   // Protocol: https://www.indexnow.org
   // Supported by: Bing, Yandex, Seznam, Naver
   indexNow: {
-    apiKey: process.env.INDEXNOW_API_KEY || "0425bb255d5944648d196e29a60f7cfb",
+    apiKey: process.env.INDEXNOW_API_KEY || "",
     enabled: process.env.INDEXNOW_ENABLED !== "false",
   },
 
